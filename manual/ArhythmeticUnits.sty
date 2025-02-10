@@ -1,0 +1,195 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ArhythmeticUnits}[ArhythmeticUnits LaTeX package]
+
+% ----------------------------------------------------------------------------
+% MARK: Packages
+% ----------------------------------------------------------------------------
+
+% set the font to Helvetica
+\RequirePackage[scaled]{helvet}
+\renewcommand\familydefault{\sfdefault}
+% for type-setting
+\RequirePackage{amsmath, amssymb, amsfonts, verbatim, pifont, microtype}
+% for slashed out text
+\RequirePackage[normalem]{ulem}
+% for units and scientific notation
+\RequirePackage[table]{xcolor}
+\RequirePackage{siunitx}
+% for references and URLs
+\RequirePackage[pdfusetitle,hidelinks]{hyperref}
+\RequirePackage{url}
+% Natbib setup for author-year style
+\RequirePackage{natbib}
+ \bibpunct[, ]{(}{)}{,}{a}{}{,}%
+ \def\bibfont{\small}%
+ \def\bibsep{\smallskipamount}%
+ \def\bibhang{24pt}%
+ \def\newblock{\ }%
+ \def\BIBand{and}%
+% for graphics and figures
+\RequirePackage{graphicx, subfig, tikz}
+% force figures to stay in their sections
+\RequirePackage[section]{placeins}
+% for tables
+\RequirePackage{booktabs, longtable, tabularx}
+\RequirePackage{multicol, multirow}
+\RequirePackage{adjustbox}
+\RequirePackage[flushleft]{threeparttable}
+% setup the algorithm package
+% ruled: show bars around title and bar at bottom
+% lined: show the line column on the left of the algorithm
+% linesnumbered: print line numbers for each line
+\RequirePackage[ruled,lined,linesnumbered]{algorithm2e}
+\DontPrintSemicolon % don't print the semicolon that \; usually prints
+% headers and footers
+\RequirePackage{fancyhdr}
+% change the enumeration left index to be smaller
+\RequirePackage{enumitem}
+\setlist{leftmargin=1em}
+% set the page margins
+\RequirePackage[margin=1in]{geometry}
+
+\usepackage{titlesec}
+% remove the number from the Section headings
+\titleformat{\section}{\normalfont\Large\bfseries}{}{0pt}{}
+% remove the Section portion of the Section.Subsection numbering
+\renewcommand{\thesubsection}{\arabic{subsection}}
+% update the format of the subsection header using titlesec
+\titleformat{\subsection}{\normalfont\Large\bfseries}{\thesubsection}{1em}{}
+
+% import a debugging package to show the margin boxes
+% \usepackage{showframe}
+
+% ----------------------------------------------------------------------------
+% MARK: Options
+% ----------------------------------------------------------------------------
+
+\RequirePackage{kvoptions}
+
+% \SetupKeyvalOptions{family=threshold,prefix=threshold@}
+\DeclareStringOption[Module]{moduleName}[Module]
+\DeclareStringOption[0.0.0]{version}[0.0.0]
+\ProcessKeyvalOptions*
+
+% ----------------------------------------------------------------------------
+% MARK: Declarations
+% ----------------------------------------------------------------------------
+
+\let\tempone\itemize
+\let\temptwo\enditemize
+\renewenvironment{itemize}{\tempone\addtolength{\itemsep}{-0.5\baselineskip}}{\temptwo}
+\renewenvironment{enumerate}{\tempone\addtolength{\itemsep}{-0.5\baselineskip}}{\temptwo}
+
+% setup captions for tables
+\captionsetup[table]{%
+  labelfont={bf},
+  name={Table},
+  labelsep=colon,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% setup captions for figures
+\captionsetup[figure]{%
+  labelfont={bf},
+  name={Figure},
+  labelsep=colon,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+% setup captions for algorithms
+\captionsetup[algorithm2e]{%
+  labelfont={bf},
+  name={Figure},
+  labelsep=colon,
+  justification=raggedright,
+  singlelinecheck=false
+}
+
+\definecolor{coverColor}{RGB}{202,202,202}
+
+% ----------------------------------------------------------------------------
+% Headers / Footers
+% ----------------------------------------------------------------------------
+
+\setlength{\headheight}{15pt}
+\pagestyle{fancy}
+\lhead{Arhythmetic Units}
+\rhead{\itshape {\ArhythmeticUnits@moduleName} v{\ArhythmeticUnits@version}}
+\cfoot{\thepage}
+
+% ----------------------------------------------------------------------------
+% Commands
+% ----------------------------------------------------------------------------
+
+% a command for setting the max width of an image using graphicx
+\makeatletter
+\def\maxwidth#1{\ifdim\Gin@nat@width>#1 #1\else\Gin@nat@width\fi}
+\makeatother
+
+% Create the title page.
+%
+% @param 1 the path to the logo image
+% @param 2 the sub-title of the module
+% @param 3 the path to the module image
+% @param 4 the path to the brand logo
+%
+\newcommand{\titlePage}[4]{%
+\pagecolor{coverColor}
+\thispagestyle{empty}  % fancyhdr: remove headers from this title page
+\begin{center}
+    \includegraphics[width=\maxwidth{\textwidth}]{#1}
+    \vfill
+    \includegraphics[width=\maxwidth{\textwidth}]{#2}
+    \vfill
+    \includegraphics[width=\maxwidth{\textwidth}]{#3}
+\end{center}
+\clearpage
+\nopagecolor
+}
+
+% Create the default title page with images at:
+% 1: img/Logo
+% 2: img/Module
+% 3: img/ArhythmeticUnits
+\newcommand{\defaultTitlePage}{%
+\titlePage{img/Logo}{img/Module}{img/ArhythmeticUnits}%
+}
+
+\newcommand{\finalPage}{%
+\clearpage
+\pagecolor{coverColor}
+\thispagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+    {\Large\textbf{Arhythmetic Units}}\\[1em]
+    {\small © 2025 Arhythmetic Units. All rights reserved.}
+\end{center}
+\vspace*{\fill}
+}
+
+% implicitly define \FloatBarrier in subsection so placeins will work with
+% subsections in this dissertation
+\makeatletter
+\AtBeginDocument{%
+  \expandafter\renewcommand\expandafter\subsection\expandafter{%
+    \expandafter\@fb@secFB\subsection
+  }%
+}
+\makeatother
+
+% implicitly define \FloatBarrier in subsubsection so placeins will work with
+% subsections in this dissertation
+\makeatletter
+\AtBeginDocument{%
+  \expandafter\renewcommand\expandafter\subsubsection\expandafter{%
+    \expandafter\@fb@secFB\subsubsection
+  }%
+}
+\makeatother
+
+\makeatletter
+\title{{\ArhythmeticUnits@moduleName} v{\ArhythmeticUnits@version}}
+\author{Christian Kauten}
+\makeatother
