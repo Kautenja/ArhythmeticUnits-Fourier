@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef KAUTENJA_RACK_PARAM_QUANTITY
-#define KAUTENJA_RACK_PARAM_QUANTITY
+#ifndef ARHYTHMETIC_UNITS_FOURIER_PARAM_QUANTITY_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_PARAM_QUANTITY_HPP_
 
 #include <string>
 #include "rack.hpp"
@@ -41,4 +41,4 @@ struct TriggerParamQuantity : rack::ParamQuantity {
     inline std::string getLabel() override { return ""; }
 };
 
-#endif  // KAUTENJA_RACK_PARAM_QUANTITY
+#endif  // ARHYTHMETIC_UNITS_FOURIER_PARAM_QUANTITY_HPP_

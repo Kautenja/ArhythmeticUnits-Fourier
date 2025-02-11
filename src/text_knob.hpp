@@ -17,8 +17,8 @@
 #include <string>
 #include "rack.hpp"
 
-#ifndef MODULES_SIGNAL_ANALYSIS_TEXT_KNOB_HPP_
-#define MODULES_SIGNAL_ANALYSIS_TEXT_KNOB_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
 
 /// @brief A knob that renders the label and value as text on the widget.
 struct TextKnob : rack::app::Knob {
@@ -83,4 +83,4 @@ struct TextKnob : rack::app::Knob {
     }
 };
 
-#endif  // MODULES_SIGNAL_ANALYSIS_TEXT_KNOB_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_

@@ -15,8 +15,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef KAUTENJA_RACK_JSON_HPP
-#define KAUTENJA_RACK_JSON_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_JSON_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_JSON_HPP_
 
 #include <jansson.h>
 #include <string>
@@ -145,4 +145,4 @@ template<> inline int get<std::string>(json_t* const rootJ, const std::string& k
 
 }  // namespace JSON
 
-#endif  // KAUTENJA_RACK_JSON_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_JSON_HPP_

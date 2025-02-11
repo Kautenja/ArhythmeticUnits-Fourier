@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_PLUGIN_HPP
-#define ARHYTHMETIC_UNITS_PLUGIN_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
 
 #include "rack.hpp"
 
@@ -25,11 +25,11 @@ using namespace rack;
 extern rack::Plugin* plugin_instance;
 
 #include "./json.hpp"
-#include "./theme.hpp"
 #include "./param_quantity.hpp"
+#include "./theme.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.
 extern rack::Model *modelSpectrogram;
 extern rack::Model *modelSpectrumAnalyzer;
 
-#endif  // ARHYTHMETIC_UNITS_PLUGIN_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_

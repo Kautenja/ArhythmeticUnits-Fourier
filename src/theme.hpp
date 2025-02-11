@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_THEME_HPP_
-#define ARHYTHMETIC_UNITS_THEME_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
 
 #include <unistd.h>
 #include <jansson.h>
@@ -123,4 +123,4 @@ struct ThemedWidget : rack::ModuleWidget {
     }
 };
 
-#endif  // ARHYTHMETIC_UNITS_THEME_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
