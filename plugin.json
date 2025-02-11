@@ -18,7 +18,10 @@
     },
     {
       "slug": "Spectrogram",
-      "name": "Spectrogram"
+      "name": "Sound Spectrograph (Spectrogram)",
+      "description": "Highly tune-able spectrogram visualizer",
+      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Sound-Spectrograph.pdf",
+      "tags": ["Visual"]
     }
   ]
 }
