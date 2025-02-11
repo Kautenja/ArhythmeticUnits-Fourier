@@ -1,7 +1,6 @@
-// An oscilloscope module based on the one from VCV Rack Fundamental.
-// Copyright 2020 Christian Kauten
+// An spectrogram module.
 //
-// Author: Christian Kauten (kautencreations@gmail.com)
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
