@@ -36,7 +36,6 @@
 #include <algorithm>
 #include <string>
 #include "./dsp/math.hpp"
-#include "./dsp/filter.hpp"
 #include "./dsp/trigger.hpp"
 #include "./kautenja_rack/json.hpp"
 #include "./plugin.hpp"
@@ -48,7 +47,7 @@
 /// @param points The points to interpolate
 /// @param control The control points to populate.
 /// @param tension Tension parameter for Catmull–Rom (typically 0.0 ~ 0.5)
-inline void catmullRomToBezier(Vec points[4], Vec control[2], float tension = 0.5f) {
+inline void catmull_rom_to_bezier(Vec points[4], Vec control[2], float tension = 0.5f) {
     // One common approach is to set control points based on tangents
     // at p1 and p2. The standard formula can vary, but typically:
     float t = (1.0f - tension) / 6.0f;
@@ -1205,7 +1204,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
                     point.y = Math::clip(point.y, mask.pos.y - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
                 }
                 Vec control[2];
-                catmullRomToBezier(points, control);
+                catmull_rom_to_bezier(points, control);
                 // Draw a cubic Bezier from p[i] to p[i+1] using control points
                 nvgBezierTo(args.vg, control[0].x, control[0].y, control[1].x, control[1].y, points[2].x, points[2].y);
                 if (last_point) {
