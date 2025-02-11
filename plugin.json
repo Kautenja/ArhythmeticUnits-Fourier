@@ -5,11 +5,16 @@
   "name": "Fourier",
   "brand": "ArhythmeticUnits",
   "author": "Christian Kauten",
+  "authorEmail": "arhythmetic.units@gmail.com",
   "sourceUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier",
+  "changelogUrl": "https://github.com/Kautenja/PotatoChips/blob/master/CHANGELOG.md",
   "modules": [
     {
       "slug": "SpectrumAnalyzer",
-      "name": "Fourier (Spectrum Analyzer)"
+      "name": "Fourier (Spectrum Analyzer)",
+      "description": "Highly tune-able spectrum analyzer",
+      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf",
+      "tags": ["Visual"]
     },
     {
       "slug": "Spectrogram",
