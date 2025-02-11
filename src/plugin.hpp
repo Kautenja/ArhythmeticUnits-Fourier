@@ -18,7 +18,6 @@
 #define ARHYTHMETIC_UNITS_PLUGIN_HPP
 
 #include "rack.hpp"
-#include "kautenja_rack/helpers.hpp"
 #include "kautenja_rack/param_quantity.hpp"
 
 using namespace rack;
