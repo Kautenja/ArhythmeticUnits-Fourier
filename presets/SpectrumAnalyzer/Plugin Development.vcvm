@@ -1,0 +1,59 @@
+{
+  "plugin": "ArhythmeticUnits-Fourier",
+  "model": "SpectrumAnalyzer",
+  "version": "2.0.0",
+  "params": [
+    {
+      "value": 1.0,
+      "id": 0
+    },
+    {
+      "value": 1.0,
+      "id": 1
+    },
+    {
+      "value": 1.0,
+      "id": 2
+    },
+    {
+      "value": 1.0,
+      "id": 3
+    },
+    {
+      "value": 0.0,
+      "id": 4
+    },
+    {
+      "value": 14.0,
+      "id": 5
+    },
+    {
+      "value": 12.0,
+      "id": 6
+    },
+    {
+      "value": 0.029999999329447746,
+      "id": 7
+    },
+    {
+      "value": 1.0,
+      "id": 8
+    },
+    {
+      "value": 1.0,
+      "id": 9
+    },
+    {
+      "value": 0.0,
+      "id": 10
+    },
+    {
+      "value": 0.0,
+      "id": 11
+    },
+    {
+      "value": 0.0,
+      "id": 14
+    }
+  ]
+}
