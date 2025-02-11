@@ -41,7 +41,6 @@
 #include "./kautenja_rack/json.hpp"
 #include "./plugin.hpp"
 #include "./theme.hpp"
-#include "./components/components.hpp"
 #include "./text_knob.hpp"
 
 /// @brief Compute control points for a Catmull-Rom segment from p1 to p2
