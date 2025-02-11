@@ -22,13 +22,6 @@
 //       coefficients in the imaginary spot, take an FFT with N/2, and combine
 //       the real and imaginary components back into an FFT with N/2 + 1
 //       coefficients, i.e., emitting the reflected coefficients up to N.
-// TODO: Scheduled FFT to reduce bursty nature of the computational pipeline.
-//       When the hop size is long and window length is long, one can observe
-//       bursty performance degradation as the DFT divider fires and triggers
-//       large FFT computations. A conceptually simple way to alleviate this
-//       is to schedule the computation of single FFTs into smaller batches
-//       that can run continuously to spread the computational burden across
-//       the period of the hop length.
 
 #include <iostream>
 #include <iomanip>
