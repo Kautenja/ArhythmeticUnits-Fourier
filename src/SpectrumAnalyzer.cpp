@@ -37,9 +37,7 @@
 #include <string>
 #include "./dsp/math.hpp"
 #include "./dsp/trigger.hpp"
-#include "./kautenja_rack/json.hpp"
 #include "./plugin.hpp"
-#include "./theme.hpp"
 #include "./text_knob.hpp"
 
 /// @brief Compute control points for a Catmull-Rom segment from p1 to p2

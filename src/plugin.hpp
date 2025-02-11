@@ -18,12 +18,15 @@
 #define ARHYTHMETIC_UNITS_PLUGIN_HPP
 
 #include "rack.hpp"
-#include "kautenja_rack/param_quantity.hpp"
 
 using namespace rack;
 
 /// the global instance of the VCV Rack plug-in.
 extern rack::Plugin* plugin_instance;
+
+#include "./json.hpp"
+#include "./theme.hpp"
+#include "./param_quantity.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.
 extern rack::Model *modelSpectrogram;

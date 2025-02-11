@@ -109,12 +109,12 @@ struct ThemedWidget : rack::ModuleWidget {
     /// @param menu the menu to add the context items to
     ///
     inline void appendContextMenu(ui::Menu* menu) override {
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuLabel("Plugin Theme"));
+        menu->addChild(new rack::MenuSeparator);
+        menu->addChild(rack::createMenuLabel("Plugin Theme"));
         std::string current_theme = THEMES[0];
         get_theme(&current_theme);
         for (int i = 0; i < 2; i++) {
-            auto item = createMenuItem<ThemeMenuItem>(THEMES[i], CHECKMARK(current_theme == THEMES[i]));
+            auto item = rack::createMenuItem<ThemeMenuItem>(THEMES[i], CHECKMARK(current_theme == THEMES[i]));
             item->widget = this;
             item->basename = BASENAME;
             item->theme = THEMES[i];

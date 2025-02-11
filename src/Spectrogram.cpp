@@ -40,8 +40,6 @@
 #include "./dsp/math.hpp"
 #include "./dsp/trigger.hpp"
 #include "./plugin.hpp"
-#include "./kautenja_rack/json.hpp"
-#include "./theme.hpp"
 
 /// @brief The options for frequency scales on the display.
 enum class FrequencyScale {
