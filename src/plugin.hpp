@@ -20,7 +20,6 @@
 #include "rack.hpp"
 #include "kautenja_rack/helpers.hpp"
 #include "kautenja_rack/param_quantity.hpp"
-#include "kautenja_rack/halo.hpp"
 
 using namespace rack;
 
