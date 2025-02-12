@@ -715,21 +715,28 @@ struct CachedWindow {
     std::vector<T> samples;
     /// Whether to use a symmetric window.
     bool is_symmetric;
+    /// Whether the window function should be gained or not.
+    bool is_gained;
 
     /// @brief Compute the window for the current set of parameters.
     inline void compute_window() {
+        const float gain = is_gained ? T(1) / coherent_gain(function) : T(1);
         for (size_t n = 0; n < samples.size(); n++)
-            samples[n] = window<T>(function, n, samples.size(), is_symmetric);
+            samples[n] = gain * window<T>(function, n, samples.size(), is_symmetric);
     }
 
  public:
     /// @brief Initialize a new pre-computed window.
     /// @param function_ The window function to represent.
     /// @param N The length of the window function.
-    /// @param is_symmetric Whether the window function is symmetric.
-    explicit CachedWindow(const Function& function_, const size_t& N,
-        const bool& is_symmetric_ = true
-    ) : function(function_), samples(N), is_symmetric(is_symmetric_) {
+    /// @param is_symmetric_ Whether the window function is symmetric.
+    /// @param is_gained_ Whether the window function should be gained or not.
+    explicit CachedWindow(
+        const Function& function_,
+        const size_t& N,
+        const bool& is_symmetric_ = true,
+        const bool& is_gained_ = false
+    ) : function(function_), samples(N), is_symmetric(is_symmetric_), is_gained(is_gained_) {
         compute_window();
     }
 
@@ -737,23 +744,29 @@ struct CachedWindow {
     /// @param function The window function to represent.
     /// @param N The length of the window function.
     /// @param is_symmetric Whether the window function is symmetric.
+    /// @param is_gained Whether the window function should be gained or not.
     /// @details
     /// If the window function is already of the specified type, this
     /// function returns without re-calculating the parameters.
-    inline void set_window(const Function& function, const size_t& N,
-        const bool& is_symmetric = true
+    inline void set_window(
+        const Function& function,
+        const size_t& N,
+        const bool& is_symmetric = true,
+        const bool& is_gained = false
     ) {
         // If the function and length have not changed, then there is no need
         // to re-calculate the values. Silently fall back to a NoOp.
         if (
             function == this->function &&
             N == samples.size() &&
-            is_symmetric == this->is_symmetric
+            is_symmetric == this->is_symmetric &&
+            is_gained == this->is_gained
         ) return;
         // Resize buffer to the new size, set the function, and compute samples.
         this->function = function;
         samples.resize(N);
         this->is_symmetric = is_symmetric;
+        this->is_gained = is_gained;
         compute_window();
     }
 
@@ -770,6 +783,9 @@ struct CachedWindow {
 
     /// @brief Return true for symmetric window, false for asymmetric.
     inline const bool& get_is_symmetric() const { return is_symmetric; }
+
+    /// @brief Return true for gained window, false for un-gained.
+    inline const bool& get_is_gained() const { return is_gained; }
 };
 
 // ---------------------------------------------------------------------------

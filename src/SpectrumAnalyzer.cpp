@@ -271,6 +271,9 @@ struct SpectrumAnalyzer : rack::Module {
     /// The delay line for tracking the input signal x[t].
     Math::ContiguousCircularBuffer<std::complex<float>> delay[NUM_CHANNELS];
 
+    /// The window function for windowing the FFT.
+    Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
+
     /// An on-the-fly FFT calculator for each input channel.
     Math::OnTheFlyFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
 
@@ -623,6 +626,7 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_window() {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
+        window_function.set_window(get_window_function(), N, false, true);
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             if (ffts[i].size() != N)
@@ -770,7 +774,7 @@ struct SpectrumAnalyzer : rack::Module {
                     filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
                 make_points(i);
                 // Add the delay line to the FFT pipeline.
-                ffts[i].buffer(delay[i].contiguous(), get_window_function());
+                ffts[i].buffer(delay[i].contiguous(), window_function.get_samples());
             }
             for (size_t j = 0; j <= ceilf(ffts[i].get_total_steps() / get_hop_length()); j++)
                 ffts[i].step();

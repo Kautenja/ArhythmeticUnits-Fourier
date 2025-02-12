@@ -460,14 +460,13 @@ class OnTheFlyFFT {
     /// @param window The window function to use before computing the DFT.
     inline void buffer(
         const std::complex<float>* samples,
-        const Window::Function& window = Window::Function::Boxcar
+        const std::vector<float>& window
     ) {
         const auto N = coefficients.size();
         // Copy the coefficients into the buffer.
         memcpy(coefficients.data(), samples, N * sizeof(std::complex<float>));
         // Window the local copy of the coefficients.
-        for (size_t n = 0; n < N; ++n)
-            coefficients[n] *= Window::window<float>(window, n, N, false) / Window::coherent_gain(window);
+        for (size_t n = 0; n < N; ++n) coefficients[n] *= window[n];
 
         // Bit-reversal permutation
         size_t j = 0;
