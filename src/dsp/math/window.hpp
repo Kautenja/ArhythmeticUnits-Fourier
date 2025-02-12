@@ -705,6 +705,69 @@ inline float side_lobe_amplitude(const Function& window) {
 //     }
 // }
 
+/// @brief A structure for holding and updating samples of a cached window.
+template<typename T>
+struct CachedWindow {
+ private:
+    /// The current window function being represented.
+    Function function;
+    /// The samples of the window function being represented.
+    std::vector<T> samples;
+    /// Whether to use a symmetric window.
+    bool is_symmetric;
+
+    /// @brief Compute the window for the current set of parameters.
+    inline void compute_window() {
+        for (size_t n = 0; n < samples.size(); n++)
+            samples[n] = window(function, n, samples.size(), is_symmetric);
+    }
+
+ public:
+    /// @brief Initialize a new pre-computed window.
+    /// @param function_ The window function to represent.
+    /// @param N The length of the window function.
+    /// @param is_symmetric Whether the window function is symmetric.
+    explicit CachedWindow(const Function& function_, const size_t& N,
+        const bool& is_symmetric_ = true
+    ) : function(function_), samples(N), is_symmetric(is_symmetric_) {
+        compute_window();
+    }
+
+    /// @brief Update the window to given size and function.
+    /// @param function The window function to represent.
+    /// @param N The length of the window function.
+    /// @param is_symmetric Whether the window function is symmetric.
+    /// @details
+    /// If the window function is already of the specified type, this
+    /// function returns without re-calculating the parameters.
+    inline void set_window(const Function& function, const size_t& N,
+        const bool& is_symmetric = true
+    ) {
+        // If the function and length have not changed, then there is no need
+        // to re-calculate the values. Silently fall back to a NoOp.
+        if (
+            function == this->function &&
+            N == samples.size() &&
+            is_symmetric == this->is_symmetric
+        ) return;
+        // Resize buffer to the new size, set the function, and compute samples.
+        this->function = function;
+        samples.resize(N);
+        this->is_symmetric = is_symmetric;
+        compute_window();
+    }
+
+    /// @brief Return the window function sample at the given index.
+    /// @param index The index of the window function sample to return.
+    /// @returns The window function sample at the given index.
+    inline float operator[](const size_t& index) {
+        return samples[index];
+    }
+
+    /// @brief Return the sample buffer.
+    inline std::vector<float>& get_samples() { return samples; }
+};
+
 // ---------------------------------------------------------------------------
 // MARK: Parametric Windows
 // ---------------------------------------------------------------------------
