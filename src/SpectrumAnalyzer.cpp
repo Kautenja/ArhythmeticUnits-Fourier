@@ -763,22 +763,20 @@ struct SpectrumAnalyzer : rack::Module {
         const float alpha = get_time_smoothing_alpha();
         const auto frequency_smoothing = get_frequency_smoothing();
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (!ffts[i].is_done_computing()) continue;
-            // Perform octave smoothing. For an N-length FFT, smooth over the
-            // first N/2 + 1 coefficients to omit reflected frequencies.
-            if (frequency_smoothing != FrequencySmoothing::None)
-                ffts[i].coefficients = Math::smooth_fft(ffts[i].coefficients, sample_rate, to_float(frequency_smoothing));
-            // Pass the coefficients through a smoothing filter.
-            for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
-                filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
-            make_points(i);
-            // Add the delay line to the FFT pipeline.
-            ffts[i].buffer(delay[i].contiguous(), get_window_function());
-        }
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            for (size_t j = 0; j <= ceilf(ffts[i].get_total_steps() / get_hop_length()); j++) {
-                ffts[i].step();
+            if (ffts[i].is_done_computing()) {
+                // Perform octave smoothing. For an N-length FFT, smooth over the
+                // first N/2 + 1 coefficients to omit reflected frequencies.
+                if (frequency_smoothing != FrequencySmoothing::None)
+                    ffts[i].coefficients = Math::smooth_fft(ffts[i].coefficients, sample_rate, to_float(frequency_smoothing));
+                // Pass the coefficients through a smoothing filter.
+                for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
+                    filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
+                make_points(i);
+                // Add the delay line to the FFT pipeline.
+                ffts[i].buffer(delay[i].contiguous(), get_window_function());
             }
+            for (size_t j = 0; j <= ceilf(ffts[i].get_total_steps() / get_hop_length()); j++)
+                ffts[i].step();
         }
     }
 
