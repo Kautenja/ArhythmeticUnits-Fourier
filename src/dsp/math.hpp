@@ -19,14 +19,11 @@
 #define DSP_MATH_HPP
 
 #include "math/circular_buffer.hpp"
-#include "math/clipping.hpp"
 #include "math/constants.hpp"
 #include "math/color_map.hpp"
 #include "math/eurorack.hpp"
-#include "math/folding.hpp"
 #include "math/functions.hpp"
 #include "math/ieee754.hpp"
-#include "math/knee.hpp"
 #include "math/window.hpp"
 #include "math/dft.hpp"
 #include "math/fft.hpp"
