@@ -757,6 +757,7 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_coefficients() {
         // Determine the alpha parameter of the low-pass smoothing filter.
         const float alpha = get_time_smoothing_alpha();
+        // Determine the setting of the frequency smoothing mode.
         const auto frequency_smoothing = get_frequency_smoothing();
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             if (ffts[i].is_done_computing()) {
