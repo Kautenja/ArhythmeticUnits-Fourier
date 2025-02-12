@@ -417,11 +417,49 @@ class RFFT {
 
 
 
+/// @brief Precomputed bit-reversal table for radix-2 FFT.
+class BitReversalTable {
+ private:
+    /// The pre-computed bit-reversal table.
+    std::vector<size_t> table;
+
+ public:
+    /// @brief Initialize a bit-reversal table for an N-point FFT.
+    /// @param n The length of the FFT.
+    explicit BitReversalTable(const size_t& n) { resize(n); }
+
+    /// @brief Resize the bit-reversal table.
+    /// @param n The length of the FFT.
+    inline void resize(const size_t& n) {
+        table.resize(n);
+        size_t log2n = static_cast<size_t>(log2f(n));
+        for (size_t i = 0; i < n; ++i) {
+            size_t y = 0;
+            size_t x = i;
+            for (size_t j = 0; j < log2n; ++j) {
+                y = (y << 1) | (x & 1);
+                x >>= 1;
+            }
+            table[i] = y;
+        }
+    }
+
+    /// @brief Return the length of the FFT.
+    inline size_t size() const { return table.size(); }
+
+    /// @brief Return the bit-reversal index at the given index.
+    /// @param i The index of the bit-reversal index to access.
+    /// @returns The bit-reversal index at the given index.
+    const size_t& operator[](size_t i) const { return table[i]; }
+};
+
 /// @brief An FFT computation utility based on pre-computed Twiddle factors.
 class OnTheFlyFFT {
  private:
     /// @brief Pre-computed twiddle factors for an N-point FFT.
     TwiddleFactors twiddles;
+    /// @brief Pre-computed bit-reversal table for an N-point FFT.
+    BitReversalTable bit_reversal;
 
     /// The current step of the Cooley-Tukey algorithm.
     size_t step_ = 2;
@@ -438,12 +476,13 @@ class OnTheFlyFFT {
 
     /// @brief Initialize the FFT
     /// @param n The length of the FFT.
-    OnTheFlyFFT(const size_t& n) : twiddles(n), coefficients(n) { }
+    OnTheFlyFFT(const size_t& n) : twiddles(n), bit_reversal(n), coefficients(n) { }
 
     /// @brief Resize the FFT.
     /// @param n The length of the FFT.
     inline void resize(const size_t& n) {
         twiddles.resize(n);
+        bit_reversal.resize(n);
         coefficients.resize(n);
         total_steps = (n / 2.f) * log2f(n);
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
@@ -467,21 +506,10 @@ class OnTheFlyFFT {
         memcpy(coefficients.data(), samples, N * sizeof(std::complex<float>));
         // Window the local copy of the coefficients.
         for (size_t n = 0; n < N; ++n) coefficients[n] *= window[n];
-
-        // Bit-reversal permutation
-        size_t j = 0;
-        for (size_t i = 0; i < N; ++i) {
-            if (i < j) {
-                std::swap(coefficients[i], coefficients[j]);
-            }
-            size_t mask = N >> 1;
-            while (j >= mask && mask > 0) {
-                j -= mask;
-                mask >>= 1;
-            }
-            j += mask;
-        }
-
+        // Bit-reversal Permutation using Pre-computed Table.
+        for (size_t n = 0; n < N; ++n)
+            if (n < bit_reversal[n])
+                std::swap(coefficients[n], coefficients[bit_reversal[n]]);
         // Reset the FFT computation iterator variables.
         step_ = 2;
         group = 0;

@@ -777,7 +777,7 @@ struct SpectrumAnalyzer : rack::Module {
                 ffts[i].buffer(delay[i].contiguous(), window_function.get_samples());
             }
             // Perform the number of FFT steps required for this audio sample.
-            for (size_t j = 0; j < ceilf(ffts[i].get_total_steps() / get_hop_length()); j++)
+            for (size_t j = 0; j <= ceilf(ffts[i].get_total_steps() / get_hop_length()); j++)
                 ffts[i].step();
         }
     }
