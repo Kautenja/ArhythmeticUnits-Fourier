@@ -274,9 +274,6 @@ struct SpectrumAnalyzer : rack::Module {
     /// An on-the-fly FFT calculator for each input channel.
     Math::OnTheFlyFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
 
-    /// A buffer of DFT coefficients of \f$x[t - N], ..., x[t]\f$
-    Math::DFTCoefficients coefficients[NUM_CHANNELS];
-
     /// A copy of the low-pass filtered coefficients.
     Math::DFTCoefficients filtered_coefficients[NUM_CHANNELS];
 
@@ -635,9 +632,8 @@ struct SpectrumAnalyzer : rack::Module {
             delay[i].resize(N);
             delay[i].clear();
             // Resize and clear the coefficient buffers.
-            coefficients[i].resize(N);
-            std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
-            filtered_coefficients[i] = coefficients[i];
+            filtered_coefficients[i].resize(N);
+            std::fill(filtered_coefficients[i].begin(), filtered_coefficients[i].end(), 0.f);
             // Update the rasterized coefficients from the FFT length.
             rasterized_coefficients[i].resize(N / 2.f + 1);
             for (auto& coeff : rasterized_coefficients[i]) {
