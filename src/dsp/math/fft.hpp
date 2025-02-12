@@ -228,6 +228,42 @@ class TwiddleFactors {
     const std::complex<float>& operator[](size_t i) const { return factors[i]; }
 };
 
+/// @brief Precomputed bit-reversal table for radix-2 FFT.
+class BitReversalTable {
+ private:
+    /// The pre-computed bit-reversal table.
+    std::vector<size_t> table;
+
+ public:
+    /// @brief Initialize a bit-reversal table for an N-point FFT.
+    /// @param n The length of the FFT.
+    explicit BitReversalTable(const size_t& n) { resize(n); }
+
+    /// @brief Resize the bit-reversal table.
+    /// @param n The length of the FFT.
+    inline void resize(const size_t& n) {
+        table.resize(n);
+        size_t log2n = static_cast<size_t>(log2f(n));
+        for (size_t i = 0; i < n; ++i) {
+            size_t y = 0;
+            size_t x = i;
+            for (size_t j = 0; j < log2n; ++j) {
+                y = (y << 1) | (x & 1);
+                x >>= 1;
+            }
+            table[i] = y;
+        }
+    }
+
+    /// @brief Return the length of the FFT.
+    inline size_t size() const { return table.size(); }
+
+    /// @brief Return the bit-reversal index at the given index.
+    /// @param i The index of the bit-reversal index to access.
+    /// @returns The bit-reversal index at the given index.
+    const size_t& operator[](size_t i) const { return table[i]; }
+};
+
 /// @brief An FFT computation utility based on pre-computed Twiddle factors.
 class FFT {
  private:
@@ -417,41 +453,7 @@ class RFFT {
 
 
 
-/// @brief Precomputed bit-reversal table for radix-2 FFT.
-class BitReversalTable {
- private:
-    /// The pre-computed bit-reversal table.
-    std::vector<size_t> table;
 
- public:
-    /// @brief Initialize a bit-reversal table for an N-point FFT.
-    /// @param n The length of the FFT.
-    explicit BitReversalTable(const size_t& n) { resize(n); }
-
-    /// @brief Resize the bit-reversal table.
-    /// @param n The length of the FFT.
-    inline void resize(const size_t& n) {
-        table.resize(n);
-        size_t log2n = static_cast<size_t>(log2f(n));
-        for (size_t i = 0; i < n; ++i) {
-            size_t y = 0;
-            size_t x = i;
-            for (size_t j = 0; j < log2n; ++j) {
-                y = (y << 1) | (x & 1);
-                x >>= 1;
-            }
-            table[i] = y;
-        }
-    }
-
-    /// @brief Return the length of the FFT.
-    inline size_t size() const { return table.size(); }
-
-    /// @brief Return the bit-reversal index at the given index.
-    /// @param i The index of the bit-reversal index to access.
-    /// @returns The bit-reversal index at the given index.
-    const size_t& operator[](size_t i) const { return table[i]; }
-};
 
 /// @brief An FFT computation utility based on pre-computed Twiddle factors.
 class OnTheFlyFFT {
