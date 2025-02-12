@@ -1514,3 +1514,167 @@ TEST_CASE("Calculate a symmetric Tukey window impulse response of length 8") {
         REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
     }
 }
+
+// ---------------------------------------------------------------------------
+// MARK: CachedWindow
+// ---------------------------------------------------------------------------
+
+SCENARIO("Cached windows need to be represented") {
+    GIVEN("Parameters for an asymmetric Bartlett window of length 7") {
+        const auto function = Math::Window::Function::Bartlett;
+        const size_t N = 7;
+        const bool is_symmetric = false;
+        WHEN("The CachedWindow is instantiated, the samples matched") {
+            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+            }
+        }
+    }
+    GIVEN("Parameters for an asymmetric Bartlett window of length 8") {
+        const auto function = Math::Window::Function::Bartlett;
+        const size_t N = 8;
+        const bool is_symmetric = false;
+        WHEN("The CachedWindow is instantiated, the samples matched") {
+            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+            }
+        }
+    }
+    GIVEN("Parameters for a symmetric Bartlett window of length 7") {
+        const auto function = Math::Window::Function::Bartlett;
+        const size_t N = 7;
+        const bool is_symmetric = true;
+        WHEN("The CachedWindow is instantiated, the samples matched") {
+            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+            }
+        }
+    }
+    GIVEN("Parameters for a symmetric Bartlett window of length 8") {
+        const auto function = Math::Window::Function::Bartlett;
+        const size_t N = 8;
+        const bool is_symmetric = true;
+        WHEN("The CachedWindow is instantiated, the samples matched") {
+            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+            }
+        }
+    }
+}
+
+SCENARIO("Cached windows need to be updated on-the-fly") {
+    GIVEN("An existing window function") {
+        const auto function = Math::Window::Function::Bartlett;
+        const size_t N = 7;
+        const bool is_symmetric = false;
+        Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+        WHEN("The cached window is set with the same parameters") {
+            cached_window.set_window(function, N, is_symmetric);
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+            }
+        }
+        WHEN("The cached window is set with a new length") {
+            cached_window.set_window(function, N + 1, is_symmetric);
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N + 1 == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N + 1; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N + 1, is_symmetric));
+            }
+        }
+        WHEN("The cached window is set with a new window function") {
+            cached_window.set_window(Math::Window::Function::Hann, N, is_symmetric);
+            THEN("The correct function flag is set") {
+                REQUIRE(Math::Window::Function::Hann == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(Math::Window::Function::Hann, n, N, is_symmetric));
+            }
+        }
+        WHEN("The cached window is set with a new asymmetry flag") {
+            cached_window.set_window(function, N, !is_symmetric);
+            THEN("The correct function flag is set") {
+                REQUIRE(function == cached_window.get_function());
+            }
+            THEN("The length of the cached window is correct") {
+                REQUIRE(N == cached_window.get_samples().size());
+            }
+            THEN("The correct symmetry flag is set") {
+                REQUIRE(!is_symmetric == cached_window.get_is_symmetric());
+            }
+            THEN("The samples match the window function call outputs") {
+                for (size_t n = 0; n < N; n++)
+                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, !is_symmetric));
+            }
+        }
+    }
+}
