@@ -491,21 +491,6 @@ class OnTheFlyFFT {
 
     /// @brief Perform a single step of the FFT computation.
     inline void step() {
-        // // Iterative Cooley-Tukey FFT
-        // for (size_t step = 2; step <= n; step <<= 1) {
-        //     size_t half_step = step / 2;
-        //     size_t twiddle_stride = n / step;
-        //     for (size_t group = 0; group < n; group += step) {
-        //         for (size_t pair = 0; pair < half_step; ++pair) {
-        //             std::complex<float> w = twiddles[pair * twiddle_stride];
-        //             std::complex<float> even = input[group + pair];
-        //             std::complex<float> odd = input[group + pair + half_step] * w;
-        //             input[group + pair] = even + odd;
-        //             input[group + pair + half_step] = even - odd;
-        //         }
-        //     }
-        // }
-
         if (is_done_computing()) return;
         // Determine the half step and twiddle stride.
         const size_t half_step = step_ / 2;

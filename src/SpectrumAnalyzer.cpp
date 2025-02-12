@@ -271,9 +271,7 @@ struct SpectrumAnalyzer : rack::Module {
     /// The delay line for tracking the input signal x[t].
     Math::ContiguousCircularBuffer<std::complex<float>> delay[NUM_CHANNELS];
 
-    /// The FFT computation utility based on pre-computed Twiddle factors.
-    Math::FFT fft{1};
-
+    /// An on-the-fly FFT calculator for each input channel.
     Math::OnTheFlyFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
 
     /// A buffer of DFT coefficients of \f$x[t - N], ..., x[t]\f$
@@ -284,10 +282,6 @@ struct SpectrumAnalyzer : rack::Module {
 
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
     std::vector<Vec> rasterized_coefficients[NUM_CHANNELS];
-
-    /// A clock divider for calculating the DFT on a specific period.
-    /// This parameter controls the "hop length" of the DFT analysis.
-    Trigger::Divider dft_divider;
 
     /// A clock divider for updating the lights at a lower sampling rate.
     Trigger::Divider light_divider;
@@ -410,9 +404,6 @@ struct SpectrumAnalyzer : rack::Module {
     inline void onSampleRateChange() final {
         rack::Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
-        // Set the DFT divider to the hop length and reset it.
-        dft_divider.setDivision(get_hop_length());
-        dft_divider.reset();
         // Set the light divider relative to the sample rate and reset it.
         light_divider.setDivision(512);
         light_divider.reset();
@@ -635,11 +626,6 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_window() {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
-        // Update the pre-computed FFT twiddle factors.
-        if (fft.size() != N) {
-            fft.resize(N);
-            dft_divider.reset();
-        }
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             if (ffts[i].size() != N)
@@ -660,8 +646,6 @@ struct SpectrumAnalyzer : rack::Module {
             }
             render_coefficients[i] = rasterized_coefficients[i];
         }
-        // Update the division of the DFT to match the hop length.
-        dft_divider.setDivision(get_hop_length());
     }
 
     /// @brief Process presses to the "run" button.
@@ -775,40 +759,22 @@ struct SpectrumAnalyzer : rack::Module {
 
     /// @brief Process samples with the DFT.
     inline void process_coefficients() {
-        // Only compute FFTs when the DFT divider fires, i.e., along the
-        // impulse train of the target hop rate.
-        if (dft_divider.process()) {
-            // Determine the alpha parameter of the low-pass smoothing filter.
-            const float alpha = get_time_smoothing_alpha();
-            const auto frequency_smoothing = get_frequency_smoothing();
-            for (size_t i = 0; i < NUM_CHANNELS; i++) {
-                // Perform octave smoothing. For an N-length FFT, smooth over the
-                // first N/2 + 1 coefficients to omit reflected frequencies.
-                if (frequency_smoothing != FrequencySmoothing::None)
-                    ffts[i].coefficients = Math::smooth_fft(ffts[i].coefficients, sample_rate, to_float(frequency_smoothing));
-                // Pass the coefficients through a smoothing filter.
-                for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
-                    filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
-                make_points(i);
-                // Add the delay line to the FFT pipeline.
-                ffts[i].buffer(delay[i].contiguous(), get_window_function());
-
-                // // Copy the delay line into the coefficient buffer using the O(1)
-                // // contiguous view of the ring buffer.
-                // memcpy(coefficients[i].data(), delay[i].contiguous(), coefficients[i].size() * sizeof(std::complex<float>));
-                // // Perform the N-point FFT in-place.
-                // fft(coefficients[i].data(), get_window_function());
-                // // Perform octave smoothing. For an N-length FFT, smooth over the
-                // // first N/2 + 1 coefficients to omit reflected frequencies.
-                // if (frequency_smoothing != FrequencySmoothing::None)
-                //     coefficients[i] = Math::smooth_fft(coefficients[i], sample_rate, to_float(frequency_smoothing));
-                // // Pass the coefficients through a smoothing filter.
-                // for (size_t n = 0; n < coefficients[i].size(); n++)
-                //     filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(coefficients[i][n]);
-                // make_points(i);
-            }
+        // Determine the alpha parameter of the low-pass smoothing filter.
+        const float alpha = get_time_smoothing_alpha();
+        const auto frequency_smoothing = get_frequency_smoothing();
+        for (size_t i = 0; i < NUM_CHANNELS; i++) {
+            if (!ffts[i].is_done_computing()) continue;
+            // Perform octave smoothing. For an N-length FFT, smooth over the
+            // first N/2 + 1 coefficients to omit reflected frequencies.
+            if (frequency_smoothing != FrequencySmoothing::None)
+                ffts[i].coefficients = Math::smooth_fft(ffts[i].coefficients, sample_rate, to_float(frequency_smoothing));
+            // Pass the coefficients through a smoothing filter.
+            for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
+                filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
+            make_points(i);
+            // Add the delay line to the FFT pipeline.
+            ffts[i].buffer(delay[i].contiguous(), get_window_function());
         }
-
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             for (size_t j = 0; j <= ceilf(ffts[i].get_total_steps() / get_hop_length()); j++) {
                 ffts[i].step();
