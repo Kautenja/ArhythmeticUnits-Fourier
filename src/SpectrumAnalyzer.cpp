@@ -23,6 +23,16 @@
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
 
+// TODO: DC/AC coupling. When plugging an LFO into the module the DC offset
+//       kind of messes up the reading. It would be nice to have an optional
+//       AC coupling mode to block DC from entering the module by default.
+//       Most users wont be using DC anyway (it's an engineering thing maybe?)
+
+// TODO: When applying e.g., 4.5dB/Oct slope, this causes the entire signal
+// range to be attenuated by what looks like a factor of 4. Does signal
+// content need some form of coherent gain across the spectrum when using
+// slope?
+
 /// @brief Compute control points for a Catmull-Rom segment from p1 to p2
 /// with tangents based on neighbors p0 and p3.
 /// @param points The points to interpolate
