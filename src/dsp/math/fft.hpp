@@ -284,10 +284,10 @@ class BitReversalTable {
 /// @brief An FFT computation utility based on pre-computed Twiddle factors.
 class OnTheFlyFFT {
  private:
-    /// @brief Pre-computed twiddle factors for an N-point FFT.
-    TwiddleFactors twiddles;
     /// @brief Pre-computed bit-reversal table for an N-point FFT.
     BitReversalTable bit_reversal;
+    /// @brief Pre-computed twiddle factors for an N-point FFT.
+    TwiddleFactors twiddles;
 
     /// The current step of the Cooley-Tukey algorithm.
     size_t step_ = 2;
@@ -304,13 +304,13 @@ class OnTheFlyFFT {
 
     /// @brief Initialize the FFT
     /// @param n The length of the FFT.
-    OnTheFlyFFT(const size_t& n) : twiddles(n), bit_reversal(n), coefficients(n) { }
+    OnTheFlyFFT(const size_t& n) : bit_reversal(n), twiddles(n), coefficients(n) { }
 
     /// @brief Resize the FFT.
     /// @param n The length of the FFT.
     inline void resize(const size_t& n) {
-        twiddles.resize(n);
         bit_reversal.resize(n);
+        twiddles.resize(n);
         coefficients.resize(n);
         total_steps = (n >> 1) * static_cast<size_t>(log2f(n));
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
