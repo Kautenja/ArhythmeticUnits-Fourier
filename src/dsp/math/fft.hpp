@@ -38,45 +38,83 @@ typedef std::vector<std::complex<float>> DFTCoefficients;
 /// A type for STFT coefficient matrices.
 typedef std::vector<DFTCoefficients> STFTCoefficients;
 
-/// @brief Pre-computed twiddle factors for radix-2 FFT.
+/// @brief A utility class for pre-computing and storing twiddle factors for a radix-2 FFT.
+///
+/// This class precomputes the complex exponential coefficients (twiddle factors)
+/// used in the computation of the Fast Fourier Transform (FFT). For an FFT of length \f$ N \f$,
+/// the twiddle factors are defined as:
+/// \f[ W_k = e^{-i \frac{2\pi k}{N}}, \quad k = 0, 1, \dots, \frac{N}{2}-1. \f]
+///
+/// Only \f$ N/2 \f$ factors are stored due to the symmetry properties of the FFT.
+/// Precomputing these factors significantly improves the performance of the FFT by avoiding
+/// repeated calls to expensive transcendental functions during the transform computation.
+///
+/// @note The FFT length \f$ N \f$ should ideally be a power of 2 to work with radix-2 FFT algorithms.
 class TwiddleFactors {
  private:
-    /// The pre-computed twiddle factors.
+    /// @brief Pre-computed twiddle factors stored as a vector of std::complex<float>.
+    ///
+    /// Only half the number of factors are stored because the FFT algorithm can exploit
+    /// the symmetry in the complex exponentials, where the full set for an N-point FFT is:
+    /// \f[ \{ W_0, W_1, \ldots, W_{(N/2)-1} \} \f]
     std::vector<std::complex<float>> factors;
 
  public:
-    /// @brief Initialize a twiddle factor set for an N-point FFT.
-    /// @param n The length of the FFT.
-    explicit TwiddleFactors(const size_t& n) { resize(n); }
+    /// @brief Constructs a TwiddleFactors object for an N-point FFT.
+    ///
+    /// @param n The length of the FFT. Ideally, n should be a power of 2.
+    ///
+    /// The constructor precomputes the twiddle factors by calling the resize() method.
+    explicit TwiddleFactors(const size_t& n) {
+        resize(n);
+    }
 
-    /// @brief Resize the twiddle factor buffer.
-    /// @param n The length of the FFT.
+    /// @brief Resizes and precomputes the twiddle factor buffer for a new FFT length.
+    ///
+    /// @param n The new FFT length. Ideally, n should be a power of 2.
+    ///
+    /// This method performs the following steps:
+    /// 1. Resizes the internal vector to hold \f$ N/2 \f$ twiddle factors.
+    /// 2. Computes the constant multiplier \f$ e^{-i \frac{2\pi}{N}} \f$.
+    /// 3. Uses an iterative approach to compute each factor:
+    ///    \f[ \text{current} = \text{multiplier}^i \quad \text{for} \quad i = 0, 1, \ldots, \frac{N}{2}-1, \f]
+    ///    where \f$ \text{current} \f$ is initially set to 1.
     inline void resize(const size_t& n) {
-        factors.resize(n >> 1);  // bit-wise "/ 2"
-        // NOTE: This old implementation results in many calls to exp.
-        // for (size_t i = 0; i < factors.size(); ++i)
-        //     factors[i] = std::exp(std::complex<float>(0, -2.0f * M_PI * i / n));
-        // Pre-compute the multiplier: e^{-i * 2pi/n}.
+        // Resize the vector to store half the number of FFT points.
+        factors.resize(n >> 1);  // Equivalent to factors.resize(n / 2)
+        // Calculate the angular step theta = -2*pi/n.
         const float theta = -2.0f * M_PI / n;
+        // Compute the multiplier: e^{-i 2pi/n} = cos(theta) + i*sin(theta)
         const std::complex<float> multiplier(std::cos(theta), std::sin(theta));
+        // Initialize the first twiddle factor to 1 (i.e., e^{0}).
         std::complex<float> current(1.0f, 0.0f);
+        // Iteratively compute and store each twiddle factor.
         for (size_t i = 0; i < factors.size(); ++i) {
             factors[i] = current;
             current *= multiplier;
         }
     }
 
-    /// @brief Return the length of the FFT.
+    /// @brief Returns the FFT size corresponding to the stored twiddle factors.
+    ///
+    /// @return The FFT length \f$ N \f$, computed as twice the number of stored factors.
+    ///
+    /// Since only \f$ N/2 \f$ twiddle factors are stored (to leverage symmetry), this method
+    /// returns \f$ N = 2 \times (\text{number of stored factors}) \f$.
     inline size_t size() const {
-        return factors.size() << 1;  // bit-wise "* 2"
+        return factors.size() << 1;  // Equivalent to factors.size() * 2.
     }
 
-    /// @brief Return the twiddle factor at the given index.
-    /// @param i The index of the twiddle factor to access.
-    /// @returns The twiddle factor at the given index.
-    /// @details
-    /// Twiddle factors are computed as
-    /// \f$W_k = e^{\frac{-i * 2 * \pi * k}{N}}\f$
+    /// @brief Accesses a pre-computed twiddle factor by its index.
+    ///
+    /// @param i The index of the desired twiddle factor (0-based index).
+    /// @return A constant reference to the \f$ i \f$th twiddle factor.
+    ///
+    /// The accessed twiddle factor is given by:
+    /// \f[ W_i = e^{-i \frac{2\pi i}{N}}, \f]
+    /// where \f$ N \f$ is the FFT length (returned by size()). It is important to note
+    /// that valid indices range from 0 to \f$ \frac{N}{2} - 1 \f$. Accessing an index outside
+    /// this range leads to undefined behavior.
     const std::complex<float>& operator[](const size_t& i) const {
         return factors[i];
     }
