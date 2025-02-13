@@ -19,11 +19,13 @@
 #ifndef DSP_MATH_FFT_HPP
 #define DSP_MATH_FFT_HPP
 
-#include <stdlib.h>
-#include <algorithm>
 #include <cmath>
-#include <complex>
+#include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <cstring>  // memcpy
+#include <algorithm>
+#include <complex>
 #include <limits>
 #include <vector>
 #include "constants.hpp"
@@ -381,24 +383,49 @@ class OnTheFlyFFT {
     }
 };
 
-/// @brief An RFFT computation utility based on pre-computed Twiddle factors.
+/// @brief An RFFT computation utility based on pre-computed twiddle factors.
+///
+/// The OnTheFlyRFFT class implements a Real FFT (RFFT) by leveraging an underlying
+/// complex FFT of half the size (N/2) and pre-computed twiddle factors. This approach
+/// packs the real input samples into a complex array, computes the FFT on the packed data,
+/// and then reconstructs the full N-point FFT using the symmetry properties of real signals.
+///
+/// @note The RFFT length (N) must be a power of 2.
 class OnTheFlyRFFT {
  private:
-    /// @brief The N/2 point FFT.
+    /// @brief The underlying N/2-point FFT used for the RFFT computation.
+    ///
+    /// The complex FFT is applied on a packed representation of the real input,
+    /// reducing the computation by half while leveraging the symmetry in real signals.
     OnTheFlyFFT fft;
-    /// @brief Pre-computed twiddle factors for reconstructing an N-point FFT.
+
+    /// @brief Pre-computed twiddle factors used for reconstructing the full N-point FFT.
+    ///
+    /// These twiddle factors, defined as \f$ W_k = e^{-j\frac{2\pi k}{N}} \f$, are used in the
+    /// reconstruction process to combine the FFT results of the even and odd parts of the signal.
     TwiddleFactors twiddles;
 
  public:
-    /// @brief The coefficients to compute on-the-fly
+    /// @brief The output coefficients buffer containing the final FFT result.
+    ///
+    /// This vector holds the frequency-domain representation (complex spectrum) of the real input
+    /// signal after the reconstruction process. Its size is N.
     std::vector<std::complex<float>> coefficients;
 
-    /// @brief Initialize the RFFT
-    /// @param n The length of the RFFT.
+    /// @brief Constructs an OnTheFlyRFFT object for an N-point RFFT.
+    ///
+    /// @param n The length of the RFFT. Must be a power of 2.
+    ///
+    /// The constructor initializes the underlying N/2-point FFT, the twiddle factors for
+    /// reconstruction, and the output coefficients buffer.
     OnTheFlyRFFT(const size_t& n) : fft(n >> 1), twiddles(n), coefficients(n) { }
 
-    /// @brief Resize the RFFT.
-    /// @param n The length of the RFFT.
+    /// @brief Resizes and reinitializes the RFFT computation structures.
+    ///
+    /// @param n The new length of the RFFT. Must be a power of 2.
+    ///
+    /// This method resizes the underlying FFT, twiddle factors, and the coefficients buffer.
+    /// It also resets the coefficients to zero.
     inline void resize(const size_t& n) {
         fft.resize(n >> 1);
         twiddles.resize(n);
@@ -406,32 +433,49 @@ class OnTheFlyRFFT {
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
-    /// @brief Return the length of the RFFT.
+    /// @brief Returns the length of the RFFT.
+    ///
+    /// @return The number of samples (N) in the RFFT.
     inline size_t size() const {
         return coefficients.size();
     }
 
-    /// @brief Return the total number of steps needed to compute the FFT.
-    inline size_t get_total_steps() const { return fft.get_total_steps(); }
+    /// @brief Returns the total number of steps required to compute the underlying FFT.
+    ///
+    /// @return The total number of butterfly operations needed by the underlying FFT.
+    inline size_t get_total_steps() const {
+        return fft.get_total_steps();
+    }
 
-    /// @brief Buffer input samples for on-the-fly computation.
-    /// @param samples The sample buffer of length N.
-    /// @param window The window function to use before computing the DFT.
+    /// @brief Buffers input samples and prepares the RFFT for on-the-fly computation.
+    ///
+    /// @param samples A pointer to the real input sample buffer of length N.
+    /// @param window A vector representing the window function to be applied to the input samples.
+    ///
+    /// This method performs the following operations:
+    /// 1. Packs the real input samples into a temporary complex array. Two consecutive samples
+    ///    (one for the real part and one for the imaginary part) form a complex number.
+    /// 2. Applies the provided window function to the samples during the packing process.
+    /// 3. Buffers the packed data into the underlying FFT using a unity window since the window
+    ///    has already been applied.
     inline void buffer(const float* samples, const std::vector<float>& window) {
-        const size_t M = size() >> 1;
-        // Create a temporary packed array.
+        const size_t M = size() >> 1;  // M = N/2, the size of the underlying FFT.
+        // Create a temporary array to pack the samples into complex numbers.
         std::vector<std::complex<float>> packed(M);
         for (size_t k = 0; k < M; ++k) {
             float r = samples[2 * k]     * window[2 * k];
             float i = samples[2 * k + 1] * window[2 * k + 1];
             packed[k] = std::complex<float>(r, i);
         }
-        // Since the window has already been applied, pass a unity window.
+        // Since the window function has been applied during packing, use a unity window for FFT.
         std::vector<float> unity(M, 1.0f);
         fft.buffer(packed.data(), unity);
     }
 
-    /// @brief Perform a single step of the FFT computation.
+    /// @brief Performs a single step of the RFFT computation.
+    ///
+    /// This method advances the underlying FFT computation by one butterfly operation. Once the
+    /// FFT computation is complete, it finalizes the reconstruction of the full FFT spectrum.
     inline void step() {
         if (fft.is_done_computing())
             return;
@@ -440,32 +484,43 @@ class OnTheFlyRFFT {
             finalize();
     }
 
-    /// @brief Perform a batch of steps targeting a known hop-rate.
+    /// @brief Performs a batch of FFT steps targeting a specified hop length.
+    ///
     /// @param hop_length The number of samples between FFT computations.
-    /// @details
-    /// This call to `step` performs the number of steps required to compute
-    /// the FFT in `hop_length` total samples.
+    ///
+    /// This method calculates the number of FFT steps to perform based on the hop length and then
+    /// iteratively calls the single-step method, allowing the RFFT computation to be distributed
+    /// across multiple processing intervals.
     inline void step(const size_t& hop_length) {
         const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < num_steps; i++) step();
+        for (size_t i = 0; i < num_steps; i++) {
+            step();
+        }
     }
 
-    /// @brief Return a flag determining whether the computation is complete.
-    /// @returns True if the FFT is done computing, False otherwise.
+    /// @brief Checks whether the RFFT computation has been completed.
+    ///
+    /// @return True if the underlying FFT has been fully computed and the RFFT reconstruction
+    ///         is complete; false otherwise.
     inline bool is_done_computing() const {
         return fft.is_done_computing();
     }
 
-    /// @brief Finalize interleaved N/2-point FFT coefficients.
+    /// @brief Finalizes the reconstruction of the N-point FFT from the underlying N/2-point FFT.
+    ///
+    /// This method reconstructs the full FFT coefficients for a real input signal by combining
+    /// the results from the underlying complex FFT with pre-computed twiddle factors.
+    /// It handles the special cases of the DC and Nyquist bins separately and reconstructs the
+    /// remaining bins using symmetry properties.
     inline void finalize() {
-        const auto N = size();    // full FFT length.
-        const size_t M = N >> 1;  // M = N/2.
-        // Handle DC and Nyquist bins.
+        const auto N = size();    // Full FFT length (N)
+        const size_t M = N >> 1;  // Half FFT length (M = N/2)
+        // Handle DC (k = 0) and Nyquist (k = M) bins separately.
         float re0 = fft.coefficients[0].real();
         float im0 = fft.coefficients[0].imag();
         coefficients[0] = std::complex<float>(re0 + im0, 0.0f);
         coefficients[M] = std::complex<float>(re0 - im0, 0.0f);
-        // Reconstruct bins 1 .. M-1.
+        // Reconstruct FFT bins for 1 <= k < M.
         for (size_t k = 1; k < M; k++) {
             std::complex<float> A = fft.coefficients[k];
             std::complex<float> B = std::conj(fft.coefficients[M - k]);
