@@ -394,20 +394,25 @@ class OnTheFlyRFFT {
     TwiddleFactors twiddles;
 
  public:
+    /// @brief The coefficients to compute on-the-fly
+    std::vector<std::complex<float>> coefficients;
+
     /// @brief Initialize the RFFT
     /// @param n The length of the RFFT.
-    OnTheFlyRFFT(const size_t& n) : fft(n >> 1), twiddles(n) { }
+    OnTheFlyRFFT(const size_t& n) : fft(n >> 1), twiddles(n), coefficients(n) { }
 
     /// @brief Resize the RFFT.
     /// @param n The length of the RFFT.
     inline void resize(const size_t& n) {
         fft.resize(n >> 1);
         twiddles.resize(n);
+        coefficients.resize(n);
+        std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
     /// @brief Return the length of the RFFT.
     inline size_t size() const {
-        return twiddles.size();
+        return coefficients.size();
     }
 
     /// @brief Return the total number of steps needed to compute the FFT.
@@ -452,101 +457,68 @@ class OnTheFlyRFFT {
         return fft.is_done_computing();
     }
 
-    // /// @brief Finalize interleaved N/2-point FFT coefficients.
-    // inline void finalize() {
-    //     // Determine the length of the FFT, i.e., N.
-    //     const auto N = size();
-    //
-    //     std::vector<std::complex<float>> output(N);
-    //
-    //     // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
-    //     // Typically:
-    //     //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
-    //     //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
-    //     float re0 = fft.coefficients[0].real();
-    //     float im0 = fft.coefficients[0].imag();
-    //
-    //     output[0]          = std::complex<float>(re0 + im0, 0.0f);
-    //     output[N / 2]      = std::complex<float>(re0 - im0, 0.0f);
-    //
-    //     // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
-    //     for (size_t k = 1; k < N / 2; k++) {
-    //         // Let Xk = interleaved[k]
-    //         // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
-    //         std::complex<float> Xk  = fft.coefficients[k];
-    //         std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
-    //
-    //         // Twiddle factor for k
-    //         auto Wk = twiddles[k];
-    //
-    //         // The typical RFFT combination:
-    //         // output[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
-    //         // output[N-k] = conj(output[k])
-    //
-    //         auto half = 0.5f;
-    //
-    //         auto sum     = Xk + XNk;     // (Xk + XNk)
-    //         auto diff    = Xk - XNk;     // (Xk - XNk)
-    //         // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
-    //         // but it's easier to do Wk * ( diff * -i ).
-    //         // In many references, you'll see a re-labeling that Wk has also a j factor built in.
-    //
-    //         // This is one place where you have to be careful about
-    //         // how you incorporate the "e^{-j 2 pi k / N}" factor.
-    //
-    //         auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
-    //         auto twisted = Wk * magic;                                // then by the twiddle
-    //
-    //         output[N / 2 - k]     = half * (sum - twisted);
-    //         output[N / 2 + k]     = std::conj(output[k]);
-    //     }
-    // }
-
     /// @brief Finalize interleaved N/2-point FFT coefficients.
     inline void finalize() {
-        // Determine the length of the FFT, i.e., N.
-        const auto N = size();
+        // // Determine the length of the FFT, i.e., N.
+        // const auto N = size();
+        //
+        // // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
+        // // Typically:
+        // //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
+        // //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
+        // float re0 = fft.coefficients[0].real();
+        // float im0 = fft.coefficients[0].imag();
+        //
+        // coefficients[0]     = std::complex<float>(re0 + im0, 0.0f);
+        // coefficients[N / 2] = std::complex<float>(re0 - im0, 0.0f);
+        //
+        // // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
+        // for (size_t k = 1; k < N / 2; k++) {
+        //     // Let Xk = interleaved[k]
+        //     // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
+        //     std::complex<float> Xk  = fft.coefficients[k];
+        //     std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
+        //
+        //     // Twiddle factor for k
+        //     auto Wk = twiddles[k];
+        //
+        //     // The typical RFFT combination:
+        //     // coefficients[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
+        //     // coefficients[N-k] = conj(coefficients[k])
+        //
+        //     auto half = 0.5f;
+        //
+        //     auto sum     = Xk + XNk;     // (Xk + XNk)
+        //     auto diff    = Xk - XNk;     // (Xk - XNk)
+        //     // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
+        //     // but it's easier to do Wk * ( diff * -i ).
+        //     // In many references, you'll see a re-labeling that Wk has also a j factor built in.
+        //
+        //     // This is one place where you have to be careful about
+        //     // how you incorporate the "e^{-j 2 pi k / N}" factor.
+        //
+        //     auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
+        //     auto twisted = Wk * magic;                                // then by the twiddle
+        //
+        //     coefficients[N / 2 - k] = half * (sum - twisted);
+        //     coefficients[N / 2 + k] = std::conj(coefficients[k]);
+        // }
 
-        // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
-        // Typically:
-        //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
-        //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
+        const auto N = size();       // full FFT length.
+        const size_t M = N >> 1;       // M = N/2.
+        // Handle DC and Nyquist bins.
         float re0 = fft.coefficients[0].real();
         float im0 = fft.coefficients[0].imag();
-
-        fft.coefficients[0]     = std::complex<float>(re0 + im0, 0.0f);
-        fft.coefficients[N / 2] = std::complex<float>(re0 - im0, 0.0f);
-
-        // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
-        for (size_t k = 1; k < N / 2; k++) {
-            // Let Xk = interleaved[k]
-            // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
-            std::complex<float> Xk  = fft.coefficients[k];
-            std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
-
-            // Twiddle factor for k
-            auto Wk = twiddles[k];
-
-            // The typical RFFT combination:
-            // output[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
-            // output[N-k] = conj(output[k])
-
-            auto half = 0.5f;
-
-            auto sum     = Xk + XNk;     // (Xk + XNk)
-            auto diff    = Xk - XNk;     // (Xk - XNk)
-            // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
-            // but it's easier to do Wk * ( diff * -i ).
-            // In many references, you'll see a re-labeling that Wk has also a j factor built in.
-
-            // This is one place where you have to be careful about
-            // how you incorporate the "e^{-j 2 pi k / N}" factor.
-
-            auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
-            auto twisted = Wk * magic;                                // then by the twiddle
-
-            fft.coefficients[N / 2 - k] = half * (sum - twisted);
-            fft.coefficients[N / 2 + k] = std::conj(fft.coefficients[k]);
+        coefficients[0] = std::complex<float>(re0 + im0, 0.0f);
+        coefficients[M] = std::complex<float>(re0 - im0, 0.0f);
+        // Reconstruct bins 1 .. M-1.
+        for (size_t k = 1; k < M; k++) {
+            std::complex<float> A = fft.coefficients[k];
+            std::complex<float> B = std::conj(fft.coefficients[M - k]);
+            std::complex<float> Wk = twiddles[k]; // Wk = exp(-j*2pi*k/N)
+            std::complex<float> Xk = 0.5f * (A + B - std::complex<float>(0, 1) * Wk * (A - B));
+            coefficients[k]     = Xk;
+            coefficients[N - k] = std::conj(Xk);
         }
     }
 };

@@ -14,15 +14,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// TODO: Real-valued FFT to reduce computation by half.
-//       Because we're taking an FFT of a strictly real-valued signal, we
-//       can leverage the RFFT to reduce computational burden. I.e., instead
-//       of thinking of the real signal as a complex signal with 0 imaginary
-//       component, we can put the even coefficients in the real spot and odd
-//       coefficients in the imaginary spot, take an FFT with N/2, and combine
-//       the real and imaginary components back into an FFT with N/2 + 1
-//       coefficients, i.e., emitting the reflected coefficients up to N.
-
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -269,13 +260,13 @@ struct SpectrumAnalyzer : rack::Module {
     float sample_rate = 0.f;
 
     /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<std::complex<float>> delay[NUM_CHANNELS];
+    Math::ContiguousCircularBuffer<float> delay[NUM_CHANNELS];
 
     /// The window function for windowing the FFT.
     Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
+    Math::OnTheFlyRFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
 
     /// A copy of the low-pass filtered coefficients.
     Math::DFTCoefficients filtered_coefficients[NUM_CHANNELS];
@@ -626,7 +617,7 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_window() {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
-        window_function.set_window(get_window_function(), N, false, true);
+        window_function.set_window(get_window_function(), N >> 1, false, true);
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             if (ffts[i].size() != N)
