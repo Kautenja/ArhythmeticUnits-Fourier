@@ -210,14 +210,13 @@ class TwiddleFactors {
     /// @brief Resize the twiddle factor buffer.
     /// @param n The length of the FFT.
     inline void resize(const size_t& n) {
-        factors.resize(n / 2);
-        for (size_t i = 0; i < n / 2; ++i) {
+        factors.resize(n >> 1);  // n / 2
+        for (size_t i = 0; i < factors.size(); ++i)
             factors[i] = std::exp(std::complex<float>(0, -2.0f * M_PI * i / n));
-        }
     }
 
     /// @brief Return the length of the FFT.
-    inline size_t size() const { return 2 * factors.size(); }
+    inline size_t size() const { return factors.size() << 1; }
 
     /// @brief Return the twiddle factor at the given index.
     /// @param i The index of the twiddle factor to access.
