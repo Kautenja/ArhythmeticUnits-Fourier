@@ -121,24 +121,56 @@ class TwiddleFactors {
 };
 
 /// @brief Pre-computed bit-reversal table for radix-2 FFT.
+///
+/// This class precomputes a table of bit-reversed indices for an FFT of length \f$ N \f$.
+/// Bit-reversal is a crucial step in the radix-2 FFT algorithm, where the input data is
+/// reordered according to the bit-reversed order of their indices. This reordering allows
+/// the FFT algorithm to access data in a cache-friendly pattern and perform the butterfly
+/// computations efficiently.
+///
+/// For an index \f$ i \f$ (with \f$ 0 \leq i < N \f$), the bit-reversed index is obtained by
+/// reversing the binary representation of \f$ i \f$. For example, if \f$ N = 8 \f$ (i.e., using 3 bits),
+/// the bit reversal of \f$ i = 3 \f$ (binary \f$ 011 \f$) is \f$ 110 \f$ (binary), which is 6 in decimal.
+///
+/// @note It is assumed that \f$ N \f$ is a power of 2.
 class BitReversalTable {
  private:
-    /// The pre-computed bit-reversal table.
+    /// @brief The pre-computed bit-reversal table.
+    ///
+    /// Each entry in this vector holds the bit-reversed index corresponding to its position.
     std::vector<size_t> table;
 
  public:
-    /// @brief Initialize a bit-reversal table for an N-point FFT.
-    /// @param n The length of the FFT.
-    explicit BitReversalTable(const size_t& n) { resize(n); }
+    /// @brief Constructs a BitReversalTable for an \f$ N \f$-point FFT.
+    ///
+    /// @param n The length of the FFT. It is assumed that \f$ n \f$ is a power of 2.
+    ///
+    /// The constructor precomputes the bit-reversal table by invoking the resize() method.
+    explicit BitReversalTable(const size_t& n) {
+        resize(n);
+    }
 
-    /// @brief Resize the bit-reversal table.
-    /// @param n The length of the FFT.
+    /// @brief Resizes and precomputes the bit-reversal table for an \f$ N \f$-point FFT.
+    ///
+    /// @param n The new FFT length. It is assumed that \f$ n \f$ is a power of 2.
+    ///
+    /// This method performs the following steps:
+    /// 1. Resizes the internal vector to hold \f$ n \f$ entries.
+    /// 2. Computes the number of bits required to represent the indices, which is
+    ///    \f$ \log_2(n) \f$.
+    /// 3. For each index \f$ i \f$ in the range [0, \f$ n-1 \f$]:
+    ///    - Initializes a temporary variable \f$ y \f$ to 0.
+    ///    - Iteratively extracts the least significant bit of \f$ i \f$ and
+    ///      appends it to \f$ y \f$, effectively reversing the bit order.
+    ///    - Stores the computed bit-reversed value in the table.
     inline void resize(const size_t& n) {
         table.resize(n);
+        // Determine the number of bits required to represent indices 0 to n-1.
         size_t log2n = static_cast<size_t>(log2f(n));
         for (size_t i = 0; i < n; ++i) {
             size_t y = 0;
             size_t x = i;
+            // Reverse the bits of i.
             for (size_t j = 0; j < log2n; ++j) {
                 y = (y << 1) | (x & 1);
                 x >>= 1;
@@ -147,12 +179,18 @@ class BitReversalTable {
         }
     }
 
-    /// @brief Return the length of the FFT.
+    /// @brief Returns the size of the FFT (i.e., the number of indices in the table).
+    ///
+    /// @return The FFT length, which is also the number of entries in the bit-reversal table.
     inline size_t size() const { return table.size(); }
 
-    /// @brief Return the bit-reversal index at the given index.
-    /// @param idx The index of the bit-reversal index to access.
-    /// @returns The bit-reversal index at the given index.
+    /// @brief Accesses the bit-reversed index at a given position.
+    ///
+    /// @param idx The original index (0-based) for which to retrieve the bit-reversed value.
+    /// @return A constant reference to the bit-reversed index corresponding to \f$ idx \f$.
+    ///
+    /// The returned value is the bit-reversed representation of \f$ idx \f$ for an FFT of
+    /// the current size.
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
 
