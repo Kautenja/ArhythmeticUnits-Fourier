@@ -422,25 +422,16 @@ class OnTheFlyRFFT {
     /// @param samples The sample buffer of length N.
     /// @param window The window function to use before computing the DFT.
     inline void buffer(const float* samples, const std::vector<float>& window) {
-        // // Interleave the even and odd components using a clever casting based
-        // // approach. If we can guarantee that even and odd tuples are evenly
-        // // spaced and contiguous, then we can simply cast each (even,odd)
-        // // tuple directly to a complex float. This reduces the complexity of
-        // // interleaving from O(N) to O(1) and encumbers no memory overhead.
-        // auto interleaved = reinterpret_cast<const std::complex<float>*>(samples);
-        // // Now buffer the interleaved values in an N/2-point FFT.
-        // fft.buffer(interleaved, window);
-        const size_t N = size();
-        const size_t half = N >> 1;
+        const size_t M = size() >> 1;
         // Create a temporary packed array.
-        std::vector<std::complex<float>> packed(half);
-        for (size_t k = 0; k < half; ++k) {
+        std::vector<std::complex<float>> packed(M);
+        for (size_t k = 0; k < M; ++k) {
             float r = samples[2 * k]     * window[2 * k];
             float i = samples[2 * k + 1] * window[2 * k + 1];
             packed[k] = std::complex<float>(r, i);
         }
         // Since the window has already been applied, pass a unity window.
-        std::vector<float> unity(half, 1.0f);
+        std::vector<float> unity(M, 1.0f);
         fft.buffer(packed.data(), unity);
     }
 
