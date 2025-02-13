@@ -637,7 +637,6 @@ inline Math::DFTCoefficients smooth_fft(const Math::DFTCoefficients &fft_coeffs,
     return smoothed;
 }
 
-
 }  // namespace Math
 
 #endif  // DSP_MATH_FFT_HPP
