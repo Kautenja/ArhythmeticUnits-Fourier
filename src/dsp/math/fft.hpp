@@ -38,36 +38,6 @@ typedef std::vector<std::complex<float>> DFTCoefficients;
 /// A type for STFT coefficient matrices.
 typedef std::vector<DFTCoefficients> STFTCoefficients;
 
-/// @brief Compute the Fast Fourier Transform (FTT) in-place.
-///
-/// @tparam N the length of the input sequence.
-/// @param input the input vector to compute the FFT of, \f$x[n]\f$
-/// @param window a windowing function to use when calculating coefficients.
-///
-template<int N>
-void fft_(
-    std::vector<std::complex<float>>& input,
-    const Window::Function& window = Window::Function::Boxcar
-) {
-    static_assert((N & (N - 1)) == 0, "N must be a power of 2");
-    std::vector<std::complex<float>> even(N / 2), odds(N / 2);
-    for (int i = 0; i < N / 2; ++i) {
-        even[i] = Window::window<float>(window, 2*i, N, false) * input[2*i] / Window::coherent_gain(window);
-        odds[i] = Window::window<float>(window, 2*i+1, N, false) * input[2*i+1] / Window::coherent_gain(window);
-    }
-    fft_<N / 2>(even);
-    fft_<N / 2>(odds);
-    for (int i = 0; i < N / 2; ++i) {
-        std::complex<float> w = exp(std::complex<float>(0, -2 * pi<float>() * i / N)) * odds[i];
-        input[i] = even[i] + w;
-        input[i + N / 2] = even[i] - w;
-    }
-}
-
-// The base case of a 1-point FFT is a NoOp.
-template<>
-inline void fft_<1>(std::vector<std::complex<float>>&, const Window::Function&) { }
-
 /// @brief Pre-computed twiddle factors for radix-2 FFT.
 class TwiddleFactors {
  private:

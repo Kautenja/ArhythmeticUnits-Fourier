@@ -40,6 +40,36 @@
 #include "./dsp/trigger.hpp"
 #include "./plugin.hpp"
 
+/// @brief Compute the Fast Fourier Transform (FTT) in-place.
+///
+/// @tparam N the length of the input sequence.
+/// @param input the input vector to compute the FFT of, \f$x[n]\f$
+/// @param window a windowing function to use when calculating coefficients.
+///
+template<int N>
+void fft_(
+    std::vector<std::complex<float>>& input,
+    const Math::Window::Function& window = Math::Window::Function::Boxcar
+) {
+    static_assert((N & (N - 1)) == 0, "N must be a power of 2");
+    std::vector<std::complex<float>> even(N / 2), odds(N / 2);
+    for (int i = 0; i < N / 2; ++i) {
+        even[i] = Math::Window::window<float>(window, 2*i, N, false) * input[2*i] / Math::Window::coherent_gain(window);
+        odds[i] = Math::Window::window<float>(window, 2*i+1, N, false) * input[2*i+1] / Math::Window::coherent_gain(window);
+    }
+    fft_<N / 2>(even);
+    fft_<N / 2>(odds);
+    for (int i = 0; i < N / 2; ++i) {
+        std::complex<float> w = exp(std::complex<float>(0, -2 * Math::pi<float>() * i / N)) * odds[i];
+        input[i] = even[i] + w;
+        input[i + N / 2] = even[i] - w;
+    }
+}
+
+// The base case of a 1-point FFT is a NoOp.
+template<>
+inline void fft_<1>(std::vector<std::complex<float>>&, const Math::Window::Function&) { }
+
 /// @brief The options for frequency scales on the display.
 enum class FrequencyScale {
     /// Linear frequency rendering along a fixed offset.
@@ -189,7 +219,7 @@ struct Spectrogram : rack::Module {
         const float gain = params[PARAM_INPUT_GAIN].getValue();
         if (dft_divider.process() && is_running) {
             for (int i = 0; i < N_FFT; i++) coefficients[hop_index][i] = gain * delay.at(i);
-            Math::fft_<N_FFT>(coefficients[hop_index], window);
+            fft_<N_FFT>(coefficients[hop_index], window);
             hop_index = (hop_index + 1) % N_STFT;
         }
         // set lights
