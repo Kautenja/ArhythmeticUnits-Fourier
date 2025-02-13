@@ -196,7 +196,7 @@ inline void fft_inplace(
 
 
 
-/// @brief Precomputed twiddle factors for radix-2 FFT.
+/// @brief Pre-computed twiddle factors for radix-2 FFT.
 class TwiddleFactors {
  private:
     /// The pre-computed twiddle factors.
