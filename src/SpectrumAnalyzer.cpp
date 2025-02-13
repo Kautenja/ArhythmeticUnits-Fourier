@@ -617,7 +617,7 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_window() {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
-        window_function.set_window(get_window_function(), N >> 1, false, true);
+        window_function.set_window(get_window_function(), N, false, true);
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             if (ffts[i].size() != N)

@@ -422,14 +422,26 @@ class OnTheFlyRFFT {
     /// @param samples The sample buffer of length N.
     /// @param window The window function to use before computing the DFT.
     inline void buffer(const float* samples, const std::vector<float>& window) {
-        // Interleave the even and odd components using a clever casting based
-        // approach. If we can guarantee that even and odd tuples are evenly
-        // spaced and contiguous, then we can simply cast each (even,odd)
-        // tuple directly to a complex float. This reduces the complexity of
-        // interleaving from O(N) to O(1) and encumbers no memory overhead.
-        auto interleaved = reinterpret_cast<const std::complex<float>*>(samples);
-        // Now buffer the interleaved values in an N/2-point FFT.
-        fft.buffer(interleaved, window);
+        // // Interleave the even and odd components using a clever casting based
+        // // approach. If we can guarantee that even and odd tuples are evenly
+        // // spaced and contiguous, then we can simply cast each (even,odd)
+        // // tuple directly to a complex float. This reduces the complexity of
+        // // interleaving from O(N) to O(1) and encumbers no memory overhead.
+        // auto interleaved = reinterpret_cast<const std::complex<float>*>(samples);
+        // // Now buffer the interleaved values in an N/2-point FFT.
+        // fft.buffer(interleaved, window);
+        const size_t N = size();
+        const size_t half = N >> 1;
+        // Create a temporary packed array.
+        std::vector<std::complex<float>> packed(half);
+        for (size_t k = 0; k < half; ++k) {
+            float r = samples[2 * k]     * window[2 * k];
+            float i = samples[2 * k + 1] * window[2 * k + 1];
+            packed[k] = std::complex<float>(r, i);
+        }
+        // Since the window has already been applied, pass a unity window.
+        std::vector<float> unity(half, 1.0f);
+        fft.buffer(packed.data(), unity);
     }
 
     /// @brief Perform a single step of the FFT computation.
@@ -459,51 +471,6 @@ class OnTheFlyRFFT {
 
     /// @brief Finalize interleaved N/2-point FFT coefficients.
     inline void finalize() {
-        // // Determine the length of the FFT, i.e., N.
-        // const auto N = size();
-        //
-        // // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
-        // // Typically:
-        // //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
-        // //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
-        // float re0 = fft.coefficients[0].real();
-        // float im0 = fft.coefficients[0].imag();
-        //
-        // coefficients[0]     = std::complex<float>(re0 + im0, 0.0f);
-        // coefficients[N / 2] = std::complex<float>(re0 - im0, 0.0f);
-        //
-        // // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
-        // for (size_t k = 1; k < N / 2; k++) {
-        //     // Let Xk = interleaved[k]
-        //     // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
-        //     std::complex<float> Xk  = fft.coefficients[k];
-        //     std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
-        //
-        //     // Twiddle factor for k
-        //     auto Wk = twiddles[k];
-        //
-        //     // The typical RFFT combination:
-        //     // coefficients[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
-        //     // coefficients[N-k] = conj(coefficients[k])
-        //
-        //     auto half = 0.5f;
-        //
-        //     auto sum     = Xk + XNk;     // (Xk + XNk)
-        //     auto diff    = Xk - XNk;     // (Xk - XNk)
-        //     // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
-        //     // but it's easier to do Wk * ( diff * -i ).
-        //     // In many references, you'll see a re-labeling that Wk has also a j factor built in.
-        //
-        //     // This is one place where you have to be careful about
-        //     // how you incorporate the "e^{-j 2 pi k / N}" factor.
-        //
-        //     auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
-        //     auto twisted = Wk * magic;                                // then by the twiddle
-        //
-        //     coefficients[N / 2 - k] = half * (sum - twisted);
-        //     coefficients[N / 2 + k] = std::conj(coefficients[k]);
-        // }
-
         const auto N = size();    // full FFT length.
         const size_t M = N >> 1;  // M = N/2.
         // Handle DC and Nyquist bins.
