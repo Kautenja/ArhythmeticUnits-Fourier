@@ -120,7 +120,7 @@ class TwiddleFactors {
     }
 };
 
-/// @brief Precomputed bit-reversal table for radix-2 FFT.
+/// @brief Pre-computed bit-reversal table for radix-2 FFT.
 class BitReversalTable {
  private:
     /// The pre-computed bit-reversal table.
@@ -151,9 +151,9 @@ class BitReversalTable {
     inline size_t size() const { return table.size(); }
 
     /// @brief Return the bit-reversal index at the given index.
-    /// @param i The index of the bit-reversal index to access.
+    /// @param idx The index of the bit-reversal index to access.
     /// @returns The bit-reversal index at the given index.
-    const size_t& operator[](size_t i) const { return table[i]; }
+    const size_t& operator[](size_t idx) const { return table[idx]; }
 };
 
 /// @brief An FFT computation utility based on pre-computed Twiddle factors.
