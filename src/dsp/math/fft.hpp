@@ -194,33 +194,81 @@ class BitReversalTable {
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
 
-/// @brief An FFT computation utility based on pre-computed Twiddle factors.
+/// @brief An FFT computation utility based on pre-computed twiddle factors.
+///
+/// The OnTheFlyFFT class provides an efficient implementation of the radix-2 Fast Fourier Transform (FFT)
+/// using pre-computed bit-reversal indices and twiddle factors. It is designed for on-the-fly computation,
+/// allowing the FFT to be computed incrementally (step-by-step) rather than in one complete pass. This is
+/// particularly useful in streaming or real-time applications.
+///
+/// The class encapsulates the state required for the Cooley-Tukey FFT algorithm, including:
+/// - A pre-computed bit-reversal table to reorder the input samples.
+/// - Pre-computed twiddle factors for the butterfly computations.
+/// - Internal state variables (`step_`, `group`, and `pair`) to manage the iterative FFT processing.
+/// - An internal coefficients buffer that holds both the input samples (after windowing and bit-reversal)
+///   and the intermediate/final FFT results.
+///
+/// @note The FFT length (number of samples) must be a power of 2.
 class OnTheFlyFFT {
  private:
     /// @brief Pre-computed bit-reversal table for an N-point FFT.
+    ///
+    /// This table is used to rearrange the input samples into bit-reversed order prior to
+    /// performing the FFT computation.
     BitReversalTable bit_reversal;
+
     /// @brief Pre-computed twiddle factors for an N-point FFT.
+    ///
+    /// These are the complex coefficients used in the butterfly operations of the FFT.
     TwiddleFactors twiddles;
 
-    /// The current step of the Cooley-Tukey algorithm.
+    /// @brief The current step size in the Cooley-Tukey algorithm.
+    ///
+    /// Initially set to 2, this variable doubles after completing each stage of the FFT.
     size_t step_ = 2;
-    /// The current group of the Cooley-Tukey algorithm.
+
+    /// @brief The current group offset within the coefficients buffer.
+    ///
+    /// Groups define the starting index for a set of butterfly computations in the current stage.
     size_t group = 0;
-    /// The current pair of the Cooley-Tukey algorithm.
+
+    /// @brief The current pair offset within a group.
+    ///
+    /// This index tracks the position within a group for the current butterfly operation.
     size_t pair = 0;
-    /// The total number of steps needed to compute the FFT.
+
+    /// @brief The total number of steps needed to complete the FFT computation.
+    ///
+    /// Computed as:
+    /// \f[
+    /// \text{total\_steps} = \frac{N}{2} \times \log_2(N)
+    /// \f]
+    /// where \f$ N \f$ is the FFT length.
     size_t total_steps = 0;
 
  public:
-    /// @brief The coefficients to compute on-the-fly
+    /// @brief The coefficients buffer for the FFT computation.
+    ///
+    /// This vector holds the input samples (after windowing and bit-reversal) and is updated in-place
+    /// during the FFT computation. Once the computation is complete, this buffer contains the frequency
+    /// domain representation of the input signal.
     std::vector<std::complex<float>> coefficients;
 
-    /// @brief Initialize the FFT
-    /// @param n The length of the FFT.
+    /// @brief Constructs an OnTheFlyFFT object for an N-point FFT.
+    ///
+    /// @param n The length of the FFT. Must be a power of 2.
+    ///
+    /// The constructor initializes the pre-computed bit-reversal table, twiddle factors,
+    /// and the coefficients buffer to accommodate \f$ N \f$ samples.
     OnTheFlyFFT(const size_t& n) : bit_reversal(n), twiddles(n), coefficients(n) { }
 
-    /// @brief Resize the FFT.
-    /// @param n The length of the FFT.
+    /// @brief Resizes and initializes the FFT computation structures.
+    ///
+    /// @param n The new FFT length. Must be a power of 2.
+    ///
+    /// This method resizes the bit-reversal table, twiddle factors, and coefficients buffer.
+    /// It also recalculates the total number of FFT computation steps and resets the coefficients
+    /// buffer to zero.
     inline void resize(const size_t& n) {
         bit_reversal.resize(n);
         twiddles.resize(n);
@@ -229,70 +277,105 @@ class OnTheFlyFFT {
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
-    /// @brief Return the length of the FFT.
+    /// @brief Returns the FFT length.
+    ///
+    /// @return The number of samples in the FFT.
+    ///
+    /// This value is determined by the size of the twiddle factors (which are pre-computed for an N-point FFT).
     inline size_t size() const { return twiddles.size(); }
 
-    /// @brief Return the total number of steps needed to compute the FFT.
+    /// @brief Returns the total number of steps required for the FFT computation.
+    ///
+    /// @return The total number of Cooley-Tukey steps needed.
+    ///
+    /// The total steps are computed as:
+    /// \f[
+    /// \text{total\_steps} = \frac{N}{2} \times \log_2(N)
+    /// \f]
     inline size_t get_total_steps() const { return total_steps; }
 
-    /// @brief Buffer input samples for on-the-fly computation.
-    /// @param samples The sample buffer of length N.
-    /// @param window The window function to use before computing the DFT.
+    /// @brief Buffers input samples and prepares the FFT for on-the-fly computation.
+    ///
+    /// @param samples A pointer to the input sample buffer containing \f$ N \f$ complex samples.
+    /// @param window A vector representing the window function to be applied to the samples.
+    ///
+    /// This method performs the following operations:
+    /// 1. Copies the input samples into the internal coefficients buffer.
+    /// 2. Applies the provided window function to each sample.
+    /// 3. Reorders the samples using a bit-reversal permutation based on the pre-computed table.
+    /// 4. Resets the internal state variables (`step_`, `group`, and `pair`) for the FFT computation.
     inline void buffer(
         const std::complex<float>* samples,
         const std::vector<float>& window
     ) {
         const auto N = coefficients.size();
-        // Copy the coefficients into the buffer.
+        // Copy the samples into the coefficients buffer.
         memcpy(coefficients.data(), samples, N * sizeof(std::complex<float>));
-        // Window the local copy of the coefficients.
-        for (size_t n = 0; n < N; ++n) coefficients[n] *= window[n];
-        // Bit-reversal Permutation using Pre-computed Table.
+        // Apply the window function to each sample.
+        for (size_t n = 0; n < N; ++n)
+            coefficients[n] *= window[n];
+        // Perform bit-reversal permutation using the pre-computed bit-reversal table.
         for (size_t n = 0; n < N; ++n)
             if (n < bit_reversal[n])
                 std::swap(coefficients[n], coefficients[bit_reversal[n]]);
-        // Reset the FFT computation iterator variables.
+        // Reset FFT state variables.
         step_ = 2;
         group = 0;
         pair = 0;
     }
 
-    /// @brief Perform a single step of the FFT computation.
+    /// @brief Performs a single FFT computation step (butterfly operation).
+    ///
+    /// This method executes one butterfly operation of the Cooley-Tukey FFT algorithm. It:
+    /// 1. Determines the current half-step size and twiddle factor stride.
+    /// 2. Retrieves the appropriate twiddle factor from the pre-computed table.
+    /// 3. Computes the butterfly (combining an even-indexed element with an odd-indexed element).
+    /// 4. Updates the internal coefficients buffer in-place.
+    /// 5. Advances the internal state (`pair`, `group`, and `step_`) for the next computation.
     inline void step() {
         if (is_done_computing()) return;
-        // Determine the half step and twiddle stride.
+        // Calculate the half-step size and determine the twiddle factor stride.
         const size_t half_step = step_ >> 1;
         const size_t twiddle_stride = coefficients.size() / step_;
-        // Compute the inner logic of the Cooley-Tukey algorithm.
+        // Retrieve the appropriate twiddle factor.
         const auto w = twiddles[pair * twiddle_stride];
+        // Perform the butterfly operation.
         const auto even = coefficients[group + pair];
         const auto odd = coefficients[group + pair + half_step] * w;
         coefficients[group + pair] = even + odd;
         coefficients[group + pair + half_step] = even - odd;
-        // Update the loop iterators.
+        // Update the FFT state variables.
         pair = pair + 1;
         if (pair >= half_step) {
             pair = 0;
             group = group + step_;
             if (group >= coefficients.size()) {
                 group = 0;
-                step_ <<= 1;
+                step_ <<= 1;  // Double the step size for the next stage.
             }
         }
     }
 
-    /// @brief Perform a batch of steps targeting a known hop-rate.
+    /// @brief Performs a batch of FFT steps targeting a specified hop length.
+    ///
     /// @param hop_length The number of samples between FFT computations.
-    /// @details
-    /// This call to `step` performs the number of steps required to compute
-    /// the FFT in `hop_length` total samples.
+    ///
+    /// This method calculates the number of FFT steps to perform based on the hop length and
+    /// the total number of steps required. It then iteratively calls the single-step() method,
+    /// allowing the FFT computation to be spread across multiple processing intervals.
     inline void step(const size_t& hop_length) {
         const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < num_steps; i++) step();
+        for (size_t i = 0; i < num_steps; i++) {
+            step();
+        }
     }
 
-    /// @brief Return a flag determining whether the computation is complete.
-    /// @returns True if the FFT is done computing, False otherwise.
+    /// @brief Checks whether the FFT computation has been completed.
+    ///
+    /// @return True if the FFT has been fully computed; false otherwise.
+    ///
+    /// The FFT computation is considered complete when the current step size exceeds
+    /// the length of the coefficients buffer.
     inline bool is_done_computing() const {
         return step_ > coefficients.size();
     }
