@@ -207,12 +207,26 @@ class TwiddleFactors {
     /// @param n The length of the FFT.
     explicit TwiddleFactors(const size_t& n) { resize(n); }
 
+    // /// @brief Resize the twiddle factor buffer.
+    // /// @param n The length of the FFT.
+    // inline void resize(const size_t& n) {
+    //     factors.resize(n >> 1);  // n / 2
+    //     for (size_t i = 0; i < factors.size(); ++i)
+    //         factors[i] = std::exp(std::complex<float>(0, -2.0f * M_PI * i / n));
+    // }
+
     /// @brief Resize the twiddle factor buffer.
     /// @param n The length of the FFT.
     inline void resize(const size_t& n) {
         factors.resize(n >> 1);  // n / 2
-        for (size_t i = 0; i < factors.size(); ++i)
-            factors[i] = std::exp(std::complex<float>(0, -2.0f * M_PI * i / n));
+        // Pre-compute the multiplier: e^{-i * 2pi/n}.
+        const float theta = -2.0f * M_PI / n;
+        const std::complex<float> multiplier(std::cos(theta), std::sin(theta));
+        std::complex<float> current(1.0f, 0.0f);
+        for (size_t i = 0; i < factors.size(); ++i) {
+            factors[i] = current;
+            current *= multiplier;
+        }
     }
 
     /// @brief Return the length of the FFT.
@@ -224,7 +238,9 @@ class TwiddleFactors {
     /// @details
     /// Twiddle factors are computed as
     /// \f$W_k = e^{\frac{-i * 2 * \pi * k}{N}}\f$
-    const std::complex<float>& operator[](size_t i) const { return factors[i]; }
+    const std::complex<float>& operator[](const size_t& i) const {
+        return factors[i];
+    }
 };
 
 /// @brief Precomputed bit-reversal table for radix-2 FFT.
