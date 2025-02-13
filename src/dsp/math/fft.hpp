@@ -504,8 +504,8 @@ class OnTheFlyRFFT {
         //     coefficients[N / 2 + k] = std::conj(coefficients[k]);
         // }
 
-        const auto N = size();       // full FFT length.
-        const size_t M = N >> 1;       // M = N/2.
+        const auto N = size();    // full FFT length.
+        const size_t M = N >> 1;  // M = N/2.
         // Handle DC and Nyquist bins.
         float re0 = fft.coefficients[0].real();
         float im0 = fft.coefficients[0].imag();
