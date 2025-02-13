@@ -218,7 +218,7 @@ class TwiddleFactors {
     /// @brief Resize the twiddle factor buffer.
     /// @param n The length of the FFT.
     inline void resize(const size_t& n) {
-        factors.resize(n >> 1);  // n / 2
+        factors.resize(n >> 1);  // bit-wise "/ 2"
         // Pre-compute the multiplier: e^{-i * 2pi/n}.
         const float theta = -2.0f * M_PI / n;
         const std::complex<float> multiplier(std::cos(theta), std::sin(theta));
@@ -230,7 +230,9 @@ class TwiddleFactors {
     }
 
     /// @brief Return the length of the FFT.
-    inline size_t size() const { return factors.size() << 1; }
+    inline size_t size() const {
+        return factors.size() << 1;  // bit-wise "* 2"
+    }
 
     /// @brief Return the twiddle factor at the given index.
     /// @param i The index of the twiddle factor to access.
@@ -310,7 +312,7 @@ class OnTheFlyFFT {
         twiddles.resize(n);
         bit_reversal.resize(n);
         coefficients.resize(n);
-        total_steps = (n / 2.f) * log2f(n);
+        total_steps = (n >> 1) * static_cast<size_t>(log2f(n));
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
@@ -346,7 +348,7 @@ class OnTheFlyFFT {
     inline void step() {
         if (is_done_computing()) return;
         // Determine the half step and twiddle stride.
-        const size_t half_step = step_ / 2;
+        const size_t half_step = step_ >> 1;
         const size_t twiddle_stride = coefficients.size() / step_;
         // Compute the inner logic of the Cooley-Tukey algorithm.
         const auto w = twiddles[pair * twiddle_stride];
