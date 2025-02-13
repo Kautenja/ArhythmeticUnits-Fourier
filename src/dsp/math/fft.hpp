@@ -530,112 +530,80 @@ class OnTheFlyRFFT {
             coefficients[N - k] = std::conj(Xk);
         }
     }
+
+    /**
+     * @brief Perform in-place smoothing of the FFT magnitudes.
+     *
+     * This method smooths the FFT magnitude spectrum over octave-based frequency bands.
+     * Instead of returning a new vector, it modifies the internal `coefficients` buffer directly,
+     * replacing each FFT coefficient with its smoothed magnitude (stored in the real part, with zero imaginary part).
+     *
+     * @param sample_rate        Sampling frequency in Hz.
+     * @param fraction_of_octave Fraction-of-an-octave for smoothing (e.g. 1.0 = 1 octave, 1/6 = 1/6 octave).
+     * @param f_min              Minimum frequency for the smoothing window (Hz).
+     * @param f_max              Maximum frequency for the smoothing window (Hz). Defaults to sample_rate/2 if <= 0.
+     */
+    inline void smooth(float sample_rate, float fraction_of_octave, float f_min = 20.0f, float f_max = 0.0f) {
+        // Ensure FFT coefficients exist.
+        const size_t n = coefficients.size();
+        if (n == 0) { return; }
+        if (f_max <= 0.0f) { f_max = sample_rate / 2.0f; }
+        const float bin_width = sample_rate / static_cast<float>(n);
+
+        // 1) Compute magnitude array (temporary storage).
+        std::vector<float> mag(n);
+        for (size_t i = 0; i < n; ++i) {
+            float re = coefficients[i].real();
+            float im = coefficients[i].imag();
+            mag[i] = std::sqrt(re * re + im * im);
+        }
+
+        // 2) Build prefix sum of magnitudes.
+        std::vector<double> prefix_mag(n + 1, 0.0);
+        for (size_t i = 0; i < n; ++i) {
+            prefix_mag[i + 1] = prefix_mag[i] + mag[i];
+        }
+
+        // 3) Apply octave-based smoothing in-place.
+        const float half_band_factor = std::pow(2.0f, fraction_of_octave / 2.0f);
+        const float desired_ratio = std::pow(2.0f, fraction_of_octave);
+
+        for (size_t i = 0; i < n; ++i) {
+            const float f_center = i * bin_width;
+            // Skip bins outside the allowed frequency range.
+            if (f_center < f_min || f_center > f_max) {
+                coefficients[i] = std::complex<float>(0.0f, 0.0f);
+                continue;
+            }
+            // Define the initial smoothing window.
+            float f_low  = f_center / half_band_factor;
+            float f_high = f_center * half_band_factor;
+            // Adjust window boundaries if necessary.
+            if (f_high > f_max) {
+                f_high = f_max;
+                f_low  = f_high / desired_ratio;
+            }
+            if (f_low < f_min) {
+                f_low  = f_min;
+                f_high = f_low * desired_ratio;
+                if (f_high > f_max) { f_high = f_max; }
+            }
+            // Map frequencies to FFT bin indices.
+            size_t low_idx  = static_cast<size_t>(std::floor(f_low / bin_width));
+            size_t high_idx = static_cast<size_t>(std::floor(f_high / bin_width));
+            if (low_idx >= n) {
+                coefficients[i] = std::complex<float>(0.0f, 0.0f);
+                continue;
+            }
+            high_idx = std::min(high_idx, n - 1UL);
+            const size_t count = high_idx - low_idx + 1;
+            const double sum_in_window = prefix_mag[high_idx + 1] - prefix_mag[low_idx];
+            float avg = (count > 0) ? static_cast<float>(sum_in_window / count) : 0.0f;
+            // Replace the FFT coefficient with the smoothed magnitude.
+            coefficients[i] = std::complex<float>(avg, 0.0f);
+        }
+    }
 };
-
-/// @brief Smooth the FFT magnitudes over octave-based bandwidths.
-/// @param fft_coeffs         Full FFT array, size = N.
-/// @param sample_rate        Sampling frequency in Hz.
-/// @param fraction_of_octave Fraction-of-an-octave for smoothing (e.g. 1.0 = 1 octave, 1/6 = 1/6 octave).
-/// @param f_min              Minimum frequency for the smoothing window (Hz).
-/// @param f_max              Maximum frequency for the smoothing window (Hz). Defaults to sample_rate/2 if <= 0.
-/// @returns A vector of size N where each element is the smoothed magnitude for the corresponding FFT bin.
-/// @details
-/// This function smooths the FFT magnitude spectrum by averaging the magnitudes within a logarithmically
-/// spaced frequency window corresponding to the given fraction-of-an-octave. For each FFT bin:
-///   - The center frequency is computed as f_center = i * (sample_rate / N).
-///   - An initial smoothing window is defined as:
-///         f_low  = f_center / (2^(fraction_of_octave/2))
-///         f_high = f_center * (2^(fraction_of_octave/2))
-///   - If the window exceeds the allowed frequency range [f_min, f_max], the boundaries are adjusted
-///     to maintain the desired octave span (i.e. f_high / f_low ≈ 2^(fraction_of_octave)).
-///   - A prefix sum of the FFT magnitudes is used to quickly compute the average magnitude over the window.
-/// The output is a vector of the same size as the input FFT array, preserving the linear bin spacing.
-inline Math::DFTCoefficients smooth_fft(const Math::DFTCoefficients &fft_coeffs, float sample_rate, float fraction_of_octave, float f_min = 20.0f, float f_max = 0.0f) {
-    const size_t n = fft_coeffs.size();
-    if (n == 0) { return {}; }
-
-    // Default f_max to the Nyquist frequency if not specified.
-    if (f_max <= 0.0f) { f_max = sample_rate / 2.0f; }
-
-    // Compute the frequency resolution (bin width).
-    const float bin_width = sample_rate / static_cast<float>(n);
-
-    //--------------------------------------------------------------------------
-    // 1) Compute the magnitude array.
-    //    For each FFT coefficient, calculate:
-    //       mag[i] = sqrt( real^2 + imag^2 )
-    //--------------------------------------------------------------------------
-    std::vector<float> mag(n);
-    for (size_t i = 0; i < n; ++i) {
-        float re = fft_coeffs[i].real();
-        float im = fft_coeffs[i].imag();
-        mag[i] = std::sqrt(re * re + im * im);
-    }
-
-    //--------------------------------------------------------------------------
-    // 2) Build a prefix sum of magnitudes.
-    //    Let prefix_mag[k] = sum(mag[0] ... mag[k-1]) with prefix_mag[0] = 0.
-    //--------------------------------------------------------------------------
-    std::vector<double> prefix_mag(n + 1, 0.0);
-    for (size_t i = 0; i < n; ++i) {
-        prefix_mag[i + 1] = prefix_mag[i] + mag[i];
-    }
-
-    //--------------------------------------------------------------------------
-    // 3) For each FFT bin, define a log-based smoothing window and compute
-    //    the average magnitude using the prefix sum.
-    //--------------------------------------------------------------------------
-    Math::DFTCoefficients smoothed(n, 0.f);
-
-    // half_band_factor defines the half-width of the smoothing window:
-    //   half_band_factor = 2^(fraction_of_octave/2)
-    const float half_band_factor = std::pow(2.0f, fraction_of_octave / 2.0f);
-    // desired_ratio is the overall frequency span of the window:
-    //   desired_ratio = 2^(fraction_of_octave)
-    const float desired_ratio = std::pow(2.0f, fraction_of_octave);
-
-    for (size_t i = 0; i < n; ++i) {
-        // Compute the center frequency for bin i.
-        const float f_center = i * bin_width;
-
-        // Skip bins outside the allowed frequency range.
-        if (f_center < f_min || f_center > f_max) {
-            smoothed[i] = 0.f;
-            continue;
-        }
-
-        // Define the initial smoothing window.
-        float f_low  = f_center / half_band_factor;
-        float f_high = f_center * half_band_factor;
-
-        // Adjust the window if it exceeds the allowed frequency range.
-        if (f_high > f_max) {
-            f_high = f_max;
-            f_low  = f_high / desired_ratio;
-        }
-        if (f_low < f_min) {
-            f_low  = f_min;
-            f_high = f_low * desired_ratio;
-            if (f_high > f_max) { f_high = f_max; }
-        }
-
-        // Map the window frequencies to FFT bin indices.
-        size_t low_idx  = static_cast<size_t>(std::floor(f_low / bin_width));
-        size_t high_idx = static_cast<size_t>(std::floor(f_high / bin_width));
-        if (low_idx >= n) {
-            smoothed[i] = 0.f;
-            continue;
-        }
-        high_idx = std::min(high_idx, n - 1UL);
-
-        // Compute the average magnitude in the window using the prefix sum.
-        const size_t count = high_idx - low_idx + 1;
-        const double sum_in_window = prefix_mag[high_idx + 1] - prefix_mag[low_idx];
-        smoothed[i] = (count > 0) ? static_cast<float>(sum_in_window / count) : 0.f;
-    }
-
-    return smoothed;
-}
 
 }  // namespace Math
 

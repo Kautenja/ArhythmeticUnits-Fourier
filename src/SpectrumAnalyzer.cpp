@@ -759,7 +759,7 @@ struct SpectrumAnalyzer : rack::Module {
                 // Perform octave smoothing. For an N-length FFT, smooth over the
                 // first N/2 + 1 coefficients to omit reflected frequencies.
                 if (frequency_smoothing != FrequencySmoothing::None)
-                    ffts[i].coefficients = Math::smooth_fft(ffts[i].coefficients, sample_rate, to_float(frequency_smoothing));
+                    ffts[i].smooth(sample_rate, to_float(frequency_smoothing));
                 // Pass the coefficients through a smoothing filter.
                 for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
                     filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
