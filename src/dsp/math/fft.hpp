@@ -385,9 +385,171 @@ class OnTheFlyFFT {
     }
 };
 
+/// @brief An RFFT computation utility based on pre-computed Twiddle factors.
+class OnTheFlyRFFT {
+ private:
+    /// @brief The N/2 point FFT.
+    OnTheFlyFFT fft;
+    /// @brief Pre-computed twiddle factors for reconstructing an N-point FFT.
+    TwiddleFactors twiddles;
 
+ public:
+    /// @brief Initialize the RFFT
+    /// @param n The length of the RFFT.
+    OnTheFlyRFFT(const size_t& n) : fft(n >> 1), twiddles(n) { }
 
+    /// @brief Resize the RFFT.
+    /// @param n The length of the RFFT.
+    inline void resize(const size_t& n) {
+        fft.resize(n >> 1);
+        twiddles.resize(n);
+    }
 
+    /// @brief Return the length of the RFFT.
+    inline size_t size() const {
+        return twiddles.size();
+    }
+
+    /// @brief Return the total number of steps needed to compute the FFT.
+    inline size_t get_total_steps() const { return fft.get_total_steps(); }
+
+    /// @brief Buffer input samples for on-the-fly computation.
+    /// @param samples The sample buffer of length N.
+    /// @param window The window function to use before computing the DFT.
+    inline void buffer(const float* samples, const std::vector<float>& window) {
+        // Interleave the even and odd components using a clever casting based
+        // approach. If we can guarantee that even and odd tuples are evenly
+        // spaced and contiguous, then we can simply cast each (even,odd)
+        // tuple directly to a complex float. This reduces the complexity of
+        // interleaving from O(N) to O(1) and encumbers no memory overhead.
+        auto interleaved = reinterpret_cast<const std::complex<float>*>(samples);
+        // Now buffer the interleaved values in an N/2-point FFT.
+        fft.buffer(interleaved, window);
+    }
+
+    /// @brief Perform a single step of the FFT computation.
+    inline void step() {
+        if (fft.is_done_computing())
+            return;
+        fft.step();
+        if (fft.is_done_computing())
+            finalize();
+    }
+
+    /// @brief Perform a batch of steps targeting a known hop-rate.
+    /// @param hop_length The number of samples between FFT computations.
+    /// @details
+    /// This call to `step` performs the number of steps required to compute
+    /// the FFT in `hop_length` total samples.
+    inline void step(const size_t& hop_length) {
+        const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
+        for (size_t i = 0; i < num_steps; i++) step();
+    }
+
+    /// @brief Return a flag determining whether the computation is complete.
+    /// @returns True if the FFT is done computing, False otherwise.
+    inline bool is_done_computing() const {
+        return fft.is_done_computing();
+    }
+
+    // /// @brief Finalize interleaved N/2-point FFT coefficients.
+    // inline void finalize() {
+    //     // Determine the length of the FFT, i.e., N.
+    //     const auto N = size();
+    //
+    //     std::vector<std::complex<float>> output(N);
+    //
+    //     // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
+    //     // Typically:
+    //     //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
+    //     //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
+    //     float re0 = fft.coefficients[0].real();
+    //     float im0 = fft.coefficients[0].imag();
+    //
+    //     output[0]          = std::complex<float>(re0 + im0, 0.0f);
+    //     output[N / 2]      = std::complex<float>(re0 - im0, 0.0f);
+    //
+    //     // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
+    //     for (size_t k = 1; k < N / 2; k++) {
+    //         // Let Xk = interleaved[k]
+    //         // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
+    //         std::complex<float> Xk  = fft.coefficients[k];
+    //         std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
+    //
+    //         // Twiddle factor for k
+    //         auto Wk = twiddles[k];
+    //
+    //         // The typical RFFT combination:
+    //         // output[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
+    //         // output[N-k] = conj(output[k])
+    //
+    //         auto half = 0.5f;
+    //
+    //         auto sum     = Xk + XNk;     // (Xk + XNk)
+    //         auto diff    = Xk - XNk;     // (Xk - XNk)
+    //         // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
+    //         // but it's easier to do Wk * ( diff * -i ).
+    //         // In many references, you'll see a re-labeling that Wk has also a j factor built in.
+    //
+    //         // This is one place where you have to be careful about
+    //         // how you incorporate the "e^{-j 2 pi k / N}" factor.
+    //
+    //         auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
+    //         auto twisted = Wk * magic;                                // then by the twiddle
+    //
+    //         output[N / 2 - k]     = half * (sum - twisted);
+    //         output[N / 2 + k]     = std::conj(output[k]);
+    //     }
+    // }
+
+    /// @brief Finalize interleaved N/2-point FFT coefficients.
+    inline void finalize() {
+        // Determine the length of the FFT, i.e., N.
+        const auto N = size();
+
+        // Handle k = 0 and k = N/2 (the DC bin and Nyquist bin)
+        // Typically:
+        //   X[0] = real( interleaved[0] ) + imag( interleaved[0] )
+        //   X[N/2] = real( interleaved[0] ) - imag( interleaved[0] )
+        float re0 = fft.coefficients[0].real();
+        float im0 = fft.coefficients[0].imag();
+
+        fft.coefficients[0]     = std::complex<float>(re0 + im0, 0.0f);
+        fft.coefficients[N / 2] = std::complex<float>(re0 - im0, 0.0f);
+
+        // For k = 1..(N/2 - 1), we need to use the known RFFT reconstruction formula
+        for (size_t k = 1; k < N / 2; k++) {
+            // Let Xk = interleaved[k]
+            // Let XNk = interleaved[N/2 - k] (the "mirrored" index)
+            std::complex<float> Xk  = fft.coefficients[k];
+            std::complex<float> XNk = std::conj(fft.coefficients[N / 2 - k]); // conjugate because of Hermitian symmetry
+
+            // Twiddle factor for k
+            auto Wk = twiddles[k];
+
+            // The typical RFFT combination:
+            // output[k]   = 0.5 * [ (Xk + XNk) - j*Wk*(Xk - XNk) ]
+            // output[N-k] = conj(output[k])
+
+            auto half = 0.5f;
+
+            auto sum     = Xk + XNk;     // (Xk + XNk)
+            auto diff    = Xk - XNk;     // (Xk - XNk)
+            // multiply diff by -j = j * (XNk - Xk), or simply diff * ( -i )
+            // but it's easier to do Wk * ( diff * -i ).
+            // In many references, you'll see a re-labeling that Wk has also a j factor built in.
+
+            // This is one place where you have to be careful about
+            // how you incorporate the "e^{-j 2 pi k / N}" factor.
+
+            auto magic   = std::complex<float>(0.0f, -1.0f) * diff;  // multiply by -j
+            auto twisted = Wk * magic;                                // then by the twiddle
+
+            fft.coefficients[N / 2 - k] = half * (sum - twisted);
+            fft.coefficients[N / 2 + k] = std::conj(fft.coefficients[k]);
+        }
+    }
+};
 
 
 
