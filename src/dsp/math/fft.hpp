@@ -371,116 +371,68 @@ inline Math::DFTCoefficients smooth_fft(
     float fMax = 0.0f)
 {
     const size_t N = fftCoeffs.size();
-    if (N == 0) {
+    if (N == 0)
         return {};
-    }
 
-    // Default fMax to sampleRate if not specified or <= 0
-    if (fMax <= 0.0f) {
+    // Set fMax to sampleRate if not specified.
+    if (fMax <= 0.0f)
         fMax = sampleRate;
-    }
 
-    //--------------------------------------------------------------------------
-    // 1) Build a frequency array (linearly spaced)
-    //    freq[i] = i * (sampleRate / N)
-    //--------------------------------------------------------------------------
-    std::vector<float> freqs(N);
+    // Each FFT bin spans this much frequency.
     const float binWidth = sampleRate / static_cast<float>(N);
-    for (size_t i = 0; i < N; ++i) {
-        freqs[i] = i * binWidth;
-    }
 
-    //--------------------------------------------------------------------------
-    // 2) Build a magnitude array and a prefix sum for quick averaging
-    //
-    //    mag[i] = sqrt( real^2 + imag^2 )
-    //    prefixMag[i] = sum of mag[0..i-1], with prefixMag[0] = 0 for convenience
-    //--------------------------------------------------------------------------
+    // Compute magnitudes.
     std::vector<float> mag(N);
-    mag.reserve(N);
     for (size_t i = 0; i < N; ++i) {
         float re = fftCoeffs[i].real();
         float im = fftCoeffs[i].imag();
         mag[i] = std::sqrt(re * re + im * im);
     }
 
+    // Build prefix sum: prefixMag[k] = sum_{i=0}^{k-1} mag[i]
     std::vector<double> prefixMag(N + 1, 0.0);
-    for (size_t i = 1; i <= N; ++i) {
-        prefixMag[i] = prefixMag[i-1] + static_cast<double>(mag[i-1]);
-    }
+    for (size_t i = 0; i < N; ++i)
+        prefixMag[i + 1] = prefixMag[i] + mag[i];
 
-    // Helper lambda: sum of magnitudes in range [start, end] (inclusive of end).
-    // We'll clamp the indices to [0, N-1].
-    auto rangeSum = [&](size_t start, size_t end){
-        if (end < start) return 0.0;
-        start = std::min(start, N-1UL);
-        end   = std::min(end,   N-1UL);
-        return prefixMag[end + 1] - prefixMag[start];
-    };
-
-    //--------------------------------------------------------------------------
-    // 3) For each bin i, define log-based window around freqs[i],
-    //    then find the bin indices [lowIdx, highIdx] via binary search,
-    //    and compute the average magnitude using prefix sums.
-    //--------------------------------------------------------------------------
+    // Prepare output vector.
     Math::DFTCoefficients smoothed(N, 0.f);
 
     // halfBandFactor = 2^(fractionOfOctave/2)
-    // e.g. fractionOfOctave=1 => halfBandFactor=~1.4142 => 1-octave total
     const float halfBandFactor = std::pow(2.0f, fractionOfOctave / 2.0f);
 
-    // We’ll do a quick lambda to help clamp a frequency to [fMin, fMax].
-    auto clampFreq = [&](float f) {
+    // Helper lambda to clamp a frequency to [fMin, fMax]
+    auto clampFreq = [fMin, fMax](float f) -> float {
         return std::max(fMin, std::min(f, fMax));
     };
 
-    for (size_t i = 0; i < N; ++i)
-    {
-        float fCenter = freqs[i];
-        // If outside [fMin, fMax], we skip or set to 0
+    // Process each bin.
+    for (size_t i = 0; i < N; ++i) {
+        // Compute center frequency directly from bin index.
+        float fCenter = i * binWidth;
+
+        // Skip bins outside the desired frequency range.
         if (fCenter < fMin || fCenter > fMax) {
-            smoothed[i] = 0.0f;
+            smoothed[i] = 0.f;
             continue;
         }
 
-        // Define log-based window
+        // Define the smoothing window (logarithmic scale).
         float fLow  = clampFreq(fCenter / halfBandFactor);
         float fHigh = clampFreq(fCenter * halfBandFactor);
 
-        // If fHigh < fLow, skip
-        if (fHigh < fLow) {
-            smoothed[i] = 0.0f;
-            continue;
-        }
-
-        // ---------------------------------------------------------------
-        // Find the bin indices that correspond to fLow and fHigh.
-        // freq[idx] = idx * binWidth.
-        // => idx = freq / binWidth.
-        //
-        // We'll do an integer cast, but let's be safer and do:
-        //    idx = floor( freq / binWidth ) for fLow
-        //    idx = floor( freq / binWidth ) for fHigh
-        // Or we could do binary search, but a direct formula is simpler
-        // since freq[i] is linear with i.
-        // ---------------------------------------------------------------
+        // Map the window edges to FFT bin indices.
         size_t lowIdx  = static_cast<size_t>(std::floor(fLow  / binWidth));
         size_t highIdx = static_cast<size_t>(std::floor(fHigh / binWidth));
-
-        if (lowIdx > highIdx || lowIdx >= N) {
-            smoothed[i] = 0.0f;
+        if (lowIdx >= N) {
+            smoothed[i] = 0.f;
             continue;
         }
-        if (highIdx >= N) {
-            highIdx = N - 1;
-        }
+        highIdx = std::min(highIdx, N - 1UL);
 
-        // sum of magnitudes in [lowIdx .. highIdx]
-        double sumInRange = rangeSum(lowIdx, highIdx);
-        size_t count      = (highIdx - lowIdx + 1);
-
-        // arithmetic mean
-        smoothed[i] = (count > 0) ? static_cast<float>(sumInRange / count) : 0.0f;
+        // Average the magnitudes in [lowIdx, highIdx] using the prefix sum.
+        const size_t count = highIdx - lowIdx + 1;
+        const double sum = prefixMag[highIdx + 1] - prefixMag[lowIdx];
+        smoothed[i] = static_cast<float>(sum / count);
     }
 
     return smoothed;
