@@ -135,7 +135,7 @@ struct Spectrogram : rack::Module {
     Spectrogram() : sample_rate(APP->engine->getSampleRate()), coefficients(N_STFT) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup the input signal port and controls.
-        configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 24.f / 20.f), std::pow(10.f, 18.f / 20.f), "Input Gain", " dB", -10, 20);
+        configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
         configInput(INPUT_SIGNAL, "TODO");
         // Configure the run button.
         configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
@@ -423,25 +423,23 @@ struct Spectrogram : rack::Module {
             is_running = !is_running;
     }
 
-    // /// @brief Process input signals.
-    // /// @details
-    // /// Applies gain to each input signal and buffers it for DFT computation.
-    // inline void process_input_signal() {
-    //     if (!is_running) return;  // Don't buffer input signals if not running.
-    //     for (size_t i = 0; i < NUM_CHANNELS; i++) {
-    //         // Get the input signal and convert to normalized bipolar [-1, 1].
-    //         const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
-    //         // Determine the gain to apply to this channel's input signal.
-    //         const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
-    //         // Pass signal through the DC blocking filter. Do this regardless
-    //         // of whether we are in AC-coupling mode to ensure when switching
-    //         // between modes there is no graphical delay from the filter
-    //         // accumulating signal data.
-    //         dc_blockers[i].process(signal);
-    //         // Insert the normalized and processed input signal into the delay.
-    //         delay[i].insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
-    //     }
-    // }
+    /// @brief Process input signal.
+    /// @details
+    /// Applies gain to each input signal and buffers it for DFT computation.
+    inline void process_input_signal() {
+        if (!is_running) return;  // Don't buffer input signals if not running.
+        // Get the input signal and convert to normalized bipolar [-1, 1].
+        const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
+        // Determine the gain to apply to this channel's input signal.
+        const auto gain = params[PARAM_INPUT_GAIN].getValue();
+        // Pass signal through the DC blocking filter. Do this regardless
+        // of whether we are in AC-coupling mode to ensure when switching
+        // between modes there is no graphical delay from the filter
+        // accumulating signal data.
+        dc_blocker.process(signal);
+        // Insert the normalized and processed input signal into the delay.
+        delay.insert(gain * (is_ac_coupled ? dc_blocker.getValue() : signal));
+    }
 
     /// @brief Process a sample.
     ///
@@ -458,9 +456,10 @@ struct Spectrogram : rack::Module {
         // delay.insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
 
         // Buffer the input signal.
-        delay.insert(Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltage()));
+        // delay.insert(Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltage()));
 
         process_run_button();
+        process_input_signal();
 
         // Process samples with the DFT
         const float gain = params[PARAM_INPUT_GAIN].getValue();
