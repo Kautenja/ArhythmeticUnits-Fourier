@@ -227,6 +227,8 @@ struct SpectrumAnalyzer : rack::Module {
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
         rack::Module::onReset();
+        // Reset momentary button trigger states.
+        is_running = true;
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
@@ -267,6 +269,7 @@ struct SpectrumAnalyzer : rack::Module {
     ///
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
+        JSON::set<bool>(rootJ, "is_running", is_running);
         JSON::set<bool>(rootJ, "is_fill_enabled", is_fill_enabled);
         JSON::set<bool>(rootJ, "is_bezier_enabled", is_bezier_enabled);
         JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
@@ -278,6 +281,9 @@ struct SpectrumAnalyzer : rack::Module {
     /// @param rootJ a pointer to a json_t with state data for this module
     ///
     inline void dataFromJson(json_t* rootJ) final {
+        JSON::get<bool>(rootJ, "is_running", [&](const bool& value) {
+            is_running = value;
+        });
         JSON::get<bool>(rootJ, "is_fill_enabled", [&](const bool& value) {
             is_fill_enabled = value;
         });

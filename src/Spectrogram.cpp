@@ -19,6 +19,7 @@
 #include <iostream>
 #include "./dsp/math.hpp"
 #include "./dsp/trigger.hpp"
+#include "./dsp/dc_blocker.hpp"
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
 
@@ -102,8 +103,8 @@ struct Spectrogram : rack::Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    // /// DC-blocking filters for AC-coupled mode.
-    // Filter::DCBlocker<float> dc_blocker;
+    /// DC-blocking filters for AC-coupled mode.
+    Filter::DCBlocker<float> dc_blocker;
 
     /// The delay line for tracking the input signal x[t]
     Math::ContiguousCircularBuffer<float> delay;
@@ -112,7 +113,7 @@ struct Spectrogram : rack::Module {
     Trigger::Divider dft_divider;
 
     /// a clock divider for updating the lights every 512 frames
-    Trigger::Divider lightDivider;
+    Trigger::Divider light_divider;
 
     /// a Schmitt Trigger for handling presses on the clock button
     Trigger::Threshold<float> runTrigger;
@@ -126,6 +127,9 @@ struct Spectrogram : rack::Module {
 
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
+
+    /// Whether to apply AC coupling to input signal.
+    bool is_ac_coupled = true;
 
     /// @brief Initialize a new spectrogram.
     Spectrogram() : sample_rate(APP->engine->getSampleRate()), coefficients(N_STFT) {
@@ -192,51 +196,43 @@ struct Spectrogram : rack::Module {
         // Resize the delay line for the number of FFT bins.
         delay.resize(N_FFT);
         dft_divider.setDivision(N_FFT / 2);
-        lightDivider.setDivision(512);
         onReset();
     }
 
-    // /// @brief Respond to the module being reset by the host environment.
-    // inline void onReset() final {
-    //     rack::Module::onReset();
-    //     // Reset hidden menu options.
-    //     is_fill_enabled = false;
-    //     is_bezier_enabled = true;
-    //     is_ac_coupled = true;
-    //     // Act as if the sample rate has changed to reset remaining state.
-    //     onSampleRateChange();
-    // }
-
-    // /// @brief Respond to a change in sample rate from the engine.
-    // inline void onSampleRateChange() final {
-    //     rack::Module::onSampleRateChange();
-    //     sample_rate = APP->engine->getSampleRate();
-    //     // Set the light divider relative to the sample rate and reset it.
-    //     light_divider.setDivision(512);
-    //     light_divider.reset();
-    //     // Update the low frequency bound and preserve settings.
-    //     const auto low_frequency = get_low_frequency();
-    //     getParamQuantity(PARAM_LOW_FREQUENCY)->maxValue = sample_rate / 2.f;
-    //     set_low_frequency(low_frequency);
-    //     // Update the high frequency bound and preserve settings.
-    //     const auto high_frequency = get_high_frequency();
-    //     getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
-    //     set_high_frequency(high_frequency);
-    //     // Set the transition width of DC-blocking filters for AC-coupled mode.
-    //     for (auto& filter : dc_blockers) {
-    //         filter.setTransitionWidth(10.f, sample_rate);
-    //         filter.reset();
-    //     }
-    // }
-
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
+        rack::Module::onReset();
+        // Reset momentary button trigger states.
+        is_running = true;
+        // Reset hidden menu options.
+        is_ac_coupled = true;
+        // Clear delay lines and cached coefficients.
         delay.clear();
         dft_divider.reset();
-        lightDivider.reset();
         for (std::size_t i = 0; i < coefficients.size(); i++)
             std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
-        is_running = true;
+        // Act as if the sample rate has changed to reset remaining state.
+        onSampleRateChange();
+    }
+
+    /// @brief Respond to a change in sample rate from the engine.
+    inline void onSampleRateChange() final {
+        rack::Module::onSampleRateChange();
+        sample_rate = APP->engine->getSampleRate();
+        // Set the light divider relative to the sample rate and reset it.
+        light_divider.setDivision(512);
+        light_divider.reset();
+        // Update the low frequency bound and preserve settings.
+        const auto low_frequency = get_low_frequency();
+        getParamQuantity(PARAM_LOW_FREQUENCY)->maxValue = sample_rate / 2.f;
+        set_low_frequency(low_frequency);
+        // Update the high frequency bound and preserve settings.
+        const auto high_frequency = get_high_frequency();
+        getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
+        set_high_frequency(high_frequency);
+        // Set the transition width of DC-blocking filters for AC-coupled mode.
+        dc_blocker.setTransitionWidth(10.f, sample_rate);
+        dc_blocker.reset();
     }
 
     /// @brief Convert the module's state to a JSON object.
@@ -246,6 +242,7 @@ struct Spectrogram : rack::Module {
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
         JSON::set<bool>(rootJ, "is_running", is_running);
+        JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
         return rootJ;
     }
 
@@ -254,7 +251,8 @@ struct Spectrogram : rack::Module {
     /// @param rootJ a pointer to a json_t with state data for this module
     ///
     inline void dataFromJson(json_t* rootJ) final {
-        JSON::get<bool>(rootJ, "is_running",      [&](const bool& value) { is_running = value; });
+        JSON::get<bool>(rootJ, "is_running", [&](const bool& value) { is_running = value; });
+        JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) { is_ac_coupled = value; });
     }
 
     // -----------------------------------------------------------------------
@@ -434,8 +432,8 @@ struct Spectrogram : rack::Module {
             hop_index = (hop_index + 1) % N_STFT;
         }
         // set lights
-        if (lightDivider.process()) {
-            const auto lightTime = args.sampleTime * lightDivider.getDivision();
+        if (light_divider.process()) {
+            const auto lightTime = args.sampleTime * light_divider.getDivision();
             lights[LIGHT_RUN].setSmoothBrightness(is_running, lightTime);
         }
     }
@@ -674,7 +672,7 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
     ///
     void appendContextMenu(Menu* menu) override {
         // get a pointer to the module
-        Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
+        // Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
 
         // -------------------------------------------------------------------
         // MARK: Super
