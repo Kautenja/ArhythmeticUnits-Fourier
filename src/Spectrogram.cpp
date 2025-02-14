@@ -667,7 +667,6 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         addParam(createParam<Rogan2PWhite>(Vec(18, box.size.y - RACK_GRID_WIDTH - 100), module, Spectrogram::PARAM_INPUT_GAIN));
         addParam(createParamCentered<PB61303>(Vec(35, 45), module, Spectrogram::PARAM_RUN));
         addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(35, 45), module, Spectrogram::LIGHT_RUN));
-
         // Screen controls.
         // Window function control with custom angles to match discrete range.
         auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
@@ -688,7 +687,6 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
         // Slope (dB/octave @1000Hz) controls.
         addParam(createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE));
-
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -701,20 +699,14 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
     /// @param menu the menu object to add context items for the module to
     ///
     void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
         // get a pointer to the module
         Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
-
-        menu->addChild(new MenuSeparator);
-
         // Create an option for enabling AC-coupled mode.
         auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
         ac_coupling_item->flag = &module->is_ac_coupled;
         menu->addChild(ac_coupling_item);
-
-        // -------------------------------------------------------------------
-        // MARK: Super
-        // -------------------------------------------------------------------
-
+        // Call the super function.
         ThemedWidget<BASENAME>::appendContextMenu(menu);
     }
 };
