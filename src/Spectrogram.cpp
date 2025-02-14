@@ -113,9 +113,6 @@ struct Spectrogram : rack::Module {
     /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
     Math::STFTCoefficients coefficients;
 
-    /// @brief The frequency scale to render.
-    FrequencyScale frequency_scale = FrequencyScale::Logarithmic;
-
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
 
@@ -159,7 +156,6 @@ struct Spectrogram : rack::Module {
         lightDivider.reset();
         for (std::size_t i = 0; i < coefficients.size(); i++)
             std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
-        frequency_scale = FrequencyScale::Logarithmic;
         is_running = true;
     }
 
@@ -169,7 +165,6 @@ struct Spectrogram : rack::Module {
     ///
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
-        JSON::set<int>(rootJ, "frequency_scale", static_cast<int>(frequency_scale));
         JSON::set<bool>(rootJ, "is_running", is_running);
         return rootJ;
     }
@@ -179,7 +174,6 @@ struct Spectrogram : rack::Module {
     /// @param rootJ a pointer to a json_t with state data for this module
     ///
     inline void dataFromJson(json_t* rootJ) final {
-        JSON::get<int>(rootJ,  "frequency_scale", [&](const int& value)  { frequency_scale = static_cast<FrequencyScale>(value); });
         JSON::get<bool>(rootJ, "is_running",      [&](const bool& value) { is_running = value; });
     }
 
@@ -396,7 +390,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 float scaled_y = y;
-                if (module->frequency_scale == FrequencyScale::Logarithmic)
+                if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
                     scaled_y = height * Math::squared(scaled_y / height);
                 auto coeff = interpolate_coefficients(module->coefficients[x], scaled_y);
                 // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
@@ -446,7 +440,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             nvgFill(args.vg);
             nvgClosePath(args.vg);
             // draw ticks for the axes of the plot.
-            switch (module->frequency_scale) {
+            switch (module->get_frequency_scale()) {
             case FrequencyScale::Linear:
                 draw_y_ticks_linear(args);
                 break;
@@ -502,39 +496,6 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
     void appendContextMenu(Menu* menu) override {
         // get a pointer to the module
         Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
-
-        // -------------------------------------------------------------------
-        // MARK: Frequency Scale
-        // -------------------------------------------------------------------
-
-        // labels for the frequency axis scaling options
-        static const char* FREQUENCY_SCALE_LABELS[2] = {
-            "Linear",
-            "Logarithmic"
-        };
-
-        /// A menu item for changing the frequency scale.
-        struct FrequencyScaleItem : MenuItem {
-            /// The module to update.
-            Spectrogram* module = nullptr;
-            /// The frequency scale option for this menu item.
-            FrequencyScale frequency_scale;
-
-            inline void onAction(const event::Action& e) override {
-                module->frequency_scale = frequency_scale;
-            }
-        };
-        // add the item to the menu
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuLabel("Frequency Scale"));
-        for (unsigned i = 0; i < 2; i++) {
-            auto frequency_scale = static_cast<FrequencyScale>(i);
-            const auto check = CHECKMARK(module->frequency_scale == frequency_scale);
-            auto item = createMenuItem<FrequencyScaleItem>(FREQUENCY_SCALE_LABELS[i], check);
-            item->module = module;
-            item->frequency_scale = frequency_scale;
-            menu->addChild(item);
-        }
 
         // -------------------------------------------------------------------
         // MARK: Super
