@@ -55,5 +55,8 @@
       "value": 0.0,
       "id": 14
     }
-  ]
+  ],
+  "data": {
+    "is_ac_coupled": false
+  }
 }
