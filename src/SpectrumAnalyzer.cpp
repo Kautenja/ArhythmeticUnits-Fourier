@@ -421,7 +421,7 @@ struct SpectrumAnalyzer : rack::Module {
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
         for (auto& filter : dc_blockers) {
-            filter.setTransitionWidth(20.f, sample_rate);
+            filter.setTransitionWidth(10.f, sample_rate);
             filter.reset();
         }
     }
