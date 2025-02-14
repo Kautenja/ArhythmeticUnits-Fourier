@@ -407,8 +407,8 @@ struct Spectrogram : rack::Module {
         window_function.set_window(get_window_function(), N_FFT, false, true);
         // // Iterate over the number of channels to resize buffers.
         // for (size_t i = 0; i < NUM_CHANNELS; i++) {
-        //     if (ffts[i].size() != N)
-        //         ffts[i].resize(N);
+        //     if (fft.size() != N)
+        //         fft.resize(N);
         //     if (delay[i].size() == N) continue;
         //     // Resize and clear the delay lines.
         //     delay[i].resize(N);
@@ -454,7 +454,32 @@ struct Spectrogram : rack::Module {
         delay.insert(gain * (is_ac_coupled ? dc_blocker.getValue() : signal));
     }
 
-    // TODO
+    /// @brief Process samples with the DFT.
+    inline void process_coefficients() {
+        // Determine the alpha parameter of the low-pass smoothing filter.
+        const float alpha = get_time_smoothing_alpha();
+        // Determine the setting of the frequency smoothing mode.
+        const auto frequency_smoothing = get_frequency_smoothing();
+        if (fft.is_done_computing()) {
+            // Perform octave smoothing. For an N-length FFT, smooth over the
+            // first N/2 + 1 coefficients to omit reflected frequencies.
+            if (frequency_smoothing != FrequencySmoothing::None)
+                fft.smooth(sample_rate, to_float(frequency_smoothing));
+            // Pass the coefficients through a smoothing filter.
+            for (size_t n = 0; n < fft.coefficients.size(); n++)
+                filtered_coefficients[n] = alpha * std::abs(filtered_coefficients[n]) + (1.f - alpha) * std::abs(fft.coefficients[n]);
+            // make_points(i);
+
+            // coefficients[hop_index] = filtered_coefficients;
+            // hop_index = (hop_index + 1) % N_STFT;
+
+            // Add the delay line to the FFT pipeline.
+            fft.buffer(delay.contiguous(), window_function.get_samples());
+        }
+        // Perform the number of FFT steps required at this hop-rate.
+        // fft.step(get_hop_length());
+        fft.step(N_FFT / 2);
+    }
 
     /// @brief Set the lights on the panel.
     ///
@@ -474,6 +499,7 @@ struct Spectrogram : rack::Module {
         process_window();
         process_run_button();
         process_input_signal();
+        process_coefficients();
 
         // Process samples with the DFT
         if (dft_divider.process() && is_running) {
