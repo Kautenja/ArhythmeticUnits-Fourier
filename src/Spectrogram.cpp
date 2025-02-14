@@ -644,20 +644,20 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
         // Frequency scale control with custom angles to match discrete range.
-        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
+        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
         addParam(frequency_scale_param);
         // Time smoothing control.
-        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
+        addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
         // Frequency smoothing control with custom angles to match discrete range.
-        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 7 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY));
-        addParam(createParam<TextKnob>(Vec(50 + 8 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
+        addParam(createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY));
+        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
         // Slope (dB/octave @1000Hz) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 9 * 66, 330), module, Spectrogram::PARAM_SLOPE));
+        addParam(createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE));
 
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
