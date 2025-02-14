@@ -709,6 +709,13 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         // get a pointer to the module
         // Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
 
+        // menu->addChild(new MenuSeparator);
+
+        // // Create an option for enabling AC-coupled mode.
+        // auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
+        // ac_coupling_item->flag = &module->is_ac_coupled;
+        // menu->addChild(ac_coupling_item);
+
         // -------------------------------------------------------------------
         // MARK: Super
         // -------------------------------------------------------------------
