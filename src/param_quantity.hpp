@@ -19,6 +19,8 @@
 
 #include <string>
 #include "rack.hpp"
+#include "./structs.hpp"
+#include "./dsp/math.hpp"
 
 /// @brief A parameter quantity for a boolean switch.
 struct BooleanParamQuantity : rack::ParamQuantity {
@@ -38,6 +40,38 @@ struct TriggerParamQuantity : rack::ParamQuantity {
 
     /// @brief Return the parameter description (disabled for this trigger).
     inline std::string getLabel() override { return ""; }
+};
+
+/// @brief A parameter quantity for window function selection.
+struct WindowFunctionParamQuantity : rack::ParamQuantity {
+    /// @brief Return the value as a formatted string.
+    inline std::string getDisplayValueString() final {
+        return Math::Window::name(static_cast<Math::Window::Function>(getValue()));
+    }
+};
+
+/// @brief A parameter quantity for magnitude scale selection.
+struct MagnitudeScaleParamQuantity : rack::ParamQuantity {
+    /// @brief Return the value as a formatted string.
+    inline std::string getDisplayValueString() override {
+        return to_string(static_cast<MagnitudeScale>(getValue()));
+    }
+};
+
+/// @brief A parameter quantity for frequency scale selection.
+struct FrequencyScaleParamQuantity : rack::ParamQuantity {
+    /// @brief Return the value as a formatted string.
+    inline std::string getDisplayValueString() final {
+        return to_string(static_cast<FrequencyScale>(getValue()));
+    }
+};
+
+/// @brief A parameter quantity for frequency smoothing selection.
+struct FrequencySmoothingParamQuantity : rack::ParamQuantity {
+    /// @brief Return the value as a formatted string.
+    inline std::string getDisplayValueString() final {
+        return to_string(static_cast<FrequencySmoothing>(getValue()));
+    }
 };
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_PARAM_QUANTITY_HPP_

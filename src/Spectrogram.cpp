@@ -51,26 +51,6 @@ void fft_(
 template<>
 inline void fft_<1>(std::vector<std::complex<float>>&, const Math::Window::Function&) { }
 
-/// @brief The options for frequency scales on the display.
-enum class FrequencyScale {
-    /// Linear frequency rendering along a fixed offset.
-    Linear = 0,
-    /// Logarithmic frequency rendering along base 10 harmonics.
-    Logarithmic
-};
-
-/// @brief A parameter quantity for frequency scale selection.
-struct FrequencyScaleParamQuantity : rack::ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() final {
-        switch (static_cast<FrequencyScale>(getValue())) {
-        case FrequencyScale::Linear:      return "Linear";
-        case FrequencyScale::Logarithmic: return "Logarithmic";
-        default:                          return "Unknown";
-        }
-    }
-};
-
 /// @brief Linearly interpolate between coefficients.
 /// @param coeff The coefficients to interpolate between.
 /// @param index The floating point index to sample from the coefficients.
@@ -86,8 +66,8 @@ static inline std::complex<float> interpolate_coefficients(const Math::DFTCoeffi
 struct Spectrogram : rack::Module {
  public:
     enum {
-        N_FFT = 2048,
-        N_STFT = 512
+        N_FFT = 512,
+        N_STFT = 1024
     };
 
     enum ParamIds {
