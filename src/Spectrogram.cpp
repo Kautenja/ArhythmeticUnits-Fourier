@@ -659,14 +659,15 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         setModule(module);
         // Spectrogram display
         SpectralImageDisplay* display = new SpectralImageDisplay(static_cast<Spectrogram*>(module));
-        display->setPosition(Vec(RACK_GRID_WIDTH + 55, RACK_GRID_WIDTH));
-        display->setSize(Vec(box.size.x - 2 * RACK_GRID_WIDTH - 55, box.size.y - 2 * RACK_GRID_WIDTH));
+        display->setPosition(Vec(45, 15));
+        display->setSize(Vec(465, 350));
         addChild(display);
-        // Input/output/parameters/lights
-        addInput(createInput<PJ301MPort>(Vec(20, box.size.y - RACK_GRID_WIDTH - 35), module, Spectrogram::INPUT_SIGNAL));
-        addParam(createParam<Rogan2PWhite>(Vec(18, box.size.y - RACK_GRID_WIDTH - 100), module, Spectrogram::PARAM_INPUT_GAIN));
-        addParam(createParamCentered<PB61303>(Vec(35, 45), module, Spectrogram::PARAM_RUN));
-        addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(35, 45), module, Spectrogram::LIGHT_RUN));
+        // Inputs
+        addInput(createInput<PJ301MPort>(Vec(11, 30), module, Spectrogram::INPUT_SIGNAL));
+        addParam(createParam<Trimpot>(Vec(13, 66), module, Spectrogram::PARAM_INPUT_GAIN));
+        // Buttons.
+        addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, Spectrogram::PARAM_RUN));
+        addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, Spectrogram::LIGHT_RUN));
         // Screen controls.
         // Window function control with custom angles to match discrete range.
         auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
