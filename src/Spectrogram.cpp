@@ -38,8 +38,8 @@ static inline std::complex<float> interpolate_coefficients(const Math::DFTCoeffi
 struct Spectrogram : rack::Module {
  public:
     enum {
-        N_FFT = 512,
-        N_STFT = 1024
+        N_FFT = 2048,
+        N_STFT = 512
     };
 
     enum ParamIds {
