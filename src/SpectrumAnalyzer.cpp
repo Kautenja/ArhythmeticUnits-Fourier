@@ -22,11 +22,7 @@
 #include "./dsp/trigger.hpp"
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
-
-// TODO: DC/AC coupling. When plugging an LFO into the module the DC offset
-//       kind of messes up the reading. It would be nice to have an optional
-//       AC coupling mode to block DC from entering the module by default.
-//       Most users wont be using DC anyway (it's an engineering thing maybe?)
+#include "./dsp/dc_blocker.hpp"
 
 // TODO: When applying e.g., 4.5dB/Oct slope, this causes the entire signal
 // range to be attenuated by what looks like a factor of 4. Does signal
@@ -269,6 +265,9 @@ struct SpectrumAnalyzer : rack::Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
+    /// DC-blocking filters for AC-coupled mode.
+    Filter::DCBlocker<float> dc_blockers[NUM_CHANNELS];
+
     /// The delay line for tracking the input signal x[t].
     Math::ContiguousCircularBuffer<float> delay[NUM_CHANNELS];
 
@@ -305,6 +304,9 @@ struct SpectrumAnalyzer : rack::Module {
 
     /// Whether to use Bezier curves.
     bool is_bezier_enabled = true;
+
+    /// Whether to apply AC coupling to input signal.
+    bool is_ac_coupled = true;
 
     /// @brief Initialize a new spectrum analyzer.
     SpectrumAnalyzer() : sample_rate(APP->engine->getSampleRate()) {
@@ -397,6 +399,7 @@ struct SpectrumAnalyzer : rack::Module {
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
+        is_ac_coupled = true;
         // Act as if the sample rate has changed to reset remaining state.
         onSampleRateChange();
     }
@@ -416,6 +419,11 @@ struct SpectrumAnalyzer : rack::Module {
         const auto high_frequency = get_high_frequency();
         getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
+        // Set the transition width of DC-blocking filters for AC-coupled mode.
+        for (auto& filter : dc_blockers) {
+            filter.setTransitionWidth(20.f, sample_rate);
+            filter.reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -430,6 +438,7 @@ struct SpectrumAnalyzer : rack::Module {
         json_t* rootJ = json_object();
         JSON::set<bool>(rootJ, "is_fill_enabled", is_fill_enabled);
         JSON::set<bool>(rootJ, "is_bezier_enabled", is_bezier_enabled);
+        JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
         return rootJ;
     }
 
@@ -443,6 +452,9 @@ struct SpectrumAnalyzer : rack::Module {
         });
         JSON::get<bool>(rootJ, "is_bezier_enabled", [&](const bool& value) {
             is_bezier_enabled = value;
+        });
+        JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) {
+            is_ac_coupled = value;
         });
     }
 
@@ -664,9 +676,15 @@ struct SpectrumAnalyzer : rack::Module {
     inline void process_input_signal() {
         if (!is_running) return;  // Don't buffer input signals if not running.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            const auto voltage = inputs[INPUT_SIGNAL + i].getVoltageSum();
+            // Get the input signal and convert to normalized bipolar [-1, 1].
+            const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
+            // Determine the gain to apply to this channel's input signal.
             const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
-            delay[i].insert(gain * Math::Eurorack::fromAC(voltage));
+            // Depending on the AC-coupling mode, filter the input signal to
+            // remove DC.
+            const auto sample = is_ac_coupled ? dc_blockers[i].process(signal) : signal;
+            // Insert the normalized and processed input signal into the delay.
+            delay[i].insert(gain * sample);
         }
     }
 
@@ -1542,6 +1560,10 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
         auto bezier_curve_item = createMenuItem<FlagMenuItem>("Bezier Curve", CHECKMARK(module->is_bezier_enabled));
         bezier_curve_item->flag = &module->is_bezier_enabled;
         menu->addChild(bezier_curve_item);
+        // Create an option for enabling AC-coupled mode.
+        auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
+        ac_coupling_item->flag = &module->is_ac_coupled;
+        menu->addChild(ac_coupling_item);
         // Call the super function.
         ThemedWidget<BASENAME>::appendContextMenu(menu);
     }
