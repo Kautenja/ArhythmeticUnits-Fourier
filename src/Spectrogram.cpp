@@ -76,6 +76,8 @@ struct Spectrogram : rack::Module {
         PARAM_RUN,
         PARAM_WINDOW_FUNCTION,
         PARAM_FREQUENCY_SCALE,
+        PARAM_TIME_SMOOTHING,
+        PARAM_FREQUENCY_SMOOTHING,
         NUM_PARAMS
     };
 
@@ -140,6 +142,21 @@ struct Spectrogram : rack::Module {
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
             "a logarithmic scale.";
+        // Setup time smoothing in seconds with millisecond render scaling.
+        configParam(PARAM_TIME_SMOOTHING, 0.f, 2.5f, 0.f, "Average", "ms", 0, 1000);
+        getParamQuantity(PARAM_TIME_SMOOTHING)->displayPrecision = 4;
+        getParamQuantity(PARAM_TIME_SMOOTHING)->description =
+            "The temporal smoothing filter of the STFT. Higher values\n"
+            "increase the averaging duration, making the spectrum move\n"
+            "more slowly to provide a general impression of signal\n"
+            "frequency content.";
+        // Setup frequency smoothing as a custom discrete enumeration.
+        configParam<FrequencySmoothingParamQuantity>(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth");
+        getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->snapEnabled = true;
+        getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
+            "The fractional-octave smoothing filter of the DFT. For\n"
+            "example, 1/6-oct smoothing reduces fine details in the\n"
+            "high frequencies.";
 
         for (std::size_t i = 0; i < coefficients.size(); i++)
             coefficients[i] = Math::DFTCoefficients(N_FFT);
@@ -213,6 +230,48 @@ struct Spectrogram : rack::Module {
     /// @param value The frequency scale for rendering the X axis.
     inline void set_frequency_scale(const FrequencyScale& value) {
         params[PARAM_FREQUENCY_SCALE].setValue(static_cast<float>(value));
+    }
+
+    // Time/Magnitude Smoothing
+
+    /// @brief Return the time smoothing setting.
+    /// @returns The time smoothing setting (measured in seconds.)
+    inline float get_time_smoothing() {
+        return params[PARAM_TIME_SMOOTHING].getValue();
+    }
+
+    /// @brief Set the time smoothing setting.
+    /// @param value The time smoothing setting (measured in seconds.)
+    inline void set_time_smoothing(const float& value) {
+        params[PARAM_TIME_SMOOTHING].setValue(value);
+    }
+
+    // /// @brief Compute the alpha parameter of the time smoothing filter.
+    // /// @returns The alpha parameter of an EMA smoothing filter.
+    // inline float get_time_smoothing_alpha() {
+    //     // Determine the length of the smoothing filter.
+    //     const float smoothing_time = params[PARAM_TIME_SMOOTHING].getValue();
+    //     // If smoothing time is 0 or lower, alpha is always 0.
+    //     if (smoothing_time <= 0.f) return 0.f;
+    //     // Determine the hop-rate, i.e., the refresh rate of the DFT.
+    //     const float hop_time = params[PARAM_HOP_LENGTH].getValue();
+    //     // Calculate alpha relative to the hop-rate to keep time normalized.
+    //     return expf(-10.f * hop_time / smoothing_time);
+    // }
+
+    // Frequency/Magnitude Smoothing
+
+    /// @brief Return the frequency smoothing setting.
+    /// @returns The frequency smoothing for rendering the coefficients.
+    inline FrequencySmoothing get_frequency_smoothing() {
+        const auto value = params[PARAM_FREQUENCY_SMOOTHING].getValue();
+        return static_cast<FrequencySmoothing>(value);
+    }
+
+    /// @brief Set the frequency smoothing setting.
+    /// @param value The frequency smoothing for rendering the coefficients.
+    inline void set_frequency_smoothing(const FrequencySmoothing& value) {
+        params[PARAM_FREQUENCY_SMOOTHING].setValue(static_cast<float>(value));
     }
 
     // -----------------------------------------------------------------------
@@ -481,6 +540,12 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
         addParam(frequency_scale_param);
+        // Time smoothing control.
+        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
+        // Frequency smoothing control with custom angles to match discrete range.
+        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        frequency_smoothing_param->maxAngle = 2.f * M_PI;
+        addParam(frequency_smoothing_param);
 
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
