@@ -427,7 +427,8 @@ struct Spectrogram : rack::Module {
     /// @details
     /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
-        if (!is_running) return;  // Don't buffer input signals if not running.
+        // TODO: When to check is_running in this module?
+        // if (!is_running) return;  // Don't buffer input signals if not running.
         // Get the input signal and convert to normalized bipolar [-1, 1].
         const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
@@ -446,25 +447,13 @@ struct Spectrogram : rack::Module {
     /// @param args the sample arguments (sample rate, sample time, etc.)
     ///
     void process(const ProcessArgs& args) final {
-
-        // // Pass signal through the DC blocking filter. Do this regardless
-        // // of whether we are in AC-coupling mode to ensure when switching
-        // // between modes there is no graphical delay from the filter
-        // // accumulating signal data.
-        // dc_blocker.process(signal);
-        // // Insert the normalized and processed input signal into the delay.
-        // delay.insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
-
-        // Buffer the input signal.
-        // delay.insert(Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltage()));
-
+        // process_window();
         process_run_button();
         process_input_signal();
 
         // Process samples with the DFT
-        const float gain = params[PARAM_INPUT_GAIN].getValue();
         if (dft_divider.process() && is_running) {
-            for (int i = 0; i < N_FFT; i++) coefficients[hop_index][i] = gain * delay.at(i);
+            for (int i = 0; i < N_FFT; i++) coefficients[hop_index][i] = delay.at(i);
             fft_<N_FFT>(coefficients[hop_index], get_window_function());
             hop_index = (hop_index + 1) % N_STFT;
         }
