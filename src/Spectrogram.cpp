@@ -204,6 +204,38 @@ struct Spectrogram : rack::Module {
         params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
     }
 
+    // -----------------------------------------------------------------------
+    // MARK: Processing
+    // -----------------------------------------------------------------------
+
+    /// @brief Process the window length and hop length parameters.
+    /// @details
+    /// Resizes the delay lines and DFT buffers to the length of the window.
+    /// Also sets the DFT divider to the length of the hop.
+    inline void process_window() {
+        // // Determine the length of the delay lines and associated FFTs.
+        // const size_t N = get_window_length();
+        // window_function.set_window(get_window_function(), N, false, true);
+        // // Iterate over the number of channels to resize buffers.
+        // for (size_t i = 0; i < NUM_CHANNELS; i++) {
+        //     if (ffts[i].size() != N)
+        //         ffts[i].resize(N);
+        //     if (delay[i].size() == N) continue;
+        //     // Resize and clear the delay lines.
+        //     delay[i].resize(N);
+        //     delay[i].clear();
+        //     // Resize and clear the coefficient buffers.
+        //     filtered_coefficients[i].resize(N);
+        //     std::fill(filtered_coefficients[i].begin(), filtered_coefficients[i].end(), 0.f);
+        //     // Update the rasterized coefficients from the FFT length.
+        //     rasterized_coefficients[i].resize(N / 2.f + 1);
+        //     for (auto& coeff : rasterized_coefficients[i]) {
+        //         coeff.x = 0.f;
+        //         coeff.y = 0.f;
+        //     }
+        //     render_coefficients[i] = rasterized_coefficients[i];
+        // }
+    }
 
     /// @brief Process a sample.
     ///
