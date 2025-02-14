@@ -20,6 +20,7 @@
 #include "./dsp/math.hpp"
 #include "./dsp/trigger.hpp"
 #include "./plugin.hpp"
+#include "./text_knob.hpp"
 
 /// @brief Compute the Fast Fourier Transform (FTT) in-place.
 ///
@@ -71,8 +72,9 @@ struct Spectrogram : rack::Module {
     };
 
     enum ParamIds {
-        PARAM_RUN,
         PARAM_INPUT_GAIN,
+        PARAM_RUN,
+        PARAM_WINDOW_FUNCTION,
         NUM_PARAMS
     };
 
@@ -122,8 +124,21 @@ struct Spectrogram : rack::Module {
     /// @brief Initialize a new spectrogram.
     Spectrogram() : coefficients(N_STFT) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-        configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
+        // Setup the input signal port and controls.
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 24.f / 20.f), std::pow(10.f, 18.f / 20.f), "Input Gain", " dB", -10, 20);
+        configInput(INPUT_SIGNAL, "TODO");
+        // Configure the run button.
+        configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
+        getParamQuantity(PARAM_RUN)->description =
+            "Enables or disables the analyzer. When disabled,\n"
+            "the analyzer stops buffering and processing new audio.";
+        // Setup the window function as a custom discrete enumeration.
+        configParam<WindowFunctionParamQuantity>(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window");
+        getParamQuantity(PARAM_WINDOW_FUNCTION)->snapEnabled = true;
+        getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
+            "The window function to apply before the FFT. Windowing\n"
+            "helps reduce spectral leakage in the frequency domain.";
+
         for (std::size_t i = 0; i < coefficients.size(); i++)
             coefficients[i] = Math::DFTCoefficients(N_FFT);
         delay.resize(N_FFT);
@@ -165,6 +180,30 @@ struct Spectrogram : rack::Module {
         JSON::get<int>(rootJ,  "window",          [&](const int& value)  { window = static_cast<Math::Window::Function>(value); });
         JSON::get<bool>(rootJ, "is_running",      [&](const bool& value) { is_running = value; });
     }
+
+    // -----------------------------------------------------------------------
+    // MARK: Parameters
+    // -----------------------------------------------------------------------
+
+    // /// @brief Return the current sample rate of the module.
+    // /// @returns The sample rate of the module.
+    // inline float get_sample_rate() const { return sample_rate; }
+
+    // Window Function
+
+    /// @brief Return the window function.
+    /// @returns The window function for computing DFT coefficients.
+    inline Math::Window::Function get_window_function() {
+        const auto value = params[PARAM_WINDOW_FUNCTION].getValue();
+        return static_cast<Math::Window::Function>(value);
+    }
+
+    /// @brief Set the window function.
+    /// @param value The window function for computing DFT coefficients.
+    inline void set_window_function(const Math::Window::Function& value) {
+        params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
+    }
+
 
     /// @brief Process a sample.
     ///
@@ -389,6 +428,13 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         addParam(createParam<Rogan2PWhite>(Vec(18, box.size.y - RACK_GRID_WIDTH - 100), module, Spectrogram::PARAM_INPUT_GAIN));
         addParam(createParamCentered<PB61303>(Vec(35, 45), module, Spectrogram::PARAM_RUN));
         addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(35, 45), module, Spectrogram::LIGHT_RUN));
+
+        // Screen controls.
+        // Window function control with custom angles to match discrete range.
+        auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
+        window_function_param->maxAngle = 2.f * M_PI;
+        addParam(window_function_param);
+
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));

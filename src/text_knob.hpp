@@ -16,6 +16,8 @@
 
 #include <string>
 #include "rack.hpp"
+#include "./structs.hpp"
+#include "./dsp/math.hpp"
 
 #ifndef ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
@@ -32,7 +34,7 @@ struct TextKnob : rack::app::Knob {
         /// The line height for the font.
         float line_height = 11.f;
         /// the font for rendering text on the display
-        std::shared_ptr<Font> font = APP->window->loadFont(
+        std::shared_ptr<rack::Font> font = APP->window->loadFont(
             rack::asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
         );
     } label, value;  // The label and value text.
@@ -80,6 +82,94 @@ struct TextKnob : rack::app::Knob {
             nvgText(args.vg, box.size.x / 2.f, 18, value.text.c_str(), NULL);
         }
         rack::app::Knob::drawLayer(args, layer);
+    }
+};
+
+/// @brief A menu item for changing a parameter widget value.
+struct ParamWidgetMenuItem : MenuItem {
+    /// The parameter widget to update.
+    rack::app::ParamWidget* param_widget = nullptr;
+    /// The option for this menu item.
+    float value;
+
+    /// @brief Respond to the menu item being selected.
+    inline void onAction(const event::Action& e) override {
+        param_widget->getParamQuantity()->setValue(value);
+    }
+};
+
+/// @brief A text knob with window function option selection when right-clicked.
+struct WindowFunctionTextKnob : TextKnob {
+    void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
+        for (size_t i = 0; i < 15; i++) {  // TODO: get total number of windows automatically
+            const auto label = Math::Window::name(static_cast<Math::Window::Function>(i));
+            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
+            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
+            item->value = i;
+            item->param_widget = this;
+            menu->addChild(item);
+        }
+    }
+};
+
+/// @brief A text knob with window length option selection when right-clicked.
+struct WindowLengthTextKnob : TextKnob {
+    void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
+        for (size_t i = 7; i < 15; i++) {
+            const auto label = std::to_string(1 << i);
+            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
+            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
+            item->value = i;
+            item->param_widget = this;
+            menu->addChild(item);
+        }
+    }
+};
+
+/// @brief A text knob with frequency scale option selection when right-clicked.
+struct FrequencyScaleTextKnob : TextKnob {
+    void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
+        for (size_t i = 0; i < static_cast<size_t>(FrequencyScale::NumOptions); i++) {
+            const auto label = to_string(static_cast<FrequencyScale>(i));
+            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
+            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
+            item->value = i;
+            item->param_widget = this;
+            menu->addChild(item);
+        }
+    }
+};
+
+/// @brief A text knob with magnitude scale option selection when right-clicked.
+struct MagnitudeScaleTextKnob : TextKnob {
+    void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
+        for (size_t i = 0; i < static_cast<size_t>(MagnitudeScale::NumOptions); i++) {
+            const auto label = to_string(static_cast<MagnitudeScale>(i));
+            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
+            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
+            item->value = i;
+            item->param_widget = this;
+            menu->addChild(item);
+        }
+    }
+};
+
+/// @brief A text knob with frequency smoothing option selection when right-clicked.
+struct FrequencySmoothingTextKnob : TextKnob {
+    void appendContextMenu(Menu* menu) override {
+        menu->addChild(new MenuSeparator);
+        for (size_t i = 0; i < static_cast<size_t>(FrequencySmoothing::NumOptions); i++) {
+            const auto label = to_string(static_cast<FrequencySmoothing>(i));
+            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
+            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
+            item->value = i;
+            item->param_widget = this;
+            menu->addChild(item);
+        }
     }
 };
 
