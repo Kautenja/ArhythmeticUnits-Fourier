@@ -206,7 +206,6 @@ struct Spectrogram : rack::Module {
         for (std::size_t i = 0; i < coefficients.size(); i++)
             coefficients[i] = Math::DFTCoefficients(N_FFT);
         // Resize the delay line for the number of FFT bins.
-        delay.resize(N_FFT);
         dft_divider.setDivision(N_FFT / 2);
         onReset();
     }
@@ -402,28 +401,16 @@ struct Spectrogram : rack::Module {
     /// Resizes the delay lines and DFT buffers to the length of the window.
     /// Also sets the DFT divider to the length of the hop.
     inline void process_window() {
-        // // Determine the length of the delay lines and associated FFTs.
-        // const size_t N = get_window_length();
         window_function.set_window(get_window_function(), N_FFT, false, true);
-        // // Iterate over the number of channels to resize buffers.
-        // for (size_t i = 0; i < NUM_CHANNELS; i++) {
-        //     if (fft.size() != N)
-        //         fft.resize(N);
-        //     if (delay[i].size() == N) continue;
-        //     // Resize and clear the delay lines.
-        //     delay[i].resize(N);
-        //     delay[i].clear();
-        //     // Resize and clear the coefficient buffers.
-        //     filtered_coefficients[i].resize(N);
-        //     std::fill(filtered_coefficients[i].begin(), filtered_coefficients[i].end(), 0.f);
-        //     // Update the rasterized coefficients from the FFT length.
-        //     rasterized_coefficients[i].resize(N / 2.f + 1);
-        //     for (auto& coeff : rasterized_coefficients[i]) {
-        //         coeff.x = 0.f;
-        //         coeff.y = 0.f;
-        //     }
-        //     render_coefficients[i] = rasterized_coefficients[i];
-        // }
+        if (fft.size() != N_FFT)
+            fft.resize(N_FFT);
+        if (delay.size() != N_FFT) {
+            delay.resize(N_FFT);
+            delay.clear();
+        }
+        if (filtered_coefficients.size() != N_FFT)
+            filtered_coefficients.resize(N_FFT);
+        std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0.f);
     }
 
     /// @brief Process presses to the "run" button.
