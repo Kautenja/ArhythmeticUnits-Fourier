@@ -561,6 +561,15 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     /// @param args the arguments for the current draw call
     ///
     void draw_spectrogram(const DrawArgs& args) {
+
+        // The reference frequency for the slope compensation.
+        static constexpr float reference_frequency = 1000.f;
+        const auto slope = module->get_slope();
+        // Determine the Nyquist rate from the sample rate.
+        const float nyquist_rate = APP->engine->getSampleRate() / 2.f;
+        // A small constant for numerical stability.
+        static constexpr float epsilon = 1e-6f;
+
         // Determine the dimensions of the spectral image.
         const int width = module->coefficients.size();
         const int height = module->coefficients[0].size() / 2;
@@ -568,6 +577,17 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         uint8_t pixels[height * width * 4];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
+                // // Determine the y-scale from the frequency. The slope is provided
+                // // in decibels/octave, so first determine the octave offset from
+                // // the current frequency using, e.g., 1000Hz as the reference
+                // // frequency for the curve. I.e., because octaves are logarithmic,
+                // // we can simply compute \f$\log2(f_i / f_{reference})\f$ and
+                // // multiply by the slope. Because we're dealing with y first in
+                // // terms of amplitude, also convert the decibel scaling to an
+                // // amplitude gain.
+                // auto gain = log2f(x * nyquist_rate / reference_frequency + epsilon);
+                // gain = Math::decibels2amplitude(slope * gain);
+
                 float scaled_y = y;
                 if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
                     scaled_y = height * Math::squared(scaled_y / height);
