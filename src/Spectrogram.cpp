@@ -319,18 +319,18 @@ struct Spectrogram : rack::Module {
         params[PARAM_TIME_SMOOTHING].setValue(value);
     }
 
-    // /// @brief Compute the alpha parameter of the time smoothing filter.
-    // /// @returns The alpha parameter of an EMA smoothing filter.
-    // inline float get_time_smoothing_alpha() {
-    //     // Determine the length of the smoothing filter.
-    //     const float smoothing_time = params[PARAM_TIME_SMOOTHING].getValue();
-    //     // If smoothing time is 0 or lower, alpha is always 0.
-    //     if (smoothing_time <= 0.f) return 0.f;
-    //     // Determine the hop-rate, i.e., the refresh rate of the DFT.
-    //     const float hop_time = params[PARAM_HOP_LENGTH].getValue();
-    //     // Calculate alpha relative to the hop-rate to keep time normalized.
-    //     return expf(-10.f * hop_time / smoothing_time);
-    // }
+    /// @brief Compute the alpha parameter of the time smoothing filter.
+    /// @returns The alpha parameter of an EMA smoothing filter.
+    inline float get_time_smoothing_alpha() {
+        // Determine the length of the smoothing filter.
+        const float smoothing_time = params[PARAM_TIME_SMOOTHING].getValue();
+        // If smoothing time is 0 or lower, alpha is always 0.
+        if (smoothing_time <= 0.f) return 0.f;
+        // Determine the hop-rate, i.e., the refresh rate of the DFT.
+        const float hop_time = N_FFT / 2;  // params[PARAM_HOP_LENGTH].getValue();
+        // Calculate alpha relative to the hop-rate to keep time normalized.
+        return expf(-10.f * hop_time / smoothing_time);
+    }
 
     // Frequency/Magnitude Smoothing
 
