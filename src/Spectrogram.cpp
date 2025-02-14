@@ -78,6 +78,9 @@ struct Spectrogram : rack::Module {
         PARAM_FREQUENCY_SCALE,
         PARAM_TIME_SMOOTHING,
         PARAM_FREQUENCY_SMOOTHING,
+        PARAM_LOW_FREQUENCY,
+        PARAM_HIGH_FREQUENCY,
+        PARAM_SLOPE,
         NUM_PARAMS
     };
 
@@ -96,6 +99,12 @@ struct Spectrogram : rack::Module {
     };
 
  private:
+    /// The sample rate of the module.
+    float sample_rate = 0.f;
+
+    // /// DC-blocking filters for AC-coupled mode.
+    // Filter::DCBlocker<float> dc_blocker;
+
     /// The delay line for tracking the input signal x[t]
     Math::ContiguousCircularBuffer<float> delay;
 
@@ -119,7 +128,7 @@ struct Spectrogram : rack::Module {
     uint32_t hop_index = 0;
 
     /// @brief Initialize a new spectrogram.
-    Spectrogram() : coefficients(N_STFT) {
+    Spectrogram() : sample_rate(APP->engine->getSampleRate()), coefficients(N_STFT) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup the input signal port and controls.
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 24.f / 20.f), std::pow(10.f, 18.f / 20.f), "Input Gain", " dB", -10, 20);
@@ -157,14 +166,68 @@ struct Spectrogram : rack::Module {
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"
             "high frequencies.";
-
+        // Setup the low frequency range selector based on the Nyquist rate.
+        configParam(PARAM_LOW_FREQUENCY, 0, sample_rate / 2.f, 0, "LO Freq", "Hz");
+        getParamQuantity(PARAM_LOW_FREQUENCY)->description =
+            "The lower frequency bound for display. Frequencies below\n"
+            "this bound are not shown.";
+        // Setup the high frequency range selector based on the Nyquist rate.
+        configParam(PARAM_HIGH_FREQUENCY, 0, sample_rate / 2.f, sample_rate / 2.f, "HI Freq", "Hz");
+        getParamQuantity(PARAM_HIGH_FREQUENCY)->description =
+            "The upper frequency bound for display. Frequencies above\n"
+            "this bound are not shown.";
+        // Setup the slope along a simple range of values. Use a default value
+        // of 4.5dB/oct that will be familiar to SPAN users.
+        configParam(PARAM_SLOPE, -9, 9, 4.5, "Slope", "dB/oct");
+        getParamQuantity(PARAM_SLOPE)->description =
+            "The spectrum's slope around 1kHz. Useful for visually\n"
+            "compensating the natural roll-off of high frequency energy\n"
+            "in musical signals. Typical values are 4.5 and 3.0.";
+        // Disable randomization for all parameters.
+        for (size_t i = 0; i < NUM_PARAMS; i++)
+            getParamQuantity(i)->randomizeEnabled = false;
+        // Setup the buffer of coefficients.
         for (std::size_t i = 0; i < coefficients.size(); i++)
             coefficients[i] = Math::DFTCoefficients(N_FFT);
+        // Resize the delay line for the number of FFT bins.
         delay.resize(N_FFT);
         dft_divider.setDivision(N_FFT / 2);
         lightDivider.setDivision(512);
         onReset();
     }
+
+    // /// @brief Respond to the module being reset by the host environment.
+    // inline void onReset() final {
+    //     rack::Module::onReset();
+    //     // Reset hidden menu options.
+    //     is_fill_enabled = false;
+    //     is_bezier_enabled = true;
+    //     is_ac_coupled = true;
+    //     // Act as if the sample rate has changed to reset remaining state.
+    //     onSampleRateChange();
+    // }
+
+    // /// @brief Respond to a change in sample rate from the engine.
+    // inline void onSampleRateChange() final {
+    //     rack::Module::onSampleRateChange();
+    //     sample_rate = APP->engine->getSampleRate();
+    //     // Set the light divider relative to the sample rate and reset it.
+    //     light_divider.setDivision(512);
+    //     light_divider.reset();
+    //     // Update the low frequency bound and preserve settings.
+    //     const auto low_frequency = get_low_frequency();
+    //     getParamQuantity(PARAM_LOW_FREQUENCY)->maxValue = sample_rate / 2.f;
+    //     set_low_frequency(low_frequency);
+    //     // Update the high frequency bound and preserve settings.
+    //     const auto high_frequency = get_high_frequency();
+    //     getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
+    //     set_high_frequency(high_frequency);
+    //     // Set the transition width of DC-blocking filters for AC-coupled mode.
+    //     for (auto& filter : dc_blockers) {
+    //         filter.setTransitionWidth(10.f, sample_rate);
+    //         filter.reset();
+    //     }
+    // }
 
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
@@ -272,6 +335,52 @@ struct Spectrogram : rack::Module {
     /// @param value The frequency smoothing for rendering the coefficients.
     inline void set_frequency_smoothing(const FrequencySmoothing& value) {
         params[PARAM_FREQUENCY_SMOOTHING].setValue(static_cast<float>(value));
+    }
+
+    // Low Frequency Bound
+
+    /// @brief Return the lowest frequency to render on the display.
+    /// @returns The lowest frequency to render in Hz. If the frequency falls
+    /// below the Nyquist rate, then the Nyquist rate is returned.
+    inline float get_low_frequency() {
+        return fmin(params[PARAM_LOW_FREQUENCY].getValue(), sample_rate / 2.f);
+    }
+
+    /// @brief Set the lowest frequency to render on the display.
+    /// @param value The lowest frequency to render in Hz. If the value is
+    /// above the Nyquist rate, then the value is clipped.
+    inline void set_low_frequency(const float& value) {
+        params[PARAM_LOW_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
+    }
+
+    // High Frequency Bound
+
+    /// @brief Return the highest frequency to render on the display.
+    /// @returns The highest frequency to render in Hz. If the frequency
+    /// falls below the Nyquist rate, then the Nyquist rate is returned.
+    inline float get_high_frequency() {
+        return fmin(params[PARAM_HIGH_FREQUENCY].getValue(), sample_rate / 2.f);
+    }
+
+    /// @brief Set the highest frequency to render on the display.
+    /// @param value The highest frequency to render in Hz. If the value is
+    /// above the Nyquist rate, then the value is clipped.
+    inline void set_high_frequency(const float& value) {
+        params[PARAM_HIGH_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
+    }
+
+    // Magnitude/Frequency Slope
+
+    /// @brief Return the slope of the Bode plot.
+    /// @returns The slope of the Bode plot measured in dB/octave.
+    inline float get_slope() {
+        return params[PARAM_SLOPE].getValue();
+    }
+
+    /// @brief Set the slope of the Bode plot.
+    /// @param value The slope of the Bode plot measured in dB/octave.
+    inline void set_slope(const float& value) {
+        params[PARAM_SLOPE].setValue(value);
     }
 
     // -----------------------------------------------------------------------
@@ -546,6 +655,11 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
+        // Low and High frequency (frequency range) controls.
+        addParam(createParam<TextKnob>(Vec(50 + 7 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY));
+        addParam(createParam<TextKnob>(Vec(50 + 8 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
+        // Slope (dB/octave @1000Hz) controls.
+        addParam(createParam<TextKnob>(Vec(50 + 9 * 66, 330), module, Spectrogram::PARAM_SLOPE));
 
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
