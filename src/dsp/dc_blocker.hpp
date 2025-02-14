@@ -94,7 +94,7 @@ struct DCBlocker {
     /// @param sample_rate the sample rate of the external processing loop
     /// @returns the transition width measured in \f$Hz\f$
     ///
-    inline T getTransitionWidth(const float& sample_rate) {
+    inline T getTransitionWidth(const float& sample_rate) const {
         return sample_rate * (T(1) - p) / T(2);
     }
 
