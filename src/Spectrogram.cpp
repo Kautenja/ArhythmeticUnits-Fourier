@@ -115,9 +115,6 @@ struct Spectrogram : rack::Module {
     /// @brief The frequency scale to render.
     FrequencyScale frequency_scale = FrequencyScale::Logarithmic;
 
-    /// The window applied to the signal before computing the coefficients.
-    Math::Window::Function window = Math::Window::Function::Hann;
-
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
 
@@ -155,7 +152,6 @@ struct Spectrogram : rack::Module {
         for (std::size_t i = 0; i < coefficients.size(); i++)
             std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
         frequency_scale = FrequencyScale::Logarithmic;
-        window = Math::Window::Function::Hann;
         is_running = true;
     }
 
@@ -166,7 +162,6 @@ struct Spectrogram : rack::Module {
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
         JSON::set<int>(rootJ, "frequency_scale", static_cast<int>(frequency_scale));
-        JSON::set<int>(rootJ, "window", static_cast<int>(window));
         JSON::set<bool>(rootJ, "is_running", is_running);
         return rootJ;
     }
@@ -177,7 +172,6 @@ struct Spectrogram : rack::Module {
     ///
     inline void dataFromJson(json_t* rootJ) final {
         JSON::get<int>(rootJ,  "frequency_scale", [&](const int& value)  { frequency_scale = static_cast<FrequencyScale>(value); });
-        JSON::get<int>(rootJ,  "window",          [&](const int& value)  { window = static_cast<Math::Window::Function>(value); });
         JSON::get<bool>(rootJ, "is_running",      [&](const bool& value) { is_running = value; });
     }
 
@@ -251,7 +245,7 @@ struct Spectrogram : rack::Module {
         const float gain = params[PARAM_INPUT_GAIN].getValue();
         if (dft_divider.process() && is_running) {
             for (int i = 0; i < N_FFT; i++) coefficients[hop_index][i] = gain * delay.at(i);
-            fft_<N_FFT>(coefficients[hop_index], window);
+            fft_<N_FFT>(coefficients[hop_index], get_window_function());
             hop_index = (hop_index + 1) % N_STFT;
         }
         // set lights
@@ -512,33 +506,6 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
             auto item = createMenuItem<FrequencyScaleItem>(FREQUENCY_SCALE_LABELS[i], check);
             item->module = module;
             item->frequency_scale = frequency_scale;
-            menu->addChild(item);
-        }
-
-        // -------------------------------------------------------------------
-        // MARK: Window
-        // -------------------------------------------------------------------
-
-        /// A menu item for changing the DFT window.
-        struct WindowItem : MenuItem {
-            /// The module to update.
-            Spectrogram* module = nullptr;
-            /// The DFT window option for this menu item.
-            Math::Window::Function window;
-
-            inline void onAction(const event::Action& e) override {
-                module->window = window;
-            }
-        };
-        // add the window selection item to the menu
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuLabel("Window"));
-        for (unsigned i = 0; i < 15; i++) {  // TODO: get total number of windows automatically
-            const auto window = static_cast<Math::Window::Function>(i);
-            const auto check = CHECKMARK(module->window == window);
-            auto item = createMenuItem<WindowItem>(Math::Window::name(window), check);
-            item->window = window;
-            item->module = module;
             menu->addChild(item);
         }
 
