@@ -14,25 +14,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// - controls
-//     - run/stop
-//     - clear
-// - Menu option for hop length and window length
-//     - hop length, 5ms, 10ms, 15ms, 20ms, 25ms?
-//     - window length, default to 2 * hop length?
-//     - hop length + window length coupled?
-//     - manual entry for simplicity and few assumptions with 10ms,25ms default?
-// - Menu option for window like other window selection modules I have
-// - Menu option for color-scale
-//
-// 1. Buffer audio for `window_length`.
-// 2. Compute the nearest N-point FFT of the window every `hop_length`
-// 3. Buffer H FFT bins to render in a circular buffer
-//
-// TODO: what is the best graphical way to render?
-// -   Mordax data takes the simple approach of just rendering the coefficients buffer
-//     -   a vertical scan-line shows the current frame index
-
 #include <algorithm>
 #include <string>
 #include <iostream>
