@@ -517,11 +517,13 @@ struct SpectrumAnalyzer : rack::Module {
             const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
             // Determine the gain to apply to this channel's input signal.
             const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
-            // Depending on the AC-coupling mode, filter the input signal to
-            // remove DC.
-            const auto sample = is_ac_coupled ? dc_blockers[i].process(signal) : signal;
+            // Pass signal through the DC blocking filter. Do this regardless
+            // of whether we are in AC-coupling mode to ensure when switching
+            // between modes there is no graphical delay from the filter
+            // accumulating signal data.
+            dc_blockers[i].process(signal);
             // Insert the normalized and processed input signal into the delay.
-            delay[i].insert(gain * sample);
+            delay[i].insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
         }
     }
 
