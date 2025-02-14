@@ -116,7 +116,7 @@ struct Spectrogram : rack::Module {
     Trigger::Divider light_divider;
 
     /// a Schmitt Trigger for handling presses on the clock button
-    Trigger::Threshold<float> runTrigger;
+    Trigger::Threshold<float> run_trigger;
 
     /// Whether the analyzer is running or not.
     bool is_running = true;
@@ -414,16 +414,54 @@ struct Spectrogram : rack::Module {
         // }
     }
 
+    /// @brief Process presses to the "run" button.
+    /// @details
+    /// Processes the run parameter with a trigger and flips the `is_running`
+    /// flag when it fires.
+    inline void process_run_button() {
+        if (run_trigger.process(params[PARAM_RUN].getValue()))
+            is_running = !is_running;
+    }
+
+    // /// @brief Process input signals.
+    // /// @details
+    // /// Applies gain to each input signal and buffers it for DFT computation.
+    // inline void process_input_signal() {
+    //     if (!is_running) return;  // Don't buffer input signals if not running.
+    //     for (size_t i = 0; i < NUM_CHANNELS; i++) {
+    //         // Get the input signal and convert to normalized bipolar [-1, 1].
+    //         const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
+    //         // Determine the gain to apply to this channel's input signal.
+    //         const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
+    //         // Pass signal through the DC blocking filter. Do this regardless
+    //         // of whether we are in AC-coupling mode to ensure when switching
+    //         // between modes there is no graphical delay from the filter
+    //         // accumulating signal data.
+    //         dc_blockers[i].process(signal);
+    //         // Insert the normalized and processed input signal into the delay.
+    //         delay[i].insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
+    //     }
+    // }
+
     /// @brief Process a sample.
     ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
     ///
     void process(const ProcessArgs& args) final {
+
+        // // Pass signal through the DC blocking filter. Do this regardless
+        // // of whether we are in AC-coupling mode to ensure when switching
+        // // between modes there is no graphical delay from the filter
+        // // accumulating signal data.
+        // dc_blocker.process(signal);
+        // // Insert the normalized and processed input signal into the delay.
+        // delay.insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
+
         // Buffer the input signal.
         delay.insert(Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltage()));
-        // Handle presses on the "run" button
-        if (runTrigger.process(params[PARAM_RUN].getValue()))
-            is_running = !is_running;
+
+        process_run_button();
+
         // Process samples with the DFT
         const float gain = params[PARAM_INPUT_GAIN].getValue();
         if (dft_divider.process() && is_running) {
