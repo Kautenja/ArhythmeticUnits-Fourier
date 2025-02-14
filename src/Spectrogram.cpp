@@ -75,6 +75,7 @@ struct Spectrogram : rack::Module {
         PARAM_INPUT_GAIN,
         PARAM_RUN,
         PARAM_WINDOW_FUNCTION,
+        PARAM_FREQUENCY_SCALE,
         NUM_PARAMS
     };
 
@@ -135,6 +136,13 @@ struct Spectrogram : rack::Module {
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
+        // Setup the discrete frequency scale selector.
+        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale");
+        getParamQuantity(PARAM_FREQUENCY_SCALE)->snapEnabled = true;
+        getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
+            "The frequency-axis scale on the display. The DFT spaces\n"
+            "frequencies linearly but humans hear frequencies along\n"
+            "a logarithmic scale.";
 
         for (std::size_t i = 0; i < coefficients.size(); i++)
             coefficients[i] = Math::DFTCoefficients(N_FFT);
@@ -196,6 +204,21 @@ struct Spectrogram : rack::Module {
     /// @param value The window function for computing DFT coefficients.
     inline void set_window_function(const Math::Window::Function& value) {
         params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
+    }
+
+    // Frequency Scale
+
+    /// @brief Return the frequency scale setting.
+    /// @returns The frequency scale for rendering the X axis.
+    inline FrequencyScale get_frequency_scale() {
+        const auto value = params[PARAM_FREQUENCY_SCALE].getValue();
+        return static_cast<FrequencyScale>(value);
+    }
+
+    /// @brief Set the frequency scale setting.
+    /// @param value The frequency scale for rendering the X axis.
+    inline void set_frequency_scale(const FrequencyScale& value) {
+        params[PARAM_FREQUENCY_SCALE].setValue(static_cast<float>(value));
     }
 
     // -----------------------------------------------------------------------
@@ -460,6 +483,10 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
+        // Frequency scale control with custom angles to match discrete range.
+        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
+        frequency_scale_param->maxAngle = 0.3 * M_PI;
+        addParam(frequency_scale_param);
 
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
