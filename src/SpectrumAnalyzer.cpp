@@ -1222,17 +1222,6 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     }
 };
 
-/// @brief A menu item for changing boolean parameters.
-struct FlagMenuItem : MenuItem {
-    /// @brief The flag to update.
-    bool* flag = nullptr;
-
-    /// @brief Respond to the menu item being selected.
-    inline void onAction(const event::Action& e) override {
-        (*flag) = !(*flag);
-    }
-};
-
 /// The base-name for the panel files.
 const char BASENAME[] = "res/SpectrumAnalyzer";
 

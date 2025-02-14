@@ -19,6 +19,17 @@
 
 #include "rack.hpp"
 
+/// @brief A menu item for changing boolean parameters.
+struct FlagMenuItem : rack::MenuItem {
+    /// @brief The flag to update.
+    bool* flag = nullptr;
+
+    /// @brief Respond to the menu item being selected.
+    inline void onAction(const rack::event::Action& e) override {
+        (*flag) = !(*flag);
+    }
+};
+
 using namespace rack;
 
 /// the global instance of the VCV Rack plug-in.
