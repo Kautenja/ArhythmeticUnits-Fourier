@@ -109,6 +109,18 @@ struct Spectrogram : rack::Module {
     /// The delay line for tracking the input signal x[t]
     Math::ContiguousCircularBuffer<float> delay;
 
+    /// The window function for windowing the FFT.
+    Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, N_FFT, false, true};
+
+    /// An on-the-fly FFT calculator for each input channel.
+    Math::OnTheFlyRFFT fft{N_FFT};
+
+    /// A copy of the low-pass filtered coefficients.
+    Math::DFTCoefficients filtered_coefficients{N_FFT};
+
+
+
+
     /// A clock divider for calculating the DFT on a specific period.
     Trigger::Divider dft_divider;
 
@@ -392,7 +404,7 @@ struct Spectrogram : rack::Module {
     inline void process_window() {
         // // Determine the length of the delay lines and associated FFTs.
         // const size_t N = get_window_length();
-        // window_function.set_window(get_window_function(), N, false, true);
+        window_function.set_window(get_window_function(), N_FFT, false, true);
         // // Iterate over the number of channels to resize buffers.
         // for (size_t i = 0; i < NUM_CHANNELS; i++) {
         //     if (ffts[i].size() != N)
@@ -459,7 +471,7 @@ struct Spectrogram : rack::Module {
     /// @param args the sample arguments (sample rate, sample time, etc.)
     ///
     void process(const ProcessArgs& args) final {
-        // process_window();
+        process_window();
         process_run_button();
         process_input_signal();
 
