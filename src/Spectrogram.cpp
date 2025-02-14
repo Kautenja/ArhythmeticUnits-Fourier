@@ -442,6 +442,18 @@ struct Spectrogram : rack::Module {
         delay.insert(gain * (is_ac_coupled ? dc_blocker.getValue() : signal));
     }
 
+    // TODO
+
+    /// @brief Set the lights on the panel.
+    ///
+    /// @param args the sample arguments (sample rate, sample time, etc.)
+    ///
+    inline void process_lights(const ProcessArgs& args) {
+        if (!light_divider.process()) return;
+        const auto light_time = args.sampleTime * light_divider.getDivision();
+        lights[LIGHT_RUN].setSmoothBrightness(is_running, light_time);
+    }
+
     /// @brief Process a sample.
     ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
@@ -457,11 +469,8 @@ struct Spectrogram : rack::Module {
             fft_<N_FFT>(coefficients[hop_index], get_window_function());
             hop_index = (hop_index + 1) % N_STFT;
         }
-        // set lights
-        if (light_divider.process()) {
-            const auto lightTime = args.sampleTime * light_divider.getDivision();
-            lights[LIGHT_RUN].setSmoothBrightness(is_running, lightTime);
-        }
+
+        process_lights(args);
     }
 };
 
