@@ -429,7 +429,8 @@ struct Spectrogram : rack::Module {
     /// @param args the sample arguments (sample rate, sample time, etc.)
     ///
     void process(const ProcessArgs& args) final {
-        // Update the window function.
+        // Update the window function. We need asymmetric windows for FFT
+        // analysis and need coherent gain to be integrated into the window.
         window_function.set_window(get_window_function(), N_FFT, false, true);
         // Handle presses to the run button.
         if (run_trigger.process(params[PARAM_RUN].getValue()))
