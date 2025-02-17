@@ -848,11 +848,19 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
+            // // Draw the background.
+            // nvgBeginPath(args.vg);
+            // nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
+            // nvgFillColor(args.vg, background_color);
+            // nvgFill(args.vg);
+            // nvgClosePath(args.vg);
             // Draw the background.
             nvgBeginPath(args.vg);
             nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
             nvgFillColor(args.vg, background_color);
             nvgFill(args.vg);
+            nvgStrokeColor(args.vg, axis_stroke_color);
+            nvgStroke(args.vg);
             nvgClosePath(args.vg);
             // draw ticks for the axes of the plot.
             switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
