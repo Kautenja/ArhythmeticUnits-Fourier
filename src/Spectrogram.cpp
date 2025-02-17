@@ -469,10 +469,6 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
     /// The font size for the axis text.
     float axis_font_size = 8;
-    /// The color of the line to render.
-    NVGcolor coefficients_stroke_color = {{{0.9f, 0.85f, 0.15f, 0.75f}}};
-    /// The width of the lines to render for coefficients.
-    float coefficients_stroke_width = 1.5;
 
     explicit SpectralImageDisplay(Spectrogram* module_) :
         TransparentWidget(), module(module_) { }
