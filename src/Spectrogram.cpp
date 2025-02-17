@@ -278,6 +278,21 @@ struct Spectrogram : rack::Module {
         return N_FFT >> 1;  // N_FFT / 2
     }
 
+    // /// @brief Return the hop length of the windowed DFT in samples.
+    // /// @returns The number of samples to hop between computations of the DFT.
+    // inline size_t get_hop_length(const float& duration = 10.f) const {
+    //     return sample_rate * duration / N_STFT;
+    // }
+
+    // N STFT
+
+    /// @brief Return the length of the STFT for a certain length of time.
+    /// @returns The length of the STFT in frames for the input duration.
+    inline size_t get_n_stft(const float& duration = 10.f) {
+        // return duration / (get_hop_length() / sample_rate);
+        return sample_rate * duration / get_hop_length();
+    }
+
     // Frequency Scale
 
     /// @brief Return the frequency scale setting.
