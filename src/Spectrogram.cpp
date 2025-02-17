@@ -699,8 +699,8 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         // A small constant for numerical stability.
         static constexpr float epsilon = 1e-6f;
         // Determine the dimensions of the spectral image.
-        const int width = module->get_coefficients().size();  // TODO: use N_STFT?
-        const int height = module->get_coefficients()[0].size() / 2;  // TOSO: use N_FFT?
+        const int width = module->get_coefficients().size();
+        const int height = module->get_coefficients()[0].size() / 2;
         // Create a pixel buffer from the spectral image in RGBA8888 format.
         uint8_t pixels[height * width * 4];
         for (int y = 0; y < height; y++) {
@@ -752,12 +752,102 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         nvgClosePath(args.vg);
     }
 
+    /// @brief Draw the mouse position cross-hair.
+    /// @param args the arguments for the current draw call.
+    void draw_cross_hair(const DrawArgs& args) {
+        const auto mouse_position = get_mouse_position();
+        // Render the cross-hair row.
+        const float y_position = rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top);
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, pad_left, y_position);
+        nvgLineTo(args.vg, box.size.x - pad_right, y_position);
+        nvgStrokeWidth(args.vg, 0.5);
+        nvgStrokeColor(args.vg, cross_hair_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // Render the cross-hair column.
+        const float x_position = rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right);
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, x_position, pad_top);
+        nvgLineTo(args.vg, x_position, box.size.y - pad_bottom);
+        nvgStrokeWidth(args.vg, 0.5);
+        nvgStrokeColor(args.vg, cross_hair_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+    }
+
+    /// @brief Draw the cross-hair information as text.
+    /// @param args the arguments for the current draw call.
+    void draw_cross_hair_text(const DrawArgs& args) {
+        const auto mouse_position = get_mouse_position();
+        // Determine the frequency, frequency bin, etc. based on x.
+        float hover_freq = 0;
+        switch (module->get_frequency_scale()) {
+        case FrequencyScale::Linear:
+            hover_freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * mouse_position.y;
+            break;
+        case FrequencyScale::Logarithmic:
+            hover_freq = (get_high_frequency() - get_low_frequency()) * Math::squared(mouse_position.y) + get_low_frequency();
+            break;
+        default: break;  // TODO: raise error
+        }
+        nvgFontSize(args.vg, 9);
+        nvgFontFaceId(args.vg, font->handle);
+        nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
+        nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+        // Convert the hovered frequency to a string representation.
+        std::ostringstream stream;
+        if (hover_freq < 1000.f)
+            stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
+        else
+            stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
+        // Render hovered frequency above the plot in the top left.
+        nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
+        // Convert the frequency to a note.
+        if (hover_freq > 0) {
+            Math::TunedNote note;
+            Math::frequency_to_note(note, hover_freq);
+            // Render the note and octave
+            stream = {};
+            stream << Math::to_string(note.note) << note.octave;
+            nvgText(args.vg, pad_left + 55, pad_top / 2, stream.str().c_str(), NULL);
+            // Render the tuning measured in cents.
+            stream = {};
+            stream << (note.cents >= 0 ? "+" : "");
+            stream << std::fixed << std::setprecision(2) << note.cents << " cents";
+            nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+            nvgText(args.vg, pad_left + 140, pad_top / 2, stream.str().c_str(), NULL);
+        }
+        // TODO:
+        // Render the coefficient magnitude.
+        // const auto x = static_cast<int>(mouse_position.x * module->get_coefficients().size());
+        // const auto y = static_cast<int>(mouse_position.y * module->get_coefficients()[0].size() / 2);
+        // const auto magnitude = module->get_coefficients()[x][y];
+        // std::cout << Math::amplitude2decibels(magnitude) << std::endl;
+        // // // Render the y position.
+        // stream = {};
+        // // switch (module->get_magnitude_scale()) {
+        // // case MagnitudeScale::Linear:
+        // //     stream << std::fixed << std::setprecision(2) << mouse_position.y * 4 * 100 << "%";
+        // //     break;
+        // // case MagnitudeScale::Logarithmic60dB:
+        // //     stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
+        // //     break;
+        // // case MagnitudeScale::Logarithmic120dB:
+        // //     stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
+        // //     break;
+        // // default: break;  // TODO: raise error
+        // // }
+        // nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        // nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, stream.str().c_str(), NULL);
+    }
+
     /// @brief Draw the display on the main context.
     ///
     /// @param args the arguments for the draw context for this widget
     ///
     void drawLayer(const DrawArgs& args, int layer) override {
-        if (module != nullptr && layer == 1) {  // draw regardless of brightness settings.
+        if (layer == 1) {  // draw regardless of brightness settings.
             // Draw the background.
             nvgBeginPath(args.vg);
             nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
@@ -765,7 +855,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             nvgFill(args.vg);
             nvgClosePath(args.vg);
             // draw ticks for the axes of the plot.
-            switch (module->get_frequency_scale()) {
+            switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
             case FrequencyScale::Linear:
                 draw_y_ticks_linear(args);
                 break;
@@ -774,7 +864,14 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                 break;
             }
             // Draw the spectrogram.
-            draw_spectrogram(args);
+            if (module != nullptr) {
+                draw_spectrogram(args);
+                // Interactive mouse hovering functionality.
+                if (mouse_state.is_hovering) {
+                    draw_cross_hair(args);
+                    draw_cross_hair_text(args);
+                }
+            }
             // border
             nvgBeginPath(args.vg);
             nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
@@ -782,7 +879,6 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             nvgStrokeColor(args.vg, axis_stroke_color);
             nvgStroke(args.vg);
             nvgClosePath(args.vg);
-
         }
         Widget::drawLayer(args, layer);
     }
