@@ -131,7 +131,7 @@ struct Spectrogram : rack::Module {
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
         // Setup the discrete frequency scale selector.
-        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale");
+        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "Y Scale");
         getParamQuantity(PARAM_FREQUENCY_SCALE)->snapEnabled = true;
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
@@ -609,80 +609,75 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     // MARK: Rendering
     // -----------------------------------------------------------------------
 
+    // /// @brief Draw the Y ticks with a linear scale.
+    // ///
+    // /// @param args the arguments for the current draw call
+    // ///
+    // void draw_y_ticks_linear(const DrawArgs& args) const {
+    //     const float num_y_ticks = 10;
+    //     // Determine the highest frequency to render (Nyquist frequency)
+    //     // and quantize it to the nearest 1000'th place. This allows the
+    //     // spectra to be linearly cut up in a way that yields friendly
+    //     // frequencies.
+    //     const float nyquist_frequency = 1e3 * roundf(0.001 * APP->engine->getSampleRate() / 2);
+    //     const auto quantized_sample_rate = 2 * nyquist_frequency / APP->engine->getSampleRate();
+    //     for (float i = 1; i < num_y_ticks; i++) {
+    //         // Determine the relative position and re-scale it to the
+    //         // pixel location on-screen.
+    //         const auto position = i / num_y_ticks;
+    //         const auto point_y = rescale(position, 0.f, quantized_sample_rate, box.size.y, 0);
+    //         // Render the tick marker.
+    //         nvgBeginPath(args.vg);
+    //         nvgMoveTo(args.vg, 0, point_y);
+    //         nvgLineTo(args.vg, box.size.x, point_y);
+    //         nvgStrokeWidth(args.vg, axis_stroke_width);
+    //         nvgStrokeColor(args.vg, axis_stroke_color);
+    //         nvgStroke(args.vg);
+    //         nvgClosePath(args.vg);
+    //         // Render the tick label.
+    //         std::stringstream stream;
+    //         stream << std::fixed << std::setprecision(1) << (nyquist_frequency * position / 1000.f) << "kHz";
+    //         nvgFontSize(args.vg, axis_font_size);
+    //         nvgFillColor(args.vg, axis_font_color);
+    //         nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
+    //         nvgText(args.vg, 15, point_y + 4, stream.str().c_str(), NULL);
+    //     }
+    // }
+
     /// @brief Draw the Y ticks with a linear scale.
     ///
     /// @param args the arguments for the current draw call
     ///
-    void draw_y_ticks_linear(const DrawArgs& args) const {
-        const float num_y_ticks = 10;
-        // Determine the highest frequency to render (Nyquist frequency)
-        // and quantize it to the nearest 1000'th place. This allows the
-        // spectra to be linearly cut up in a way that yields friendly
-        // frequencies.
-        const float nyquist_frequency = 1e3 * roundf(0.001 * APP->engine->getSampleRate() / 2);
-        const auto quantized_sample_rate = 2 * nyquist_frequency / APP->engine->getSampleRate();
-        for (float i = 1; i < num_y_ticks; i++) {
-            // Determine the relative position and re-scale it to the
-            // pixel location on-screen.
-            const auto position = i / num_y_ticks;
-            const auto point_y = rescale(position, 0.f, quantized_sample_rate, box.size.y, 0);
-            // Render the tick marker.
+    void draw_y_ticks_linear(const DrawArgs& args) {
+        static constexpr float xticks = 10;
+        for (float i = 1; i < xticks; i++) {
+            // Determine the relative position and re-scale it to the pixel
+            // location on-screen. Since we're drawing a static number of
+            // points, the position doesn't change relative to the minimum or
+            // maximum frequencies (only the label value will change.)
+            float position = i / xticks;
+            float point_y = rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom);
+            // Render tick marker
             nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, 0, point_y);
-            nvgLineTo(args.vg, box.size.x, point_y);
+            nvgMoveTo(args.vg, pad_left, point_y);
+            nvgLineTo(args.vg, box.size.x - pad_right, point_y);
             nvgStrokeWidth(args.vg, axis_stroke_width);
             nvgStrokeColor(args.vg, axis_stroke_color);
             nvgStroke(args.vg);
             nvgClosePath(args.vg);
-            // Render the tick label.
+            // Render tick label
+            float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
             std::stringstream stream;
-            stream << std::fixed << std::setprecision(1) << (nyquist_frequency * position / 1000.f) << "kHz";
+            if (freq < 1000.f)
+                stream << std::fixed << std::setprecision(0) << freq << "Hz";
+            else
+                stream << std::fixed << std::setprecision(1) << freq / 1000.f << "kHz";
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
-            nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, 15, point_y + 4, stream.str().c_str(), NULL);
+            nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
         }
     }
-
-    // /// @brief Draw the Y ticks with an exponential scale.
-    // ///
-    // /// @param args the arguments for the current draw call
-    // ///
-    // void draw_y_ticks_logarithmic(const DrawArgs& args) const {
-    //     // Determine the highest frequency to render (Nyquist frequency)
-    //     const float nyquist_frequency = APP->engine->getSampleRate() / 2;
-    //     // Iterate over frequencies exponentially (base 10) starting
-    //     // at 100Hz up to the Nyquist frequency (e.g., 100, 1000, ...).
-    //     const auto nyquist_exponnent = floor(log10(nyquist_frequency)) + 1;
-    //     for (float exponent = 2.f; exponent < nyquist_exponnent; exponent++) {
-    //         // Iterate over harmonics of the base frequency, i.e., if
-    //         // we're at base 100Hz, iterate over 200Hz, 300Hz, ...
-    //         const float base_frequency = powf(10.f, exponent);
-    //         for (float offset = 1.f; offset < 10.f; offset++) {
-    //             // Scale base frequency to offset to the n'th harmonic.
-    //             const float frequency = base_frequency * offset;
-    //             if (frequency >= nyquist_frequency) break;
-    //             nvgBeginPath(args.vg);
-    //             // Re-scale the frequency to a pixel location and render.
-    //             const auto position = sqrt(frequency / nyquist_frequency);
-    //             const auto point_y = rescale(position, 0.f, 1.f, box.size.y, 0);
-    //             nvgMoveTo(args.vg, 0, point_y);
-    //             nvgLineTo(args.vg, box.size.x, point_y);
-    //             nvgStrokeWidth(args.vg, axis_stroke_width);
-    //             nvgStrokeColor(args.vg, axis_stroke_color);
-    //             nvgStroke(args.vg);
-    //             nvgClosePath(args.vg);
-    //         }
-    //         // Render a label with the base frequency in kHz.
-    //         std::stringstream stream;
-    //         stream << std::fixed << std::setprecision(1) << (base_frequency / 1000.f) << "kHz";
-    //         nvgFontSize(args.vg, axis_font_size);
-    //         nvgFillColor(args.vg, axis_font_color);
-    //         nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-    //         const auto point_y = rescale(sqrt(base_frequency / nyquist_frequency), 0.f, 1.f, box.size.y, 0);
-    //         nvgText(args.vg, 15, point_y + 4, stream.str().c_str(), NULL);
-    //     }
-    // }
 
     /// @brief Draw the Y ticks with an exponential scale.
     ///
