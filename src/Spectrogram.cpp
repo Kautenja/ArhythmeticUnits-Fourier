@@ -451,27 +451,163 @@ struct Spectrogram : rack::Module {
 /// A widget that displays an image stored in a 32-bit RGBA pixel buffer.
 struct SpectralImageDisplay : rack::TransparentWidget {
  private:
+    /// The vertical (top) padding for the plot.
+    static constexpr size_t pad_top = 20;
+    /// The vertical (bottom) padding for the plot.
+    static constexpr size_t pad_bottom = 50;
+    /// The horizontal (left) padding for the plot.
+    static constexpr size_t pad_left = 30;
+    /// The horizontal (right) padding for the plot.
+    static constexpr size_t pad_right = 5;
+    /// The radius of the rounded corners of the screen
+    static constexpr int corner_radius = 5;
+    /// The background color of the screen
+    static constexpr NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    /// The stroke color for the axis lines
+    static constexpr NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+    /// The width of the lines to render for axes.
+    static constexpr float axis_stroke_width = 1;
+    /// The font color for the axis text.
+    static constexpr NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
+    /// The font size for the axis text.
+    static constexpr float axis_font_size = 8;
+    /// The stroke color for the cross-hair
+    static constexpr NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
+
+    // /// the font for rendering text on the display
+    // const std::shared_ptr<Font> font = APP->window->loadFont(
+    //     rack::asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
+    // );
+
     /// The spectrogram module to render data from.
-    Spectrogram* module;
+    Spectrogram* module = nullptr;
+
+    /// the state of the mouse.
+    struct {
+        /// A state variable determining whether the mouse is above the widget.
+        bool is_hovering = false;
+        /// whether a drag is currently active
+        bool is_pressed = false;
+        /// whether the drag operation is being modified
+        bool is_modified = false;
+        /// the current position of the mouse pointer during the drag
+        rack::Vec position = {0, 0};
+    } mouse_state;
+
     /// a pointer to the image to draw the display to
     int screen = -1;
 
- public:
-    /// The radius of the rounded corners of the screen
-    int corner_radius = 5;
-    /// The background color of the screen
-    NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    /// The stroke color for the axis lines
-    NVGcolor axis_stroke_color = {{{1.0f, 1.0f, 1.0f, 0.2f}}};
-    /// The width of the lines to render for axes.
-    float axis_stroke_width = 1;
-    /// The font color for the axis text.
-    NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
-    /// The font size for the axis text.
-    float axis_font_size = 8;
+    // /// @brief Return the normalized position of the mouse.
+    // rack::Vec get_mouse_position() {
+    //     rack::Vec position = mouse_state.position;
+    //     // calculate the normalized x,y positions in [0, 1]. Account for
+    //     // padding to ensure relative position corresponds to the plot.
+    //     position.x = (position.x - pad_left) / (box.size.x - pad_left - pad_right);
+    //     position.x = Math::clip(position.x, 0.f, 1.f);
+    //     // y axis increases downward in pixel space, so invert about 1.
+    //     position.y = 1.f - (position.y - pad_top) / (box.size.y - pad_top - pad_bottom);
+    //     position.y = Math::clip(position.y, 0.f, 1.f);
+    //     return position;
+    // }
 
+    // /// @brief Return the minimum frequency to render on the x axis.
+    // inline float get_low_frequency() {
+    //     if (module == nullptr) return 0;
+    //     return module->get_low_frequency();
+    // }
+
+    // /// @brief Return the maximum frequency to render on the x axis.
+    // inline float get_high_frequency() {
+    //     if (module == nullptr) return APP->engine->getSampleRate() / 2;
+    //     return module->get_high_frequency();
+    // }
+
+ public:
     explicit SpectralImageDisplay(Spectrogram* module_) :
         TransparentWidget(), module(module_) { }
+
+    // -----------------------------------------------------------------------
+    // MARK: Interactivity
+    // -----------------------------------------------------------------------
+
+    /// @brief Respond to the mouse entering the widget.
+    void onEnter(const EnterEvent& e) override {
+        // Consume the event to prevent it from propagating.
+        e.consume(this);
+        // Set the hovering state to true.
+        mouse_state.is_hovering = true;
+    }
+
+    /// @brief Respond to the mouse exiting the widget.
+    void onLeave(const LeaveEvent& e) override {
+        // Consume the event to prevent it from propagating.
+        e.consume(this);
+        // Set the hovering state to false.
+        mouse_state.is_hovering = false;
+    }
+
+    /// @brief Respond to mouse hover events above the widget.
+    void onHover(const HoverEvent& e) override {
+        // Consume the event to prevent it from propagating.
+        e.consume(this);
+        // Set the mouse state to the hover position.
+        mouse_state.position = e.pos;
+    }
+
+    // /// @brief Respond to mouse scroll events while hovering above the widget.
+    // void onHoverScroll(const HoverScrollEvent& e) override {
+    //     // Consume the event to prevent it from propagating.
+    //     e.consume(this);
+    // }
+
+    /// Respond to a button event on this widget.
+    void onButton(const rack::event::Button &e) override {
+        // Consume the event to prevent it from propagating.
+        e.consume(this);
+        // Set the mouse state to the hover position.
+        mouse_state.position = e.pos;
+        // setup the drag state.
+        mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
+        // if the action is a press copy the waveform before updating
+        mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
+        // Handle right clicks.
+        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
+            dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
+    }
+
+    /// @brief Respond to drag start event on this widget.
+    void onDragStart(const rack::event::DragStart &e) override {
+        // // lock the cursor so it does not move in the engine during the edit
+        // APP->window->cursorLock();
+        // consume the event to prevent it from propagating
+        e.consume(this);
+    }
+
+    /// @brief Respond to drag move event on this widget.
+    void onDragMove(const rack::event::DragMove &e) override {
+        // consume the event to prevent it from propagating
+        e.consume(this);
+        // if the drag operation is not active, return early
+        if (!mouse_state.is_pressed) return;
+        // update the drag state based on the change in position from the mouse
+        mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
+        mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
+    }
+
+    /// @brief Respond to drag end event on this widget.
+    void onDragEnd(const rack::event::DragEnd &e) override {
+        // // unlock the cursor to return it to its normal state
+        // APP->window->cursorUnlock();
+        // consume the event to prevent it from propagating
+        e.consume(this);
+        if (!mouse_state.is_pressed) return;
+        // disable the press state.
+        mouse_state.is_pressed = false;
+    }
+
+    // -----------------------------------------------------------------------
+    // MARK: Rendering
+    // -----------------------------------------------------------------------
 
     /// @brief Draw the Y ticks with a linear scale.
     ///
@@ -589,26 +725,25 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                 pixels[4 * (width * (height - 1 - y) + x) + 3] = static_cast<uint8_t>(0.7 * 255);
             }
         }
-
         // create / update the image container
         if (screen == -1)  // check if the screen has been initialized yet
             screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels);
         else  // update the screen with the pixel data
             nvgUpdateImage(args.vg, screen, pixels);
-        // draw the screen
+        // screen from STFT pixels.
         nvgBeginPath(args.vg);
-        nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
-        nvgFillPaint(args.vg, nvgImagePattern(args.vg, 0, 0, box.size.x, box.size.y, 0, screen, 1.0));
+        nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+        nvgFillPaint(args.vg, nvgImagePattern(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom, 0, screen, 1.0));
         nvgFill(args.vg);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
         nvgClosePath(args.vg);
-        // scan-line
+        // scan-line from hop index.
         nvgBeginPath(args.vg);
-        float scan_x = module->get_hop_index() / static_cast<float>(Spectrogram::N_STFT);
-        nvgMoveTo(args.vg, scan_x * box.size.x, 0);
-        nvgLineTo(args.vg, scan_x * box.size.x, box.size.y);
+        float scan_x = module->get_hop_index() / static_cast<float>(width);
+        nvgMoveTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), pad_top);
+        nvgLineTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), box.size.y - pad_bottom);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
@@ -627,17 +762,26 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             nvgFillColor(args.vg, background_color);
             nvgFill(args.vg);
             nvgClosePath(args.vg);
-            // draw ticks for the axes of the plot.
-            switch (module->get_frequency_scale()) {
-            case FrequencyScale::Linear:
-                draw_y_ticks_linear(args);
-                break;
-            case FrequencyScale::Logarithmic:
-                draw_y_ticks_logarithmic(args);
-                break;
-            }
+            // // draw ticks for the axes of the plot.
+            // switch (module->get_frequency_scale()) {
+            // case FrequencyScale::Linear:
+            //     draw_y_ticks_linear(args);
+            //     break;
+            // case FrequencyScale::Logarithmic:
+            //     draw_y_ticks_logarithmic(args);
+            //     break;
+            // }
             // Draw the spectrogram.
             draw_spectrogram(args);
+
+            // border
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+            nvgStrokeWidth(args.vg, axis_stroke_width);
+            nvgStrokeColor(args.vg, axis_stroke_color);
+            nvgStroke(args.vg);
+            nvgClosePath(args.vg);
+
         }
         Widget::drawLayer(args, layer);
     }

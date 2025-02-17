@@ -684,14 +684,14 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     static constexpr NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     /// The stroke color for the axis lines
     static constexpr NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-    /// The stroke color for the cross-hair
-    static constexpr NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
     /// The width of the lines to render for axes.
     static constexpr float axis_stroke_width = 1;
     /// The font color for the axis text.
     static constexpr NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
     /// The font size for the axis text.
     static constexpr float axis_font_size = 8;
+    /// The stroke color for the cross-hair
+    static constexpr NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
 
     /// the font for rendering text on the display
     const std::shared_ptr<Font> font = APP->window->loadFont(
