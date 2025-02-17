@@ -609,41 +609,6 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     // MARK: Rendering
     // -----------------------------------------------------------------------
 
-    // /// @brief Draw the Y ticks with a linear scale.
-    // ///
-    // /// @param args the arguments for the current draw call
-    // ///
-    // void draw_y_ticks_linear(const DrawArgs& args) const {
-    //     const float num_y_ticks = 10;
-    //     // Determine the highest frequency to render (Nyquist frequency)
-    //     // and quantize it to the nearest 1000'th place. This allows the
-    //     // spectra to be linearly cut up in a way that yields friendly
-    //     // frequencies.
-    //     const float nyquist_frequency = 1e3 * roundf(0.001 * APP->engine->getSampleRate() / 2);
-    //     const auto quantized_sample_rate = 2 * nyquist_frequency / APP->engine->getSampleRate();
-    //     for (float i = 1; i < num_y_ticks; i++) {
-    //         // Determine the relative position and re-scale it to the
-    //         // pixel location on-screen.
-    //         const auto position = i / num_y_ticks;
-    //         const auto point_y = rescale(position, 0.f, quantized_sample_rate, box.size.y, 0);
-    //         // Render the tick marker.
-    //         nvgBeginPath(args.vg);
-    //         nvgMoveTo(args.vg, 0, point_y);
-    //         nvgLineTo(args.vg, box.size.x, point_y);
-    //         nvgStrokeWidth(args.vg, axis_stroke_width);
-    //         nvgStrokeColor(args.vg, axis_stroke_color);
-    //         nvgStroke(args.vg);
-    //         nvgClosePath(args.vg);
-    //         // Render the tick label.
-    //         std::stringstream stream;
-    //         stream << std::fixed << std::setprecision(1) << (nyquist_frequency * position / 1000.f) << "kHz";
-    //         nvgFontSize(args.vg, axis_font_size);
-    //         nvgFillColor(args.vg, axis_font_color);
-    //         nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-    //         nvgText(args.vg, 15, point_y + 4, stream.str().c_str(), NULL);
-    //     }
-    // }
-
     /// @brief Draw the Y ticks with a linear scale.
     ///
     /// @param args the arguments for the current draw call
