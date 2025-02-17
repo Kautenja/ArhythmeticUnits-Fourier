@@ -251,6 +251,21 @@ struct Spectrogram : rack::Module {
         params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
     }
 
+    // Hop Length
+
+    /// @brief Return the hop length of the windowed DFT in samples.
+    /// @returns The number of samples to hop between computations of the DFT.
+    inline size_t get_hop_length() {
+        // return params[PARAM_HOP_LENGTH].getValue() * sample_rate;
+        return N_FFT / 2;
+    }
+
+    // /// @brief Set the hop length of the windowed DFT in samples.
+    // /// @param value Number of samples to hop between computations of the DFT.
+    // inline void set_hop_length(const size_t& value) {
+    //     return params[PARAM_HOP_LENGTH].setValue(value / sample_rate);
+    // }
+
     // Frequency Scale
 
     /// @brief Return the frequency scale setting.
@@ -288,7 +303,7 @@ struct Spectrogram : rack::Module {
         // If smoothing time is 0 or lower, alpha is always 0.
         if (smoothing_time <= 0.f) return 0.f;
         // Determine the hop-rate, i.e., the refresh rate of the DFT.
-        const float hop_time = (N_FFT / 2) / sample_rate;  // params[PARAM_HOP_LENGTH].getValue();
+        const float hop_time = get_hop_length() / sample_rate;  // params[PARAM_HOP_LENGTH].getValue();
         // Calculate alpha relative to the hop-rate to keep time normalized.
         return expf(-10.f * hop_time / smoothing_time);
     }
@@ -425,8 +440,7 @@ struct Spectrogram : rack::Module {
             fft.buffer(delay.contiguous(), window_function.get_samples());
         }
         // Perform the number of FFT steps required at this hop-rate.
-        // fft.step(get_hop_length());
-        fft.step(N_FFT / 2);
+        fft.step(get_hop_length());
     }
 
     /// @brief Set the lights on the panel.
