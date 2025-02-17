@@ -178,12 +178,15 @@ struct Spectrogram : rack::Module {
         rack::Module::onReset();
         // Reset momentary button trigger states.
         is_running = true;
+        // Reset the hop index.
+        hop_index = 0;
         // Reset hidden menu options.
         is_ac_coupled = true;
         // Clear delay lines and cached coefficients.
         delay.clear();
         for (std::size_t i = 0; i < coefficients.size(); i++)
             std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
+        std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0.f);
         // Act as if the sample rate has changed to reset remaining state.
         onSampleRateChange();
     }
