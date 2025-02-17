@@ -88,6 +88,9 @@ struct Spectrogram : rack::Module {
     /// A copy of the low-pass filtered coefficients.
     Math::DFTCoefficients filtered_coefficients;
 
+    /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
+    Math::STFTCoefficients coefficients;
+
     /// a clock divider for updating the lights every 512 frames
     Trigger::Divider light_divider;
 
@@ -101,9 +104,6 @@ struct Spectrogram : rack::Module {
     uint32_t hop_index = 0;
 
  public:
-    /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
-    Math::STFTCoefficients coefficients;
-
     /// Whether to apply AC coupling to input signal.
     bool is_ac_coupled = true;
 
@@ -243,11 +243,17 @@ struct Spectrogram : rack::Module {
 
     /// @brief Return the current sample rate of the module.
     /// @returns The sample rate of the module.
-    inline float get_sample_rate() const { return sample_rate; }
+    inline const float& get_sample_rate() const { return sample_rate; }
 
     /// @brief Return the current hop index of the STFT.
     /// @brief The current hop index in [0, STFT - 1]
-    inline uint32_t get_hop_index() const { return hop_index; }
+    inline const uint32_t& get_hop_index() const { return hop_index; }
+
+    /// @brief Return the STFT coefficients.
+    /// @returns The current STFT coefficients.
+    inline const Math::STFTCoefficients& get_coefficients() const {
+        return coefficients;
+    }
 
     // Window Function
 
@@ -268,16 +274,9 @@ struct Spectrogram : rack::Module {
 
     /// @brief Return the hop length of the windowed DFT in samples.
     /// @returns The number of samples to hop between computations of the DFT.
-    inline size_t get_hop_length() {
-        // return params[PARAM_HOP_LENGTH].getValue() * sample_rate;
-        return N_FFT / 2;
+    inline static constexpr size_t get_hop_length() {
+        return N_FFT >> 1;  // N_FFT / 2
     }
-
-    // /// @brief Set the hop length of the windowed DFT in samples.
-    // /// @param value Number of samples to hop between computations of the DFT.
-    // inline void set_hop_length(const size_t& value) {
-    //     return params[PARAM_HOP_LENGTH].setValue(value / sample_rate);
-    // }
 
     // Frequency Scale
 
@@ -316,7 +315,7 @@ struct Spectrogram : rack::Module {
         // If smoothing time is 0 or lower, alpha is always 0.
         if (smoothing_time <= 0.f) return 0.f;
         // Determine the hop-rate, i.e., the refresh rate of the DFT.
-        const float hop_time = get_hop_length() / sample_rate;  // params[PARAM_HOP_LENGTH].getValue();
+        const float hop_time = get_hop_length() / sample_rate;
         // Calculate alpha relative to the hop-rate to keep time normalized.
         return expf(-10.f * hop_time / smoothing_time);
     }
@@ -386,29 +385,10 @@ struct Spectrogram : rack::Module {
     // MARK: Processing
     // -----------------------------------------------------------------------
 
-    /// @brief Process the window length and hop length parameters.
-    /// @details
-    /// Resizes the delay lines and DFT buffers to the length of the window.
-    /// Also sets the DFT divider to the length of the hop.
-    inline void process_window() {
-        window_function.set_window(get_window_function(), N_FFT, false, true);
-    }
-
-    /// @brief Process presses to the "run" button.
-    /// @details
-    /// Processes the run parameter with a trigger and flips the `is_running`
-    /// flag when it fires.
-    inline void process_run_button() {
-        if (run_trigger.process(params[PARAM_RUN].getValue()))
-            is_running = !is_running;
-    }
-
     /// @brief Process input signal.
     /// @details
     /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
-        // TODO: When to check is_running in this module?
-        // if (!is_running) return;  // Don't buffer input signals if not running.
         // Get the input signal and convert to normalized bipolar [-1, 1].
         const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
@@ -424,16 +404,14 @@ struct Spectrogram : rack::Module {
 
     /// @brief Process samples with the DFT.
     inline void process_coefficients() {
-        // Determine the alpha parameter of the low-pass smoothing filter.
-        const float alpha = get_time_smoothing_alpha();
-        // Determine the setting of the frequency smoothing mode.
-        const auto frequency_smoothing = get_frequency_smoothing();
         if (fft.is_done_computing()) {
             // Perform octave smoothing. For an N-length FFT, smooth over the
             // first N/2 + 1 coefficients to omit reflected frequencies.
+            const auto frequency_smoothing = get_frequency_smoothing();
             if (frequency_smoothing != FrequencySmoothing::None)
                 fft.smooth(sample_rate, to_float(frequency_smoothing));
             // Pass the coefficients through a smoothing filter.
+            const float alpha = get_time_smoothing_alpha();
             for (size_t n = 0; n < fft.coefficients.size(); n++)
                 filtered_coefficients[n] = alpha * std::abs(filtered_coefficients[n]) + (1.f - alpha) * std::abs(fft.coefficients[n]);
             // Update the coefficients and increment the hop index.
@@ -446,26 +424,26 @@ struct Spectrogram : rack::Module {
         fft.step(get_hop_length());
     }
 
-    /// @brief Set the lights on the panel.
-    ///
-    /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
-    inline void process_lights(const ProcessArgs& args) {
-        if (!light_divider.process()) return;
-        const auto light_time = args.sampleTime * light_divider.getDivision();
-        lights[LIGHT_RUN].setSmoothBrightness(is_running, light_time);
-    }
-
     /// @brief Process a sample.
     ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
     ///
     void process(const ProcessArgs& args) final {
-        process_window();
-        process_run_button();
-        process_input_signal();
-        process_coefficients();
-        process_lights(args);
+        // Update the window function.
+        window_function.set_window(get_window_function(), N_FFT, false, true);
+        // Handle presses to the run button.
+        if (run_trigger.process(params[PARAM_RUN].getValue()))
+            is_running = !is_running;
+        // Process the input signal and compute SFT coefficients as needed.
+        if (is_running) {
+            process_input_signal();
+            process_coefficients();
+        }
+        // Update the panel lights.
+        if (light_divider.process()) {
+            const auto light_time = args.sampleTime * light_divider.getDivision();
+            lights[LIGHT_RUN].setSmoothBrightness(is_running, light_time);
+        }
     }
 };
 
@@ -586,8 +564,8 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         // A small constant for numerical stability.
         static constexpr float epsilon = 1e-6f;
         // Determine the dimensions of the spectral image.
-        const int width = module->coefficients.size();
-        const int height = module->coefficients[0].size() / 2;
+        const int width = module->get_coefficients().size();  // TODO: use N_STFT?
+        const int height = module->get_coefficients()[0].size() / 2;  // TOSO: use N_FFT?
         // Create a pixel buffer from the spectral image in RGBA8888 format.
         uint8_t pixels[height * width * 4];
         for (int y = 0; y < height; y++) {
@@ -605,7 +583,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                 float scaled_y = y;
                 if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
                     scaled_y = height * Math::squared(scaled_y / height);
-                auto coeff = gain * interpolate_coefficients(module->coefficients[x], scaled_y);
+                auto coeff = gain * interpolate_coefficients(module->get_coefficients()[x], scaled_y);
                 // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
                 auto color = Math::ColorMap::magma(abs(coeff) / height);
                 pixels[4 * (width * (height - 1 - y) + x) + 0] = color.r * 255;
