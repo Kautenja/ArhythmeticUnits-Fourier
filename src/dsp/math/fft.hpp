@@ -217,12 +217,12 @@ class OnTheFlyFFT {
     ///
     /// This table is used to rearrange the input samples into bit-reversed order prior to
     /// performing the FFT computation.
-    BitReversalTable bit_reversal;
+    BitReversalTable bit_reversal{1};
 
     /// @brief Pre-computed twiddle factors for an N-point FFT.
     ///
     /// These are the complex coefficients used in the butterfly operations of the FFT.
-    TwiddleFactors twiddles;
+    TwiddleFactors twiddles{1};
 
     /// @brief The current step size in the Cooley-Tukey algorithm.
     ///
@@ -254,7 +254,7 @@ class OnTheFlyFFT {
     /// This vector holds the input samples (after windowing and bit-reversal) and is updated in-place
     /// during the FFT computation. Once the computation is complete, this buffer contains the frequency
     /// domain representation of the input signal.
-    std::vector<std::complex<float>> coefficients;
+    std::vector<std::complex<float>> coefficients{1};
 
     /// @brief Constructs an OnTheFlyFFT object for an N-point FFT.
     ///
@@ -262,7 +262,7 @@ class OnTheFlyFFT {
     ///
     /// The constructor initializes the pre-computed bit-reversal table, twiddle factors,
     /// and the coefficients buffer to accommodate \f$ N \f$ samples.
-    OnTheFlyFFT(const size_t& n) : bit_reversal(n), twiddles(n), coefficients(n) { }
+    explicit OnTheFlyFFT(const size_t& n) { resize(n); }
 
     /// @brief Resizes and initializes the FFT computation structures.
     ///
@@ -397,20 +397,20 @@ class OnTheFlyRFFT {
     ///
     /// The complex FFT is applied on a packed representation of the real input,
     /// reducing the computation by half while leveraging the symmetry in real signals.
-    OnTheFlyFFT fft;
+    OnTheFlyFFT fft{1};
 
     /// @brief Pre-computed twiddle factors used for reconstructing the full N-point FFT.
     ///
     /// These twiddle factors, defined as \f$ W_k = e^{-j\frac{2\pi k}{N}} \f$, are used in the
     /// reconstruction process to combine the FFT results of the even and odd parts of the signal.
-    TwiddleFactors twiddles;
+    TwiddleFactors twiddles{1};
 
  public:
     /// @brief The output coefficients buffer containing the final FFT result.
     ///
     /// This vector holds the frequency-domain representation (complex spectrum) of the real input
     /// signal after the reconstruction process. Its size is N.
-    std::vector<std::complex<float>> coefficients;
+    std::vector<std::complex<float>> coefficients{1};
 
     /// @brief Constructs an OnTheFlyRFFT object for an N-point RFFT.
     ///
@@ -418,7 +418,7 @@ class OnTheFlyRFFT {
     ///
     /// The constructor initializes the underlying N/2-point FFT, the twiddle factors for
     /// reconstruction, and the output coefficients buffer.
-    OnTheFlyRFFT(const size_t& n) : fft(n >> 1), twiddles(n), coefficients(n) { }
+    explicit OnTheFlyRFFT(const size_t& n) { resize(n); }
 
     /// @brief Resizes and reinitializes the RFFT computation structures.
     ///

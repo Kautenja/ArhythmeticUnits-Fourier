@@ -106,7 +106,12 @@ struct SpectrumAnalyzer : rack::Module {
     Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT ffts[NUM_CHANNELS] = {{1}, {1}, {1}, {1}};
+    Math::OnTheFlyRFFT ffts[NUM_CHANNELS] = {
+        Math::OnTheFlyRFFT(1),
+        Math::OnTheFlyRFFT(1),
+        Math::OnTheFlyRFFT(1),
+        Math::OnTheFlyRFFT(1)
+    };
 
     /// A copy of the low-pass filtered coefficients.
     Math::DFTCoefficients filtered_coefficients[NUM_CHANNELS];

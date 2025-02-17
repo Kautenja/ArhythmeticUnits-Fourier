@@ -80,13 +80,13 @@ struct Spectrogram : rack::Module {
     Math::ContiguousCircularBuffer<float> delay;
 
     /// The window function for windowing the FFT.
-    Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, N_FFT, false, true};
+    Math::Window::CachedWindow<float> window_function;
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT fft{1};
+    Math::OnTheFlyRFFT fft;
 
     /// A copy of the low-pass filtered coefficients.
-    Math::DFTCoefficients filtered_coefficients{N_FFT};
+    Math::DFTCoefficients filtered_coefficients;
 
     /// a clock divider for updating the lights every 512 frames
     Trigger::Divider light_divider;
@@ -97,18 +97,24 @@ struct Spectrogram : rack::Module {
     /// Whether the analyzer is running or not.
     bool is_running = true;
 
- public:
-    /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
-    Math::STFTCoefficients coefficients{N_STFT};
-
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
+
+ public:
+    /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
+    Math::STFTCoefficients coefficients;
 
     /// Whether to apply AC coupling to input signal.
     bool is_ac_coupled = true;
 
     /// @brief Initialize a new spectrogram.
-    Spectrogram() : sample_rate(APP->engine->getSampleRate()) {
+    Spectrogram() :
+        sample_rate(APP->engine->getSampleRate()),
+        delay(N_FFT),
+        window_function(Math::Window::Function::Boxcar, N_FFT, false, true),
+        fft(N_FFT),
+        filtered_coefficients(N_FFT),
+        coefficients(N_STFT) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup the input signal port and controls.
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
@@ -235,9 +241,13 @@ struct Spectrogram : rack::Module {
     // MARK: Parameters
     // -----------------------------------------------------------------------
 
-    // /// @brief Return the current sample rate of the module.
-    // /// @returns The sample rate of the module.
-    // inline float get_sample_rate() const { return sample_rate; }
+    /// @brief Return the current sample rate of the module.
+    /// @returns The sample rate of the module.
+    inline float get_sample_rate() const { return sample_rate; }
+
+    /// @brief Return the current hop index of the STFT.
+    /// @brief The current hop index in [0, STFT - 1]
+    inline uint32_t get_hop_index() const { return hop_index; }
 
     // Window Function
 
@@ -382,16 +392,6 @@ struct Spectrogram : rack::Module {
     /// Also sets the DFT divider to the length of the hop.
     inline void process_window() {
         window_function.set_window(get_window_function(), N_FFT, false, true);
-        if (fft.size() != N_FFT)
-            fft.resize(N_FFT);
-        if (delay.size() != N_FFT) {
-            delay.resize(N_FFT);
-            delay.clear();
-        }
-        if (filtered_coefficients.size() != N_FFT) {
-            filtered_coefficients.resize(N_FFT);
-            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0.f);
-        }
     }
 
     /// @brief Process presses to the "run" button.
@@ -631,7 +631,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         nvgClosePath(args.vg);
         // scan-line
         nvgBeginPath(args.vg);
-        float scan_x = module->hop_index / static_cast<float>(Spectrogram::N_STFT);
+        float scan_x = module->get_hop_index() / static_cast<float>(Spectrogram::N_STFT);
         nvgMoveTo(args.vg, scan_x * box.size.x, 0);
         nvgLineTo(args.vg, scan_x * box.size.x, box.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
