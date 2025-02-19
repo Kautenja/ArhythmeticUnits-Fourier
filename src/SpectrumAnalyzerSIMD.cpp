@@ -527,6 +527,11 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
         if (!is_running) return;  // Don't buffer input signals if not running.
+
+
+
+
+
         // Buffer signals and gains into SIMD structs for vectorized compute.
         float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
         float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
@@ -540,6 +545,24 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         dc_blockers_simd.process(signals_simd);
         // Insert the normalized and processed input signal into the delay.
         delay_simd.insert(gains_simd * (is_ac_coupled ? dc_blockers_simd.getValue() : signals_simd));
+
+
+
+
+
+        for (size_t i = 0; i < NUM_CHANNELS; i++) {
+            // Get the input signal and convert to normalized bipolar [-1, 1].
+            const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
+            // Determine the gain to apply to this channel's input signal.
+            const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
+            // Pass signal through the DC blocking filter. Do this regardless
+            // of whether we are in AC-coupling mode to ensure when switching
+            // between modes there is no graphical delay from the filter
+            // accumulating signal data.
+            dc_blockers[i].process(signal);
+            // Insert the normalized and processed input signal into the delay.
+            delay[i].insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
+        }
     }
 
     /// @brief Create a point from a spectral coefficient.

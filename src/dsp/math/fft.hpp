@@ -30,6 +30,7 @@
 #include <vector>
 #include "constants.hpp"
 #include "window.hpp"
+#include "rack.hpp"
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -52,14 +53,16 @@ typedef std::vector<DFTCoefficients> STFTCoefficients;
 /// repeated calls to expensive transcendental functions during the transform computation.
 ///
 /// @note The FFT length \f$ N \f$ should ideally be a power of 2 to work with radix-2 FFT algorithms.
+/// @tparam T The type for the twiddle factors.
+template<typename T>
 class TwiddleFactors {
  private:
-    /// @brief Pre-computed twiddle factors stored as a vector of std::complex<float>.
+    /// @brief Pre-computed twiddle factors stored as a vector of std::complex<T>.
     ///
     /// Only half the number of factors are stored because the FFT algorithm can exploit
     /// the symmetry in the complex exponentials, where the full set for an N-point FFT is:
     /// \f[ \{ W_0, W_1, \ldots, W_{(N/2)-1} \} \f]
-    std::vector<std::complex<float>> factors;
+    std::vector<std::complex<T>> factors;
 
  public:
     /// @brief Constructs a TwiddleFactors object for an N-point FFT.
@@ -85,11 +88,11 @@ class TwiddleFactors {
         // Resize the vector to store half the number of FFT points.
         factors.resize(n >> 1);  // Equivalent to factors.resize(n / 2)
         // Calculate the angular step theta = -2*pi/n.
-        const float theta = -2.0f * M_PI / n;
+        const T theta = T(-2.0) * M_PI / n;
         // Compute the multiplier: e^{-i 2pi/n} = cos(theta) + i*sin(theta)
-        const std::complex<float> multiplier(std::cos(theta), std::sin(theta));
+        const std::complex<T> multiplier(rack::simd::cos(theta), rack::simd::sin(theta));
         // Initialize the first twiddle factor to 1 (i.e., e^{0}).
-        std::complex<float> current(1.0f, 0.0f);
+        std::complex<T> current(T(1.0), T(0.0));
         // Iteratively compute and store each twiddle factor.
         for (size_t i = 0; i < factors.size(); ++i) {
             factors[i] = current;
@@ -117,7 +120,7 @@ class TwiddleFactors {
     /// where \f$ N \f$ is the FFT length (returned by size()). It is important to note
     /// that valid indices range from 0 to \f$ \frac{N}{2} - 1 \f$. Accessing an index outside
     /// this range leads to undefined behavior.
-    const std::complex<float>& operator[](const size_t& i) const {
+    const std::complex<T>& operator[](const size_t& i) const {
         return factors[i];
     }
 };
@@ -222,7 +225,7 @@ class OnTheFlyFFT {
     /// @brief Pre-computed twiddle factors for an N-point FFT.
     ///
     /// These are the complex coefficients used in the butterfly operations of the FFT.
-    TwiddleFactors twiddles{1};
+    TwiddleFactors<float> twiddles{1};
 
     /// @brief The current step size in the Cooley-Tukey algorithm.
     ///
@@ -403,7 +406,7 @@ class OnTheFlyRFFT {
     ///
     /// These twiddle factors, defined as \f$ W_k = e^{-j\frac{2\pi k}{N}} \f$, are used in the
     /// reconstruction process to combine the FFT results of the even and odd parts of the signal.
-    TwiddleFactors twiddles{1};
+    TwiddleFactors<float> twiddles{1};
 
  public:
     /// @brief The output coefficients buffer containing the final FFT result.
