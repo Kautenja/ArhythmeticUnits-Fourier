@@ -70,23 +70,25 @@ struct DCBlocker {
     /// the coefficient for the feedback line that controls the transition
     /// width. The default of 0.999 produces a transition width of 10Hz for
     /// signals sampled at rates of 44100Hz.
-    T p = 0.999;
+    T p;
     /// the delayed input signal for the digital differentiator
-    T last_input = 0;
+    T last_input;
     /// the delayed output signal for the leaky integrator
-    T output = 0;
+    T output;
 
  public:
+    DCBlocker() : p(0.999), last_input(0.0), output(0.0) { }
+
     /// @brief Reset the state of the filter.
-    inline void reset() { last_input = output = 0; }
+    inline void reset() { last_input = output = 0.0; }
 
     /// @brief Set the transition width in \f$Hz\f$.
     ///
     /// @param width the width of the transition band in \f$Hz\f$
     /// @param sample_rate the sample rate of the external processing loop
     ///
-    inline void setTransitionWidth(const float& width, const float& sample_rate) {
-        p = T(1) - (T(2) * width / sample_rate);
+    inline void setTransitionWidth(const T& width, const T& sample_rate) {
+        p = T(1.0) - (T(2.0) * width / sample_rate);
     }
 
     /// @brief Set the transition width in \f$Hz\f$.
@@ -94,8 +96,8 @@ struct DCBlocker {
     /// @param sample_rate the sample rate of the external processing loop
     /// @returns the transition width measured in \f$Hz\f$
     ///
-    inline T getTransitionWidth(const float& sample_rate) const {
-        return sample_rate * (T(1) - p) / T(2);
+    inline T getTransitionWidth(const T& sample_rate) const {
+        return sample_rate * (T(1.0) - p) / T(2.0);
     }
 
     /// @brief Process a sample using the filter.
@@ -113,7 +115,7 @@ struct DCBlocker {
     inline const T& process(const T& input) {
         // Calculate the output from the filter and store the value as the last
         // output for the next call to `process`, i.e., y[n - 1]
-        output = ((T(1) + p) / T(2)) * (input - last_input) + p * output;
+        output = ((T(1.0) + p) / T(2.0)) * (input - last_input) + p * output;
         // Store the current input to be the last input for the next call to
         // `process`, i.e., x[n - 1]
         last_input = input;
