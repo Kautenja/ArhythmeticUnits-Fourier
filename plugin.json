@@ -17,6 +17,13 @@
       "tags": ["Visual"]
     },
     {
+      "slug": "SpectrumAnalyzerSIMD",
+      "name": "Fourier (Spectrum Analyzer) SIMD",
+      "description": "Highly tune-able spectrum analyzer",
+      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf",
+      "tags": ["Visual"]
+    },
+    {
       "slug": "Spectrogram",
       "name": "Sound Spectrograph (Spectrogram)",
       "description": "Highly tune-able spectrogram visualizer",

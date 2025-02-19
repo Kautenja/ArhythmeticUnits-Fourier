@@ -106,7 +106,7 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     Math::ContiguousCircularBuffer<float> delay[NUM_CHANNELS];
 
     /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<rack::simd::float_4> delay_simd;
+    // Math::ContiguousCircularBuffer<rack::simd::float_4> delay_simd;
 
     /// The window function for windowing the FFT.
     Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
@@ -268,8 +268,8 @@ struct SpectrumAnalyzerSIMD : rack::Module {
             filter.setTransitionWidth(10.f, sample_rate);
             filter.reset();
         }
-        dc_blockers_simd.setTransitionWidth(10.f, sample_rate);
-        dc_blockers_simd.reset();
+        // dc_blockers_simd.setTransitionWidth(10.f, sample_rate);
+        // dc_blockers_simd.reset();
     }
 
     // -----------------------------------------------------------------------
@@ -525,19 +525,19 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
         if (!is_running) return;  // Don't buffer input signals if not running.
-        // Buffer signals and gains into SIMD structs for vectorized compute.
-        float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
-        float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            signals[i] = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
-            gains[i] = params[PARAM_INPUT_GAIN + i].getValue();
-        }
-        rack::simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
-        rack::simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
-        // Process the input signals with the DC blocking filters.
-        dc_blockers_simd.process(signals_simd);
-        // Insert the normalized and processed input signal into the delay.
-        delay_simd.insert(gains_simd * (is_ac_coupled ? dc_blockers_simd.getValue() : signals_simd));
+        // // Buffer signals and gains into SIMD structs for vectorized compute.
+        // float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
+        // float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
+        // for (size_t i = 0; i < NUM_CHANNELS; i++) {
+        //     signals[i] = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
+        //     gains[i] = params[PARAM_INPUT_GAIN + i].getValue();
+        // }
+        // rack::simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
+        // rack::simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
+        // // Process the input signals with the DC blocking filters.
+        // dc_blockers_simd.process(signals_simd);
+        // // Insert the normalized and processed input signal into the delay.
+        // delay_simd.insert(gains_simd * (is_ac_coupled ? dc_blockers_simd.getValue() : signals_simd));
 
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             // Get the input signal and convert to normalized bipolar [-1, 1].
@@ -1336,4 +1336,4 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
     }
 };
 
-// Model* modelSpectrumAnalyzerSIMD = createModel<SpectrumAnalyzerSIMD, SpectrumAnalyzerWidget>("SpectrumAnalyzerSIMD");
+Model* modelSpectrumAnalyzerSIMD = createModel<SpectrumAnalyzerSIMD, SpectrumAnalyzerWidget>("SpectrumAnalyzerSIMD");
