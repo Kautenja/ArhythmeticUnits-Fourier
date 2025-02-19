@@ -151,6 +151,12 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     /// The delay line for tracking the input signal x[t].
     Math::ContiguousCircularBuffer<rack::simd::float_4> delay_simd;
 
+    // /// The window function for windowing the FFT.
+    // Math::Window::CachedWindow<rack::simd::float_4> window_function_simd{Math::Window::Function::Boxcar, 1, false, true};
+
+    /// An on-the-fly FFT calculator for each input channel.
+    Math::OnTheFlyRFFT<rack::simd::float_4> fft{1};
+
  public:
     /// @brief Initialize a new spectrum analyzer.
     SpectrumAnalyzerSIMD() : sample_rate(APP->engine->getSampleRate()) {
