@@ -214,6 +214,7 @@ class BitReversalTable {
 ///   and the intermediate/final FFT results.
 ///
 /// @note The FFT length (number of samples) must be a power of 2.
+template<typename T>
 class OnTheFlyFFT {
  private:
     /// @brief Pre-computed bit-reversal table for an N-point FFT.
@@ -394,13 +395,14 @@ class OnTheFlyFFT {
 /// and then reconstructs the full N-point FFT using the symmetry properties of real signals.
 ///
 /// @note The RFFT length (N) must be a power of 2.
+template<typename T>
 class OnTheFlyRFFT {
  private:
     /// @brief The underlying N/2-point FFT used for the RFFT computation.
     ///
     /// The complex FFT is applied on a packed representation of the real input,
     /// reducing the computation by half while leveraging the symmetry in real signals.
-    OnTheFlyFFT fft{1};
+    OnTheFlyFFT<T> fft{1};
 
     /// @brief Pre-computed twiddle factors used for reconstructing the full N-point FFT.
     ///

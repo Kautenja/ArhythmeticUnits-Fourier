@@ -83,7 +83,7 @@ struct Spectrogram : rack::Module {
     Math::Window::CachedWindow<float> window_function;
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT fft;
+    Math::OnTheFlyRFFT<float> fft;
 
     /// A copy of the low-pass filtered coefficients.
     Math::DFTCoefficients filtered_coefficients;
