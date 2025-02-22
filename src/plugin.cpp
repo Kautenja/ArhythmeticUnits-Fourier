@@ -27,5 +27,4 @@ void init(rack::Plugin* instance) {
     plugin_instance = instance;
     instance->addModel(modelSpectrogram);
     instance->addModel(modelSpectrumAnalyzer);
-    instance->addModel(modelSpectrumAnalyzerSIMD);
 }

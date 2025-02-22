@@ -42,6 +42,5 @@ extern rack::Plugin* plugin_instance;
 /// The "Fourier" Spectrogram analyzer module.
 extern rack::Model *modelSpectrogram;
 extern rack::Model *modelSpectrumAnalyzer;
-extern rack::Model *modelSpectrumAnalyzerSIMD;
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
