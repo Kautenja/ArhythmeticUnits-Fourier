@@ -624,10 +624,10 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         // Determine the setting of the frequency smoothing mode.
         const auto frequency_smoothing = get_frequency_smoothing();
         if (fft.is_done_computing()) {
-            // // Perform octave smoothing. For an N-length FFT, smooth over the
-            // // first N/2 + 1 coefficients to omit reflected frequencies.
-            // if (frequency_smoothing != FrequencySmoothing::None)
-            //     fft.smooth(sample_rate, to_float(frequency_smoothing));
+            // Perform octave smoothing. For an N-length FFT, smooth over the
+            // first N/2 + 1 coefficients to omit reflected frequencies.
+            if (frequency_smoothing != FrequencySmoothing::None)
+                fft.smooth(sample_rate, to_float(frequency_smoothing));
             // Pass the coefficients through a smoothing filter.
             for (size_t n = 0; n < fft.coefficients.size(); n++)
                 filtered_coefficients[n] = alpha * rack::simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * rack::simd::abs(fft.coefficients[n]);
