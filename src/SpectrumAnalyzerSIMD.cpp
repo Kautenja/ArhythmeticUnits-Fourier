@@ -96,25 +96,8 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    /// DC-blocking filters for AC-coupled mode.
-    Filter::DCBlocker<float> dc_blockers[NUM_CHANNELS];
-
-    /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<float> delay[NUM_CHANNELS];
-
     /// The window function for windowing the FFT.
     Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
-
-    /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT<float> ffts[NUM_CHANNELS] = {
-        Math::OnTheFlyRFFT<float>(1),
-        Math::OnTheFlyRFFT<float>(1),
-        Math::OnTheFlyRFFT<float>(1),
-        Math::OnTheFlyRFFT<float>(1)
-    };
-
-    /// A copy of the low-pass filtered coefficients.
-    Math::DFTCoefficients filtered_coefficients[NUM_CHANNELS];
 
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
     std::vector<Vec> rasterized_coefficients[NUM_CHANNELS];
@@ -146,16 +129,16 @@ struct SpectrumAnalyzerSIMD : rack::Module {
 
  private:
     /// DC-blocking filters for AC-coupled mode.
-    Filter::DCBlocker<rack::simd::float_4> dc_blockers_simd;
+    Filter::DCBlocker<rack::simd::float_4> dc_blocker;
 
     /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<rack::simd::float_4> delay_simd;
-
-    // /// The window function for windowing the FFT.
-    // Math::Window::CachedWindow<rack::simd::float_4> window_function_simd{Math::Window::Function::Boxcar, 1, false, true};
+    Math::ContiguousCircularBuffer<rack::simd::float_4> delay;
 
     /// An on-the-fly FFT calculator for each input channel.
     Math::OnTheFlyRFFT<rack::simd::float_4> fft{1};
+
+    /// A copy of the low-pass filtered coefficients.
+    std::vector<std::complex<rack::simd::float_4>> filtered_coefficients;
 
  public:
     /// @brief Initialize a new spectrum analyzer.
@@ -272,12 +255,8 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
-        for (auto& filter : dc_blockers) {
-            filter.setTransitionWidth(10.f, sample_rate);
-            filter.reset();
-        }
-        dc_blockers_simd.setTransitionWidth(10.f, sample_rate);
-        dc_blockers_simd.reset();
+        dc_blocker.setTransitionWidth(10.f, sample_rate);
+        dc_blocker.reset();
     }
 
     // -----------------------------------------------------------------------
@@ -498,17 +477,19 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
         window_function.set_window(get_window_function(), N, false, true);
+        if (filtered_coefficients.size() != N) {
+            filtered_coefficients.resize(N);
+            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0);
+        }
+        if (fft.size() != N)
+            fft.resize(N);
+        if (delay.size() != N) {
+            delay.resize(N);
+            delay.clear();
+        }
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (ffts[i].size() != N)
-                ffts[i].resize(N);
-            if (delay[i].size() == N) continue;
-            // Resize and clear the delay lines.
-            delay[i].resize(N);
-            delay[i].clear();
-            // Resize and clear the coefficient buffers.
-            filtered_coefficients[i].resize(N);
-            std::fill(filtered_coefficients[i].begin(), filtered_coefficients[i].end(), 0.f);
+            if (rasterized_coefficients[i].size() == N / 2.f + 1) continue;
             // Update the rasterized coefficients from the FFT length.
             rasterized_coefficients[i].resize(N / 2.f + 1);
             for (auto& coeff : rasterized_coefficients[i]) {
@@ -533,11 +514,6 @@ struct SpectrumAnalyzerSIMD : rack::Module {
     /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
         if (!is_running) return;  // Don't buffer input signals if not running.
-
-
-
-
-
         // Buffer signals and gains into SIMD structs for vectorized compute.
         float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
         float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
@@ -548,27 +524,9 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         rack::simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
         rack::simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
         // Process the input signals with the DC blocking filters.
-        dc_blockers_simd.process(signals_simd);
+        dc_blocker.process(signals_simd);
         // Insert the normalized and processed input signal into the delay.
-        delay_simd.insert(gains_simd * (is_ac_coupled ? dc_blockers_simd.getValue() : signals_simd));
-
-
-
-
-
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            // Get the input signal and convert to normalized bipolar [-1, 1].
-            const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
-            // Determine the gain to apply to this channel's input signal.
-            const auto gain = params[PARAM_INPUT_GAIN + i].getValue();
-            // Pass signal through the DC blocking filter. Do this regardless
-            // of whether we are in AC-coupling mode to ensure when switching
-            // between modes there is no graphical delay from the filter
-            // accumulating signal data.
-            dc_blockers[i].process(signal);
-            // Insert the normalized and processed input signal into the delay.
-            delay[i].insert(gain * (is_ac_coupled ? dc_blockers[i].getValue() : signal));
-        }
+        delay.insert(gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd));
     }
 
     /// @brief Create a point from a spectral coefficient.
@@ -614,7 +572,7 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         const auto frequency_scale = get_frequency_scale();
         const auto magnitude_scale = get_magnitude_scale();
         // Determine the non-repeated coefficients.
-        const float N = filtered_coefficients[lane_index].size() / 2.f + 1.f;
+        const float N = filtered_coefficients.size() / 2.f + 1.f;
         for (size_t n = 0; n < static_cast<size_t>(N); n++) {
             // Set the point to a reference from the rasterized point buffer.
             Vec& point = rasterized_coefficients[lane_index][n];
@@ -642,7 +600,7 @@ struct SpectrumAnalyzerSIMD : rack::Module {
             // Set the Y point to the linear coefficient percentage. Apply the
             // gain that was previously calculated from the scaling function.
             const float max_amplitude = Math::decibels2amplitude(max_magnitude);
-            point.y = gain * abs(filtered_coefficients[lane_index][n]) / (max_amplitude * N);
+            point.y = gain * abs(filtered_coefficients[n]).s[lane_index] / (max_amplitude * N);
             // Apply magnitude scaling to the Y point.
             switch (magnitude_scale) {
             case MagnitudeScale::Linear:
@@ -665,22 +623,23 @@ struct SpectrumAnalyzerSIMD : rack::Module {
         const float alpha = get_time_smoothing_alpha();
         // Determine the setting of the frequency smoothing mode.
         const auto frequency_smoothing = get_frequency_smoothing();
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (ffts[i].is_done_computing()) {
-                // Perform octave smoothing. For an N-length FFT, smooth over the
-                // first N/2 + 1 coefficients to omit reflected frequencies.
-                if (frequency_smoothing != FrequencySmoothing::None)
-                    ffts[i].smooth(sample_rate, to_float(frequency_smoothing));
-                // Pass the coefficients through a smoothing filter.
-                for (size_t n = 0; n < ffts[i].coefficients.size(); n++)
-                    filtered_coefficients[i][n] = alpha * std::abs(filtered_coefficients[i][n]) + (1.f - alpha) * std::abs(ffts[i].coefficients[n]);
-                make_points(i);
-                // Add the delay line to the FFT pipeline.
-                ffts[i].buffer(delay[i].contiguous(), window_function.get_samples());
-            }
-            // Perform the number of FFT steps required at this hop-rate.
-            ffts[i].step(get_hop_length());
+        if (fft.is_done_computing()) {
+            // // Perform octave smoothing. For an N-length FFT, smooth over the
+            // // first N/2 + 1 coefficients to omit reflected frequencies.
+            // if (frequency_smoothing != FrequencySmoothing::None)
+            //     fft.smooth(sample_rate, to_float(frequency_smoothing));
+            // Pass the coefficients through a smoothing filter.
+            for (size_t n = 0; n < fft.coefficients.size(); n++)
+                filtered_coefficients[n] = alpha * rack::simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * rack::simd::abs(fft.coefficients[n]);
+            make_points(0);
+            make_points(1);
+            make_points(2);
+            make_points(3);
+            // Add the delay line to the FFT pipeline.
+            fft.buffer(delay.contiguous(), window_function.get_samples());
         }
+        // Perform the number of FFT steps required at this hop-rate.
+        fft.step(get_hop_length());
     }
 
     /// @brief Set the lights on the panel.
@@ -707,7 +666,7 @@ struct SpectrumAnalyzerSIMD : rack::Module {
 };
 
 /// @brief A display widget for rendering frequency coefficients.
-struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
+struct SpectrumAnalyzerDisplaySIMD : rack::TransparentWidget {
  private:
     /// The vertical (top) padding for the plot.
     static constexpr size_t pad_top = 20;
@@ -782,7 +741,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     ///
     /// @param module_ the module to render on the display.
     ///
-    explicit SpectrumAnalyzerDisplay(SpectrumAnalyzerSIMD* module_) :
+    explicit SpectrumAnalyzerDisplaySIMD(SpectrumAnalyzerSIMD* module_) :
         rack::TransparentWidget(),
         module(module_) { }
 
@@ -1270,12 +1229,12 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
 const char BASENAME[] = "res/SpectrumAnalyzer";
 
 /// @brief The widget for the spectrum analyzer module.
-struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
+struct SpectrumAnalyzerSIMDWidget : ThemedWidget<BASENAME> {
     /// @brief Create a new spectrum analyzer widget.
     ///
     /// @param module The back-end module to interact with. Can be a nullptr.
     ///
-    explicit SpectrumAnalyzerWidget(SpectrumAnalyzerSIMD* module = nullptr) : ThemedWidget<BASENAME>() {
+    explicit SpectrumAnalyzerSIMDWidget(SpectrumAnalyzerSIMD* module = nullptr) : ThemedWidget<BASENAME>() {
         setModule(module);
         // Screws
         addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
@@ -1291,7 +1250,7 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
         addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzerSIMD::PARAM_RUN));
         addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzerSIMD::LIGHT_RUN));
         // Screen.
-        SpectrumAnalyzerDisplay* display = new SpectrumAnalyzerDisplay(module);
+        SpectrumAnalyzerDisplaySIMD* display = new SpectrumAnalyzerDisplaySIMD(module);
         display->setPosition(Vec(45, 15));
         display->setSize(Vec(660, 350));
         addChild(display);
@@ -1353,4 +1312,4 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
     }
 };
 
-Model* modelSpectrumAnalyzerSIMD = createModel<SpectrumAnalyzerSIMD, SpectrumAnalyzerWidget>("SpectrumAnalyzerSIMD");
+Model* modelSpectrumAnalyzerSIMD = createModel<SpectrumAnalyzerSIMD, SpectrumAnalyzerSIMDWidget>("SpectrumAnalyzerSIMD");

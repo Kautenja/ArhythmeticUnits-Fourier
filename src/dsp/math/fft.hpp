@@ -98,22 +98,6 @@ class TwiddleFactors {
         }
     }
 
-    // inline void resize(const size_t& n) {
-    //     // Resize the vector to store half the number of FFT points.
-    //     factors.resize(n >> 1);  // Equivalent to factors.resize(n / 2)
-    //     // Calculate the angular step theta = -2*pi/n.
-    //     const T theta = T(-2.0) * M_PI / n;
-    //     // Compute the multiplier: e^{-i 2pi/n} = cos(theta) + i*sin(theta)
-    //     const std::complex<T> multiplier(rack::simd::cos(theta), rack::simd::sin(theta));
-    //     // Initialize the first twiddle factor to 1 (i.e., e^{0}).
-    //     std::complex<T> current(T(1.0), T(0.0));
-    //     // Iteratively compute and store each twiddle factor.
-    //     for (size_t i = 0; i < factors.size(); ++i) {
-    //         factors[i] = current;
-    //         current = current * multiplier;
-    //     }
-    // }
-
     /// @brief Returns the FFT size corresponding to the stored twiddle factors.
     ///
     /// @return The FFT length \f$ N \f$, computed as twice the number of stored factors.
@@ -212,6 +196,22 @@ class BitReversalTable {
     /// the current size.
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
+
+/// @brief Generic static function to multiply two complex numbers manually.
+/// @param a The left-hand operand.
+/// @param b The right-hand operand.
+/// @returns The complex product of `a` and `b`.
+/// @details
+/// This implementation is a work-around for using SIMD primitives. SIMD
+/// doesn't implement some of the operators needed by std::complex<T>
+/// implementation of multiplication. Something about checking for equality
+/// with 0?
+template<typename T>
+static inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::complex<T>& b) {
+    T realPart = a.real() * b.real() - a.imag() * b.imag();
+    T imagPart = a.real() * b.imag() + a.imag() * b.real();
+    return std::complex<T>(realPart, imagPart);
+}
 
 /// @brief An FFT computation utility based on pre-computed twiddle factors.
 ///
@@ -324,10 +324,7 @@ class OnTheFlyFFT {
     /// 2. Applies the provided window function to each sample.
     /// 3. Reorders the samples using a bit-reversal permutation based on the pre-computed table.
     /// 4. Resets the internal state variables (`step_`, `group`, and `pair`) for the FFT computation.
-    inline void buffer(
-        const std::complex<T>* samples,
-        const std::vector<T>& window
-    ) {
+    inline void buffer(const std::complex<T>* samples, const std::vector<T>& window) {
         const auto N = coefficients.size();
         // Copy the samples into the coefficients buffer.
         memcpy(coefficients.data(), samples, N * sizeof(std::complex<T>));
@@ -358,10 +355,10 @@ class OnTheFlyFFT {
         const size_t half_step = step_ >> 1;
         const size_t twiddle_stride = coefficients.size() / step_;
         // Retrieve the appropriate twiddle factor.
-        const auto w = twiddles[pair * twiddle_stride];
+        const std::complex<T> w = twiddles[pair * twiddle_stride];
         // Perform the butterfly operation.
         const auto even = coefficients[group + pair];
-        const auto odd = coefficients[group + pair + half_step] * w;
+        const auto odd = complex_multiply(coefficients[group + pair + half_step], w);
         coefficients[group + pair] = even + odd;
         coefficients[group + pair + half_step] = even - odd;
         // Update the FFT state variables.
@@ -384,7 +381,7 @@ class OnTheFlyFFT {
     /// the total number of steps required. It then iteratively calls the single-step() method,
     /// allowing the FFT computation to be spread across multiple processing intervals.
     inline void step(const size_t& hop_length) {
-        const auto num_steps = ceilf(get_total_steps() / static_cast<T>(hop_length));
+        const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
         for (size_t i = 0; i < num_steps; i++) {
             step();
         }
@@ -477,13 +474,13 @@ class OnTheFlyRFFT {
     /// 2. Applies the provided window function to the samples during the packing process.
     /// 3. Buffers the packed data into the underlying FFT using a unity window since the window
     ///    has already been applied.
-    inline void buffer(const T* samples, const std::vector<T>& window) {
+    inline void buffer(const T* samples, const std::vector<float>& window) {
         const size_t M = size() >> 1;  // M = N/2, the size of the underlying FFT.
         // Create a temporary array to pack the samples into complex numbers.
         std::vector<std::complex<T>> packed(M);
         for (size_t k = 0; k < M; ++k) {
-            T r = samples[2 * k]     * window[2 * k];
-            T i = samples[2 * k + 1] * window[2 * k + 1];
+            T r = samples[2 * k]     * T(window[2 * k]);
+            T i = samples[2 * k + 1] * T(window[2 * k + 1]);
             packed[k] = std::complex<T>(r, i);
         }
         // Since the window function has been applied during packing, use a unity window for FFT.
@@ -511,7 +508,7 @@ class OnTheFlyRFFT {
     /// iteratively calls the single-step method, allowing the RFFT computation to be distributed
     /// across multiple processing intervals.
     inline void step(const size_t& hop_length) {
-        const auto num_steps = ceilf(get_total_steps() / static_cast<T>(hop_length));
+        const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
         for (size_t i = 0; i < num_steps; i++) {
             step();
         }
@@ -544,7 +541,14 @@ class OnTheFlyRFFT {
             std::complex<T> A = fft.coefficients[k];
             std::complex<T> B = std::conj(fft.coefficients[M - k]);
             std::complex<T> Wk = twiddles[k]; // Wk = exp(-j*2pi*k/N)
-            std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
+            // NOTE: The below work-around addresses an incompatibility
+            // between std::complex and SIMD primitive types. We replace:
+            // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
+            // with the broken down version:
+            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
+                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
+                            Xk = A + B - Xk;
+                            Xk = complex_multiply<T>(Xk, T(0.5));
             coefficients[k]     = Xk;
             coefficients[N - k] = std::conj(Xk);
         }
@@ -570,15 +574,15 @@ class OnTheFlyRFFT {
         const float bin_width = sample_rate / static_cast<float>(n);
 
         // 1) Compute magnitude array (temporary storage).
-        std::vector<float> mag(n);
+        std::vector<T> mag(n);
         for (size_t i = 0; i < n; ++i) {
-            float re = coefficients[i].real();
-            float im = coefficients[i].imag();
-            mag[i] = std::sqrt(re * re + im * im);
+            T re = coefficients[i].real();
+            T im = coefficients[i].imag();
+            mag[i] = rack::simd::sqrt(re * re + im * im);
         }
 
         // 2) Build prefix sum of magnitudes.
-        std::vector<double> prefix_mag(n + 1, 0.0);
+        std::vector<T> prefix_mag(n + 1, 0.0);
         for (size_t i = 0; i < n; ++i) {
             prefix_mag[i + 1] = prefix_mag[i] + mag[i];
         }
@@ -616,10 +620,10 @@ class OnTheFlyRFFT {
             }
             high_idx = std::min(high_idx, n - 1UL);
             const size_t count = high_idx - low_idx + 1;
-            const double sum_in_window = prefix_mag[high_idx + 1] - prefix_mag[low_idx];
-            float avg = (count > 0) ? static_cast<float>(sum_in_window / count) : 0.0f;
+            const T sum_in_window = prefix_mag[high_idx + 1] - prefix_mag[low_idx];
+            T avg = (count > 0) ? sum_in_window / count : 0.0f;
             // Replace the FFT coefficient with the smoothed magnitude.
-            coefficients[i] = std::complex<float>(avg, 0.0f);
+            coefficients[i] = std::complex<T>(avg, T(0.0));
         }
     }
 };
