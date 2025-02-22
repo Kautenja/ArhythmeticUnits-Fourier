@@ -30,7 +30,6 @@
 #include <vector>
 #include "constants.hpp"
 #include "window.hpp"
-#include "rack.hpp"
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -94,7 +93,7 @@ class TwiddleFactors {
         // #pragma omp simd
         for (size_t i = 0; i < factors.size(); ++i) {
             const T angle = theta * static_cast<T>(i);
-            factors[i] = std::complex<T>(rack::simd::cos(angle), rack::simd::sin(angle));
+            factors[i] = std::complex<T>(cos(angle), sin(angle));
         }
     }
 
@@ -578,7 +577,7 @@ class OnTheFlyRFFT {
         for (size_t i = 0; i < n; ++i) {
             T re = coefficients[i].real();
             T im = coefficients[i].imag();
-            mag[i] = rack::simd::sqrt(re * re + im * im);
+            mag[i] = sqrt(re * re + im * im);
         }
 
         // 2) Build prefix sum of magnitudes.
