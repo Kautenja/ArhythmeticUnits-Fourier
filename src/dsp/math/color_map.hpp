@@ -153,9 +153,10 @@ inline Color cividis(float value) {
 inline Color bone(float value) {
     static const Color bone_table[] = {
         {0.000000, 0.000000, 0.000000},
-        {0.250980, 0.250980, 0.250980},
-        {0.500000, 0.500000, 0.500000},
-        {0.750980, 0.750980, 0.750980},
+        {0.062745, 0.062745, 0.129411},
+        {0.298039, 0.337254, 0.419607},
+        {0.423529, 0.505882, 0.537254},
+        {0.623529, 0.705882, 0.705882},
         {1.000000, 1.000000, 1.000000}
     };
     return get_colormap_value(bone_table, value);
@@ -183,7 +184,8 @@ enum class Function {
     Plasma,
     Inferno,
     Bone,
-    Gray
+    Gray,
+    NumFunctions
 };
 
 /// @brief Compute the color for given color mapping and value.
@@ -199,8 +201,8 @@ inline Color color_map(const Function& color_map_, const float& value) {
     case Function::Inferno:  return inferno(value);
     case Function::Bone:     return bone(value);
     case Function::Gray:     return gray(value);
+    default: throw std::runtime_error("Unrecognized color_map_ input.");
     }
-    throw std::runtime_error("Unrecognized color_map_ input.");
 }
 
 /// @brief Return the name of the given color map.
@@ -215,8 +217,8 @@ inline std::string name(const Function& color_map_) {
     case Function::Inferno:  return "Inferno";
     case Function::Bone:     return "Bone";
     case Function::Gray:     return "Gray";
+    default: throw std::runtime_error("Unrecognized color_map_ input.");
     }
-    throw std::runtime_error("Unrecognized color_map_ input.");
 }
 
 }  // namespace ColorMap

@@ -185,12 +185,11 @@ struct Spectrogram : rack::Module {
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
         rack::Module::onReset();
-        // Reset momentary button trigger states.
+        // Resent instance state of the module and menu preferences.
         is_running = true;
-        // Reset the hop index.
         hop_index = 0;
-        // Reset hidden menu options.
         is_ac_coupled = true;
+        color_map = Math::ColorMap::Function::Magma;
         // Clear delay lines and cached coefficients.
         delay.clear();
         for (std::size_t i = 0; i < coefficients.size(); i++)
@@ -228,6 +227,7 @@ struct Spectrogram : rack::Module {
         json_t* rootJ = json_object();
         JSON::set<bool>(rootJ, "is_running", is_running);
         JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
+        JSON::set<int>(rootJ,  "color_map", static_cast<int>(color_map));
         return rootJ;
     }
 
@@ -238,6 +238,9 @@ struct Spectrogram : rack::Module {
     inline void dataFromJson(json_t* rootJ) final {
         JSON::get<bool>(rootJ, "is_running", [&](const bool& value) { is_running = value; });
         JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) { is_ac_coupled = value; });
+        JSON::get<int>(rootJ,  "color_map", [&](const int& value) {
+            color_map = static_cast<Math::ColorMap::Function>(value);
+        });
     }
 
     // -----------------------------------------------------------------------
@@ -957,10 +960,43 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         menu->addChild(new MenuSeparator);
         // get a pointer to the module
         Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
+
+        // -------------------------------------------------------------------
+        // MARK: A/C Coupling
+        // -------------------------------------------------------------------
+
         // Create an option for enabling AC-coupled mode.
         auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
         ac_coupling_item->flag = &module->is_ac_coupled;
         menu->addChild(ac_coupling_item);
+
+        // -------------------------------------------------------------------
+        // MARK: Color Map
+        // -------------------------------------------------------------------
+
+        /// A menu item for changing the color map.
+        struct ColorMapItem : MenuItem {
+            /// The module to update.
+            Spectrogram* module = nullptr;
+            /// The color map option for this menu item.
+            Math::ColorMap::Function color_map;
+
+            inline void onAction(const event::Action& e) override {
+                module->color_map = color_map;
+            }
+        };
+        // add the color map selection item to the menu
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createMenuLabel("Color Map"));
+        for (unsigned i = 0; i < static_cast<int>(Math::ColorMap::Function::NumFunctions); i++) {
+            const auto color_map = static_cast<Math::ColorMap::Function>(i);
+            const auto check = CHECKMARK(module->color_map == color_map);
+            auto item = createMenuItem<ColorMapItem>(Math::ColorMap::name(color_map), check);
+            item->color_map = color_map;
+            item->module = module;
+            menu->addChild(item);
+        }
+
         // Call the super function.
         ThemedWidget<BASENAME>::appendContextMenu(menu);
     }
