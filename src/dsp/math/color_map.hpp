@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <string>
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -40,7 +41,7 @@ typedef struct {
 /// @param c2 The second color.
 /// @param t Interpolation factor in the range [0, 1].
 /// @return The interpolated color.
-inline Color interpolate_color(Color c1, Color c2, float t) {
+inline Color interpolate_color(const Color& c1, const Color& c2, float t) {
     Color result;
     result.r = c1.r + t * (c2.r - c1.r);
     result.g = c1.g + t * (c2.g - c1.g);
@@ -172,6 +173,50 @@ inline Color gray(float value) {
         {1.000000, 1.000000, 1.000000}
     };
     return get_colormap_value(gray_table, value);
+}
+
+/// @brief Window function types.
+enum class Function {
+    Viridis = 0,
+    Cividis,
+    Magma,
+    Plasma,
+    Inferno,
+    Bone,
+    Gray
+};
+
+/// @brief Compute the color for given color mapping and value.
+/// @param color_map_ The color map to use when mapping values.
+/// @param value The value to map to a color.
+/// @returns The color from given mapping for given value.
+inline Color color_map(const Function& color_map_, const float& value) {
+    switch (color_map_) {
+    case Function::Viridis:  return viridis(value);
+    case Function::Cividis:  return cividis(value);
+    case Function::Magma:    return magma(value);
+    case Function::Plasma:   return plasma(value);
+    case Function::Inferno:  return inferno(value);
+    case Function::Bone:     return bone(value);
+    case Function::Gray:     return gray(value);
+    }
+    throw std::runtime_error("Unrecognized color_map_ input.");
+}
+
+/// @brief Return the name of the given color map.
+/// @param color_map_ The color map to serialize into a string representation.
+/// @returns A descriptive string name for the color-map.
+inline std::string name(const Function& color_map_) {
+    switch (color_map_) {
+    case Function::Viridis:  return "Viridis";
+    case Function::Cividis:  return "Cividis";
+    case Function::Magma:    return "Magma";
+    case Function::Plasma:   return "Plasma";
+    case Function::Inferno:  return "Inferno";
+    case Function::Bone:     return "Bone";
+    case Function::Gray:     return "Gray";
+    }
+    throw std::runtime_error("Unrecognized color_map_ input.");
 }
 
 }  // namespace ColorMap
