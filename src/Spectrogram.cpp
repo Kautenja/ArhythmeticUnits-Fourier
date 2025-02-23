@@ -107,6 +107,9 @@ struct Spectrogram : rack::Module {
     /// Whether to apply AC coupling to input signal.
     bool is_ac_coupled = true;
 
+    /// The color map to use when rasterizing STFT coefficients to images.
+    Math::ColorMap::Function color_map = Math::ColorMap::Function::Magma;
+
     /// @brief Initialize a new spectrogram.
     Spectrogram() :
         sample_rate(APP->engine->getSampleRate()),
@@ -735,7 +738,8 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                     scaled_y = height * Math::squared(scaled_y / height);
                 auto coeff = gain * interpolate_coefficients(module->get_coefficients()[x], scaled_y);
                 // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
-                auto color = Math::ColorMap::magma(abs(coeff) / height);
+                // auto color = Math::ColorMap::magma(abs(coeff) / height);
+                auto color = Math::ColorMap::color_map(module->color_map, abs(coeff) / height);
                 pixels[4 * (width * (height - 1 - y) + x) + 0] = color.r * 255;
                 pixels[4 * (width * (height - 1 - y) + x) + 1] = color.g * 255;
                 pixels[4 * (width * (height - 1 - y) + x) + 2] = color.b * 255;
