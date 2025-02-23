@@ -18,7 +18,9 @@
 #ifndef DSP_MATH_CIRCULAR_BUFFER_HPP
 #define DSP_MATH_CIRCULAR_BUFFER_HPP
 
-#include <vector>
+#include <cstddef>    // size_t
+#include <algorithm>  // std::fill
+#include <vector>     // std::vector
 #include "functions.hpp"
 
 /// @brief Basic mathematical functions.
@@ -29,18 +31,18 @@ namespace Math {
 template<typename T>
 struct CircularBuffer {
  protected:
-    /// the data stored by the circular buffer
+    /// the buffer that houses the data.
     std::vector<T> buffer;
 
-    /// the head of the buffer
-    int32_t head = 0;
+    /// the head of the buffer.
+    size_t head = 0;
 
  public:
     /// @brief Initialize a new circular buffer.
     ///
     /// @param size the number of elements to store in the circular buffer
     ///
-    explicit CircularBuffer(const std::size_t& size = 1) : buffer(size) { }
+    explicit CircularBuffer(const size_t& size = 1) : buffer(size) { }
 
     /// @brief Return a pointer to the front of the underlying data structure.
     ///
@@ -55,7 +57,7 @@ struct CircularBuffer {
     /// If `pos` is not within the range of the container, an exception of
     /// type `std::out_of_range` will throw.
     ///
-    inline T& data_at(const std::size_t& pos) { return buffer.at(pos); }
+    inline T& data_at(const size_t& pos) { return buffer.at(pos); }
 
     /// @brief Return a reference to the element at relative index `index`.
     ///
@@ -64,21 +66,21 @@ struct CircularBuffer {
     /// `index` refers to the sample relative to the head index, i.e., -1
     /// would be the last sample, +1 would be the oldest sample in the buffer.
     /// The index is circular,
-    inline T& at(const int32_t& index) {
-        return buffer[mod<int32_t>(index + head, buffer.size())];
+    inline T& at(const size_t& index) {
+        return buffer[mod<size_t>(index + head, buffer.size())];
     }
 
     /// @brief Set the size of the circular buffer to a new value.
     ///
     /// @param size_ the number of elements to store in the circular buffer
     ///
-    inline void resize(std::size_t size_) { buffer.resize(size_); }
+    inline void resize(size_t size_) { buffer.resize(size_); }
 
     /// @brief Return the size of the buffer.
     ///
     /// @returns the number of elements that the buffer can store
     ///
-    inline std::size_t size() const { return buffer.size(); }
+    inline size_t size() const { return buffer.size(); }
 
     /// @brief Clear the contents of the buffer.
     inline void clear() { std::fill(buffer.begin(), buffer.end(), 0); }
@@ -101,18 +103,18 @@ struct CircularBuffer {
 template<typename T>
 struct ContiguousCircularBuffer {
  protected:
-    /// the data stored by the double circular buffer
+    /// the circular buffer that houses two sequential copies of the data.
     std::vector<T> buffer;
 
     /// the head of the buffer
-    int32_t head = 0;
+    size_t head = 0;
 
  public:
     /// @brief Initialize a new circular buffer.
     ///
     /// @param size the number of elements to store in the circular buffer
     ///
-    explicit ContiguousCircularBuffer(const std::size_t& size = 1) : buffer(2 * size) { }
+    explicit ContiguousCircularBuffer(const size_t& size = 1) : buffer(2 * size) { }
 
     /// @brief Return the underlying contiguous data buffer.
     const std::vector<T> get_buffer() {
@@ -133,7 +135,7 @@ struct ContiguousCircularBuffer {
     /// If `pos` is not within the range of the container, an exception of
     /// type `std::out_of_range` will throw.
     ///
-    inline T& data_at(const std::size_t& pos) { return buffer.at(pos); }
+    inline T& data_at(const size_t& pos) { return buffer.at(pos); }
 
     /// @brief Return a reference to the element at relative index `index`.
     ///
@@ -142,8 +144,8 @@ struct ContiguousCircularBuffer {
     /// `index` refers to the sample relative to the head index, i.e., -1
     /// would be the last sample, +1 would be the oldest sample in the buffer.
     /// The index is circular,
-    inline T& at(const int32_t& index) {
-        return buffer[mod<int32_t>(index + head, buffer.size())];
+    inline T& at(const size_t& index) {
+        return buffer[mod<size_t>(index + head, buffer.size())];
     }
 
     /// @brief Set the size of the circular buffer to a new value.
@@ -152,7 +154,7 @@ struct ContiguousCircularBuffer {
     /// @details
     /// The internal double ring buffer will be resized to 2 * size.
     ///
-    inline void resize(std::size_t size_) { buffer.resize(2 * size_); }
+    inline void resize(size_t size_) { buffer.resize(2 * size_); }
 
     /// @brief Return the number of items that can be stored in the buffer.
     ///
@@ -160,7 +162,7 @@ struct ContiguousCircularBuffer {
     /// @details
     /// The size of the internal double ring buffer is 2 * size().
     ///
-    inline std::size_t size() const { return buffer.size() / 2; }
+    inline size_t size() const { return buffer.size() / 2; }
 
     /// @brief Clear the contents of the buffer.
     inline void clear() { std::fill(buffer.begin(), buffer.end(), 0); }
