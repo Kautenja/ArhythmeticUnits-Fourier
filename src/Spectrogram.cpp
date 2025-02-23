@@ -644,13 +644,13 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             float position = i / xticks;
             float point_y = rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom);
             // Render tick marker
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, pad_left, point_y);
-            nvgLineTo(args.vg, box.size.x - pad_right, point_y);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
+            // nvgBeginPath(args.vg);
+            // nvgMoveTo(args.vg, pad_left, point_y);
+            // nvgLineTo(args.vg, box.size.x - pad_right, point_y);
+            // nvgStrokeWidth(args.vg, axis_stroke_width);
+            // nvgStrokeColor(args.vg, axis_stroke_color);
+            // nvgStroke(args.vg);
+            // nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
             std::stringstream stream;
@@ -680,20 +680,20 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             // Iterate over harmonics of the base frequency, i.e., if
             // we're at base 100Hz, iterate over 200Hz, 300Hz, ...
             const float base_frequency = powf(10.f, exponent);
-            for (float offset = 1.f; offset < 10.f; offset++) {
-                // Scale base frequency to offset to the n'th harmonic.
-                const float frequency = base_frequency * offset;
-                if (frequency >= get_high_frequency()) break;
-                nvgBeginPath(args.vg);
-                // Re-scale the frequency to a pixel location and render.
-                const auto position = sqrt((frequency - get_low_frequency()) / frequency_range);
-                nvgMoveTo(args.vg, pad_left, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
-                nvgLineTo(args.vg, box.size.x - pad_right, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
-                nvgStrokeWidth(args.vg, axis_stroke_width);
-                nvgStrokeColor(args.vg, axis_stroke_color);
-                nvgStroke(args.vg);
-                nvgClosePath(args.vg);
-            }
+            // for (float offset = 1.f; offset < 10.f; offset++) {
+            //     // Scale base frequency to offset to the n'th harmonic.
+            //     const float frequency = base_frequency * offset;
+            //     if (frequency >= get_high_frequency()) break;
+            //     nvgBeginPath(args.vg);
+            //     // Re-scale the frequency to a pixel location and render.
+            //     const auto position = sqrt((frequency - get_low_frequency()) / frequency_range);
+            //     nvgMoveTo(args.vg, pad_left, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
+            //     nvgLineTo(args.vg, box.size.x - pad_right, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
+            //     nvgStrokeWidth(args.vg, axis_stroke_width);
+            //     nvgStrokeColor(args.vg, axis_stroke_color);
+            //     nvgStroke(args.vg);
+            //     nvgClosePath(args.vg);
+            // }
             // Render a label with the base frequency in kHz.
             std::stringstream stream;
             if (base_frequency < 1000.f)
