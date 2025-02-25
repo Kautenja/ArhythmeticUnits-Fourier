@@ -553,23 +553,31 @@ class OnTheFlyRFFT {
         }
     }
 
-    /**
-     * @brief Perform in-place smoothing of the FFT magnitudes.
-     *
-     * This method smooths the FFT magnitude spectrum over octave-based frequency bands.
-     * Instead of returning a new vector, it modifies the internal `coefficients` buffer directly,
-     * replacing each FFT coefficient with its smoothed magnitude (stored in the real part, with zero imaginary part).
-     *
-     * @param sample_rate        Sampling frequency in Hz.
-     * @param fraction_of_octave Fraction-of-an-octave for smoothing (e.g. 1.0 = 1 octave, 1/6 = 1/6 octave).
-     * @param f_min              Minimum frequency for the smoothing window (Hz).
-     * @param f_max              Maximum frequency for the smoothing window (Hz). Defaults to sample_rate/2 if <= 0.
-     */
-    inline void smooth(float sample_rate, float fraction_of_octave, float f_min = 20.0f, float f_max = 0.0f) {
+    /// @brief Perform in-place smoothing of the magnitude coefficients.
+    /// @param sample_rate The sample rate (measured in Hz.)
+    /// @param fraction_of_octave Fraction-of-an-octave for smoothing (e.g.,
+    /// \f$1 = 1\mathrm{Oct.}\f$, \f$\frac{1}{6} = \frac{1}{6}\mathrm{Oct.}\f$).
+    /// @param f_min Minimum frequency for the smoothing window (Hz).
+    /// @param f_max Maximum frequency for the smoothing window (Hz). Defaults
+    /// to \f$\frac{f_s}{2}\f$ if \f$\leq 0\f$.
+    /// @details
+    /// This method smooths the FFT magnitude spectrum over octave-based
+    /// frequency bands. Instead of returning a new vector, it modifies the
+    /// internal `coefficients` buffer directly, replacing each FFT
+    /// coefficient with its smoothed magnitude (stored in the real part, with
+    /// zero imaginary part).
+    inline void smooth(
+        float sample_rate,
+        float fraction_of_octave,
+        float f_min = 20.0f,
+        float f_max = 0.0f
+    ) {
         // Ensure FFT coefficients exist.
         const size_t n = coefficients.size();
-        if (n == 0) { return; }
-        if (f_max <= 0.0f) { f_max = sample_rate / 2.0f; }
+        if (n == 0)
+            return;
+        if (f_max <= 0.0f)
+            f_max = sample_rate / 2.0f;
         const float bin_width = sample_rate / static_cast<float>(n);
 
         // 1) Compute magnitude array (temporary storage).
