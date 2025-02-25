@@ -567,16 +567,13 @@ class OnTheFlyRFFT {
         // Ensure FFT coefficients exist.
         const size_t N = coefficients.size();
         if (N == 0) return;
-
         // Define the frequency range: from 0 Hz to the Nyquist frequency.
         const float f_max = sample_rate / 2.f;
         const float bin_width = sample_rate / static_cast<float>(N);
-
         // Build prefix sum of magnitudes.
-        std::vector<T> cumsum_mag(N + 1, 0.0);
+        std::vector<T> cumsum(N + 1, 0.0);
         for (size_t n = 0; n < N; ++n)
-            cumsum_mag[n + 1] = cumsum_mag[n] + abs(coefficients[n]);
-
+            cumsum[n + 1] = cumsum[n] + abs(coefficients[n]);
         // Apply octave-based smoothing in-place.
         const float half_band_factor = powf(2.f, fraction_of_octave / 2.f);
         const float desired_ratio = powf(2.f, fraction_of_octave);
@@ -604,9 +601,9 @@ class OnTheFlyRFFT {
             }
             high_idx = std::min(high_idx, N - 1);
             const size_t count = high_idx - low_idx + 1;
-            const T sum_in_window = cumsum_mag[high_idx + 1] - cumsum_mag[low_idx];
+            const T sum = cumsum[high_idx + 1] - cumsum[low_idx];
             // Replace the coefficient with the smoothed magnitude.
-            coefficients[n] = std::complex<T>(sum_in_window / count, T(0.0));
+            coefficients[n] = std::complex<T>(sum / count, T(0.0));
         }
     }
 };
