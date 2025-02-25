@@ -158,6 +158,22 @@ inline T stirlings_formula(const T& n) {
     return sqrt(2 * pi<T>() * n) * pow(n / e<T>(), n);
 }
 
+/// @brief Generic static function to multiply two complex numbers manually.
+/// @param a The left-hand operand.
+/// @param b The right-hand operand.
+/// @returns The complex product of `a` and `b`.
+/// @details
+/// This implementation is a work-around for using SIMD primitives. SIMD
+/// doesn't implement some of the operators needed by std::complex<T>
+/// implementation of multiplication. Something about checking for equality
+/// with 0?
+template<typename T>
+inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::complex<T>& b) {
+    T realPart = a.real() * b.real() - a.imag() * b.imag();
+    T imagPart = a.real() * b.imag() + a.imag() * b.real();
+    return std::complex<T>(realPart, imagPart);
+}
+
 /// @brief Return the input value converted to decibels.
 ///
 /// @tparam T the type of number to convert to decibels

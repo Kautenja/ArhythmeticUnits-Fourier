@@ -39,43 +39,37 @@ typedef std::vector<std::complex<float>> DFTCoefficients;
 /// A type for STFT coefficient matrices.
 typedef std::vector<DFTCoefficients> STFTCoefficients;
 
-/// @brief A utility class for pre-computing and storing twiddle factors for a radix-2 FFT.
-///
-/// This class precomputes the complex exponential coefficients (twiddle factors)
-/// used in the computation of the Fast Fourier Transform (FFT). For an FFT of length \f$ N \f$,
-/// the twiddle factors are defined as:
+/// @brief Utility class for pre-computing twiddle factors for a radix-2 FFT.
+/// @tparam T The type for the twiddle factors.
+/// @details
+/// This class pre-computes the complex exponential coefficients (twiddle
+/// factors) used in the computation of the Fast Fourier Transform (FFT). For
+/// an FFT of length \f$ N \f$, the twiddle factors are defined as:
 /// \f[ W_k = e^{-i \frac{2\pi k}{N}}, \quad k = 0, 1, \dots, \frac{N}{2}-1. \f]
 ///
-/// Only \f$ N/2 \f$ factors are stored due to the symmetry properties of the FFT.
-/// Precomputing these factors significantly improves the performance of the FFT by avoiding
-/// repeated calls to expensive transcendental functions during the transform computation.
-///
-/// @note The FFT length \f$ N \f$ should ideally be a power of 2 to work with radix-2 FFT algorithms.
-/// @tparam T The type for the twiddle factors.
+/// Only \f$ N/2 \f$ factors are stored due to the symmetry properties of the
+/// FFT. Pre-computing these factors significantly improves the performance of
+/// the FFT by avoiding repeated calls to expensive transcendental functions
+/// during the transform computation.
 template<typename T>
 class TwiddleFactors {
  private:
-    /// @brief Pre-computed twiddle factors stored as a vector of std::complex<T>.
-    ///
-    /// Only half the number of factors are stored because the FFT algorithm can exploit
-    /// the symmetry in the complex exponentials, where the full set for an N-point FFT is:
+    /// @brief Pre-computed twiddle factors.
+    /// @details
+    /// Only half the number of factors are stored because the FFT algorithm
+    /// can exploit the symmetry in the complex exponentials, where the full
+    /// set for an N-point FFT is:
     /// \f[ \{ W_0, W_1, \ldots, W_{(N/2)-1} \} \f]
     std::vector<std::complex<T>> factors;
 
  public:
-    /// @brief Constructs a TwiddleFactors object for an N-point FFT.
-    ///
+    /// @brief Construct a twiddle factor table for an N-point FFT.
     /// @param n The length of the FFT. Ideally, n should be a power of 2.
-    ///
-    /// The constructor precomputes the twiddle factors by calling the resize() method.
-    explicit TwiddleFactors(const size_t& n) {
-        resize(n);
-    }
+    explicit TwiddleFactors(const size_t& n) { resize(n); }
 
-    /// @brief Resizes and precomputes the twiddle factor buffer for a new FFT length.
-    ///
+    /// @brief Pre-compute the twiddle factor buffer for a new FFT length.
     /// @param n The new FFT length. Ideally, n should be a power of 2.
-    ///
+    /// @details
     /// This method performs the following steps:
     /// 1. Resizes the internal vector to hold \f$ N/2 \f$ twiddle factors.
     /// 2. Computes the constant multiplier \f$ e^{-i \frac{2\pi}{N}} \f$.
@@ -87,83 +81,63 @@ class TwiddleFactors {
         factors.resize(n >> 1);
         // Calculate the angular step theta = -2*pi/n.
         const T theta = T(-2.0) * M_PI / n;
-        // Use a vectorized-friendly loop (each iteration is independent).
-        // Optionally, add a SIMD pragma if desired (e.g., OpenMP's simd)
-        // #pragma omp simd
         for (size_t i = 0; i < factors.size(); ++i) {
             const T angle = theta * static_cast<T>(i);
             factors[i] = std::complex<T>(cos(angle), sin(angle));
         }
     }
 
-    /// @brief Returns the FFT size corresponding to the stored twiddle factors.
-    ///
-    /// @return The FFT length \f$ N \f$, computed as twice the number of stored factors.
-    ///
-    /// Since only \f$ N/2 \f$ twiddle factors are stored (to leverage symmetry), this method
-    /// returns \f$ N = 2 \times (\text{number of stored factors}) \f$.
+    /// @brief Return the FFT size corresponding to the stored twiddle factors.
+    /// @return The FFT length \f$N\f$, i.e., twice the number of factors.
+    /// @details
+    /// Since only \f$ N/2 \f$ twiddle factors are stored (to leverage
+    /// symmetry), this method returns \f$ N = 2 \times (\text{number of
+    /// stored factors}) \f$.
     inline size_t size() const {
         return factors.size() << 1;  // Equivalent to factors.size() * 2.
     }
 
-    /// @brief Accesses a pre-computed twiddle factor by its index.
-    ///
+    /// @brief Accesse a pre-computed twiddle factor by index.
     /// @param i The index of the desired twiddle factor (0-based index).
     /// @return A constant reference to the \f$ i \f$th twiddle factor.
-    ///
+    /// @details
     /// The accessed twiddle factor is given by:
     /// \f[ W_i = e^{-i \frac{2\pi i}{N}}, \f]
-    /// where \f$ N \f$ is the FFT length (returned by size()). It is important to note
-    /// that valid indices range from 0 to \f$ \frac{N}{2} - 1 \f$. Accessing an index outside
-    /// this range leads to undefined behavior.
+    /// where \f$ N \f$ is the FFT length (returned by size()). It is
+    /// important to note that valid indices range from \f$0\f$ to
+    /// \f$ \frac{N}{2} - 1 \f$. Accessing an index outside this range leads
+    /// to undefined behavior.
     const std::complex<T>& operator[](const size_t& i) const {
         return factors[i];
     }
 };
 
 /// @brief Pre-computed bit-reversal table for radix-2 FFT.
-///
-/// This class precomputes a table of bit-reversed indices for an FFT of length \f$ N \f$.
-/// Bit-reversal is a crucial step in the radix-2 FFT algorithm, where the input data is
-/// reordered according to the bit-reversed order of their indices. This reordering allows
-/// the FFT algorithm to access data in a cache-friendly pattern and perform the butterfly
+/// @details
+/// This class pre-computes a table of bit-reversed indices for an FFT of
+/// length \f$ N \f$. Bit-reversal is a crucial step in the radix-2 FFT
+/// algorithm, where the input data is reordered according to the bit-reversed
+/// order of their indices. This reordering allows the FFT algorithm to
+/// access data in a cache-friendly pattern and perform the butterfly
 /// computations efficiently.
 ///
-/// For an index \f$ i \f$ (with \f$ 0 \leq i < N \f$), the bit-reversed index is obtained by
-/// reversing the binary representation of \f$ i \f$. For example, if \f$ N = 8 \f$ (i.e., using 3 bits),
-/// the bit reversal of \f$ i = 3 \f$ (binary \f$ 011 \f$) is \f$ 110 \f$ (binary), which is 6 in decimal.
-///
-/// @note It is assumed that \f$ N \f$ is a power of 2.
+/// For an index \f$ i \f$ (with \f$ 0 \leq i < N \f$), the bit-reversed index
+/// is obtained by reversing the binary representation of \f$ i \f$. For
+/// example, if \f$ N = 8 \f$ (i.e., using 3 bits), the bit reversal of
+/// \f$ i = 3 \f$ (binary \f$ 011 \f$) is \f$ 110 \f$ (binary), which is 6 in
+/// decimal.
 class BitReversalTable {
  private:
-    /// @brief The pre-computed bit-reversal table.
-    ///
-    /// Each entry in this vector holds the bit-reversed index corresponding to its position.
+    /// The pre-computed bit-reversal table.
     std::vector<size_t> table;
 
  public:
-    /// @brief Constructs a BitReversalTable for an \f$ N \f$-point FFT.
-    ///
-    /// @param n The length of the FFT. It is assumed that \f$ n \f$ is a power of 2.
-    ///
-    /// The constructor precomputes the bit-reversal table by invoking the resize() method.
-    explicit BitReversalTable(const size_t& n) {
-        resize(n);
-    }
+    /// @brief Construct a BitReversalTable for an \f$ N \f$-point FFT.
+    /// @param n The length of the FFT (assumed that \f$n\f$ is a power of 2.)
+    explicit BitReversalTable(const size_t& n) { resize(n); }
 
-    /// @brief Resizes and precomputes the bit-reversal table for an \f$ N \f$-point FFT.
-    ///
-    /// @param n The new FFT length. It is assumed that \f$ n \f$ is a power of 2.
-    ///
-    /// This method performs the following steps:
-    /// 1. Resizes the internal vector to hold \f$ n \f$ entries.
-    /// 2. Computes the number of bits required to represent the indices, which is
-    ///    \f$ \log_2(n) \f$.
-    /// 3. For each index \f$ i \f$ in the range [0, \f$ n-1 \f$]:
-    ///    - Initializes a temporary variable \f$ y \f$ to 0.
-    ///    - Iteratively extracts the least significant bit of \f$ i \f$ and
-    ///      appends it to \f$ y \f$, effectively reversing the bit order.
-    ///    - Stores the computed bit-reversed value in the table.
+    /// @brief Pre-compute the bit-reversal table for an \f$ N \f$-point FFT.
+    /// @param n The new FFT length (assumed that \f$n\f$ is a power of 2.)
     inline void resize(const size_t& n) {
         table.resize(n);
         // Determine the number of bits required to represent indices 0 to n-1.
@@ -180,36 +154,19 @@ class BitReversalTable {
         }
     }
 
-    /// @brief Returns the size of the FFT (i.e., the number of indices in the table).
-    ///
-    /// @return The FFT length, which is also the number of entries in the bit-reversal table.
+    /// @brief Return the size of the FFT (number of indices in the table).
+    /// @return The number of entries in the bit-reversal table.
     inline size_t size() const { return table.size(); }
 
-    /// @brief Accesses the bit-reversed index at a given position.
-    ///
-    /// @param idx The original index (0-based) for which to retrieve the bit-reversed value.
-    /// @return A constant reference to the bit-reversed index corresponding to \f$ idx \f$.
-    ///
-    /// The returned value is the bit-reversed representation of \f$ idx \f$ for an FFT of
-    /// the current size.
+    /// @brief Access the bit-reversed index at a given position.
+    /// @param idx The original index (0-based) for which to retrieve the
+    /// bit-reversed value.
+    /// @return The bit-reversed index corresponding to \f$ idx \f$.
+    /// @details
+    /// The returned value is the bit-reversed representation of \f$ idx \f$
+    /// for an FFT of the current size.
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
-
-/// @brief Generic static function to multiply two complex numbers manually.
-/// @param a The left-hand operand.
-/// @param b The right-hand operand.
-/// @returns The complex product of `a` and `b`.
-/// @details
-/// This implementation is a work-around for using SIMD primitives. SIMD
-/// doesn't implement some of the operators needed by std::complex<T>
-/// implementation of multiplication. Something about checking for equality
-/// with 0?
-template<typename T>
-static inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::complex<T>& b) {
-    T realPart = a.real() * b.real() - a.imag() * b.imag();
-    T imagPart = a.real() * b.imag() + a.imag() * b.real();
-    return std::complex<T>(realPart, imagPart);
-}
 
 /// @brief An FFT computation utility based on pre-computed twiddle factors.
 ///
@@ -344,7 +301,7 @@ class OnTheFlyFFT {
         const std::complex<T> w = twiddles[pair * twiddle_stride];
         // Perform the butterfly operation.
         const auto even = coefficients[group + pair];
-        const auto odd = complex_multiply(coefficients[group + pair + half_step], w);
+        const auto odd = Math::complex_multiply(coefficients[group + pair + half_step], w);
         coefficients[group + pair] = even + odd;
         coefficients[group + pair + half_step] = even - odd;
         // Update the FFT state variables.
@@ -500,10 +457,10 @@ class OnTheFlyRFFT {
             // between std::complex and SIMD primitive types. We replace:
             // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
             // with the broken down version:
-            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
-                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
+            std::complex<T> Xk = Math::complex_multiply<T>(Wk, A - B);
+                            Xk = Math::complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
                             Xk = A + B - Xk;
-                            Xk = complex_multiply<T>(Xk, T(0.5));
+                            Xk = Math::complex_multiply<T>(Xk, T(0.5));
             coefficients[k]     = Xk;
             coefficients[N - k] = std::conj(Xk);
         }
