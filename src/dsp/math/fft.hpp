@@ -19,15 +19,12 @@
 #ifndef DSP_MATH_FFT_HPP
 #define DSP_MATH_FFT_HPP
 
-#include <cmath>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <algorithm>
-#include <complex>
-#include <limits>
-#include <utility>
-#include <vector>
+#include <cmath>      // floor, ceil, abs, pow, log2
+#include <cstddef>    // size_t
+#include <algorithm>  // min, fill, copy
+#include <complex>    // complex
+#include <utility>    // swap
+#include <vector>     // vector
 #include "constants.hpp"
 #include "window.hpp"
 
