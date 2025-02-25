@@ -328,6 +328,40 @@ class OnTheFlyRFFT {
     /// Pre-computed twiddle factors for reconstructing the full N-point FFT.
     TwiddleFactors<T> twiddles;
 
+    /// @brief Finalize the reconstruction of the N-point FFT from the
+    /// underlying N/2-point FFT.
+    /// @details
+    /// This method reconstructs the full FFT coefficients for a real input
+    /// signal by combining the results from the underlying complex FFT with
+    /// pre-computed twiddle factors. It handles the special cases of the DC
+    /// and Nyquist bins separately and reconstructs the remaining bins using
+    /// symmetry properties.
+    inline void finalize() {
+        const auto N = size();    // Full FFT length (N)
+        const size_t M = N >> 1;  // Half FFT length (M = N/2)
+        // Handle DC (k = 0) and Nyquist (k = M) bins separately.
+        T re0 = fft.coefficients[0].real();
+        T im0 = fft.coefficients[0].imag();
+        coefficients[0] = std::complex<T>(re0 + im0, T(0.0));
+        coefficients[M] = std::complex<T>(re0 - im0, T(0.0));
+        // Reconstruct FFT bins for 1 <= k < M.
+        for (size_t k = 1; k < M; k++) {
+            std::complex<T> A = fft.coefficients[k];
+            std::complex<T> B = std::conj(fft.coefficients[M - k]);
+            std::complex<T> Wk = twiddles[k];  // Wk = exp(-j*2pi*k/N)
+            // NOTE: The below work-around addresses an incompatibility
+            // between std::complex and SIMD primitive types. We replace:
+            // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
+            // with the broken down version:
+            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
+                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
+                            Xk = A + B - Xk;
+                            Xk = complex_multiply<T>(Xk, T(0.5));
+            coefficients[k]     = Xk;
+            coefficients[N - k] = std::conj(Xk);
+        }
+    }
+
  public:
     /// The output coefficients buffer containing the final FFT result.
     std::vector<std::complex<T>> coefficients;
@@ -354,6 +388,11 @@ class OnTheFlyRFFT {
     /// @return The total number of butterfly operations needed by the FFT.
     inline size_t get_total_steps() const { return fft.get_total_steps(); }
 
+    /// @brief Checks whether the RFFT computation has been completed.
+    /// @returns True if the underlying FFT has been fully computed and the
+    /// RFFT reconstruction is complete; false otherwise.
+    inline bool is_done_computing() const { return fft.is_done_computing(); }
+
     /// @brief Buffer input samples and prepare the RFFT for computation.
     /// @param x A pointer to the real input sample buffer of length N.
     /// @param w A vector representing the window function to be applied
@@ -367,70 +406,27 @@ class OnTheFlyRFFT {
         fft.buffer(packed.data());
     }
 
-    /// @brief Performs a single step of the RFFT computation.
-    ///
-    /// This method advances the underlying FFT computation by one butterfly operation. Once the
-    /// FFT computation is complete, it finalizes the reconstruction of the full FFT spectrum.
+    /// @brief Perform a single RFFT computation step (butterfly operation.)
+    /// @details
+    /// This method advances the underlying FFT computation by one butterfly
+    /// operation. Once the FFT computation is complete, it finalizes the
+    /// reconstruction of the full FFT spectrum.
     inline void step() {
-        if (fft.is_done_computing())
-            return;
+        if (is_done_computing()) return;
         fft.step();
-        if (fft.is_done_computing())
-            finalize();
+        if (is_done_computing()) finalize();
     }
 
-    /// @brief Performs a batch of FFT steps targeting a specified hop length.
-    ///
+    /// @brief Perform a batch of FFT steps targeting a specified hop length.
     /// @param hop_length The number of samples between FFT computations.
-    ///
-    /// This method calculates the number of FFT steps to perform based on the hop length and then
-    /// iteratively calls the single-step method, allowing the RFFT computation to be distributed
-    /// across multiple processing intervals.
+    /// @details
+    /// This method calculates the number of FFT steps to perform based on the
+    /// hop length and the total number of steps required. It then iteratively
+    /// calls the single-step() method, allowing the FFT computation to be
+    /// spread across multiple processing intervals.
     inline void step(const size_t& hop_length) {
-        const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < num_steps; i++) {
-            step();
-        }
-    }
-
-    /// @brief Checks whether the RFFT computation has been completed.
-    ///
-    /// @return True if the underlying FFT has been fully computed and the RFFT reconstruction
-    ///         is complete; false otherwise.
-    inline bool is_done_computing() const {
-        return fft.is_done_computing();
-    }
-
-    /// @brief Finalizes the reconstruction of the N-point FFT from the underlying N/2-point FFT.
-    ///
-    /// This method reconstructs the full FFT coefficients for a real input signal by combining
-    /// the results from the underlying complex FFT with pre-computed twiddle factors.
-    /// It handles the special cases of the DC and Nyquist bins separately and reconstructs the
-    /// remaining bins using symmetry properties.
-    inline void finalize() {
-        const auto N = size();    // Full FFT length (N)
-        const size_t M = N >> 1;  // Half FFT length (M = N/2)
-        // Handle DC (k = 0) and Nyquist (k = M) bins separately.
-        T re0 = fft.coefficients[0].real();
-        T im0 = fft.coefficients[0].imag();
-        coefficients[0] = std::complex<T>(re0 + im0, T(0.0));
-        coefficients[M] = std::complex<T>(re0 - im0, T(0.0));
-        // Reconstruct FFT bins for 1 <= k < M.
-        for (size_t k = 1; k < M; k++) {
-            std::complex<T> A = fft.coefficients[k];
-            std::complex<T> B = std::conj(fft.coefficients[M - k]);
-            std::complex<T> Wk = twiddles[k]; // Wk = exp(-j*2pi*k/N)
-            // NOTE: The below work-around addresses an incompatibility
-            // between std::complex and SIMD primitive types. We replace:
-            // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
-            // with the broken down version:
-            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
-                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
-                            Xk = A + B - Xk;
-                            Xk = complex_multiply<T>(Xk, T(0.5));
-            coefficients[k]     = Xk;
-            coefficients[N - k] = std::conj(Xk);
-        }
+        auto steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
+        for (size_t i = 0; i < steps; i++) step();
     }
 
     /// @brief Perform in-place smoothing of the magnitude coefficients.
