@@ -23,7 +23,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
-#include <cstring>  // memcpy
 #include <algorithm>
 #include <complex>
 #include <limits>
@@ -326,7 +325,7 @@ class OnTheFlyFFT {
     inline void buffer(const std::complex<T>* samples, const std::vector<T>& window) {
         const auto N = coefficients.size();
         // Copy the samples into the coefficients buffer.
-        memcpy(coefficients.data(), samples, N * sizeof(std::complex<T>));
+        std::copy(samples, samples + N, coefficients.begin());
         // Apply the window function to each sample.
         for (size_t n = 0; n < N; ++n)
             coefficients[n] *= window[n];
@@ -421,26 +420,17 @@ class OnTheFlyRFFT {
     TwiddleFactors<T> twiddles{1};
 
  public:
-    /// @brief The output coefficients buffer containing the final FFT result.
-    ///
-    /// This vector holds the frequency-domain representation (complex spectrum) of the real input
-    /// signal after the reconstruction process. Its size is N.
+    /// The output coefficients buffer containing the final FFT result.
     std::vector<std::complex<T>> coefficients{1};
 
     /// @brief Constructs an OnTheFlyRFFT object for an N-point RFFT.
-    ///
     /// @param n The length of the RFFT. Must be a power of 2.
-    ///
-    /// The constructor initializes the underlying N/2-point FFT, the twiddle factors for
-    /// reconstruction, and the output coefficients buffer.
-    explicit OnTheFlyRFFT(const size_t& n) { resize(n); }
+    explicit OnTheFlyRFFT(const size_t& n) : fft(1), twiddles(1), coefficients(1) {
+        resize(n);
+    }
 
-    /// @brief Resizes and reinitializes the RFFT computation structures.
-    ///
+    /// @brief Resize and re-initialize the RFFT computation structures.
     /// @param n The new length of the RFFT. Must be a power of 2.
-    ///
-    /// This method resizes the underlying FFT, twiddle factors, and the coefficients buffer.
-    /// It also resets the coefficients to zero.
     inline void resize(const size_t& n) {
         fft.resize(n >> 1);
         twiddles.resize(n);
@@ -448,43 +438,29 @@ class OnTheFlyRFFT {
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
-    /// @brief Returns the length of the RFFT.
-    ///
+    /// @brief Return the length of the RFFT.
     /// @return The number of samples (N) in the RFFT.
     inline size_t size() const {
         return coefficients.size();
     }
 
-    /// @brief Returns the total number of steps required to compute the underlying FFT.
-    ///
-    /// @return The total number of butterfly operations needed by the underlying FFT.
+    /// @brief Return the total number of steps required to compute the FFT.
+    /// @return The total number of butterfly operations needed by the FFT.
     inline size_t get_total_steps() const {
         return fft.get_total_steps();
     }
 
-    /// @brief Buffers input samples and prepares the RFFT for on-the-fly computation.
-    ///
+    /// @brief Buffer input samples and prepare the RFFT for computation.
     /// @param samples A pointer to the real input sample buffer of length N.
-    /// @param window A vector representing the window function to be applied to the input samples.
-    ///
-    /// This method performs the following operations:
-    /// 1. Packs the real input samples into a temporary complex array. Two consecutive samples
-    ///    (one for the real part and one for the imaginary part) form a complex number.
-    /// 2. Applies the provided window function to the samples during the packing process.
-    /// 3. Buffers the packed data into the underlying FFT using a unity window since the window
-    ///    has already been applied.
+    /// @param window A vector representing the window function to be applied
+    /// to the input samples.
     inline void buffer(const T* samples, const std::vector<float>& window) {
-        const size_t M = size() >> 1;  // M = N/2, the size of the underlying FFT.
-        // Create a temporary array to pack the samples into complex numbers.
-        std::vector<std::complex<T>> packed(M);
-        for (size_t k = 0; k < M; ++k) {
-            T r = samples[2 * k]     * T(window[2 * k]);
-            T i = samples[2 * k + 1] * T(window[2 * k + 1]);
-            packed[k] = std::complex<T>(r, i);
-        }
-        // Since the window function has been applied during packing, use a unity window for FFT.
-        std::vector<T> unity(M, 1.0f);
-        fft.buffer(packed.data(), unity);
+        // Create an array to interleave real samples into complex numbers.
+        std::vector<std::complex<T>> packed(fft.size());
+        for (size_t k = 0; k < packed.size(); ++k)
+            packed[k] = {samples[2 * k] * window[2 * k], samples[2 * k + 1] * window[2 * k + 1]};
+        // Since windowing is applied during packing, use no window for FFT.
+        fft.buffer(packed.data(), std::vector<T>(packed.size(), 1.f));
     }
 
     /// @brief Performs a single step of the RFFT computation.
