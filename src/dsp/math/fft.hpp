@@ -69,13 +69,6 @@ class TwiddleFactors {
 
     /// @brief Pre-compute the twiddle factor buffer for a new FFT length.
     /// @param n The new FFT length. Ideally, n should be a power of 2.
-    /// @details
-    /// This method performs the following steps:
-    /// 1. Resizes the internal vector to hold \f$ N/2 \f$ twiddle factors.
-    /// 2. Computes the constant multiplier \f$ e^{-i \frac{2\pi}{N}} \f$.
-    /// 3. Uses an iterative approach to compute each factor:
-    ///    \f[ \text{current} = \text{multiplier}^i \quad \text{for} \quad i = 0, 1, \ldots, \frac{N}{2}-1, \f]
-    ///    where \f$ \text{current} \f$ is initially set to 1.
     inline void resize(const size_t& n) {
         // Resize the vector to store half the number of FFT points.
         factors.resize(n >> 1);
@@ -93,9 +86,7 @@ class TwiddleFactors {
     /// Since only \f$ N/2 \f$ twiddle factors are stored (to leverage
     /// symmetry), this method returns \f$ N = 2 \times (\text{number of
     /// stored factors}) \f$.
-    inline size_t size() const {
-        return factors.size() << 1;  // Equivalent to factors.size() * 2.
-    }
+    inline size_t size() const { return factors.size() << 1; }
 
     /// @brief Accesse a pre-computed twiddle factor by index.
     /// @param i The index of the desired twiddle factor (0-based index).
