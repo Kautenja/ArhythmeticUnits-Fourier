@@ -233,12 +233,12 @@ class OnTheFlyFFT {
     ///
     /// This table is used to rearrange the input samples into bit-reversed order prior to
     /// performing the FFT computation.
-    BitReversalTable bit_reversal{1};
+    BitReversalTable bit_reversal;
 
     /// @brief Pre-computed twiddle factors for an N-point FFT.
     ///
     /// These are the complex coefficients used in the butterfly operations of the FFT.
-    TwiddleFactors<T> twiddles{1};
+    TwiddleFactors<T> twiddles;
 
     /// @brief The current step size in the Cooley-Tukey algorithm.
     ///
@@ -270,7 +270,7 @@ class OnTheFlyFFT {
     /// This vector holds the input samples (after windowing and bit-reversal) and is updated in-place
     /// during the FFT computation. Once the computation is complete, this buffer contains the frequency
     /// domain representation of the input signal.
-    std::vector<std::complex<T>> coefficients{1};
+    std::vector<std::complex<T>> coefficients;
 
     /// @brief Constructs an OnTheFlyFFT object for an N-point FFT.
     ///
@@ -278,7 +278,9 @@ class OnTheFlyFFT {
     ///
     /// The constructor initializes the pre-computed bit-reversal table, twiddle factors,
     /// and the coefficients buffer to accommodate \f$ N \f$ samples.
-    explicit OnTheFlyFFT(const size_t& n) { resize(n); }
+    explicit OnTheFlyFFT(const size_t& n) : bit_reversal(1), twiddles(1), coefficients(1) {
+        resize(n);
+    }
 
     /// @brief Resizes and initializes the FFT computation structures.
     ///
@@ -312,25 +314,18 @@ class OnTheFlyFFT {
     /// \f]
     inline size_t get_total_steps() const { return total_steps; }
 
-    /// @brief Buffers input samples and prepares the FFT for on-the-fly computation.
-    ///
-    /// @param samples A pointer to the input sample buffer containing \f$ N \f$ complex samples.
-    /// @param window A vector representing the window function to be applied to the samples.
-    ///
-    /// This method performs the following operations:
-    /// 1. Copies the input samples into the internal coefficients buffer.
-    /// 2. Applies the provided window function to each sample.
-    /// 3. Reorders the samples using a bit-reversal permutation based on the pre-computed table.
-    /// 4. Resets the internal state variables (`step_`, `group`, and `pair`) for the FFT computation.
-    inline void buffer(const std::complex<T>* samples, const std::vector<T>& window) {
-        const auto N = coefficients.size();
+    /// @brief Buffer input samples and prepare the FFT for computation.
+    /// @param samples The input sample buffer of \f$N\f$ complex samples.
+    /// @param window The window function samples to apply to the signal. May
+    /// be an empty vector to indicate no window (i.e., a rectangular window.)
+    inline void buffer(const std::complex<T>* samples, const std::vector<T>& window = {}) {
         // Copy the samples into the coefficients buffer.
-        std::copy(samples, samples + N, coefficients.begin());
-        // Apply the window function to each sample.
-        for (size_t n = 0; n < N; ++n)
-            coefficients[n] *= window[n];
-        // Perform bit-reversal permutation using the pre-computed bit-reversal table.
-        for (size_t n = 0; n < N; ++n)
+        std::copy(samples, samples + coefficients.size(), coefficients.begin());
+        if (window.size() > 0)  // Apply the window function to each sample.
+            for (size_t n = 0; n < coefficients.size(); ++n)
+                coefficients[n] *= window[n];
+        // Perform bit-reversal permutation using the pre-computed table.
+        for (size_t n = 0; n < coefficients.size(); ++n)
             if (n < bit_reversal[n])
                 std::swap(coefficients[n], coefficients[bit_reversal[n]]);
         // Reset FFT state variables.
@@ -340,13 +335,6 @@ class OnTheFlyFFT {
     }
 
     /// @brief Performs a single FFT computation step (butterfly operation).
-    ///
-    /// This method executes one butterfly operation of the Cooley-Tukey FFT algorithm. It:
-    /// 1. Determines the current half-step size and twiddle factor stride.
-    /// 2. Retrieves the appropriate twiddle factor from the pre-computed table.
-    /// 3. Computes the butterfly (combining an even-indexed element with an odd-indexed element).
-    /// 4. Updates the internal coefficients buffer in-place.
-    /// 5. Advances the internal state (`pair`, `group`, and `step_`) for the next computation.
     inline void step() {
         if (is_done_computing()) return;
         // Calculate the half-step size and determine the twiddle factor stride.
@@ -372,17 +360,16 @@ class OnTheFlyFFT {
     }
 
     /// @brief Performs a batch of FFT steps targeting a specified hop length.
-    ///
     /// @param hop_length The number of samples between FFT computations.
-    ///
-    /// This method calculates the number of FFT steps to perform based on the hop length and
-    /// the total number of steps required. It then iteratively calls the single-step() method,
-    /// allowing the FFT computation to be spread across multiple processing intervals.
+    /// @details
+    /// This method calculates the number of FFT steps to perform based on the
+    /// hop length and the total number of steps required. It then iteratively
+    /// calls the single-step() method, allowing the FFT computation to be
+    /// spread across multiple processing intervals.
     inline void step(const size_t& hop_length) {
         const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < num_steps; i++) {
+        for (size_t i = 0; i < num_steps; i++)
             step();
-        }
     }
 
     /// @brief Checks whether the FFT computation has been completed.
@@ -407,21 +394,14 @@ class OnTheFlyFFT {
 template<typename T>
 class OnTheFlyRFFT {
  private:
-    /// @brief The underlying N/2-point FFT used for the RFFT computation.
-    ///
-    /// The complex FFT is applied on a packed representation of the real input,
-    /// reducing the computation by half while leveraging the symmetry in real signals.
-    OnTheFlyFFT<T> fft{1};
-
-    /// @brief Pre-computed twiddle factors used for reconstructing the full N-point FFT.
-    ///
-    /// These twiddle factors, defined as \f$ W_k = e^{-j\frac{2\pi k}{N}} \f$, are used in the
-    /// reconstruction process to combine the FFT results of the even and odd parts of the signal.
-    TwiddleFactors<T> twiddles{1};
+    /// The underlying N/2-point FFT used for the RFFT computation.
+    OnTheFlyFFT<T> fft;
+    /// Pre-computed twiddle factors for reconstructing the full N-point FFT.
+    TwiddleFactors<T> twiddles;
 
  public:
     /// The output coefficients buffer containing the final FFT result.
-    std::vector<std::complex<T>> coefficients{1};
+    std::vector<std::complex<T>> coefficients;
 
     /// @brief Constructs an OnTheFlyRFFT object for an N-point RFFT.
     /// @param n The length of the RFFT. Must be a power of 2.
@@ -460,7 +440,7 @@ class OnTheFlyRFFT {
         for (size_t k = 0; k < packed.size(); ++k)
             packed[k] = {samples[2 * k] * window[2 * k], samples[2 * k + 1] * window[2 * k + 1]};
         // Since windowing is applied during packing, use no window for FFT.
-        fft.buffer(packed.data(), std::vector<T>(packed.size(), 1.f));
+        fft.buffer(packed.data());
     }
 
     /// @brief Performs a single step of the RFFT computation.
