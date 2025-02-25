@@ -161,7 +161,7 @@ struct SpectrumAnalyzer : rack::Module {
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
         // Setup the window length as powers of 2 from 2^7=128 to 2^14=16384
-        configParam(PARAM_WINDOW_LENGTH, 7.f, 14.f, 12.f, "Length", "", 2, 1);
+        configParam(PARAM_WINDOW_LENGTH, 7.f, 14.f, 11.f, "Length", "", 2, 1);
         getParamQuantity(PARAM_WINDOW_LENGTH)->snapEnabled = true;
         getParamQuantity(PARAM_WINDOW_LENGTH)->description =
             "The FFT size as a power of two. Larger sizes provide\n"
