@@ -1,8 +1,6 @@
-// Functions for calculating the Fast Fourier Transform (FFT.)
+// Functions for calculating the Fast Fourier Transform (FFT) on-the-fly.
 //
-// Copyright 2020 Christian Kauten
-//
-// Author: Christian Kauten (kautenja@auburn.edu)
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,17 +14,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_FFT_HPP
-#define DSP_MATH_FFT_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_FFT_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_FFT_HPP_
 
-#include <cmath>      // floor, ceil, abs, pow, log2
-#include <cstddef>    // size_t
-#include <algorithm>  // min, fill, copy
-#include <complex>    // complex
-#include <utility>    // swap
-#include <vector>     // vector
-#include "constants.hpp"
-#include "window.hpp"
+#include <cmath>          // floor, ceil, abs, pow, log2
+#include <cstddef>        // size_t
+#include <algorithm>      // min, fill, copy
+#include <complex>        // complex
+#include <utility>        // swap
+#include <vector>         // vector
+#include "constants.hpp"  // M_PI, j<T>, etc.
+#include "functions.hpp"  // complex_multiply, etc.
+#include "window.hpp"     // window_function
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -343,17 +342,17 @@ class OnTheFlyRFFT {
         coefficients[M] = std::complex<T>(re0 - im0, T(0.0));
         // Reconstruct FFT bins for 1 <= k < M.
         for (size_t k = 1; k < M; k++) {
-            std::complex<T> A = fft.coefficients[k];
-            std::complex<T> B = std::conj(fft.coefficients[M - k]);
-            std::complex<T> Wk = twiddles[k];  // Wk = exp(-j*2pi*k/N)
-            // NOTE: The below work-around addresses an incompatibility
-            // between std::complex and SIMD primitive types. We replace:
-            // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
+            auto A = fft.coefficients[k];
+            auto B = std::conj(fft.coefficients[M - k]);
+            auto Wk = twiddles[k];  // Wk = exp(-j*2pi*k/N)
+            // The below work-around addresses an incompatibility between
+            // `std::complex` and SIMD primitive types. We replace:
+            // auto Xk = T(0.5) * (A + B - j<T>() * Wk * (A - B));
             // with the broken down version:
-            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
-                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
-                            Xk = A + B - Xk;
-                            Xk = complex_multiply<T>(Xk, T(0.5));
+            auto Xk = complex_multiply<T>(Wk, A - B);
+                 Xk = complex_multiply<T>(Xk, j<T>());
+                 Xk = A + B - Xk;
+                 Xk = complex_multiply<T>(Xk, T(0.5));
             coefficients[k]     = Xk;
             coefficients[N - k] = std::conj(Xk);
         }
@@ -483,4 +482,4 @@ class OnTheFlyRFFT {
 
 }  // namespace Math
 
-#endif  // DSP_MATH_FFT_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FFT_HPP_

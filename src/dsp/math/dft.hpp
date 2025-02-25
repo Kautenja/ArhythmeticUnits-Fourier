@@ -1,8 +1,6 @@
 // Functions for calculating the Discrete Fourier Transform (DFT.)
 //
-// Copyright 2020 Christian Kauten
-//
-// Author: Christian Kauten (kautenja@auburn.edu)
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -16,10 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_DFT_HPP
-#define DSP_MATH_DFT_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -226,4 +224,4 @@ std::vector<T> idft_trig(const std::vector<std::complex<T>>& input) {
 
 }  // namespace Math
 
-#endif  // DSP_MATH_DFT_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_
