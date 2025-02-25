@@ -38,7 +38,7 @@ static inline std::complex<float> interpolate_coefficients(const Math::DFTCoeffi
 struct Spectrogram : rack::Module {
  public:
     enum {
-        N_FFT = 2048,
+        N_FFT = 4096,
         N_STFT = 512
     };
 
@@ -716,7 +716,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         static constexpr float reference_frequency = 1000.f;
         const auto slope = module->get_slope();
         // Determine the Nyquist rate from the sample rate.
-        const float nyquist_rate = APP->engine->getSampleRate() / 2.f;
+        const float nyquist_rate = module->get_sample_rate() / 2.f;
         // A small constant for numerical stability.
         static constexpr float epsilon = 1e-6f;
         // Determine the dimensions of the spectral image.
