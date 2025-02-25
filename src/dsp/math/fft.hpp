@@ -159,52 +159,48 @@ class BitReversalTable {
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
 
-/// @brief An FFT computation utility based on pre-computed twiddle factors.
+/// @brief A real-time optimized on-the-fly FFT implementation.
+/// @details
+/// The OnTheFlyFFT class provides an efficient implementation of the radix-2
+/// Fast Fourier Transform (FFT) using pre-computed bit-reversal indices and
+/// twiddle factors. It is designed for on-the-fly computation, allowing the
+/// FFT to be computed incrementally (step-by-step) rather than in one
+/// complete pass. This is particularly useful in streaming or real-time
+/// applications.
 ///
-/// The OnTheFlyFFT class provides an efficient implementation of the radix-2 Fast Fourier Transform (FFT)
-/// using pre-computed bit-reversal indices and twiddle factors. It is designed for on-the-fly computation,
-/// allowing the FFT to be computed incrementally (step-by-step) rather than in one complete pass. This is
-/// particularly useful in streaming or real-time applications.
-///
-/// The class encapsulates the state required for the Cooley-Tukey FFT algorithm, including:
-/// - A pre-computed bit-reversal table to reorder the input samples.
-/// - Pre-computed twiddle factors for the butterfly computations.
-/// - Internal state variables (`step_`, `group`, and `pair`) to manage the iterative FFT processing.
-/// - An internal coefficients buffer that holds both the input samples (after windowing and bit-reversal)
-///   and the intermediate/final FFT results.
-///
-/// @note The FFT length (number of samples) must be a power of 2.
+/// The class encapsulates the state required for the Cooley-Tukey FFT
+/// algorithm, including:
+/// -   A pre-computed bit-reversal table to reorder the input samples.
+/// -   Pre-computed twiddle factors for the butterfly computations.
+/// -   Internal state variables (`step_`, `group`, and `pair`) to manage the
+///     iterative FFT processing.
+/// -   An internal coefficients buffer that holds both the input samples
+///     (after windowing and bit-reversal) and the intermediate/final FFT
+///     results.
 template<typename T>
 class OnTheFlyFFT {
  private:
-    /// @brief Pre-computed bit-reversal table for an N-point FFT.
-    ///
-    /// This table is used to rearrange the input samples into bit-reversed order prior to
-    /// performing the FFT computation.
+    /// Pre-computed bit-reversal table for an N-point FFT.
     BitReversalTable bit_reversal;
 
-    /// @brief Pre-computed twiddle factors for an N-point FFT.
-    ///
-    /// These are the complex coefficients used in the butterfly operations of the FFT.
+    /// Pre-computed twiddle factors for an N-point FFT.
     TwiddleFactors<T> twiddles;
 
-    /// @brief The current step size in the Cooley-Tukey algorithm.
-    ///
-    /// Initially set to 2, this variable doubles after completing each stage of the FFT.
+    /// The current step size in the Cooley-Tukey algorithm. Initially set to
+    /// \f$2\f$, this variable doubles after completing each stage of the FFT.
     size_t step_ = 2;
 
-    /// @brief The current group offset within the coefficients buffer.
-    ///
-    /// Groups define the starting index for a set of butterfly computations in the current stage.
+    /// The current group offset within the coefficients buffer. Groups
+    /// define the starting index for a set of butterfly computations in the
+    /// current stage.
     size_t group = 0;
 
-    /// @brief The current pair offset within a group.
-    ///
-    /// This index tracks the position within a group for the current butterfly operation.
+    /// The current pair offset within a group. This index tracks the
+    /// position within a group for the current butterfly operation.
     size_t pair = 0;
 
-    /// @brief The total number of steps needed to complete the FFT computation.
-    ///
+    /// @brief Total number of steps needed to complete the FFT computation.
+    /// @details
     /// Computed as:
     /// \f[
     /// \text{total\_steps} = \frac{N}{2} \times \log_2(N)
