@@ -38,7 +38,7 @@ static inline std::complex<float> interpolate_coefficients(const Math::DFTCoeffi
 struct Spectrogram : rack::Module {
  public:
     enum {
-        N_FFT = 4096,
+        N_FFT = 2048,
         N_STFT = 512
     };
 
@@ -741,12 +741,11 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                     scaled_y = height * Math::squared(scaled_y / height);
                 auto coeff = gain * interpolate_coefficients(module->get_coefficients()[x], scaled_y);
                 // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
-                // auto color = Math::ColorMap::magma(abs(coeff) / height);
                 auto color = Math::ColorMap::color_map(module->color_map, abs(coeff) / height);
                 pixels[4 * (width * (height - 1 - y) + x) + 0] = color.r * 255;
                 pixels[4 * (width * (height - 1 - y) + x) + 1] = color.g * 255;
                 pixels[4 * (width * (height - 1 - y) + x) + 2] = color.b * 255;
-                pixels[4 * (width * (height - 1 - y) + x) + 3] = static_cast<uint8_t>(0.7 * 255);
+                pixels[4 * (width * (height - 1 - y) + x) + 3] = 255;
             }
         }
         // create / update the image container
