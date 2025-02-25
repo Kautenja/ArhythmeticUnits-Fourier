@@ -252,7 +252,8 @@ struct SpectrumAnalyzer : rack::Module {
         set_low_frequency(low_frequency);
         // Update the high frequency bound and preserve settings.
         const auto high_frequency = get_high_frequency();
-        getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
+        auto param_high_frequency = getParamQuantity(PARAM_HIGH_FREQUENCY);
+        param_high_frequency->maxValue = param_high_frequency->defaultValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
         dc_blocker.setTransitionWidth(10.f, sample_rate);

@@ -212,7 +212,8 @@ struct Spectrogram : rack::Module {
         set_low_frequency(low_frequency);
         // Update the high frequency bound and preserve settings.
         const auto high_frequency = get_high_frequency();
-        getParamQuantity(PARAM_HIGH_FREQUENCY)->maxValue = sample_rate / 2.f;
+        auto param_high_frequency = getParamQuantity(PARAM_HIGH_FREQUENCY);
+        param_high_frequency->maxValue = param_high_frequency->defaultValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
         dc_blocker.setTransitionWidth(10.f, sample_rate);
@@ -280,8 +281,9 @@ struct Spectrogram : rack::Module {
 
     /// @brief Return the hop length of the windowed DFT in samples.
     /// @returns The number of samples to hop between computations of the DFT.
-    inline static constexpr size_t get_hop_length() {
+    inline size_t get_hop_length() {
         return N_FFT >> 1;  // N_FFT / 2
+        // return sample_rate * (2048 / 2) / 44100;
     }
 
     // /// @brief Return the hop length of the windowed DFT in samples.
