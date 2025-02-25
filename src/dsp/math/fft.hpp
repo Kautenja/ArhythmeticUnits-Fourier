@@ -569,40 +569,32 @@ class OnTheFlyRFFT {
     inline void smooth(
         float sample_rate,
         float fraction_of_octave,
-        float f_min = 20.0f,
-        float f_max = 0.0f
+        float f_min = 0.f,
+        float f_max = 0.f
     ) {
         // Ensure FFT coefficients exist.
-        const size_t n = coefficients.size();
-        if (n == 0)
+        const size_t N = coefficients.size();
+        if (N == 0)
             return;
-        if (f_max <= 0.0f)
-            f_max = sample_rate / 2.0f;
-        const float bin_width = sample_rate / static_cast<float>(n);
 
-        // 1) Compute magnitude array (temporary storage).
-        std::vector<T> mag(n);
-        for (size_t i = 0; i < n; ++i) {
-            T re = coefficients[i].real();
-            T im = coefficients[i].imag();
-            mag[i] = sqrt(re * re + im * im);
-        }
+        // Ensure f_max is set to a valid Hz measurement.
+        if (f_max <= 0.f)
+            f_max = sample_rate / 2.f;
+        const float bin_width = sample_rate / static_cast<float>(N);
 
-        // 2) Build prefix sum of magnitudes.
-        std::vector<T> prefix_mag(n + 1, 0.0);
-        for (size_t i = 0; i < n; ++i) {
-            prefix_mag[i + 1] = prefix_mag[i] + mag[i];
-        }
+        // Build prefix sum of magnitudes.
+        std::vector<T> cumsum_mag(N + 1, 0.0);
+        for (size_t n = 0; n < N; ++n)
+            cumsum_mag[n + 1] = cumsum_mag[n] + abs(coefficients[n]);
 
-        // 3) Apply octave-based smoothing in-place.
-        const float half_band_factor = std::pow(2.0f, fraction_of_octave / 2.0f);
-        const float desired_ratio = std::pow(2.0f, fraction_of_octave);
-
-        for (size_t i = 0; i < n; ++i) {
-            const float f_center = i * bin_width;
+        // Apply octave-based smoothing in-place.
+        const float half_band_factor = powf(2.f, fraction_of_octave / 2.f);
+        const float desired_ratio = powf(2.f, fraction_of_octave);
+        for (size_t n = 0; n < N; ++n) {
+            const float f_center = n * bin_width;
             // Skip bins outside the allowed frequency range.
             if (f_center < f_min || f_center > f_max) {
-                coefficients[i] = std::complex<float>(0.0f, 0.0f);
+                coefficients[n] = std::complex<float>(0.f, 0.f);
                 continue;
             }
             // Define the initial smoothing window.
@@ -621,16 +613,16 @@ class OnTheFlyRFFT {
             // Map frequencies to FFT bin indices.
             size_t low_idx  = static_cast<size_t>(std::floor(f_low / bin_width));
             size_t high_idx = static_cast<size_t>(std::floor(f_high / bin_width));
-            if (low_idx >= n) {
-                coefficients[i] = std::complex<float>(0.0f, 0.0f);
+            if (low_idx >= N) {
+                coefficients[n] = std::complex<float>(0.f, 0.f);
                 continue;
             }
-            high_idx = std::min(high_idx, n - 1UL);
+            high_idx = std::min(high_idx, N - 1);
             const size_t count = high_idx - low_idx + 1;
-            const T sum_in_window = prefix_mag[high_idx + 1] - prefix_mag[low_idx];
-            T avg = (count > 0) ? sum_in_window / count : 0.0f;
+            const T sum_in_window = cumsum_mag[high_idx + 1] - cumsum_mag[low_idx];
+            T avg = (count > 0) ? sum_in_window / count : 0.f;
             // Replace the FFT coefficient with the smoothed magnitude.
-            coefficients[i] = std::complex<T>(avg, T(0.0));
+            coefficients[n] = std::complex<T>(avg, T(0.0));
         }
     }
 };
