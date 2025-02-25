@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <complex>
 #include <limits>
+#include <utility>
 #include <vector>
 #include "constants.hpp"
 #include "window.hpp"
@@ -159,7 +160,8 @@ class BitReversalTable {
     const size_t& operator[](size_t idx) const { return table[idx]; }
 };
 
-/// @brief A real-time optimized on-the-fly FFT implementation.
+/// @brief An on-the-fly implementation of the Cooley-Tukey iterative FFT.
+/// @tparam T The type for the complex coefficients.
 /// @details
 /// The OnTheFlyFFT class provides an efficient implementation of the radix-2
 /// Fast Fourier Transform (FFT) using pre-computed bit-reversal indices and
@@ -209,30 +211,16 @@ class OnTheFlyFFT {
     size_t total_steps = 0;
 
  public:
-    /// @brief The coefficients buffer for the FFT computation.
-    ///
-    /// This vector holds the input samples (after windowing and bit-reversal) and is updated in-place
-    /// during the FFT computation. Once the computation is complete, this buffer contains the frequency
-    /// domain representation of the input signal.
+    /// The coefficients buffer for the FFT computation.
     std::vector<std::complex<T>> coefficients;
 
-    /// @brief Constructs an OnTheFlyFFT object for an N-point FFT.
-    ///
+    /// @brief Construct an OnTheFlyFFT object for an N-point FFT.
     /// @param n The length of the FFT. Must be a power of 2.
-    ///
-    /// The constructor initializes the pre-computed bit-reversal table, twiddle factors,
-    /// and the coefficients buffer to accommodate \f$ N \f$ samples.
-    explicit OnTheFlyFFT(const size_t& n) : bit_reversal(1), twiddles(1), coefficients(1) {
-        resize(n);
-    }
+    explicit OnTheFlyFFT(const size_t& n) :
+        bit_reversal(1), twiddles(1), coefficients(1) { resize(n); }
 
-    /// @brief Resizes and initializes the FFT computation structures.
-    ///
+    /// @brief Resize and initialize the FFT computation structures.
     /// @param n The new FFT length. Must be a power of 2.
-    ///
-    /// This method resizes the bit-reversal table, twiddle factors, and coefficients buffer.
-    /// It also recalculates the total number of FFT computation steps and resets the coefficients
-    /// buffer to zero.
     inline void resize(const size_t& n) {
         bit_reversal.resize(n);
         twiddles.resize(n);
@@ -241,17 +229,13 @@ class OnTheFlyFFT {
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
-    /// @brief Returns the FFT length.
-    ///
+    /// @brief Return the FFT length.
     /// @return The number of samples in the FFT.
-    ///
-    /// This value is determined by the size of the twiddle factors (which are pre-computed for an N-point FFT).
     inline size_t size() const { return twiddles.size(); }
 
-    /// @brief Returns the total number of steps required for the FFT computation.
-    ///
+    /// @brief Return the number of steps required for the FFT computation.
     /// @return The total number of Cooley-Tukey steps needed.
-    ///
+    /// @details
     /// The total steps are computed as:
     /// \f[
     /// \text{total\_steps} = \frac{N}{2} \times \log_2(N)
@@ -262,33 +246,36 @@ class OnTheFlyFFT {
     /// @param samples The input sample buffer of \f$N\f$ complex samples.
     /// @param window The window function samples to apply to the signal. May
     /// be an empty vector to indicate no window (i.e., a rectangular window.)
-    inline void buffer(const std::complex<T>* samples, const std::vector<T>& window = {}) {
+    inline void buffer(const std::complex<T>* x, const std::vector<T>& w = {}) {
         // Copy the samples into the coefficients buffer.
-        std::copy(samples, samples + coefficients.size(), coefficients.begin());
-        if (window.size() > 0)  // Apply the window function to each sample.
+        std::copy(x, x + coefficients.size(), coefficients.begin());
+        // Apply the window function to each sample.
+        if (w.size() > 0) {
             for (size_t n = 0; n < coefficients.size(); ++n)
-                coefficients[n] *= window[n];
+                coefficients[n] *= w[n];
+        }
         // Perform bit-reversal permutation using the pre-computed table.
-        for (size_t n = 0; n < coefficients.size(); ++n)
+        for (size_t n = 0; n < coefficients.size(); ++n) {
             if (n < bit_reversal[n])
                 std::swap(coefficients[n], coefficients[bit_reversal[n]]);
+        }
         // Reset FFT state variables.
         step_ = 2;
         group = 0;
         pair = 0;
     }
 
-    /// @brief Performs a single FFT computation step (butterfly operation).
+    /// @brief Perform a single FFT computation step (butterfly operation.)
     inline void step() {
         if (is_done_computing()) return;
         // Calculate the half-step size and determine the twiddle factor stride.
-        const size_t half_step = step_ >> 1;
-        const size_t twiddle_stride = coefficients.size() / step_;
+        size_t half_step = step_ >> 1;
+        size_t twiddle_stride = coefficients.size() / step_;
         // Retrieve the appropriate twiddle factor.
-        const std::complex<T> w = twiddles[pair * twiddle_stride];
+        auto w = twiddles[pair * twiddle_stride];
         // Perform the butterfly operation.
-        const auto even = coefficients[group + pair];
-        const auto odd = Math::complex_multiply(coefficients[group + pair + half_step], w);
+        auto even = coefficients[group + pair];
+        auto odd = complex_multiply(coefficients[group + pair + half_step], w);
         coefficients[group + pair] = even + odd;
         coefficients[group + pair + half_step] = even - odd;
         // Update the FFT state variables.
@@ -303,38 +290,36 @@ class OnTheFlyFFT {
         }
     }
 
-    /// @brief Performs a batch of FFT steps targeting a specified hop length.
-    /// @param hop_length The number of samples between FFT computations.
+    /// @brief Perform a batch of FFT steps targeting a specified hop length.
+    /// @param hop_lenth The number of samples between FFT computations.
     /// @details
     /// This method calculates the number of FFT steps to perform based on the
     /// hop length and the total number of steps required. It then iteratively
     /// calls the single-step() method, allowing the FFT computation to be
     /// spread across multiple processing intervals.
-    inline void step(const size_t& hop_length) {
-        const auto num_steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < num_steps; i++)
-            step();
+    inline void step(const size_t& hop_lenth) {
+        auto steps = ceilf(get_total_steps() / static_cast<float>(hop_lenth));
+        for (size_t i = 0; i < steps; i++) step();
     }
 
     /// @brief Checks whether the FFT computation has been completed.
-    ///
     /// @return True if the FFT has been fully computed; false otherwise.
-    ///
-    /// The FFT computation is considered complete when the current step size exceeds
-    /// the length of the coefficients buffer.
+    /// @details
+    /// The FFT computation is considered complete when the current step size
+    /// exceeds the length of the coefficients buffer.
     inline bool is_done_computing() const {
         return step_ > coefficients.size();
     }
 };
 
-/// @brief An RFFT computation utility based on pre-computed twiddle factors.
-///
-/// The OnTheFlyRFFT class implements a Real FFT (RFFT) by leveraging an underlying
-/// complex FFT of half the size (N/2) and pre-computed twiddle factors. This approach
-/// packs the real input samples into a complex array, computes the FFT on the packed data,
-/// and then reconstructs the full N-point FFT using the symmetry properties of real signals.
-///
-/// @note The RFFT length (N) must be a power of 2.
+/// @brief An on-the-fly implementation of the Cooley-Tukey iterative RFFT.
+/// @tparam T The type for the complex coefficients.
+/// @details
+/// The OnTheFlyRFFT class implements a Real FFT (RFFT) by leveraging an
+/// underlying complex FFT of half the size (N/2) and pre-computed twiddle
+/// factors. This approach packs the real input samples into a complex array,
+/// computes the FFT on the packed data, and then reconstructs the full
+/// N-point FFT using the symmetry properties of real signals.
 template<typename T>
 class OnTheFlyRFFT {
  private:
@@ -347,11 +332,10 @@ class OnTheFlyRFFT {
     /// The output coefficients buffer containing the final FFT result.
     std::vector<std::complex<T>> coefficients;
 
-    /// @brief Constructs an OnTheFlyRFFT object for an N-point RFFT.
+    /// @brief Construct an OnTheFlyRFFT object for an N-point RFFT.
     /// @param n The length of the RFFT. Must be a power of 2.
-    explicit OnTheFlyRFFT(const size_t& n) : fft(1), twiddles(1), coefficients(1) {
-        resize(n);
-    }
+    explicit OnTheFlyRFFT(const size_t& n) :
+        fft(1), twiddles(1), coefficients(1) { resize(n); }
 
     /// @brief Resize and re-initialize the RFFT computation structures.
     /// @param n The new length of the RFFT. Must be a power of 2.
@@ -364,25 +348,21 @@ class OnTheFlyRFFT {
 
     /// @brief Return the length of the RFFT.
     /// @return The number of samples (N) in the RFFT.
-    inline size_t size() const {
-        return coefficients.size();
-    }
+    inline size_t size() const { return coefficients.size(); }
 
     /// @brief Return the total number of steps required to compute the FFT.
     /// @return The total number of butterfly operations needed by the FFT.
-    inline size_t get_total_steps() const {
-        return fft.get_total_steps();
-    }
+    inline size_t get_total_steps() const { return fft.get_total_steps(); }
 
     /// @brief Buffer input samples and prepare the RFFT for computation.
-    /// @param samples A pointer to the real input sample buffer of length N.
-    /// @param window A vector representing the window function to be applied
+    /// @param x A pointer to the real input sample buffer of length N.
+    /// @param w A vector representing the window function to be applied
     /// to the input samples.
-    inline void buffer(const T* samples, const std::vector<float>& window) {
+    inline void buffer(const T* x, const std::vector<float>& w) {
         // Create an array to interleave real samples into complex numbers.
         std::vector<std::complex<T>> packed(fft.size());
         for (size_t k = 0; k < packed.size(); ++k)
-            packed[k] = {samples[2 * k] * window[2 * k], samples[2 * k + 1] * window[2 * k + 1]};
+            packed[k] = {x[2 * k] * w[2 * k], x[2 * k + 1] * w[2 * k + 1]};
         // Since windowing is applied during packing, use no window for FFT.
         fft.buffer(packed.data());
     }
@@ -444,10 +424,10 @@ class OnTheFlyRFFT {
             // between std::complex and SIMD primitive types. We replace:
             // std::complex<T> Xk = T(0.5) * (A + B - std::complex<T>(T(0.0), T(1.0)) * Wk * (A - B));
             // with the broken down version:
-            std::complex<T> Xk = Math::complex_multiply<T>(Wk, A - B);
-                            Xk = Math::complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
+            std::complex<T> Xk = complex_multiply<T>(Wk, A - B);
+                            Xk = complex_multiply<T>(Xk, std::complex<T>(T(0.0), T(1.0)));
                             Xk = A + B - Xk;
-                            Xk = Math::complex_multiply<T>(Xk, T(0.5));
+                            Xk = complex_multiply<T>(Xk, T(0.5));
             coefficients[k]     = Xk;
             coefficients[N - k] = std::conj(Xk);
         }
