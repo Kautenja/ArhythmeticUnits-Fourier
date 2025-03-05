@@ -66,8 +66,8 @@ struct CircularBuffer {
     /// `index` refers to the sample relative to the head index, i.e., -1
     /// would be the last sample, +1 would be the oldest sample in the buffer.
     /// The index is circular,
-    inline T& at(const size_t& index) {
-        return buffer[mod<size_t>(index + head, buffer.size())];
+    inline T& at(const int32_t& index) {
+        return buffer[mod<int32_t>(index + head, buffer.size())];
     }
 
     /// @brief Set the size of the circular buffer to a new value.
@@ -144,8 +144,8 @@ struct ContiguousCircularBuffer {
     /// `index` refers to the sample relative to the head index, i.e., -1
     /// would be the last sample, +1 would be the oldest sample in the buffer.
     /// The index is circular,
-    inline T& at(const size_t& index) {
-        return buffer[mod<size_t>(index + head, buffer.size())];
+    inline T& at(const int32_t& index) {
+        return buffer[mod<int32_t>(index + head, buffer.size())];
     }
 
     /// @brief Set the size of the circular buffer to a new value.
