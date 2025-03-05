@@ -17,8 +17,7 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
 
-#include <complex>
-#include <limits>
+#include <complex>  // std::complex
 
 /// @brief Basic mathematical functions.
 namespace Math {

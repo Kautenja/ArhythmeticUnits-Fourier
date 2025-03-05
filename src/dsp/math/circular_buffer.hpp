@@ -18,6 +18,7 @@
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CIRCULAR_BUFFER_HPP_
 
 #include <cstddef>    // size_t
+#include <cstdint>    // int32_t
 #include <algorithm>  // std::fill
 #include <vector>     // std::vector
 #include "functions.hpp"
