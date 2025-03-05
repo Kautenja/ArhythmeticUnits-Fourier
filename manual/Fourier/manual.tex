@@ -522,10 +522,10 @@ be pipelined across the $H$ sample intervals between successive frames.
 
 In a pipelined approach, rather than performing the entire FFT for frame
 $m$ in one burst, the workload is evenly divided and executed
-incrementally as each new sample is acquired. This means that when a new
-sample is received, a small portion of the FFT computation for the current
-frame is processed. Over the course of $H$ samples, the complete FFT for
-frame $m$ is computed.
+incrementally as each new sample is acquired~\citep{hennessy2011computer}.
+This means that when a new sample is received, a small portion of the FFT
+computation for the current frame is processed. Over the course of $H$
+samples, the complete FFT for frame $m$ is computed.
 
 This strategy offers several benefits:
 \begin{itemize}
