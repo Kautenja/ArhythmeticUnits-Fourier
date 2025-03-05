@@ -46,6 +46,12 @@ namespace Window {
 ///
 template<typename T>
 inline T boxcar(const T& n, const T& N, const bool& is_symmetric = true) {
+    // NOTE: boxcar (rectangular) window is an identity type of function;
+    // however, it must still conform to the window function interface. To
+    // suppress unused parameter warnings from the compiler use the following
+    // statements to "use" each of the input variables. This solution works
+    // on all compilers and is the least ugly looking syntax.
+    (void)(n); (void)(N); (void)(is_symmetric);
     return 1;
 }
 

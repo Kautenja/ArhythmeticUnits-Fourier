@@ -29,7 +29,7 @@
 #include "catch.hpp"
 
 // ---------------------------------------------------------------------------
-// MARK: `fft`
+// MARK: `OnTheFlyFFT`
 // ---------------------------------------------------------------------------
 
 SCENARIO("the FFT needs to be calculated") {
@@ -100,6 +100,53 @@ SCENARIO("the FFT needs to be calculated") {
         const auto sequence = generate_sinusoid<std::complex<float>>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
         Math::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
+        WHEN("the FFT is calculated.") {
+            fft.compute();
+            THEN("the output has a spike at the fundamental frequency") {
+                // Remove the symmetric copy of the FFT coefficients above the
+                // Nyquist rate (i.e., sample rate / 2)
+                fft.coefficients.erase(fft.coefficients.begin() + fft.coefficients.size() / 2, fft.coefficients.end());
+                // Transform the coefficients to decibels
+                auto output_dB = amplitude2decibels(fft.coefficients);
+                // Locate the coefficient with the greatest magnitude in decibels
+                auto highest_bin = argmax(output_dB.data(), output_dB.size());
+                // Convert the coefficient to Hz.
+                auto frequency = float(highest_bin) * SAMPLE_RATE / FFT_BINS;
+                // Frequency should be accurate for integral values
+                REQUIRE(approx_equal<float>(FUNDAMENTAL, frequency, 1));
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// MARK: `OnTheFlyRFFT`
+// ---------------------------------------------------------------------------
+
+SCENARIO("the RFFT needs to be calculated") {
+    GIVEN("a sequence with the unit impulse (length 4)") {
+        std::vector<float> sequence = {1, 0, 0, 0};
+        std::vector<float> window(sequence.size(), 1.f);
+        Math::OnTheFlyRFFT<float> fft(sequence.size());
+        fft.buffer(sequence.data(), window);
+        WHEN("the FFT is calculated") {
+            fft.compute();
+            THEN("the output has a unit DC coefficient") {
+                REQUIRE(approx_equal(fft.coefficients[0], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(fft.coefficients[1], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(fft.coefficients[2], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(fft.coefficients[3], std::complex<float>(1, -0), 1e-6f));
+            }
+        }
+    }
+    GIVEN("a sequence with a sinusoid at 441Hz, a sample rate of 44100Hz, and 4096 frequency bins") {
+        const float FUNDAMENTAL = 441;
+        const float SAMPLE_RATE = 44100;
+        constexpr int FFT_BINS = 4096;
+        const auto sequence = generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
+        std::vector<float> window(sequence.size(), 1.f);
+        Math::OnTheFlyRFFT<float> fft(sequence.size());
+        fft.buffer(sequence.data(), window);
         WHEN("the FFT is calculated.") {
             fft.compute();
             THEN("the output has a spike at the fundamental frequency") {
