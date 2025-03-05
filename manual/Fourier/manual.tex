@@ -273,51 +273,48 @@ to the side lobe levels).
 
 \subsection{Fast Fourier Transform (FFT)}
 
-In practical applications, the DFT is computed efficiently using the Fast
-Fourier Transform (FFT) algorithm. One of the most widely used FFT algorithms
-is the Cooley-Tukey algorithm, which recursively decomposes the DFT into
-smaller DFTs, reducing the computational complexity from $O(N^2)$ to
-$O(N \log N)$. Listing~\ref{alg:cooley-tukey} shows a high-level outline of
-the \textit{iterative} Cooley-Tukey algorithm, which implements recursion
-with loops.
+In practice, the DFT is computed using the Fast Fourier Transform (FFT)
+algorithm, which dramatically reduces the computational complexity from
+$O(N^2)$ to $O(N \log N)$. The Cooley-Tukey algorithm is one of the most
+widely used FFT methods. It recursively decomposes a DFT of size $N$ into
+smaller DFTs, combining their results through a series of ``butterfly''
+operations.
+
+Listing~\ref{alg:cooley-tukey} outlines a simplified iterative version of the
+Cooley-Tukey FFT. Note that the algorithm first rearranges the input array
+into bit-reversed order, and then performs the butterfly computations stage
+by stage.
 
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{Complex array $x$ of length $N$ (assume $N$ is a power of 2)}
-\KwOut{The DFT of $x$}
-\textbf{Bit-Reversal:} Reorder elements of $x$ according to bit-reversed order of indices\;
-\For{$s \gets 1$ \KwTo $\log_2 N$}{
-    $m \gets 2^s$\;
-    Compute the primitive $m$th root of unity: $W_m \gets e^{-j\frac{2\pi}{m}}$\;
-    \For{$k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\}$}{
-        \For{$j \gets 0$ \KwTo $\frac{m}{2}-1$}{
-            $t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right]$\;
-            $u \gets x[k+j]$\;
-            $x[k+j] \gets u + t$\;
-            $x\left[k+j+\frac{m}{2}\right] \gets u - t$\;
+\KwIn{Complex array \( x \) of length \( N \) (assume \( N \) is a power of 2)}
+\KwOut{The DFT of \( x \)}
+\textbf{Bit-Reversal:} Reorder elements of \( x \) according to the bit-reversed order of indices\;
+\For{\( s \gets 1 \) \KwTo \( \log_2 N \)}{
+    \( m \gets 2^s \)\;
+    Compute the primitive \( m \)th root of unity: \( W_m \gets e^{-j\frac{2\pi}{m}} \)\;
+    \For{\( k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\} \)}{
+        \For{\( j \gets 0 \) \KwTo \( \frac{m}{2}-1 \)}{
+            \( t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right] \)\;
+            \( u \gets x[k+j] \)\;
+            \( x[k+j] \gets u + t \)\;
+            \( x\left[k+j+\frac{m}{2}\right] \gets u - t \)\;
         }
     }
 }
-\Return $x$\;
+\Return \( x \)\;
 \caption{Iterative Cooley-Tukey FFT (Simplified)}
 \label{alg:cooley-tukey}
 \end{algorithm}
 
-This iterative method efficiently computes the FFT by combining the results
-of smaller DFTs in a structured manner, greatly reducing the number of
-computations required for spectral analysis.
-
 \subsection{Memoization of Twiddle Factors}
 
-In the Cooley-Tukey FFT algorithm, the twiddle factors
-\[
+The butterfly computations in the FFT algorithm repeatedly use twiddle
+factors:
+$$
 W_m^j = e^{-j\frac{2\pi j}{m}},
-\]
-where $m = 2^s$ for a given stage $s$ and
-$j = 0, 1, \ldots, \frac{m}{2}-1$, are used repeatedly in the butterfly
-computations. Since these values depend solely on the stage size $m$ and
-the index $j$ (and not on the specific input data), they are ideal
-candidates for memoization.
+$$
+where \( m = 2^s \) for a given stage \( s \) and \( j = 0, 1, \ldots, \frac{m}{2}-1 \). Since these factors depend only on \( m \) and \( j \), they can be precomputed and stored in a lookup table. This memoization not only avoids redundant calculations during the FFT but also contributes to faster and more efficient processing, especially in real-time applications or when the FFT is computed repeatedly for the same \( N \).
 
 Memoization involves precomputing the twiddle factors once and storing them
 in a lookup table (or array) during an initialization phase. In practical
