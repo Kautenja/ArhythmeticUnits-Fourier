@@ -345,15 +345,13 @@ repeated or real-time spectral analyses.
 \subsection{Memoization of Bit-Reversal Table}
 
 In many FFT algorithms, including the iterative Cooley-Tukey method, the input
-sequence must first be reordered into bit-reversed order. Since this
-permutation depends solely on the FFT length, it can be computed once and
-stored in a lookup table. This memoization avoids recalculating the
-bit-reversed indices for every new FFT computation, thereby reducing overhead
-and speeding up the initialization phase.
+sequence must first be reordered into bit-reversed order. This reordering is
+crucial because it aligns the data for the subsequent butterfly computations,
+ensuring that the algorithm can combine pairs of elements efficiently and in a
+cache-friendly manner.
 
 For an FFT of length \( N \) (with \( N = 2^r \) for some integer \( r \)),
-each index \( i \) in the range \( 0 \leq i < N \) can be expressed in its
-binary form:
+each index \( i \) (with \( 0 \leq i < N \)) can be represented in binary as:
 $$
 i = \sum_{k=0}^{r-1} b_k \, 2^k, \quad \text{with } b_k \in \{0,1\}.
 $$
@@ -362,10 +360,24 @@ the binary digits:
 $$
 \tilde{i} = \sum_{k=0}^{r-1} b_k \, 2^{r-1-k}.
 $$
+Precomputing the bit-reversal table allows the FFT to quickly reorder its
+input without performing the bit reversal calculation on the fly for every
+index during each FFT computation. This lookup table is stored in memory and
+reused for all FFT operations of the same size.
 
-This concept can be expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
-In this form, it may be serialized to RAM, disk, or some other persistent
-indexing scheme to reduce computational overhead of computing the mapping.
+For example, if \( N = 8 \) (i.e., \( r = 3 \)), then for \( i = 3 \)
+(binary \( 011 \)):
+$$
+\tilde{i} = (0 \times 2^2) + (1 \times 2^1) + (1 \times 2^0) = 0 + 2 + 1 = 3,
+$$
+but note that when the bits are reversed (i.e., \( 110 \)), the resulting
+decimal value is 6.
+
+This concept is expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
+The inner loop extracts each bit of the index \( i \) (using bitwise
+operations), appends it in reverse order to form \( \tilde{i} \), and then
+stores the result in the table. This precomputation is typically performed
+once during initialization.
 
 \begin{algorithm}[H]
 \SetAlgoLined
