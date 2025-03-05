@@ -1,5 +1,6 @@
 // Triggers for detecting events in time-domain signals.
-// Copyright 2020 Christian Kauten
+//
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -13,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_TRIGGER_HPP
-#define DSP_TRIGGER_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_
 
 #include "trigger/common.hpp"
 #include "trigger/boolean.hpp"
@@ -24,4 +25,4 @@
 #include "trigger/threshold_dual.hpp"
 #include "trigger/zero.hpp"
 
-#endif  // DSP_TRIGGER_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_

@@ -1,7 +1,6 @@
 // A basic math package.
-// Copyright 2020 Christian Kauten
 //
-// Author: Christian Kauten (kautenja@auburn.edu)
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_HPP
-#define DSP_MATH_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_
 
 #include "math/circular_buffer.hpp"
 #include "math/constants.hpp"
@@ -27,4 +26,4 @@
 #include "math/dft.hpp"
 #include "math/fft.hpp"
 
-#endif  // DSP_MATH_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_

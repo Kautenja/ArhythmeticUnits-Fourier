@@ -28,11 +28,13 @@ namespace Trigger {
 /// @tparam T the data type for processing input signals
 template<typename T>
 struct ThresholdDual {
+ private:
     /// the trigger for the button
     Trigger::Threshold<T> buttonTrigger;
     /// the trigger for the CV
     Trigger::Threshold<T> cvTrigger;
 
+ public:
     /// Process the input signals.
     ///
     /// @param button the value of the button signal [0, 1]
@@ -42,12 +44,12 @@ struct ThresholdDual {
     inline bool process(const T& button, const T& cv) {
         bool buttonPress = buttonTrigger.process(button);
         bool cvGate = cvTrigger.process(rescale(cv, T(0.1), T(2), T(0), T(1)));
-        return buttonPress or cvGate;
+        return buttonPress || cvGate;
     }
 
     /// Return a boolean determining if either the button or CV gate is high.
-    inline const bool& isHigh() {
-        return buttonTrigger.isHigh() or cvTrigger.isHigh();
+    inline bool isHigh() const {
+        return buttonTrigger.isHigh() || cvTrigger.isHigh();
     }
 };
 
