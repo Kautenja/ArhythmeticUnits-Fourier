@@ -271,24 +271,6 @@ where $w[n]$ is the window function. Common choices include the rectangular
 balance between frequency resolution (main lobe width) and leakage (side
 lobe levels.)
 
-\subsection{Short-Time Fourier Transform (STFT)}
-
-For time-varying signals, the Short-Time Fourier Transform (STFT) provides a
-way to analyze the frequency content over successive time frames. The STFT
-involves applying a window function to successive segments of the signal and
-computing the DFT for each segment. It is defined as:
-\begin{equation}
-X(m, k) = \sum_{n=0}^{N-1} x[n + mH] \, w[n] \, e^{-j2\pi k \frac{n}{N}},
-\label{eqn:stft}
-\end{equation}
-where:
-\begin{itemize}
-  \item $m$ indexes the time frame,
-  \item $H$ is the hop size (i.e., the number of samples by which the window
-  is shifted between successive frames), and
-  \item $N$ is the window length.
-\end{itemize}
-
 \subsection{Fast Fourier Transform (FFT)}
 
 In practical applications, the DFT is computed efficiently using the Fast
@@ -359,6 +341,154 @@ While memoization does incur a small memory overhead, the trade-off is
 generally favorable in performance-critical applications. In many modern FFT
 libraries, such optimizations are implemented by default to accelerate
 repeated or real-time spectral analyses.
+
+\subsection{Memoization of Bit-Reversal Table}
+
+In many FFT algorithms, including the iterative Cooley-Tukey method, the input
+sequence must first be reordered into bit-reversed order. Since this
+permutation depends solely on the FFT length, it can be computed once and
+stored in a lookup table. This memoization avoids recalculating the
+bit-reversed indices for every new FFT computation, thereby reducing overhead
+and speeding up the initialization phase.
+
+For an FFT of length \( N \) (with \( N = 2^r \) for some integer \( r \)),
+each index \( i \) in the range \( 0 \leq i < N \) can be expressed in its
+binary form:
+$$
+i = \sum_{k=0}^{r-1} b_k \, 2^k, \quad \text{with } b_k \in \{0,1\}.
+$$
+The bit-reversed index \( \tilde{i} \) is obtained by reversing the order of
+the binary digits:
+$$
+\tilde{i} = \sum_{k=0}^{r-1} b_k \, 2^{r-1-k}.
+$$
+
+This concept can be expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
+In this form, it may be serialized to RAM, disk, or some other persistent
+indexing scheme to reduce computational overhead of computing the mapping.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{FFT length \( N \) (assume \( N = 2^r \) for some integer \( r \))}
+\KwOut{Bit-reversal table \( T \) where \( T[i] = \tilde{i} \) for \( i = 0,1,\dots,N-1 \)}
+Determine \( r \gets \log_2 N \)\;
+\For{\( i \gets 0 \) \KwTo \( N-1 \)}{
+    Set \( \tilde{i} \gets 0 \)\;
+    Set \( x \gets i \)\;
+    \For{\( j \gets 0 \) \KwTo \( r-1 \)}{
+        \( \tilde{i} \gets (\tilde{i} \ll 1) \;|\; (x \,\&\, 1) \)\;
+        \( x \gets x \gg 1 \)\;
+    }
+    Set \( T[i] \gets \tilde{i} \)\;
+}
+\Return \( T \)\;
+\caption{Precomputation of the Bit-Reversal Table}
+\label{alg:bit-reversal}
+\end{algorithm}
+
+\subsection{Real-Valued Fourier Transform (RFFT)}
+
+In musical applications, the input signal is typically purely real-valued.
+Because the Fourier transform of a real signal exhibits Hermitian
+symmetry -- where negative frequency components mirror the positive ones --
+the Real--Valued Fourier Transform (RFFT) can compute only the non-redundant
+half of the spectrum. This results in a significant reduction in both
+computational complexity and memory usage compared to a full complex FFT. The
+RFFT is implemented by packing a real-valued signal of length $N$ into a
+complex sequence of length $\frac{N}{2}$ where the real components are
+derived from the even--indexed samples and the imaginary components from the
+odd--indexed samples. A length $\frac{N}{2}$ FFT is then computed over the
+packed signal and reconstructed into DFT coefficients of the $N$-point DFT.
+
+Given a real-valued input signal \( x[n] \) of length \( N \) (with \( N \) a power of 2), the RFFT is computed in three stages:
+
+\paragraph{1. Packing}
+The real input is packed into a complex sequence of length \( M = \frac{N}{2} \) by grouping even and odd samples:
+\begin{equation}
+y[k] = x[2k] + j\,x[2k+1], \quad k = 0, 1, \dots, M-1.
+\label{eq:packing}
+\end{equation}
+
+\paragraph{2. FFT Computation}
+Compute the \( M \)-point FFT of the packed sequence:
+\begin{equation}
+Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots, M-1.
+\label{eq:fft-computation}
+\end{equation}
+(The iterative Cooley–Tukey algorithm, as described previously, may be used here.)
+
+\paragraph{3. Finalization (Reconstruction)}
+The full \( N \)-point DFT \( X[k] \) is reconstructed using the symmetry properties of the DFT for real signals. Define the twiddle factors as:
+\[
+W_N^k = e^{-j\frac{2\pi k}{N}}.
+\]
+Then, the reconstruction is performed as follows:
+\begin{itemize}
+  \item For the DC and Nyquist bins:
+  \begin{align}
+    X[0] &= \Re\{Y[0]\} + \Im\{Y[0]\}, \label{eq:dc}\\[1mm]
+    X\left[\frac{N}{2}\right] &= \Re\{Y[0]\} - \Im\{Y[0]\}. \label{eq:nyquist}
+  \end{align}
+  \item For \( k = 1, 2, \dots, \frac{N}{2}-1 \):
+  \begin{equation}
+    X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big],
+    \label{eq:finalization}
+  \end{equation}
+  and, by Hermitian symmetry, the remaining coefficients are given by:
+  \[
+  X[N-k] = X[k]^*.
+  \]
+\end{itemize}
+
+Listing~\ref{alg:rfft} provides high-level pseudo code describing the
+computation of the RFFT given a real-valued signal as input.
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Real-valued array \( x[n] \) of length \( N \) (assume \( N \) is a power of 2)}
+\KwOut{The \( N \)-point DFT \( X[k] \) for \( k = 0,1,\dots,N-1 \)}
+\textbf{Packing:}\\
+\For{\( k \gets 0 \) \KwTo \( \frac{N}{2}-1 \)}{
+  Compute \( y[k] = x[2k] + j\,x[2k+1] \);
+}
+\textbf{FFT Computation:}\\
+Compute the \( \frac{N}{2} \)-point FFT of \( y[k] \) to obtain \( Y[k] \) \;
+(see Algorithm~\ref{alg:cooley-tukey} for the iterative FFT).\\
+\textbf{Finalization:}\\
+Define \( W_N^k = e^{-j\frac{2\pi k}{N}} \) \;
+Set
+\[
+X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\} - \Im\{Y[0]\};
+\]
+\For{\( k \gets 1 \) \KwTo \( \frac{N}{2}-1 \)}{
+  Compute
+  \[
+  X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
+  \]
+  Set \( X[N-k] = X[k]^* \);
+}
+\Return \( X[k] \) for \( k = 0,1,\dots,N-1 \)\;
+\caption{Real--Valued FFT via Packing, Complex FFT, and Finalization}
+\label{alg:rfft}
+\end{algorithm}
+
+\subsection{Short-Time Fourier Transform (STFT)}
+
+For time-varying signals, the Short-Time Fourier Transform (STFT) provides a
+way to analyze the frequency content over successive time frames. The STFT
+involves applying a window function to successive segments of the signal and
+computing the DFT for each segment. It is defined as:
+\begin{equation}
+X(m, k) = \sum_{n=0}^{N-1} x[n + mH] \, w[n] \, e^{-j2\pi k \frac{n}{N}},
+\label{eqn:stft}
+\end{equation}
+where:
+\begin{itemize}
+  \item $m$ indexes the time frame,
+  \item $H$ is the hop size (i.e., the number of samples by which the window
+  is shifted between successive frames), and
+  \item $N$ is the window length.
+\end{itemize}
 
 \subsection{Pipelining the STFT Computation}
 
