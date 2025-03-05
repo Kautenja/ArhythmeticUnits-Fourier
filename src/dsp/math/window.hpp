@@ -598,111 +598,111 @@ inline float side_lobe_amplitude(const Function& window) {
     }
 }
 
-// /// @brief Return the stop-band attenuation for the given windowing function.
-// ///
-// /// @tparam window the window function to get the stop-band attenuation of
-// /// @returns the stop-band attenuation for the given window in decibels
-// ///
-// template<Function window>
-// float stopband_attenuation();
-// template<> inline constexpr float stopband_attenuation<Function::Boxcar>()          { return -21; }
-// template<> inline constexpr float stopband_attenuation<Function::Bartlett>()        { return -25; }
-// template<> inline constexpr float stopband_attenuation<Function::BartlettHann>()    { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Parzen>()          { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Welch>()           { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Cosine>()          { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Bohman>()          { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Lanczos>()         { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Hann>()            { return -44; }
-// template<> inline constexpr float stopband_attenuation<Function::Hamming>()         { return -53; }
-// template<> inline constexpr float stopband_attenuation<Function::Blackman>()        { return -74; }
-// template<> inline constexpr float stopband_attenuation<Function::BlackmanHarris>()  { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::BlackmanNuttall>() { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::KaiserBessel>()    { return 0; }
-// template<> inline constexpr float stopband_attenuation<Function::Flattop>()         { return 0; }
+/// @brief Return the stop-band attenuation for the given windowing function.
+///
+/// @tparam window the window function to get the stop-band attenuation of
+/// @returns the stop-band attenuation for the given window in decibels
+///
+template<Function window>
+float stopband_attenuation();
+template<> inline constexpr float stopband_attenuation<Function::Boxcar>()          { return -21; }
+template<> inline constexpr float stopband_attenuation<Function::Bartlett>()        { return -25; }
+template<> inline constexpr float stopband_attenuation<Function::BartlettHann>()    { return -42; }
+template<> inline constexpr float stopband_attenuation<Function::Parzen>()          { return -31; }
+template<> inline constexpr float stopband_attenuation<Function::Welch>()           { return -31; }
+template<> inline constexpr float stopband_attenuation<Function::Cosine>()          { return -33; }
+template<> inline constexpr float stopband_attenuation<Function::Bohman>()          { return -28; }
+template<> inline constexpr float stopband_attenuation<Function::Lanczos>()         { return -28; }
+template<> inline constexpr float stopband_attenuation<Function::Hann>()            { return -44; }
+template<> inline constexpr float stopband_attenuation<Function::Hamming>()         { return -53; }
+template<> inline constexpr float stopband_attenuation<Function::Blackman>()        { return -74; }
+template<> inline constexpr float stopband_attenuation<Function::BlackmanHarris>()  { return -92; }
+template<> inline constexpr float stopband_attenuation<Function::BlackmanNuttall>() { return -93; }
+template<> inline constexpr float stopband_attenuation<Function::KaiserBessel>()    { return -60; }
+template<> inline constexpr float stopband_attenuation<Function::Flattop>()         { return -99; }
 
-// /// @brief Return the stop-band attenuation for the given windowing function.
-// ///
-// /// @param window the window function to get the stop-band attenuation of
-// /// @returns the stop-band attenuation for the given window in decibels
-// ///
-// inline float stopband_attenuation(const Function& window) {
-//     switch (window) {
-//     case Function::Boxcar:          return stopband_attenuation<Function::Boxcar>();
-//     case Function::Bartlett:        return stopband_attenuation<Function::Bartlett>();
-//     case Function::BartlettHann:    return stopband_attenuation<Function::BartlettHann>();
-//     case Function::Parzen:          return stopband_attenuation<Function::Parzen>();
-//     case Function::Welch:           return stopband_attenuation<Function::Welch>();
-//     case Function::Cosine:          return stopband_attenuation<Function::Cosine>();
-//     case Function::Bohman:          return stopband_attenuation<Function::Bohman>();
-//     case Function::Lanczos:         return stopband_attenuation<Function::Lanczos>();
-//     case Function::Hann:            return stopband_attenuation<Function::Hann>();
-//     case Function::Hamming:         return stopband_attenuation<Function::Hamming>();
-//     case Function::Blackman:        return stopband_attenuation<Function::Blackman>();
-//     case Function::BlackmanHarris:  return stopband_attenuation<Function::BlackmanHarris>();
-//     case Function::BlackmanNuttall: return stopband_attenuation<Function::BlackmanNuttall>();
-//     case Function::KaiserBessel:    return stopband_attenuation<Function::KaiserBessel>();
-//     case Function::Flattop:         return stopband_attenuation<Function::Flattop>();
-//     }
-// }
+/// @brief Return the stop-band attenuation for the given windowing function.
+///
+/// @param window the window function to get the stop-band attenuation of
+/// @returns the stop-band attenuation for the given window in decibels
+///
+inline float stopband_attenuation(const Function& window) {
+    switch (window) {
+    case Function::Boxcar:          return stopband_attenuation<Function::Boxcar>();
+    case Function::Bartlett:        return stopband_attenuation<Function::Bartlett>();
+    case Function::BartlettHann:    return stopband_attenuation<Function::BartlettHann>();
+    case Function::Parzen:          return stopband_attenuation<Function::Parzen>();
+    case Function::Welch:           return stopband_attenuation<Function::Welch>();
+    case Function::Cosine:          return stopband_attenuation<Function::Cosine>();
+    case Function::Bohman:          return stopband_attenuation<Function::Bohman>();
+    case Function::Lanczos:         return stopband_attenuation<Function::Lanczos>();
+    case Function::Hann:            return stopband_attenuation<Function::Hann>();
+    case Function::Hamming:         return stopband_attenuation<Function::Hamming>();
+    case Function::Blackman:        return stopband_attenuation<Function::Blackman>();
+    case Function::BlackmanHarris:  return stopband_attenuation<Function::BlackmanHarris>();
+    case Function::BlackmanNuttall: return stopband_attenuation<Function::BlackmanNuttall>();
+    case Function::KaiserBessel:    return stopband_attenuation<Function::KaiserBessel>();
+    case Function::Flattop:         return stopband_attenuation<Function::Flattop>();
+    }
+}
 
-// /// @brief Return the transition band width for the given window.
-// ///
-// /// @tparam window the window function to calculate the transition band of
-// /// @returns the transition band width for the window.
-// ///
-// template<Function window>
-// float transition_width();
-// template<> inline constexpr float transition_width<Function::Boxcar>()          { return 0.9; }
-// template<> inline constexpr float transition_width<Function::Bartlett>()        { return 1.8; }
-// template<> inline constexpr float transition_width<Function::BartlettHann>()    { return 0; }
-// template<> inline constexpr float transition_width<Function::Parzen>()          { return 0; }
-// template<> inline constexpr float transition_width<Function::Welch>()           { return 0; }
-// template<> inline constexpr float transition_width<Function::Cosine>()          { return 0; }
-// template<> inline constexpr float transition_width<Function::Bohman>()          { return 0; }
-// template<> inline constexpr float transition_width<Function::Lanczos>()         { return 0; }
-// template<> inline constexpr float transition_width<Function::Hann>()            { return 3.1; }
-// template<> inline constexpr float transition_width<Function::Hamming>()         { return 3.3; }
-// template<> inline constexpr float transition_width<Function::Blackman>()        { return 5.5; }
-// template<> inline constexpr float transition_width<Function::BlackmanHarris>()  { return 0; }
-// template<> inline constexpr float transition_width<Function::BlackmanNuttall>() { return 0; }
-// template<> inline constexpr float transition_width<Function::KaiserBessel>()    { return 0; }
-// template<> inline constexpr float transition_width<Function::Flattop>()         { return 0; }
+/// @brief Return the transition band width for the given window.
+///
+/// @tparam window the window function to calculate the transition band of
+/// @returns the transition band width for the window.
+///
+template<Function window>
+float transition_width();
+template<> inline constexpr float transition_width<Function::Boxcar>()          { return 0.9; }
+template<> inline constexpr float transition_width<Function::Bartlett>()        { return 1.8; }
+template<> inline constexpr float transition_width<Function::BartlettHann>()    { return 3.2; }  // slightly wider than Hann
+template<> inline constexpr float transition_width<Function::Parzen>()          { return 4.0; }  // broader transition for smoother roll‐off
+template<> inline constexpr float transition_width<Function::Welch>()           { return 3.3; }  // comparable to Hamming
+template<> inline constexpr float transition_width<Function::Cosine>()          { return 3.1; }  // similar to Hann
+template<> inline constexpr float transition_width<Function::Bohman>()          { return 3.3; }  // nearly the same as Welch/Hamming
+template<> inline constexpr float transition_width<Function::Lanczos>()         { return 3.3; }  // for a typical Lanczos parameter (e.g. a = 3)
+template<> inline constexpr float transition_width<Function::Hann>()            { return 3.1; }
+template<> inline constexpr float transition_width<Function::Hamming>()         { return 3.3; }
+template<> inline constexpr float transition_width<Function::Blackman>()        { return 5.5; }
+template<> inline constexpr float transition_width<Function::BlackmanHarris>()  { return 6.3; }  // wider main lobe for extra sidelobe suppression
+template<> inline constexpr float transition_width<Function::BlackmanNuttall>() { return 6.4; }
+template<> inline constexpr float transition_width<Function::KaiserBessel>()    { return 3.6; }  // value depends on the chosen beta (here, ~-60 dB design)
+template<> inline constexpr float transition_width<Function::Flattop>()         { return 7.5; }  // very wide to ensure amplitude flatnes
 
-// /// @brief Return the transition band width for the given window.
-// ///
-// /// @param N the number of samples in the impulse response
-// /// @param window the window function to calculate the transition band of
-// ///
-// /// @details
-// /// The transition width is calculated as:
-// ///
-// /// \f$\Delta f = \f$`TRANSITION_WIDTHS[i]`\f$/ N\f$
-// ///
-// /// Filter order can be calculated by rearranging the equation:
-// ///
-// /// \f$N = \f$`TRANSITION_WIDTHS[i]`\f$/ \Delta f\f$
-// ///
-// template<typename T>
-// inline T transition_width(const T& N, const Function& window) {
-//     switch (window) {
-//     case Function::Boxcar:          return transition_width<Function::Boxcar>() / N;
-//     case Function::Bartlett:        return transition_width<Function::Bartlett>() / N;
-//     case Function::BartlettHann:    return transition_width<Function::BartlettHann>() / N;
-//     case Function::Parzen:          return transition_width<Function::Parzen>() / N;
-//     case Function::Welch:           return transition_width<Function::Welch>() / N;
-//     case Function::Cosine:          return transition_width<Function::Cosine>() / N;
-//     case Function::Bohman:          return transition_width<Function::Bohman>() / N;
-//     case Function::Lanczos:         return transition_width<Function::Lanczos>() / N;
-//     case Function::Hann:            return transition_width<Function::Hann>() / N;
-//     case Function::Hamming:         return transition_width<Function::Hamming>() / N;
-//     case Function::Blackman:        return transition_width<Function::Blackman>() / N;
-//     case Function::BlackmanHarris:  return transition_width<Function::BlackmanHarris>() / N;
-//     case Function::BlackmanNuttall: return transition_width<Function::BlackmanNuttall>() / N;
-//     case Function::KaiserBessel:    return transition_width<Function::KaiserBessel>() / N;
-//     case Function::Flattop:         return transition_width<Function::Flattop>() / N;
-//     }
-// }
+/// @brief Return the transition band width for the given window.
+///
+/// @param N the number of samples in the impulse response
+/// @param window the window function to calculate the transition band of
+///
+/// @details
+/// The transition width is calculated as:
+///
+/// \f$\Delta f = \f$`TRANSITION_WIDTHS[i]`\f$/ N\f$
+///
+/// Filter order can be calculated by rearranging the equation:
+///
+/// \f$N = \f$`TRANSITION_WIDTHS[i]`\f$/ \Delta f\f$
+///
+template<typename T>
+inline T transition_width(const T& N, const Function& window) {
+    switch (window) {
+    case Function::Boxcar:          return transition_width<Function::Boxcar>() / N;
+    case Function::Bartlett:        return transition_width<Function::Bartlett>() / N;
+    case Function::BartlettHann:    return transition_width<Function::BartlettHann>() / N;
+    case Function::Parzen:          return transition_width<Function::Parzen>() / N;
+    case Function::Welch:           return transition_width<Function::Welch>() / N;
+    case Function::Cosine:          return transition_width<Function::Cosine>() / N;
+    case Function::Bohman:          return transition_width<Function::Bohman>() / N;
+    case Function::Lanczos:         return transition_width<Function::Lanczos>() / N;
+    case Function::Hann:            return transition_width<Function::Hann>() / N;
+    case Function::Hamming:         return transition_width<Function::Hamming>() / N;
+    case Function::Blackman:        return transition_width<Function::Blackman>() / N;
+    case Function::BlackmanHarris:  return transition_width<Function::BlackmanHarris>() / N;
+    case Function::BlackmanNuttall: return transition_width<Function::BlackmanNuttall>() / N;
+    case Function::KaiserBessel:    return transition_width<Function::KaiserBessel>() / N;
+    case Function::Flattop:         return transition_width<Function::Flattop>() / N;
+    }
+}
 
 /// @brief A structure for holding and updating samples of a cached window.
 template<typename T>
@@ -883,56 +883,72 @@ inline T tukey(const T& n, const T& N, const bool& is_symmetric = true, const T&
     return T(0.5) * (T(1) + cos(Math::pi<T>() * (abs(n - M) - alpha * M) / ((T(1) - alpha) * M)));
 }
 
-// /// @brief Kaiser window design.
-// namespace Kaiser {
-//
-// /// @brief Compute the order of a Kaiser window.
-// ///
-// /// @tparam T the type of data to use for calculating the order
-// /// @param a the stop-band ripple in decibels, i.e., \f$\alpha_s\f$
-// /// @param f the transition width, i.e., \f$\Delta f\f$
-// /// @return the order for the given Kaiser filter parameters
-// ///
-// template<typename T>
-// inline std::size_t order(const T& a, const T& f) {
-//     return ceilf((a - T(7.95)) / (T(14.36) * f));
-// }
-//
-// /// @brief Compute the \f$\beta\f$ parameter for a Kaiser window.
-// ///
-// /// @tparam T the type of data to use for calculating the parameter
-// /// @param a the stop-band ripple in decibels, i.e., \f$\alpha_s\f$
-// /// @return the \f$\beta\f$ parameter computed from the stop-band ripple
-// ///
-// template<typename T>
-// inline T beta(const T& a) {
-//     if (a > T(50))  return T(0.1102) * (a - T(8.7));
-//     if (a >= T(21)) return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
-//                     return 0;
-// }
-//
-// /// @brief Calculate the value of a Kaiser window.
-// ///
-// /// @tparam T the type of data to calculate the window value
-// /// @param n the coefficient index of the filter
-// /// @param N the order of the filter (number of coefficients - 1)
-// /// @param B the beta parameter for the Kaiser window, i.e., \f$\beta\f$
-// /// @details
-// /// The parameter B can be calculated from the stop-band ripple using the
-// /// function `kaiser_beta`
-// ///
-// template<typename T>
-// inline T window(const T& n, const T& N, const T& B) {
-//     // TODO: I0 as zeroth-order modified Bessel function of the first kind
-//     // - power series expansion
-//     #define I0
-//     // calculate alpha, bearing in mind that the filter order is N - 1
-//     static const T a = (N - T(1)) / T(1);
-//     return I0(B * pow(T(1) - pow((n - a) / a, T(2)), T(0.5))) / I0(B);
-//     #undef I0
-// }
-//
-// }  // namespace Kaiser
+/// @brief Kaiser window design.
+namespace Kaiser {
+
+/// @brief Compute the zeroth-order modified Bessel function of the first kind.
+/// @tparam T the numeric type used in the computation
+/// @param x the function argument
+/// @return the computed I₀(x)
+template<typename T>
+inline T I0(const T& x) {
+    T sum = T(1);
+    T term = T(1);
+    // y = (x/2)^2
+    T y = x * x / T(4);
+    int k = 1;
+    // iterate until the term becomes negligible
+    while (term > T(1e-6) * sum) {
+        term *= y / (T(k) * T(k));
+        sum += term;
+        ++k;
+    }
+    return sum;
+}
+
+/// @brief Compute the order of a Kaiser window.
+///
+/// @tparam T the type of data to use for calculating the order
+/// @param a the stop-band ripple in decibels, i.e., \f$\alpha_s\f$
+/// @param f the transition width, i.e., \f$\Delta f\f$
+/// @return the order for the given Kaiser filter parameters
+///
+template<typename T>
+inline size_t order(const T& a, const T& f) {
+    return ceilf((a - T(7.95)) / (T(14.36) * f));
+}
+
+/// @brief Compute the \f$\beta\f$ parameter for a Kaiser window.
+///
+/// @tparam T the type of data to use for calculating the parameter
+/// @param a the stop-band ripple in decibels, i.e., \f$\alpha_s\f$
+/// @return the \f$\beta\f$ parameter computed from the stop-band ripple
+///
+template<typename T>
+inline T beta(const T& a) {
+    if (a > T(50))  return T(0.1102) * (a - T(8.7));
+    if (a >= T(21)) return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
+                    return 0;
+}
+
+/// @brief Calculate the value of a Kaiser window.
+///
+/// @tparam T the type of data to calculate the window value
+/// @param n the coefficient index of the filter
+/// @param N the order of the filter (number of coefficients - 1)
+/// @param B the beta parameter for the Kaiser window, i.e., \f$\beta\f$
+/// @details
+/// The parameter B can be calculated from the stop-band ripple using the
+/// function `kaiser_beta`
+///
+template<typename T>
+inline T window(const T& n, const T& N, const T& B) {
+    // calculate alpha, bearing in mind that the filter order is N - 1
+    static const T a = (N - T(1)) / T(1);
+    return I0(B * pow(T(1) - pow((n - a) / a, T(2)), T(0.5))) / I0(B);
+}
+
+}  // namespace Kaiser
 
 }  // namespace Window
 
