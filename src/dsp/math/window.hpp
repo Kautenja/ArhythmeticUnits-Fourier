@@ -891,7 +891,7 @@ namespace Kaiser {
 /// @param x the function argument
 /// @return the computed I₀(x)
 template<typename T>
-inline T I0(const T& x) {
+inline T bessel(const T& x) {
     T sum = T(1);
     T term = T(1);
     // y = (x/2)^2
@@ -939,13 +939,13 @@ inline T beta(const T& a) {
 /// @param B the beta parameter for the Kaiser window, i.e., \f$\beta\f$
 /// @details
 /// The parameter B can be calculated from the stop-band ripple using the
-/// function `kaiser_beta`
+/// function `Kaiser::beta`
 ///
 template<typename T>
 inline T window(const T& n, const T& N, const T& B) {
     // calculate alpha, bearing in mind that the filter order is N - 1
     static const T a = (N - T(1)) / T(1);
-    return I0(B * pow(T(1) - pow((n - a) / a, T(2)), T(0.5))) / I0(B);
+    return bessel(B * pow(T(1) - pow((n - a) / a, T(2)), T(0.5))) / bessel(B);
 }
 
 }  // namespace Kaiser
