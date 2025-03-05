@@ -82,7 +82,7 @@ struct TunedNote {
     /// @brief Convert frequency to a musical note.
     /// @param freq The frequency to convert into a musical note.
     inline int set_frequency(float freq) {
-        static constexpr float base_freq = 440.f;
+        static const float base_freq = 440.f;
         // Handle invalid frequencies
         if (freq <= 0) return 1;
         // Calculate semitones from reference frequency.
