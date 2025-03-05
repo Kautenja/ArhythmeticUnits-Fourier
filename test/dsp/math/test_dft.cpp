@@ -24,6 +24,7 @@
 #include "dsp/math/functions.hpp"
 #include "dsp/math/dft.hpp"
 #include "dsp/math/ieee754.hpp"
+#include "../../functions.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -165,7 +166,7 @@ SCENARIO("the DFT needs to be calculated") {
         const float FUNDAMENTAL = 441;
         const float SAMPLE_RATE = 44100;
         const float DFT_BINS = 4096;
-        const auto sequence = Math::generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, DFT_BINS);
+        const auto sequence = generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, DFT_BINS);
         WHEN("the DFT is calculated using the exponential form.") {
             auto output = Math::dft_exp(sequence);
             THEN("the output has the same size as the input") {
@@ -176,9 +177,9 @@ SCENARIO("the DFT needs to be calculated") {
                 // Nyquist rate (i.e., sample rate / 2)
                 output.erase(output.begin() + output.size() / 2, output.end());
                 // Transform the coefficients to decibels
-                auto output_dB = Math::amplitude2decibels(output);
+                auto output_dB = amplitude2decibels(output);
                 // Locate the coefficient with the greatest magnitude in decibels
-                auto highest_bin = Math::argmax(output_dB.data(), output_dB.size());
+                auto highest_bin = argmax(output_dB.data(), output_dB.size());
                 // Convert the coefficient to Hz.
                 auto frequency = float(highest_bin) * SAMPLE_RATE / DFT_BINS;
                 // Frequency should be accurate for integral values
@@ -195,9 +196,9 @@ SCENARIO("the DFT needs to be calculated") {
                 // Nyquist rate (i.e., sample rate / 2)
                 output.erase(output.begin() + output.size() / 2, output.end());
                 // Transform the coefficients to decibels
-                auto output_dB = Math::amplitude2decibels(output);
+                auto output_dB = amplitude2decibels(output);
                 // Locate the coefficient with the greatest magnitude in decibels
-                auto highest_bin = Math::argmax(output_dB.data(), output_dB.size());
+                auto highest_bin = argmax(output_dB.data(), output_dB.size());
                 // Convert the coefficient to Hz.
                 auto frequency = float(highest_bin) * SAMPLE_RATE / DFT_BINS;
                 // Frequency should be accurate for integral values
@@ -350,7 +351,7 @@ SCENARIO("the IDFT needs to be calculated") {
                 REQUIRE(output.size() == coefficients.size());
             }
             THEN("the output is a cosine wave in the time domain") {
-                for (std::size_t i = 0; i < output.size(); i++) {
+                for (size_t i = 0; i < output.size(); i++) {
                     const auto expected = std::cos(2.f * Math::pi<float>() * FUNDAMENTAL * i / SAMPLE_RATE);
                     REQUIRE(Math::IEEE754::approx_equal<float>(DFT_BINS * output[i], expected, 1e-6));
                 }
@@ -362,7 +363,7 @@ SCENARIO("the IDFT needs to be calculated") {
                 REQUIRE(output.size() == coefficients.size());
             }
             THEN("the output is a cosine wave in the time domain") {
-                for (std::size_t i = 0; i < output.size(); i++) {
+                for (size_t i = 0; i < output.size(); i++) {
                     const auto expected = std::cos(2.f * Math::pi<float>() * FUNDAMENTAL * i / SAMPLE_RATE);
                     REQUIRE(Math::IEEE754::approx_equal<float>(DFT_BINS * output[i], expected, 1e-6));
                 }
