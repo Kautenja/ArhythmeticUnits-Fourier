@@ -243,10 +243,11 @@ desired, a slope of $0\frac{dB}{Oct}$ is typically preferred.
 
 Fourier analysis is founded on the Discrete Fourier Transform (DFT), a
 mathematical tool that expresses a finite-length signal as a sum of sinusoids
-with discrete frequencies. Given an input signal $x[n]$ of length $N$,
-the DFT produces a sequence $X[k]$ in which each element represents the
-amplitude and phase of a sinusoid at frequency $\frac{k}{N} f_s$, with $f_s$
-being the sample rate. Mathematically, the DFT is defined as:
+with discrete frequencies~\citep{oppenheim1999discrete}. Given an input
+signal $x[n]$ of length $N$, the DFT produces a sequence $X[k]$ in which each
+element represents the amplitude and phase of a sinusoid at frequency
+$\frac{k}{N} f_s$, with $f_s$ being the sample rate. Mathematically, the DFT
+is defined as:
 \begin{equation}
 X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j2\pi k \frac{n}{N}}
 \label{eqn:dft}
@@ -259,9 +260,9 @@ $\frac{f_s}{2}$.
 
 When analyzing finite--length signals, the abrupt discontinuities at the
 boundaries can cause \textit{spectral leakage} -- an effect where energy from
-one frequency bin spills into adjacent bins. To mitigate this issue, a window
-function $w[n]$ is applied to the signal, smoothly tapering its edges. The
-windowed signal is given by:
+one frequency bin spills into adjacent bins~\citep{smith1997scientist}. To
+mitigate this issue, a window function $w[n]$ is applied to the signal,
+smoothly tapering its edges. The windowed signal is given by:
 \begin{equation}
 x_w[n] = x[n] \cdot w[n]
 \label{eqn:window}
@@ -276,9 +277,9 @@ to the side lobe levels).
 In practice, the DFT is computed using the Fast Fourier Transform (FFT)
 algorithm, which dramatically reduces the computational complexity from
 $O(N^2)$ to $O(N \log N)$. The Cooley-Tukey algorithm is one of the most
-widely used FFT methods. It recursively decomposes a DFT of size $N$ into
-smaller DFTs, combining their results through a series of ``butterfly''
-operations.
+widely used FFT methods~\citep{cooley1965algorithm}. It recursively
+decomposes a DFT of size $N$ into smaller DFTs, combining their results
+through a series of ``butterfly'' operations.
 
 Listing~\ref{alg:cooley-tukey} outlines a simplified iterative version of the
 Cooley-Tukey FFT. Note that the algorithm first rearranges the input array
@@ -287,22 +288,22 @@ by stage.
 
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{Complex array \( x \) of length \( N \) (assume \( N \) is a power of 2)}
-\KwOut{The DFT of \( x \)}
-\textbf{Bit-Reversal:} Reorder elements of \( x \) according to the bit-reversed order of indices\;
-\For{\( s \gets 1 \) \KwTo \( \log_2 N \)}{
-    \( m \gets 2^s \)\;
-    Compute the primitive \( m \)th root of unity: \( W_m \gets e^{-j\frac{2\pi}{m}} \)\;
-    \For{\( k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\} \)}{
-        \For{\( j \gets 0 \) \KwTo \( \frac{m}{2}-1 \)}{
-            \( t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right] \)\;
-            \( u \gets x[k+j] \)\;
-            \( x[k+j] \gets u + t \)\;
-            \( x\left[k+j+\frac{m}{2}\right] \gets u - t \)\;
+\KwIn{Complex array $x$ of length $N$ (assume $N$ is a power of 2)}
+\KwOut{The DFT of $x$}
+\textbf{Bit-Reversal:} Reorder elements of $x$ according to the bit-reversed order of indices\;
+\For{$s \gets 1$ \KwTo $\log_2 N$}{
+    $m \gets 2^s$\;
+    Compute the primitive $m$th root of unity: $W_m \gets e^{-j\frac{2\pi}{m}}$\;
+    \For{$k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\}$}{
+        \For{$j \gets 0$ \KwTo $\frac{m}{2}-1$}{
+            $t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right]$\;
+            $u \gets x[k+j]$\;
+            $x[k+j] \gets u + t$\;
+            $x\left[k+j+\frac{m}{2}\right] \gets u - t$\;
         }
     }
 }
-\Return \( x \)\;
+\Return $x$\;
 \caption{Iterative Cooley-Tukey FFT (Simplified)}
 \label{alg:cooley-tukey}
 \end{algorithm}
@@ -314,7 +315,12 @@ factors:
 $$
 W_m^j = e^{-j\frac{2\pi j}{m}},
 $$
-where \( m = 2^s \) for a given stage \( s \) and \( j = 0, 1, \ldots, \frac{m}{2}-1 \). Since these factors depend only on \( m \) and \( j \), they can be precomputed and stored in a lookup table. This memoization not only avoids redundant calculations during the FFT but also contributes to faster and more efficient processing, especially in real-time applications or when the FFT is computed repeatedly for the same \( N \).
+where $m = 2^s$ for a given stage $s$ and $j = 0, 1, \ldots, \frac{m}{2}-1$.
+Since these factors depend only on $m$ and $j$, they can be precomputed and
+stored in a lookup table. This memoization~\citep{cormen2009introduction} not
+only avoids redundant calculations during the FFT but also contributes to
+faster and more efficient processing, especially in real-time applications or
+when the FFT is computed repeatedly for the same $N$.
 
 Memoization involves precomputing the twiddle factors once and storing them
 in a lookup table (or array) during an initialization phase. In practical
@@ -357,10 +363,11 @@ the binary digits:
 $$
 \tilde{i} = \sum_{k=0}^{r-1} b_k \, 2^{r-1-k}.
 $$
-Precomputing the bit-reversal table allows the FFT to quickly reorder its
-input without performing the bit reversal calculation on the fly for every
-index during each FFT computation. This lookup table is stored in memory and
-reused for all FFT operations of the same size.
+Precomputing, i.e., memoizing~\citep{cormen2009introduction}, the
+bit-reversal table allows the FFT to quickly reorder its input without
+performing the bit reversal calculation on the fly for every index during
+each FFT computation. This lookup table is stored in memory and reused for
+all FFT operations of the same size.
 
 For example, if $N = 8$ (i.e., $r = 3$), then for $i = 3$
 (binary $011$):
@@ -401,18 +408,21 @@ In musical applications, the input signal is typically purely real-valued.
 Because the Fourier transform of a real signal exhibits Hermitian
 symmetry -- where negative frequency components mirror the positive ones --
 the Real--Valued Fourier Transform (RFFT) can compute only the non-redundant
-half of the spectrum. This results in a significant reduction in both
-computational complexity and memory usage compared to a full complex FFT. The
-RFFT is implemented by packing a real-valued signal of length $N$ into a
-complex sequence of length $\frac{N}{2}$ where the real components are
-derived from the even--indexed samples and the imaginary components from the
-odd--indexed samples. A length $\frac{N}{2}$ FFT is then computed over the
-packed signal and reconstructed into DFT coefficients of the $N$-point DFT.
+half of the spectrum~\citep{sorensen1987real}. This results in a significant
+reduction in both computational complexity and memory usage compared to a
+full complex FFT. The RFFT is implemented by packing a real-valued signal of
+length $N$ into a complex sequence of length $\frac{N}{2}$ where the real
+components are derived from the even--indexed samples and the imaginary
+components from the odd--indexed samples. A length $\frac{N}{2}$ FFT is then
+computed over the packed signal and reconstructed into DFT coefficients of
+the $N$-point DFT.
 
-Given a real-valued input signal $x[n]$ of length $N$ (with $N$ a power of 2), the RFFT is computed in three stages:
+Given a real-valued input signal $x[n]$ of length $N$ (with $N$ a power of 2),
+the RFFT is computed in three stages:
 
 \paragraph{1. Packing}
-The real input is packed into a complex sequence of length $M = \frac{N}{2}$ by grouping even and odd samples:
+The real input is packed into a complex sequence of length $M = \frac{N}{2}$
+by grouping even and odd samples:
 \begin{equation}
 y[k] = x[2k] + j\,x[2k+1], \quad k = 0, 1, \dots, M-1.
 \label{eq:packing}
@@ -424,10 +434,12 @@ Compute the $M$-point FFT of the packed sequence:
 Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots, M-1.
 \label{eq:fft-computation}
 \end{equation}
-(The iterative Cooley–Tukey algorithm, as described previously, may be used here.)
+(The iterative Cooley–Tukey algorithm, as described previously, may be used
+here.)
 
 \paragraph{3. Finalization (Reconstruction)}
-The full $N$-point DFT $X[k]$ is reconstructed using the symmetry properties of the DFT for real signals. Define the twiddle factors as:
+The full $N$-point DFT $X[k]$ is reconstructed using the symmetry properties
+of the DFT for real signals. Define the twiddle factors as:
 \[
 W_N^k = e^{-j\frac{2\pi k}{N}}.
 \]
@@ -484,9 +496,10 @@ X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\} 
 \subsection{Short-Time Fourier Transform (STFT)}
 
 For time-varying signals, the Short-Time Fourier Transform (STFT) provides a
-way to analyze the frequency content over successive time frames. The STFT
-involves applying a window function to successive segments of the signal and
-computing the DFT for each segment. It is defined as:
+way to analyze the frequency content over successive time
+frames~\citep{allen1977short}. The STFT involves applying a window function
+to successive segments of the signal and computing the DFT for each segment.
+It is defined as:
 \begin{equation}
 X(m, k) = \sum_{n=0}^{N-1} x[n + mH] \, w[n] \, e^{-j2\pi k \frac{n}{N}},
 \label{eqn:stft}
@@ -536,6 +549,16 @@ frame is available, and the process repeats for the next frame.
 This approach helps ensure that performance trends remain consistent, rather
 than exhibiting bursty behavior tied to the hop size $H$, thereby
 optimizing the system for real-time streaming applications.
+
+% -------------------
+% MARK: References
+% -------------------
+
+\clearpage
+\renewcommand\refname{References}
+% \nocite{*}
+\bibliographystyle{apalike}
+\bibliography{references}
 
 % ----------------------------------------------------------------------------
 % MARK: Copyright seal
