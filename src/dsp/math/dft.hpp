@@ -17,25 +17,22 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_
 
-#include <cstdlib>
-#include <algorithm>
-#include <cmath>
-#include <complex>
-#include <cstdint>
-#include <limits>
-#include <vector>
-#include "constants.hpp"
-#include "window.hpp"
+#include <cmath>          // exp
+#include <cstdlib>        // size_t
+#include <complex>        // complex
+#include <vector>         // vector
+#include "constants.hpp"  // pi, j
+#include "window.hpp"     // window, coherent_gain
 
 /// @brief Basic mathematical functions.
 namespace Math {
 
-/// @brief Compute the Discrete Fourier Transform using the exponential calculation.
+/// @brief Compute the Discrete Fourier Transform (DFT).
 ///
-/// @param input the input sequence to compute the DFT of, \f$x[n]\f$
-/// @param output the output sequence the store DFT coefficients in, \f$X[k]\f$
-/// @param length the length of the input sequence / output DFT coefficients, \f$N\f$
-/// @param window a windowing function to use when calculating coefficients.
+/// @param input Input sequence to compute the DFT of, \f$x[n]\f$
+/// @param output Output sequence the store DFT coefficients in, \f$X[k]\f$
+/// @param N Length of the input sequence / output DFT coefficients, \f$N\f$
+/// @param window Windowing function to use when calculating coefficients.
 /// @details
 /// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
 /// as:
@@ -43,27 +40,28 @@ namespace Math {
 /// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] e^{-j \frac{2 \pi k n}{N}}\f$
 ///
 template<typename T>
-void dft_exp(
+void dft(
     const T* const input,
     std::complex<T>* const output,
-    std::size_t length,
-    const Math::Window::Function& window = Math::Window::Function::Boxcar
+    size_t N,
+    const Window::Function& window = Window::Function::Boxcar
 ) {
-    for (std::size_t k = 0; k < length; k++) {  // Iterate over coefficients.
+    for (size_t k = 0; k < N; k++) {  // Iterate over coefficients.
         output[k] = 0;
-        for (std::size_t n = 0; n < length; n++) {  // Iterate over samples.
-            const std::complex<T> phase = T(2) * pi<T>() * k * n / static_cast<T>(length);
-            output[k] += Math::Window::window<T>(window, n, length, false) * input[n] * exp(-j<T>() * phase);
+        for (size_t n = 0; n < N; n++) {  // Iterate over samples.
+            auto wn = Window::window<T>(window, n, N, false);
+            auto phase = T(2) * pi<T>() * k * n / static_cast<T>(N);
+            output[k] += wn * input[n] * exp(-j<T>() * phase);
         }
-        output[k] /= Math::Window::coherent_gain(window);  // Normalize window gain.
+        output[k] /= Window::coherent_gain(window);  // Normalize window gain.
     }
 }
 
-/// @brief Compute the Discrete Fourier Transform using the exponential calculation.
+/// @brief Compute the Discrete Fourier Transform (DFT).
 ///
-/// @param input the input vector to compute the DFT of, \f$x[n]\f$
-/// @param window a windowing function to use when calculating coefficients.
-/// @returns a vector containing the DFT coefficients, \f$X[k]\f$
+/// @param input Input sequence to compute the DFT of, \f$x[n]\f$
+/// @param window Windowing function to use when calculating coefficients.
+/// @returns The DFT coefficients, \f$X[k]\f$
 /// @details
 /// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
 /// as:
@@ -71,71 +69,20 @@ void dft_exp(
 /// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] e^{-j \frac{2 \pi k n}{N}}\f$
 ///
 template<typename T>
-std::vector<std::complex<T>> dft_exp(
+std::vector<std::complex<T>> dft(
     const std::vector<T>& input,
-    const Math::Window::Function& window = Math::Window::Function::Boxcar
+    const Window::Function& window = Window::Function::Boxcar
 ) {
     std::vector<std::complex<T>> output(input.size());
-    dft_exp<T>(input.data(), output.data(), input.size(), window);
+    dft<T>(input.data(), output.data(), input.size(), window);
     return output;
 }
 
-/// @brief Compute the Discrete Fourier Transform using the exponential calculation.
+/// @brief Compute the Inverse Discrete Fourier Transform (IDFT).
 ///
-/// @param input the input sequence to compute the DFT of, \f$x[n]\f$
-/// @param output the output sequence the store DFT coefficients in, \f$X[k]\f$
-/// @param length the length of the input sequence / output DFT coefficients, \f$N\f$
-/// @param window a windowing function to use when calculating coefficients
-/// @details
-/// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
-/// as:
-///
-/// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] e^{-j \frac{2 \pi k n}{N}}\f$
-///
-template<typename T>
-void dft_trig(
-    const T* const input,
-    std::complex<T>* const output,
-    std::size_t length,
-    const Math::Window::Function& window = Math::Window::Function::Boxcar
-) {
-    for (std::size_t k = 0; k < length; k++) {  // Iterate over coefficients.
-        output[k] = 0;
-        for (std::size_t n = 0; n < length; n++) {  // Iterate over samples.
-            const std::complex<T> phase = T(2) * pi<T>() * k * n / static_cast<T>(length);
-            output[k] += Math::Window::window<T>(window, n, length, false) * input[n] * exp(-j<T>() * phase);
-        }
-        output[k] /= Math::Window::coherent_gain(window);  // Normalize window gain.
-    }
-}
-
-/// @brief Compute the Discrete Fourier Transform using the trigonometric calculation.
-///
-/// @param input the input vector to compute the DFT of, \f$x[n]\f$
-/// @param output a vector containing the DFT coefficients, \f$X[k]\f$
-/// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
-/// as:
-///
-/// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] \big( \cos(\frac{2 \pi k n}{N}) - j \sin(\frac{2 \pi k n}{N}) \big)\f$
-///
-template<typename T>
-std::vector<std::complex<T>> dft_trig(const std::vector<T>& input) {
-    std::vector<std::complex<T>> output(input.size());
-    dft_trig<T>(input.data(), output.data(), input.size(), Math::Window::Function::Boxcar);
-    return output;
-}
-
-
-
-
-
-
-
-/// @brief Compute the Discrete Fourier Transform using the exponential calculation.
-///
-/// @param input the input sequence to compute the IDFT of, \f$X[k]\f$
-/// @param output the output sequence to store time-domain samples in, \f$x[n]\f$
-/// @param length the length of the input DFT coefficients / output sequence, \f$N\f$
+/// @param input Input energies to compute the IDFT of, \f$X[k]\f$
+/// @param output Output sequence to store time-domain samples in, \f$x[n]\f$
+/// @param N Length of the input DFT coefficients / output sequence, \f$N\f$
 /// @details
 /// The Inverse Discrete Fourier Transform (IDFT) for sample \f$n\f$ is
 /// calculated as:
@@ -146,21 +93,21 @@ std::vector<std::complex<T>> dft_trig(const std::vector<T>& input) {
 /// real, i.e., the real component is returned and the phase is discarded.
 ///
 template<typename T>
-void idft_exp(const std::complex<T>* const input, T* const output, std::size_t length) {
-    for (std::size_t k = 0; k < length; k++) {  // Iterate over coefficients.
+void idft(const std::complex<T>* const input, T* const output, size_t N) {
+    for (size_t k = 0; k < N; k++) {  // Iterate over coefficients.
         std::complex<T> accum = {0, 0};
-        for (std::size_t n = 0; n < length; n++) {  // Iterate over samples.
-            const std::complex<T> phase = T(2) * pi<T>() * k * n / static_cast<T>(length);
+        for (size_t n = 0; n < N; n++) {  // Iterate over samples.
+            auto phase = T(2) * pi<T>() * k * n / static_cast<T>(N);
             accum += input[n] * exp(j<T>() * phase);
         }
-        output[k] = accum.real() / static_cast<T>(length);
+        output[k] = accum.real() / static_cast<T>(N);
     }
 }
 
-/// @brief Compute the Discrete Fourier Transform using the exponential calculation.
+/// @brief Compute the Inverse Discrete Fourier Transform (IDFT).
 ///
-/// @param input the input vector to compute the DFT of, \f$x[n]\f$
-/// @param output a vector containing the DFT coefficients, \f$X[k]\f$
+/// @param input Input energies to compute the IDFT of, \f$X[k]\f$
+/// @returns output Sequence of time-domain samples, \f$x[n]\f$
 /// @details
 /// The Inverse Discrete Fourier Transform (IDFT) for sample \f$n\f$ is
 /// calculated as:
@@ -171,54 +118,9 @@ void idft_exp(const std::complex<T>* const input, T* const output, std::size_t l
 /// real, i.e., the real component is returned and the phase is discarded.
 ///
 template<typename T>
-std::vector<T> idft_exp(const std::vector<std::complex<T>>& input) {
+std::vector<T> idft(const std::vector<std::complex<T>>& input) {
     std::vector<T> output(input.size());
-    idft_exp(input.data(), output.data(), input.size());
-    return output;
-}
-
-/// @brief Compute the Discrete Fourier Transform using the trigonometric calculation.
-///
-/// @param input the input sequence to compute the DFT of, \f$x[n]\f$
-/// @param output the output sequence the store DFT coefficients in, \f$X[k]\f$
-/// @param length the length of the input sequence / output DFT coefficients, \f$N\f$
-/// @details
-/// The Inverse Discrete Fourier Transform (IDFT) for sample \f$n\f$ is
-/// calculated as:
-///
-/// \f$x[n] = \sum_{k = 0}^{N - 1} X[k] \big( \cos(\frac{2 \pi k n}{N}) + j \sin(\frac{2 \pi k n}{N}) \big)\f$
-///
-/// An assumption is made here that the target sequence in the time domain was
-/// real, i.e., the real component is returned and the phase is discarded.
-///
-template<typename T>
-void idft_trig(const std::complex<T>* const input, T* const output, std::size_t length) {
-    for (std::size_t k = 0; k < length; k++) {  // Iterate over coefficients.
-        std::complex<T> accum = {0, 0};
-        for (std::size_t n = 0; n < length; n++) {  // Iterate over samples.
-            const T phase = T(2) * pi<T>() * k * n / static_cast<T>(length);
-            accum += input[n] * (std::cos(phase) + j<T>() * std::sin(phase));
-        }
-        output[k] = accum.real() / static_cast<T>(length);
-    }
-}
-
-/// @brief Compute the Discrete Fourier Transform using the trigonometric calculation.
-///
-/// @param input the input vector to compute the DFT of, \f$x[n]\f$
-/// @param output a vector containing the DFT coefficients, \f$X[k]\f$
-/// The Inverse Discrete Fourier Transform (IDFT) for sample \f$n\f$ is
-/// calculated as:
-///
-/// \f$x[n] = \sum_{k = 0}^{N - 1} X[k] \big( \cos(\frac{2 \pi k n}{N}) + j \sin(\frac{2 \pi k n}{N}) \big)\f$
-///
-/// An assumption is made here that the target sequence in the time domain was
-/// real, i.e., the real component is returned and the phase is discarded.
-///
-template<typename T>
-std::vector<T> idft_trig(const std::vector<std::complex<T>>& input) {
-    std::vector<T> output(input.size());
-    idft_trig(input.data(), output.data(), input.size());
+    idft(input.data(), output.data(), input.size());
     return output;
 }
 
