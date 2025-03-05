@@ -36,6 +36,17 @@ typedef std::vector<std::complex<float>> DFTCoefficients;
 /// A type for STFT coefficient matrices.
 typedef std::vector<DFTCoefficients> STFTCoefficients;
 
+/// @brief Linearly interpolate between coefficients.
+/// @param coeff The coefficients to interpolate between.
+/// @param index The floating point index to sample from the coefficients.
+/// @returns The linearly interpolated coefficient at the given index.
+static inline std::complex<float> interpolate_coefficients(const Math::DFTCoefficients& coeff, float index) {
+    int y0 = floorf(index);
+    int y1 = ceilf(index);
+    float alpha = index - y0;
+    return (1 - alpha) * coeff[y0] + alpha * coeff[y1];
+}
+
 /// @brief Utility class for pre-computing twiddle factors for a radix-2 FFT.
 /// @tparam T The type for the twiddle factors.
 /// @details

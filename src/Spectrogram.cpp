@@ -23,17 +23,6 @@
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
 
-/// @brief Linearly interpolate between coefficients.
-/// @param coeff The coefficients to interpolate between.
-/// @param index The floating point index to sample from the coefficients.
-/// @returns The linearly interpolated coefficient at the given index.
-static inline std::complex<float> interpolate_coefficients(const Math::DFTCoefficients& coeff, float index) {
-    int y0 = floorf(index);
-    int y1 = ceilf(index);
-    float alpha = index - y0;
-    return (1 - alpha) * coeff[y0] + alpha * coeff[y1];
-}
-
 /// A spectrogram module.
 struct Spectrogram : rack::Module {
  public:
@@ -741,7 +730,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
                 float scaled_y = y;
                 if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
                     scaled_y = height * Math::squared(scaled_y / height);
-                auto coeff = gain * interpolate_coefficients(module->get_coefficients()[x], scaled_y);
+                auto coeff = gain * Math::interpolate_coefficients(module->get_coefficients()[x], scaled_y);
                 // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
                 auto color = Math::ColorMap::color_map(module->color_map, abs(coeff) / height);
                 pixels[4 * (width * (height - 1 - y) + x) + 0] = color.r * 255;
