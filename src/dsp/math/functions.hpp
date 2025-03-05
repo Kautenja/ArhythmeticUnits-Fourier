@@ -15,17 +15,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_FUNCTIONS_HPP
-#define DSP_MATH_FUNCTIONS_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_FUNCTIONS_HPP
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_FUNCTIONS_HPP
 
-#include <cstdlib>
-#include <cmath>
-#include <cstdint>
-#include <algorithm>
-#include <complex>
-#include <limits>
-#include <vector>
-#include "constants.hpp"
+#include <cmath>      // signbit, log10, abs, pow, log2f, powf, roundf
+#include <algorithm>  // max, min
+#include <complex>    // complex
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -191,4 +186,4 @@ inline int frequency_to_note(TunedNote& note, const float& frequency) {
 
 }  // namespace Math
 
-#endif  // DSP_MATH_FUNCTIONS_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_FUNCTIONS_HPP
