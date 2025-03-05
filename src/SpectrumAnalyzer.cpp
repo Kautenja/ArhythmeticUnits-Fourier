@@ -14,15 +14,15 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <iostream>
 #include <iomanip>
 #include <algorithm>
 #include <string>
 #include "./dsp/math.hpp"
 #include "./dsp/trigger.hpp"
+#include "./dsp/dc_blocker.hpp"
+#include "./dsp/music_theory/western_scale.hpp"
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
-#include "./dsp/dc_blocker.hpp"
 
 // TODO: When applying e.g., 4.5dB/Oct slope, this causes the entire signal
 // range to be attenuated by what looks like a factor of 4. Does signal
@@ -1117,19 +1117,11 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
         // Render hovered frequency above the plot in the top left.
         nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
         // Convert the frequency to a note.
-        if (hover_freq > 0) {
-            Math::TunedNote note;
-            Math::frequency_to_note(note, hover_freq);
-            // Render the note and octave
-            stream = {};
-            stream << Math::to_string(note.note) << note.octave;
-            nvgText(args.vg, pad_left + 55, pad_top / 2, stream.str().c_str(), NULL);
-            // Render the tuning measured in cents.
-            stream = {};
-            stream << (note.cents >= 0 ? "+" : "");
-            stream << std::fixed << std::setprecision(2) << note.cents << " cents";
+        if (hover_freq > 0) {  // Render note, octave, and tuning (in cents.)
+            MusicTheory::TunedNote note(hover_freq);
+            nvgText(args.vg, pad_left + 55, pad_top / 2, note.note_string().c_str(), NULL);
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-            nvgText(args.vg, pad_left + 140, pad_top / 2, stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left + 140, pad_top / 2, note.cents_string().c_str(), NULL);
         }
         // Render the y position.
         stream = {};

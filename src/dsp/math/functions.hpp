@@ -121,68 +121,6 @@ inline T decibels2amplitude(const T& x) {
     return pow(T(10), x / T(20));
 }
 
-/// @brief Western scale exponentially spaced notes.
-enum class Note {C = 0, CSharp, D, DSharp, E, F, FSharp, G, GSharp, A, ASharp, B};
-
-/// @brief Convert a note to its string representation.
-/// @param note The note to concert to a string.
-/// @returns The string representation of the string note.
-inline const char* to_string(const Note& note) {
-    switch (note) {
-    case Note::C:      return "C";
-    case Note::CSharp: return "C#";
-    case Note::D:      return "D";
-    case Note::DSharp: return "D#";
-    case Note::E:      return "E";
-    case Note::F:      return "F";
-    case Note::FSharp: return "F#";
-    case Note::G:      return "G";
-    case Note::GSharp: return "G#";
-    case Note::A:      return "A";
-    case Note::ASharp: return "A#";
-    case Note::B:      return "B";
-    }
-}
-
-/// @brief A structure to hold note information.
-struct TunedNote {
-    /// The note.
-    enum Note note;
-    /// Octave number.
-    int octave;
-    /// Cents deviation.
-    float cents;
-};
-
-/// @brief Convert frequency to a musical note.
-/// @param note The note to populate.
-/// @param frequency The frequency to convert into a musical note.
-/// @details
-/// This function treats A4 = 440Hz as the base frequency for note conversion.
-/// Notes are generated with their quantized value as an enumeration `Note`,
-/// The associated octave the note belongs to, and the tuning offset measured
-/// in cents.
-inline int frequency_to_note(TunedNote& note, const float& frequency) {
-    static constexpr float base_frequency = 440.f;
-    // Handle invalid frequencies
-    if (frequency <= 0) return 1;
-    // Calculate semitones from reference frequency.
-    float n = 12.f * log2f(frequency / base_frequency);
-    // Nearest note.
-    int nearest_note = static_cast<int>(roundf(n));
-    // Calculate the note index and octave.
-    int note_index = (nearest_note + 9) % 12;  // Offset to align A4
-    if (note_index < 0) note_index += 12;
-    note.octave = 4 + (nearest_note + 9) / 12;
-    if (nearest_note < -9) note.octave--;
-    note.note = static_cast<Note>(note_index);
-    // Frequency of the nearest note
-    float nearest_frequency = base_frequency * powf(2.f, nearest_note / 12.f);
-    // Calculate cents difference
-    note.cents = 1200 * log2f(frequency / nearest_frequency);
-    return 0;
-}
-
 }  // namespace Math
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_FUNCTIONS_HPP_
