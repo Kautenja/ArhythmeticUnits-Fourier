@@ -241,35 +241,35 @@ desired, a slope of $0\frac{dB}{Oct}$ is typically preferred.
 \clearpage
 \section{Background}
 
-Fourier analysis is fundamentally based on the Discrete Fourier Transform
-(DFT), which expresses a finite-length signal as a sum of sinusoids with
-discrete frequencies. Given an input signal $x[n]$ of length $N$, the DFT
-produces a sequence $X[k]$, where the $k$th element represents the amplitude
-and phase of a sinusoid with frequency $\frac{k}{N}f_s$, with $f_s$ denoting
-the sample rate. The DFT is defined mathematically as:
+Fourier analysis is founded on the Discrete Fourier Transform (DFT), a
+mathematical tool that expresses a finite-length signal as a sum of sinusoids
+with discrete frequencies. Given an input signal $x[n]$ of length $N$,
+the DFT produces a sequence $X[k]$ in which each element represents the
+amplitude and phase of a sinusoid at frequency $\frac{k}{N} f_s$, with $f_s$
+being the sample rate. Mathematically, the DFT is defined as:
 \begin{equation}
-X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j2\pi k \frac{n}{N}},
+X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j2\pi k \frac{n}{N}}
 \label{eqn:dft}
 \end{equation}
-for $k = 0, 1, \dots, N-1$. Because the DFT assumes the signal is periodic,
-its spectrum is symmetric about the Nyquist frequency
-$\left(\frac{f_s}{2}\right)$ and repeats periodically.
+for $k = 0, 1, \dots, N-1$. Because the DFT inherently assumes the signal is
+periodic, its spectrum is symmetric about the Nyquist frequency
+$\frac{f_s}{2}$.
 
 \subsection{Windowing Functions}
 
-When analyzing finite-length signals, discontinuities at the boundaries can
-introduce \textit{spectral leakage}, where energy from one frequency bin
-bleeds into adjacent bins. To mitigate this, a window function is applied to
-the signal to taper its edges smoothly. The windowed signal $x_w[n]$ is
-obtained by an element-wise multiplication:
+When analyzing finite--length signals, the abrupt discontinuities at the
+boundaries can cause \textit{spectral leakage} -- an effect where energy from
+one frequency bin spills into adjacent bins. To mitigate this issue, a window
+function $w[n]$ is applied to the signal, smoothly tapering its edges. The
+windowed signal is given by:
 \begin{equation}
-x_w[n] = x[n] \cdot w[n],
+x_w[n] = x[n] \cdot w[n]
 \label{eqn:window}
 \end{equation}
-where $w[n]$ is the window function. Common choices include the rectangular
-(Boxcar), Hann, Hamming, and Blackman windows, each offering a different
-balance between frequency resolution (main lobe width) and leakage (side
-lobe levels.)
+where common window choices include the rectangular (Boxcar), Hann, Hamming,
+and Blackman windows. Each window offers a different trade-off between
+frequency resolution (determined by the main lobe width) and leakage (related
+to the side lobe levels).
 
 \subsection{Fast Fourier Transform (FFT)}
 
@@ -283,22 +283,22 @@ with loops.
 
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{Complex array \( x \) of length \( N \) (assume \( N \) is a power of 2)}
-\KwOut{The DFT of \( x \)}
-\textbf{Bit-Reversal:} Reorder elements of \( x \) according to bit-reversed order of indices\;
-\For{\( s \gets 1 \) \KwTo \( \log_2 N \)}{
-    \( m \gets 2^s \)\;
-    Compute the primitive \( m \)th root of unity: \( W_m \gets e^{-j\frac{2\pi}{m}} \)\;
-    \For{\( k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\} \)}{
-        \For{\( j \gets 0 \) \KwTo \( \frac{m}{2}-1 \)}{
-            \( t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right] \)\;
-            \( u \gets x[k+j] \)\;
-            \( x[k+j] \gets u + t \)\;
-            \( x\left[k+j+\frac{m}{2}\right] \gets u - t \)\;
+\KwIn{Complex array $x$ of length $N$ (assume $N$ is a power of 2)}
+\KwOut{The DFT of $x$}
+\textbf{Bit-Reversal:} Reorder elements of $x$ according to bit-reversed order of indices\;
+\For{$s \gets 1$ \KwTo $\log_2 N$}{
+    $m \gets 2^s$\;
+    Compute the primitive $m$th root of unity: $W_m \gets e^{-j\frac{2\pi}{m}}$\;
+    \For{$k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\}$}{
+        \For{$j \gets 0$ \KwTo $\frac{m}{2}-1$}{
+            $t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right]$\;
+            $u \gets x[k+j]$\;
+            $x[k+j] \gets u + t$\;
+            $x\left[k+j+\frac{m}{2}\right] \gets u - t$\;
         }
     }
 }
-\Return \( x \)\;
+\Return $x$\;
 \caption{Iterative Cooley-Tukey FFT (Simplified)}
 \label{alg:cooley-tukey}
 \end{algorithm}
@@ -313,22 +313,22 @@ In the Cooley-Tukey FFT algorithm, the twiddle factors
 \[
 W_m^j = e^{-j\frac{2\pi j}{m}},
 \]
-where \( m = 2^s \) for a given stage \( s \) and
-\( j = 0, 1, \ldots, \frac{m}{2}-1 \), are used repeatedly in the butterfly
-computations. Since these values depend solely on the stage size \( m \) and
-the index \( j \) (and not on the specific input data), they are ideal
+where $m = 2^s$ for a given stage $s$ and
+$j = 0, 1, \ldots, \frac{m}{2}-1$, are used repeatedly in the butterfly
+computations. Since these values depend solely on the stage size $m$ and
+the index $j$ (and not on the specific input data), they are ideal
 candidates for memoization.
 
 Memoization involves precomputing the twiddle factors once and storing them
 in a lookup table (or array) during an initialization phase. In practical
 implementations, this means:
 \begin{itemize}
-  \item \textbf{Precomputation:} For each stage \( s \) with block size
-  \( m \), compute the \( \frac{m}{2} \) twiddle factors
-  \( \{W_m^j\}_{j=0}^{\frac{m}{2}-1} \) before beginning the main FFT
+  \item \textbf{Precomputation:} For each stage $s$ with block size
+  $m$, compute the $\frac{m}{2}$ twiddle factors
+  $\{W_m^j\}_{j=0}^{\frac{m}{2}-1}$ before beginning the main FFT
   processing loop.
   \item \textbf{Reuse:} During the FFT computation, instead of recalculating
-  \( W_m^j \) for each butterfly operation, the algorithm simply looks up the
+  $W_m^j$ for each butterfly operation, the algorithm simply looks up the
   precomputed value. This saves significant computation time, especially for
   large FFT sizes or when processing multiple FFTs of the same length.
   \item \textbf{Efficiency:} By reducing the number of complex exponential
@@ -350,12 +350,12 @@ crucial because it aligns the data for the subsequent butterfly computations,
 ensuring that the algorithm can combine pairs of elements efficiently and in a
 cache-friendly manner.
 
-For an FFT of length \( N \) (with \( N = 2^r \) for some integer \( r \)),
-each index \( i \) (with \( 0 \leq i < N \)) can be represented in binary as:
+For an FFT of length $N$ (with $N = 2^r$ for some integer $r$),
+each index $i$ (with $0 \leq i < N$) can be represented in binary as:
 $$
 i = \sum_{k=0}^{r-1} b_k \, 2^k, \quad \text{with } b_k \in \{0,1\}.
 $$
-The bit-reversed index \( \tilde{i} \) is obtained by reversing the order of
+The bit-reversed index $\tilde{i}$ is obtained by reversing the order of
 the binary digits:
 $$
 \tilde{i} = \sum_{k=0}^{r-1} b_k \, 2^{r-1-k}.
@@ -365,35 +365,35 @@ input without performing the bit reversal calculation on the fly for every
 index during each FFT computation. This lookup table is stored in memory and
 reused for all FFT operations of the same size.
 
-For example, if \( N = 8 \) (i.e., \( r = 3 \)), then for \( i = 3 \)
-(binary \( 011 \)):
+For example, if $N = 8$ (i.e., $r = 3$), then for $i = 3$
+(binary $011$):
 $$
 \tilde{i} = (0 \times 2^2) + (1 \times 2^1) + (1 \times 2^0) = 0 + 2 + 1 = 3,
 $$
-but note that when the bits are reversed (i.e., \( 110 \)), the resulting
+but note that when the bits are reversed (i.e., $110$), the resulting
 decimal value is 6.
 
 This concept is expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
-The inner loop extracts each bit of the index \( i \) (using bitwise
-operations), appends it in reverse order to form \( \tilde{i} \), and then
+The inner loop extracts each bit of the index $i$ (using bitwise
+operations), appends it in reverse order to form $\tilde{i}$, and then
 stores the result in the table. This precomputation is typically performed
 once during initialization.
 
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{FFT length \( N \) (assume \( N = 2^r \) for some integer \( r \))}
-\KwOut{Bit-reversal table \( T \) where \( T[i] = \tilde{i} \) for \( i = 0,1,\dots,N-1 \)}
-Determine \( r \gets \log_2 N \)\;
-\For{\( i \gets 0 \) \KwTo \( N-1 \)}{
-    Set \( \tilde{i} \gets 0 \)\;
-    Set \( x \gets i \)\;
-    \For{\( j \gets 0 \) \KwTo \( r-1 \)}{
-        \( \tilde{i} \gets (\tilde{i} \ll 1) \;|\; (x \,\&\, 1) \)\;
-        \( x \gets x \gg 1 \)\;
+\KwIn{FFT length $N$ (assume $N = 2^r$ for some integer $r$)}
+\KwOut{Bit-reversal table $T$ where $T[i] = \tilde{i}$ for $i = 0,1,\dots,N-1$}
+Determine $r \gets \log_2 N$\;
+\For{$i \gets 0$ \KwTo $N-1$}{
+    Set $\tilde{i} \gets 0$\;
+    Set $x \gets i$\;
+    \For{$j \gets 0$ \KwTo $r-1$}{
+        $\tilde{i} \gets (\tilde{i} \ll 1) \;|\; (x \,\&\, 1)$\;
+        $x \gets x \gg 1$\;
     }
-    Set \( T[i] \gets \tilde{i} \)\;
+    Set $T[i] \gets \tilde{i}$\;
 }
-\Return \( T \)\;
+\Return $T$\;
 \caption{Precomputation of the Bit-Reversal Table}
 \label{alg:bit-reversal}
 \end{algorithm}
@@ -412,17 +412,17 @@ derived from the even--indexed samples and the imaginary components from the
 odd--indexed samples. A length $\frac{N}{2}$ FFT is then computed over the
 packed signal and reconstructed into DFT coefficients of the $N$-point DFT.
 
-Given a real-valued input signal \( x[n] \) of length \( N \) (with \( N \) a power of 2), the RFFT is computed in three stages:
+Given a real-valued input signal $x[n]$ of length $N$ (with $N$ a power of 2), the RFFT is computed in three stages:
 
 \paragraph{1. Packing}
-The real input is packed into a complex sequence of length \( M = \frac{N}{2} \) by grouping even and odd samples:
+The real input is packed into a complex sequence of length $M = \frac{N}{2}$ by grouping even and odd samples:
 \begin{equation}
 y[k] = x[2k] + j\,x[2k+1], \quad k = 0, 1, \dots, M-1.
 \label{eq:packing}
 \end{equation}
 
 \paragraph{2. FFT Computation}
-Compute the \( M \)-point FFT of the packed sequence:
+Compute the $M$-point FFT of the packed sequence:
 \begin{equation}
 Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots, M-1.
 \label{eq:fft-computation}
@@ -430,7 +430,7 @@ Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots
 (The iterative Cooley–Tukey algorithm, as described previously, may be used here.)
 
 \paragraph{3. Finalization (Reconstruction)}
-The full \( N \)-point DFT \( X[k] \) is reconstructed using the symmetry properties of the DFT for real signals. Define the twiddle factors as:
+The full $N$-point DFT $X[k]$ is reconstructed using the symmetry properties of the DFT for real signals. Define the twiddle factors as:
 \[
 W_N^k = e^{-j\frac{2\pi k}{N}}.
 \]
@@ -441,7 +441,7 @@ Then, the reconstruction is performed as follows:
     X[0] &= \Re\{Y[0]\} + \Im\{Y[0]\}, \label{eq:dc}\\[1mm]
     X\left[\frac{N}{2}\right] &= \Re\{Y[0]\} - \Im\{Y[0]\}. \label{eq:nyquist}
   \end{align}
-  \item For \( k = 1, 2, \dots, \frac{N}{2}-1 \):
+  \item For $k = 1, 2, \dots, \frac{N}{2}-1$:
   \begin{equation}
     X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big],
     \label{eq:finalization}
@@ -457,29 +457,29 @@ computation of the RFFT given a real-valued signal as input.
 
 \begin{algorithm}[H]
 \SetAlgoLined
-\KwIn{Real-valued array \( x[n] \) of length \( N \) (assume \( N \) is a power of 2)}
-\KwOut{The \( N \)-point DFT \( X[k] \) for \( k = 0,1,\dots,N-1 \)}
+\KwIn{Real-valued array $x[n]$ of length $N$ (assume $N$ is a power of 2)}
+\KwOut{The $N$-point DFT $X[k]$ for $k = 0,1,\dots,N-1$}
 \textbf{Packing:}\\
-\For{\( k \gets 0 \) \KwTo \( \frac{N}{2}-1 \)}{
-  Compute \( y[k] = x[2k] + j\,x[2k+1] \);
+\For{$k \gets 0$ \KwTo $\frac{N}{2}-1$}{
+  Compute $y[k] = x[2k] + j\,x[2k+1]$;
 }
 \textbf{FFT Computation:}\\
-Compute the \( \frac{N}{2} \)-point FFT of \( y[k] \) to obtain \( Y[k] \) \;
+Compute the $\frac{N}{2}$-point FFT of $y[k]$ to obtain $Y[k]$ \;
 (see Algorithm~\ref{alg:cooley-tukey} for the iterative FFT).\\
 \textbf{Finalization:}\\
-Define \( W_N^k = e^{-j\frac{2\pi k}{N}} \) \;
+Define $W_N^k = e^{-j\frac{2\pi k}{N}}$ \;
 Set
 \[
 X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\} - \Im\{Y[0]\};
 \]
-\For{\( k \gets 1 \) \KwTo \( \frac{N}{2}-1 \)}{
+\For{$k \gets 1$ \KwTo $\frac{N}{2}-1$}{
   Compute
   \[
   X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
   \]
-  Set \( X[N-k] = X[k]^* \);
+  Set $X[N-k] = X[k]^*$;
 }
-\Return \( X[k] \) for \( k = 0,1,\dots,N-1 \)\;
+\Return $X[k]$ for $k = 0,1,\dots,N-1$\;
 \caption{Real--Valued FFT via Packing, Complex FFT, and Finalization}
 \label{alg:rfft}
 \end{algorithm}
@@ -505,17 +505,17 @@ where:
 \subsection{Pipelining the STFT Computation}
 
 In real-time streaming contexts, the STFT is computed on successive frames of
-data separated by a hop size \( H \). Typically, each STFT frame is computed
-in its entirety once \( H \) new samples have arrived, which can result in
+data separated by a hop size $H$. Typically, each STFT frame is computed
+in its entirety once $H$ new samples have arrived, which can result in
 bursty processing loads. To alleviate this, the computation of each frame can
-be pipelined across the \( H \) sample intervals between successive frames.
+be pipelined across the $H$ sample intervals between successive frames.
 
 In a pipelined approach, rather than performing the entire FFT for frame
-\( m \) in one burst, the workload is evenly divided and executed
+$m$ in one burst, the workload is evenly divided and executed
 incrementally as each new sample is acquired. This means that when a new
 sample is received, a small portion of the FFT computation for the current
-frame is processed. Over the course of \( H \) samples, the complete FFT for
-frame \( m \) is computed.
+frame is processed. Over the course of $H$ samples, the complete FFT for
+frame $m$ is computed.
 
 This strategy offers several benefits:
 \begin{itemize}
@@ -531,13 +531,13 @@ This strategy offers several benefits:
 \end{itemize}
 
 In practical terms, this pipelining may be implemented by dividing the FFT
-computation into \( H \) sub-steps. At each new sample, the algorithm updates
+computation into $H$ sub-steps. At each new sample, the algorithm updates
 a portion of the FFT, caching intermediate results as needed. When all
-\( H \) increments have been processed, the complete FFT for the current
+$H$ increments have been processed, the complete FFT for the current
 frame is available, and the process repeats for the next frame.
 
 This approach helps ensure that performance trends remain consistent, rather
-than exhibiting bursty behavior tied to the hop size \( H \), thereby
+than exhibiting bursty behavior tied to the hop size $H$, thereby
 optimizing the system for real-time streaming applications.
 
 % ----------------------------------------------------------------------------
