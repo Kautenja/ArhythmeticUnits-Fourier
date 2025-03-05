@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_WINDOW_HPP
-#define DSP_MATH_WINDOW_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
 
 #include <cmath>
 #include <limits>
@@ -938,4 +938,4 @@ inline T tukey(const T& n, const T& N, const bool& is_symmetric = true, const T&
 
 }  // namespace Math
 
-#endif  // DSP_MATH_WINDOW_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
