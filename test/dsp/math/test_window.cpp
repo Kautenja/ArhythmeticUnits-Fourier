@@ -22,7 +22,7 @@
 //
 
 #include "dsp/math/window.hpp"
-#include "dsp/math/ieee754.hpp"
+#include "../../ieee754.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -42,7 +42,7 @@ TEST_CASE("Calculate an asymmetric Bartlett window impulse response of length 7"
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bartlett<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -50,7 +50,7 @@ TEST_CASE("Calculate an asymmetric Bartlett window impulse response of length 8"
     const std::vector<float> reference = {0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bartlett<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -66,7 +66,7 @@ TEST_CASE("Calculate a symmetric Bartlett window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bartlett<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -83,7 +83,7 @@ TEST_CASE("Calculate a symmetric Bartlett window impulse response of length 8") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bartlett<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -103,7 +103,7 @@ TEST_CASE("Calculate an asymmetric Hann window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("Calculate an asymmetric Hann window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -136,7 +136,7 @@ TEST_CASE("Calculate a symmetric Hann window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -153,7 +153,7 @@ TEST_CASE("Calculate a symmetric Hann window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -173,7 +173,7 @@ TEST_CASE("Calculate an asymmetric Bartlett-Hann window impulse response of leng
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::barthann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -190,7 +190,7 @@ TEST_CASE("Calculate an asymmetric Bartlett-Hann window impulse response of leng
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::barthann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -206,7 +206,7 @@ TEST_CASE("Calculate a symmetric Bartlett-Hann window impulse response of length
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::barthann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -223,7 +223,7 @@ TEST_CASE("Calculate a symmetric Bartlett-Hann window impulse response of length
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::barthann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -243,7 +243,7 @@ TEST_CASE("Calculate an asymmetric Hamming window impulse response of length 7")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hamming<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -260,7 +260,7 @@ TEST_CASE("Calculate an asymmetric Hamming window impulse response of length 8")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hamming<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -276,7 +276,7 @@ TEST_CASE("Calculate a symmetric Hamming window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hamming<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -293,7 +293,7 @@ TEST_CASE("Calculate a symmetric Hamming window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hamming<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -313,7 +313,7 @@ TEST_CASE("Calculate an asymmetric Blackman window impulse response of length 7"
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackman<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -330,7 +330,7 @@ TEST_CASE("Calculate an asymmetric Blackman window impulse response of length 8"
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackman<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -346,7 +346,7 @@ TEST_CASE("Calculate a symmetric Blackman window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackman<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -363,7 +363,7 @@ TEST_CASE("Calculate a symmetric Blackman window impulse response of length 8") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackman<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -383,7 +383,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Harris window impulse response of le
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmanharris<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -400,7 +400,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Harris window impulse response of le
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmanharris<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -416,7 +416,7 @@ TEST_CASE("Calculate a symmetric Blackman-Harris window impulse response of leng
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmanharris<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -433,7 +433,7 @@ TEST_CASE("Calculate a symmetric Blackman-Harris window impulse response of leng
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmanharris<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -453,7 +453,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Nuttall window impulse response of l
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -470,7 +470,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Nuttall window impulse response of l
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -486,7 +486,7 @@ TEST_CASE("Calculate a symmetric Blackman-Nuttall window impulse response of len
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -503,7 +503,7 @@ TEST_CASE("Calculate a symmetric Blackman-Nuttall window impulse response of len
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -523,7 +523,7 @@ TEST_CASE("Calculate an asymmetric Flattop window impulse response of length 7")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::flattop<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -540,7 +540,7 @@ TEST_CASE("Calculate an asymmetric Flattop window impulse response of length 8")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::flattop<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -556,7 +556,7 @@ TEST_CASE("Calculate a symmetric Flattop window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::flattop<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -573,7 +573,7 @@ TEST_CASE("Calculate a symmetric Flattop window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::flattop<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -593,7 +593,7 @@ TEST_CASE("Calculate an asymmetric Bohman window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bohman<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -610,7 +610,7 @@ TEST_CASE("Calculate an asymmetric Bohman window impulse response of length 8") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bohman<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -626,7 +626,7 @@ TEST_CASE("Calculate a symmetric Bohman window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bohman<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -643,7 +643,7 @@ TEST_CASE("Calculate a symmetric Bohman window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::bohman<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -663,7 +663,7 @@ TEST_CASE("Calculate an asymmetric Cosine window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::cosine<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -680,7 +680,7 @@ TEST_CASE("Calculate an asymmetric Cosine window impulse response of length 8") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::cosine<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -696,7 +696,7 @@ TEST_CASE("Calculate a symmetric Cosine window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::cosine<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -713,7 +713,7 @@ TEST_CASE("Calculate a symmetric Cosine window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::cosine<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -733,7 +733,7 @@ TEST_CASE("Calculate an asymmetric Parzen window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::parzen<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -741,7 +741,7 @@ TEST_CASE("Calculate an asymmetric Parzen window impulse response of length 8") 
     const std::vector<float> reference = {0.0, 0.03125, 0.25, 0.71875, 1.0, 0.71875, 0.25, 0.03125};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::parzen<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -757,7 +757,7 @@ TEST_CASE("Calculate a symmetric Parzen window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::parzen<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -774,7 +774,7 @@ TEST_CASE("Calculate a symmetric Parzen window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::parzen<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -794,7 +794,7 @@ TEST_CASE("Calculate an asymmetric Lanczos window impulse response of length 7")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::lanczos<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -811,7 +811,7 @@ TEST_CASE("Calculate an asymmetric Lanczos window impulse response of length 8")
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::lanczos<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -827,7 +827,7 @@ TEST_CASE("Calculate a symmetric Lanczos window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::lanczos<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -844,7 +844,7 @@ TEST_CASE("Calculate a symmetric Lanczos window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::lanczos<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -856,7 +856,7 @@ TEST_CASE("Calculate an asymmetric Welch window impulse response of length 7") {
     const std::vector<float> reference = {0.4375, 0.75, 0.9375, 1.0, 0.9375, 0.75, 0.4375};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::welch<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -873,7 +873,7 @@ TEST_CASE("Calculate an asymmetric Welch window impulse response of length 8") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::welch<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -889,7 +889,7 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 7") {
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::welch<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -897,7 +897,7 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 8") {
     const std::vector<float> reference = {0.4375, 0.75, 0.9375, 1.0, 0.9375, 0.75, 0.4375, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::welch<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1250,11 +1250,11 @@ TEST_CASE("side_lobe_amplitude should map windows to side-lobe amplitudes measur
 // ---------------------------------------------------------------------------
 
 // TEST_CASE("transition_width should calculate the transition width for an arbitrary window length.") {
-//     REQUIRE(Math::IEEE754::epsilon_equal(0.09f, Math::Window::transition_width<float>(10, Math::Window::Function::Boxcar)));
-//     REQUIRE(Math::IEEE754::epsilon_equal(0.18f, Math::Window::transition_width<float>(10, Math::Window::Function::Bartlett)));
-//     REQUIRE(Math::IEEE754::epsilon_equal(0.31f, Math::Window::transition_width<float>(10, Math::Window::Function::Hann)));
-//     REQUIRE(Math::IEEE754::epsilon_equal(0.33f, Math::Window::transition_width<float>(10, Math::Window::Function::Hamming)));
-//     REQUIRE(Math::IEEE754::epsilon_equal(0.55f, Math::Window::transition_width<float>(10, Math::Window::Function::Blackman)));
+//     REQUIRE(epsilon_equal(0.09f, Math::Window::transition_width<float>(10, Math::Window::Function::Boxcar)));
+//     REQUIRE(epsilon_equal(0.18f, Math::Window::transition_width<float>(10, Math::Window::Function::Bartlett)));
+//     REQUIRE(epsilon_equal(0.31f, Math::Window::transition_width<float>(10, Math::Window::Function::Hann)));
+//     REQUIRE(epsilon_equal(0.33f, Math::Window::transition_width<float>(10, Math::Window::Function::Hamming)));
+//     REQUIRE(epsilon_equal(0.55f, Math::Window::transition_width<float>(10, Math::Window::Function::Blackman)));
 // }
 
 // ---------------------------------------------------------------------------
@@ -1273,7 +1273,7 @@ TEST_CASE("Calculate an asymmetric exponential window impulse response of length
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::exponential<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1290,7 +1290,7 @@ TEST_CASE("Calculate an asymmetric exponential window impulse response of length
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::exponential<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1306,7 +1306,7 @@ TEST_CASE("Calculate a symmetric exponential window impulse response of length 7
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::exponential<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1323,7 +1323,7 @@ TEST_CASE("Calculate a symmetric exponential window impulse response of length 8
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::exponential<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1343,10 +1343,10 @@ TEST_CASE("Calculate an asymmetric Hann-Poisson window impulse response of lengt
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
         const auto equivalent = Math::Window::exponential<float>(i, reference.size(), false) * Math::Window::hann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(equivalent, window, 1e-6f));
+        REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
 
@@ -1363,10 +1363,10 @@ TEST_CASE("Calculate an asymmetric Hann-Poisson window impulse response of lengt
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
         const auto equivalent = Math::Window::exponential<float>(i, reference.size(), false) * Math::Window::hann<float>(i, reference.size(), false);
-        REQUIRE(Math::IEEE754::approx_equal(equivalent, window, 1e-6f));
+        REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
 
@@ -1382,10 +1382,10 @@ TEST_CASE("Calculate a symmetric Hann-Poisson window impulse response of length 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
         const auto equivalent = Math::Window::exponential<float>(i, reference.size(), true) * Math::Window::hann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(equivalent, window, 1e-6f));
+        REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
 
@@ -1402,10 +1402,10 @@ TEST_CASE("Calculate a symmetric Hann-Poisson window impulse response of length 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
         const auto equivalent = Math::Window::exponential<float>(i, reference.size(), true) * Math::Window::hann<float>(i, reference.size(), true);
-        REQUIRE(Math::IEEE754::approx_equal(equivalent, window, 1e-6f));
+        REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
 
@@ -1425,7 +1425,7 @@ TEST_CASE("Calculate an asymmetric Gaussian window impulse response of length 7"
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::gaussian<float>(i, reference.size(), false, 0.25);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1442,7 +1442,7 @@ TEST_CASE("Calculate an asymmetric Gaussian window impulse response of length 8"
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::gaussian<float>(i, reference.size(), false, 0.25);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1458,7 +1458,7 @@ TEST_CASE("Calculate a symmetric Gaussian window impulse response of length 7") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::gaussian<float>(i, reference.size(), true, 0.25);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1475,7 +1475,7 @@ TEST_CASE("Calculate a symmetric Gaussian window impulse response of length 8") 
     };
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::gaussian<float>(i, reference.size(), true, 0.25);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1487,7 +1487,7 @@ TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 7") {
     const std::vector<float> reference = {0.0, 0.6112604669781572, 1.0, 1.0, 1.0, 1.0, 0.6112604669781575};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::tukey<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1495,7 +1495,7 @@ TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::tukey<float>(i, reference.size(), false, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1503,7 +1503,7 @@ TEST_CASE("Calculate a symmetric Tukey window impulse response of length 7") {
     const std::vector<float> reference = {0.0, 0.75, 1.0, 1.0, 1.0, 0.7499999999999999, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::tukey<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 
@@ -1511,7 +1511,7 @@ TEST_CASE("Calculate a symmetric Tukey window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.6112604669781572, 1.0, 1.0, 1.0, 1.0, 0.6112604669781575, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
         const auto window = Math::Window::tukey<float>(i, reference.size(), true, 0.5);
-        REQUIRE(Math::IEEE754::approx_equal(reference[i], window, 1e-6f));
+        REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
 

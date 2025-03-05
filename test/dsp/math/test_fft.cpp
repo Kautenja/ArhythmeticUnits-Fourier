@@ -21,10 +21,10 @@
 // SOFTWARE.
 //
 
-#include "dsp/math/functions.hpp"
 #include "dsp/math/dft.hpp"
 #include "dsp/math/fft.hpp"
-#include "dsp/math/ieee754.hpp"
+#include "../../ieee754.hpp"
+#include "../../functions.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -39,7 +39,7 @@ SCENARIO("the FFT needs to be calculated") {
             auto output = Math::fft<1>(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 1);
-                REQUIRE(Math::IEEE754::epsilon_equal(std::complex<float>(0, -0), output[0]));
+                REQUIRE(epsilon_equal(std::complex<float>(0, -0), output[0]));
             }
         }
     }
@@ -49,8 +49,8 @@ SCENARIO("the FFT needs to be calculated") {
             auto output = Math::fft<2>(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 2);
-                REQUIRE(Math::IEEE754::epsilon_equal(std::complex<float>(0, -0), output[0]));
-                REQUIRE(Math::IEEE754::epsilon_equal(std::complex<float>(0, -0), output[1]));
+                REQUIRE(epsilon_equal(std::complex<float>(0, -0), output[0]));
+                REQUIRE(epsilon_equal(std::complex<float>(0, -0), output[1]));
             }
         }
     }
@@ -60,7 +60,7 @@ SCENARIO("the FFT needs to be calculated") {
             auto output = Math::fft<1>(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 1);
-                REQUIRE(Math::IEEE754::epsilon_equal(std::complex<float>(1, -0), output[0]));
+                REQUIRE(epsilon_equal(std::complex<float>(1, -0), output[0]));
             }
         }
     }
@@ -70,8 +70,8 @@ SCENARIO("the FFT needs to be calculated") {
             auto output = Math::fft<2>(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 2);
-                REQUIRE(Math::IEEE754::approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
-                REQUIRE(Math::IEEE754::approx_equal(output[1], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[1], std::complex<float>(1, -0), 1e-6f));
             }
         }
     }
@@ -81,10 +81,10 @@ SCENARIO("the FFT needs to be calculated") {
             auto output = Math::fft<4>(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 4);
-                REQUIRE(Math::IEEE754::approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
-                REQUIRE(Math::IEEE754::approx_equal(output[1], std::complex<float>(1, -0), 1e-6f));
-                REQUIRE(Math::IEEE754::approx_equal(output[2], std::complex<float>(1, -0), 1e-6f));
-                REQUIRE(Math::IEEE754::approx_equal(output[3], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[1], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[2], std::complex<float>(1, -0), 1e-6f));
+                REQUIRE(approx_equal(output[3], std::complex<float>(1, -0), 1e-6f));
             }
         }
     }
@@ -109,7 +109,7 @@ SCENARIO("the FFT needs to be calculated") {
                 // Convert the coefficient to Hz.
                 auto frequency = float(highest_bin) * SAMPLE_RATE / FFT_BINS;
                 // Frequency should be accurate for integral values
-                REQUIRE(Math::IEEE754::approx_equal<float>(FUNDAMENTAL, frequency, 1));
+                REQUIRE(approx_equal<float>(FUNDAMENTAL, frequency, 1));
             }
         }
     }
@@ -126,7 +126,7 @@ SCENARIO("the IFFT needs to be calculated") {
             auto output = Math::ifft<1>(sequence);
             THEN("the output has no signal content") {
                 REQUIRE(output.size() == 1);
-                REQUIRE(Math::IEEE754::epsilon_equal(0.f, output[0]));
+                REQUIRE(epsilon_equal(0.f, output[0]));
             }
         }
     }
@@ -136,8 +136,8 @@ SCENARIO("the IFFT needs to be calculated") {
             auto output = Math::ifft<2>(sequence);
             THEN("the output has no signal content") {
                 REQUIRE(output.size() == 2);
-                REQUIRE(Math::IEEE754::epsilon_equal(0.f, output[0]));
-                REQUIRE(Math::IEEE754::epsilon_equal(0.f, output[1]));
+                REQUIRE(epsilon_equal(0.f, output[0]));
+                REQUIRE(epsilon_equal(0.f, output[1]));
             }
         }
     }
@@ -147,7 +147,7 @@ SCENARIO("the IFFT needs to be calculated") {
             auto output = Math::ifft<1>(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 1);
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f, output[0]));
+                REQUIRE(epsilon_equal(1.f, output[0]));
             }
         }
     }
@@ -157,8 +157,8 @@ SCENARIO("the IFFT needs to be calculated") {
             auto output = Math::ifft<2>(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 2);
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/2.f, output[0]));
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/2.f, output[1]));
+                REQUIRE(epsilon_equal(1.f/2.f, output[0]));
+                REQUIRE(epsilon_equal(1.f/2.f, output[1]));
             }
         }
     }
@@ -168,10 +168,10 @@ SCENARIO("the IFFT needs to be calculated") {
             auto output = Math::ifft<4>(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 4);
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/4.f, output[0]));
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/4.f, output[1]));
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/4.f, output[2]));
-                REQUIRE(Math::IEEE754::epsilon_equal(1.f/4.f, output[3]));
+                REQUIRE(epsilon_equal(1.f/4.f, output[0]));
+                REQUIRE(epsilon_equal(1.f/4.f, output[1]));
+                REQUIRE(epsilon_equal(1.f/4.f, output[2]));
+                REQUIRE(epsilon_equal(1.f/4.f, output[3]));
             }
         }
     }
@@ -183,7 +183,7 @@ SCENARIO("the IFFT needs to be calculated") {
             THEN("the output matches a naive DFT") {
                 REQUIRE(output.size() == 4);
                 for (std::size_t i = 0; i < sequence.size(); i++) {
-                    REQUIRE(Math::IEEE754::approx_equal<float>(output[i], expected[i], 1e-6));
+                    REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
                 }
             }
         }
@@ -196,7 +196,7 @@ SCENARIO("the IFFT needs to be calculated") {
             THEN("the output matches a naive DFT") {
                 REQUIRE(output.size() == 4);
                 for (std::size_t i = 0; i < sequence.size(); i++) {
-                    REQUIRE(Math::IEEE754::approx_equal<float>(output[i], expected[i], 1e-6));
+                    REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
                 }
             }
         }
@@ -217,7 +217,7 @@ SCENARIO("the IFFT/IFFT needs to be calculated") {
             auto components = Math::fft<FFT_BINS>(sequence);
             auto reconstruction = Math::ifft<FFT_BINS>(components);
             for (std::size_t i = 0; i < sequence.size(); i++) {
-                REQUIRE(Math::IEEE754::approx_equal<float>(reconstruction[i], sequence[i], 1e-6));
+                REQUIRE(approx_equal<float>(reconstruction[i], sequence[i], 1e-6));
             }
         }
     }
@@ -235,11 +235,11 @@ SCENARIO("the IFFT/IFFT needs to be calculated in-place") {
             // Transform to the frequency domain and find the highest frequency.
             Math::fft_<FFT_BINS>(coefficients);
             auto frequency = float(Math::argmax(coefficients.data(), coefficients.size())) * SAMPLE_RATE / FFT_BINS;
-            REQUIRE(Math::IEEE754::approx_equal<float>(FUNDAMENTAL, frequency, 1));
+            REQUIRE(approx_equal<float>(FUNDAMENTAL, frequency, 1));
             // Transform back to the time-domain and check against the input.
             Math::ifft_<FFT_BINS>(coefficients);
             for (std::size_t i = 0; i < sequence.size(); i++)
-                REQUIRE(Math::IEEE754::approx_equal<float>(coefficients[i], sequence[i], 1e-6));
+                REQUIRE(approx_equal<float>(coefficients[i], sequence[i], 1e-6));
         }
     }
 }

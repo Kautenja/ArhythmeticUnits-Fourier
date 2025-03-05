@@ -23,7 +23,6 @@
 #include "math/color_map.hpp"
 #include "math/eurorack.hpp"
 #include "math/functions.hpp"
-#include "math/ieee754.hpp"
 #include "math/window.hpp"
 #include "math/dft.hpp"
 #include "math/fft.hpp"

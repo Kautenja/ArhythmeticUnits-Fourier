@@ -14,20 +14,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_IEEE754_HPP
-#define DSP_MATH_IEEE754_HPP
+#ifndef ARHYTHMETIC_UNITS_TEST_IEEE754_HPP
+#define ARHYTHMETIC_UNITS_TEST_IEEE754_HPP
 
 #include <stdlib.h>
 #include <complex>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
-
-/// @brief Basic mathematical functions.
-namespace Math {
-
-/// @brief Structures for manipulating IEEE754 floating point representations.
-namespace IEEE754 {
 
 /// @brief Return true if the floating point values are equal wrt. epsilon.
 ///
@@ -161,8 +155,4 @@ inline float exp2(const int32_t& exponent) {
     return value;
 }
 
-}  // namespace IEEE754
-
-}  // namespace Math
-
-#endif  // DSP_MATH_IEEE754_HPP
+#endif  // ARHYTHMETIC_UNITS_TEST_IEEE754_HPP
