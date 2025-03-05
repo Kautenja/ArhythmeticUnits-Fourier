@@ -821,7 +821,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
             MusicTheory::TunedNote note(hover_freq);
             nvgText(args.vg, pad_left + 55, pad_top / 2, note.note_string().c_str(), NULL);
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-            nvgText(args.vg, pad_left + 140, pad_top / 2, note.cents_string().c_str(), NULL);
+            nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
         }
         // TODO:
         // Render the coefficient magnitude.

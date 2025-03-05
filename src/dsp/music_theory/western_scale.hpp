@@ -72,20 +72,17 @@ struct TunedNote {
     /// Cents deviation.
     float cents;
 
-    /// @brief Initialize a new tuned note.
+    /// @brief Initialize a new tuned note to A4 +0 cents.
     TunedNote() : note(Note::A), octave(4), cents(0) { }
 
     /// @brief Initialize a musical note by frequency.
     /// @param freq The frequency to convert into a musical note.
-    /// @param base_freq The base frequency for A4.
-    explicit TunedNote(float freq, float base_freq = 440.f) {
-        set_frequency(freq, base_freq);
-    }
+    explicit TunedNote(float freq) { set_frequency(freq); }
 
     /// @brief Convert frequency to a musical note.
     /// @param freq The frequency to convert into a musical note.
-    /// @param base_freq The base frequency for A4.
-    inline int set_frequency(float freq, float base_freq = 440.f) {
+    inline int set_frequency(float freq) {
+        static constexpr float base_freq = 440.f;
         // Handle invalid frequencies
         if (freq <= 0) return 1;
         // Calculate semitones from reference frequency.
@@ -111,7 +108,7 @@ struct TunedNote {
     }
 
     /// @brief Return a string representation of the cents tuning.
-    inline std::string cents_string() const {
+    inline std::string tuning_string() const {
         std::ostringstream stream;
         stream << (cents >= 0 ? "+" : "");  // add a "+" for positive values.
         stream << std::fixed << std::setprecision(2) << cents << " cents";
