@@ -1,5 +1,6 @@
 // A trigger that divides another trigger signal by an integer factor.
-// Copyright 2020 Christian Kauten
+//
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by

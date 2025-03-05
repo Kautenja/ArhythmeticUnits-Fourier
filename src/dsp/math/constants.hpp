@@ -1,7 +1,6 @@
 // Constants for math functions.
-// Copyright 2020 Christian Kauten
 //
-// Author: Christian Kauten (kautenja@auburn.edu)
+// Copyright 2024 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_CONSTANTS_HPP
-#define DSP_MATH_CONSTANTS_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
 
 #include <complex>
 #include <limits>
@@ -52,38 +51,6 @@ inline constexpr T e() {
 template<typename T>
 inline constexpr std::complex<T> j() { return std::complex<T>(0, 1); }
 
-/// @brief Return the amount of time for the Haas effect in milliseconds.
-/// @details
-/// The Haas effect determines the minimal time difference between left and
-/// right channels where human perception is capable of separating the streams.
-///
-template<typename T>
-inline constexpr T haas_time() { return 0.040; }
-
-/// @brief Return the ratio of the audible spectrum to the Nyquist frequency.
-///
-/// @tparam T the type of data to work with
-/// @param f_s the Nyquist rate (sample rate) \f$f_s\f$, measured in \f$Hz\f$
-/// @returns the ratio of the audible band to the Nyquist band
-/// @details
-/// The output of audible spectrum is unit-less, it should be treated as a ratio
-/// of audible units to sample-able units. The ratio is calculated as:
-///
-/// \f$\omega_{max} \ \pi \gets 20000 / (f_s / 2)\f$
-///
-template<typename T>
-inline T audible_spectrum(const T& f_s) {
-    return static_cast<T>(20000) / (f_s / static_cast<T>(2));
-}
-
-/// @brief Return the RMS of a signal at max peak energy.
-///
-/// @tparam T the type (i.e., precision) of the returned value
-/// @returns the max RMS for a signal with amplitude domain \f$\in [-1, 1]\f$
-///
-template<typename T>
-inline constexpr T maxRMS() { return T(20) * std::log10(sqrt(T(0.5))); }
-
 }  // namespace Math
 
-#endif  // DSP_MATH_CONSTANTS_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
