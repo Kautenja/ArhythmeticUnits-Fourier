@@ -24,11 +24,6 @@
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
 
-// TODO: When applying e.g., 4.5dB/Oct slope, this causes the entire signal
-// range to be attenuated by what looks like a factor of 4. Does signal
-// content need some form of coherent gain across the spectrum when using
-// slope?
-
 /// @brief Compute control points for a Catmull-Rom segment from p1 to p2
 /// with tangents based on neighbors p0 and p3.
 /// @param points The points to interpolate
