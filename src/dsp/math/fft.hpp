@@ -317,6 +317,9 @@ class OnTheFlyFFT {
     inline bool is_done_computing() const {
         return step_ > coefficients.size();
     }
+
+    /// @brief Complete the computation schedule of the FFT.
+    inline void compute() { while (!is_done_computing()) step(); }
 };
 
 /// @brief An on-the-fly implementation of the Cooley-Tukey iterative RFFT.
@@ -435,6 +438,9 @@ class OnTheFlyRFFT {
         auto steps = ceilf(get_total_steps() / static_cast<float>(hop_length));
         for (size_t i = 0; i < steps; i++) step();
     }
+
+    /// @brief Complete the computation schedule of the FFT.
+    inline void compute() { while (!is_done_computing()) step(); }
 
     /// @brief Perform in-place smoothing of the magnitude coefficients.
     /// @param sample_rate The sample rate (measured in Hz.)
