@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_MATH_EURORACK_HPP
-#define DSP_MATH_EURORACK_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
 
 #include "functions.hpp"
 
@@ -73,4 +73,4 @@ inline T toAC(const T& value) { return value * T(5); }
 
 }  // namespace Math
 
-#endif  // DSP_MATH_EURORACK_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
