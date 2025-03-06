@@ -1,6 +1,6 @@
 // Common structures, methods, and data for detecting trigger events.
 //
-// Copyright 2024 Arhythmetic Units
+// Copyright 2025 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
