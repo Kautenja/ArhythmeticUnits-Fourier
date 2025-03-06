@@ -20,15 +20,24 @@
 #include "rack.hpp"
 using namespace rack;
 
-/// the global instance of the VCV Rack plug-in.
+/// The global instance of the VCV Rack plug-in.
 extern Plugin* plugin_instance;
 
-#include "./json.hpp"
-#include "./rack_extensions/param_quantity.hpp"
-#include "./rack_extensions/menu_item.hpp"
-#include "./rack_extensions/text_knob.hpp"
+// Extensions to the VCV rack framework.
 #include "./rack_extensions/graphics.hpp"
+#include "./rack_extensions/menu_item.hpp"
+#include "./rack_extensions/param_quantity.hpp"
+#include "./rack_extensions/text_knob.hpp"
 #include "./rack_extensions/theme.hpp"
+
+// DSP library and mathematical utilities
+#include "./dsp/filter.hpp"
+#include "./dsp/math.hpp"
+#include "./dsp/music_theory.hpp"
+#include "./dsp/trigger.hpp"
+
+// Extensions for working with JSON data.
+#include "./json.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.
 extern Model *modelSpectrogram;

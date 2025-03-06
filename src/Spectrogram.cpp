@@ -1,4 +1,4 @@
-// An spectrogram module.
+// A spectrogram module.
 //
 // Copyright 2025 Arhythmetic Units
 //
@@ -16,14 +16,10 @@
 
 #include <algorithm>
 #include <string>
-#include <iostream>
-#include "./dsp/math.hpp"
-#include "./dsp/trigger.hpp"
-#include "./dsp/dc_blocker.hpp"
-#include "./dsp/music_theory/western_scale.hpp"
+#include <iomanip>
 #include "./plugin.hpp"
 
-/// A spectrogram module.
+/// @brief A spectrogram module.
 struct Spectrogram : rack::Module {
  public:
     enum {

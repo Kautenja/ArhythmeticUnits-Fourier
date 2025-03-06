@@ -1,4 +1,4 @@
-// Arhythmetic Units math package.
+// Arhythmetic Units filters package.
 //
 // Copyright 2025 Arhythmetic Units
 //
@@ -14,16 +14,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_HPP_
 
-#include "math/circular_buffer.hpp"
-#include "math/color_map.hpp"
-#include "math/constants.hpp"
-#include "math/dft.hpp"
-#include "math/eurorack.hpp"
-#include "math/fft.hpp"
-#include "math/functions.hpp"
-#include "math/window.hpp"
+#include "filter/dc_blocker.hpp"
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_HPP_

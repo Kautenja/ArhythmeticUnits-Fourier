@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_
 
 /// @brief Structure for digital filtering.
 namespace Filter {
@@ -128,4 +128,4 @@ struct DCBlocker {
 
 }  // namespace Filter
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_

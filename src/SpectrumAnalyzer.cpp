@@ -1,4 +1,4 @@
-// A frequency spectrum analyzer module.
+// A spectrum analyzer module.
 //
 // Copyright 2025 Arhythmetic Units
 //
@@ -14,16 +14,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <iomanip>
 #include <algorithm>
 #include <string>
-#include "./dsp/math.hpp"
-#include "./dsp/trigger.hpp"
-#include "./dsp/dc_blocker.hpp"
-#include "./dsp/music_theory/western_scale.hpp"
+#include <iomanip>
 #include "./plugin.hpp"
 
-/// @brief A frequency spectrum analyzer module.
+/// @brief A spectrum analyzer module.
 struct SpectrumAnalyzer : rack::Module {
  public:
     /// Architectural constants of the module.
