@@ -24,21 +24,6 @@
 #include "./plugin.hpp"
 #include "./text_knob.hpp"
 
-/// @brief Compute control points for a Catmull-Rom segment from p1 to p2
-/// with tangents based on neighbors p0 and p3.
-/// @param points The points to interpolate
-/// @param control The control points to populate.
-/// @param tension Tension parameter for Catmull–Rom (typically 0.0 ~ 0.5)
-inline void catmull_rom_to_bezier(Vec points[4], Vec control[2], float tension = 0.5f) {
-    // One common approach is to set control points based on tangents
-    // at p1 and p2. The standard formula can vary, but typically:
-    float t = (1.0f - tension) / 6.0f;
-    control[0].x = points[1].x + (points[2].x - points[0].x) * t;
-    control[0].y = points[1].y + (points[2].y - points[0].y) * t;
-    control[1].x = points[2].x - (points[3].x - points[1].x) * t;
-    control[1].y = points[2].y - (points[3].y - points[1].y) * t;
-}
-
 /// @brief A frequency spectrum analyzer module.
 struct SpectrumAnalyzer : rack::Module {
  public:
