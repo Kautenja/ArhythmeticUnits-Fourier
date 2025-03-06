@@ -20,7 +20,7 @@
 #include "./plugin.hpp"
 
 /// @brief A spectrum analyzer module.
-struct SpectrumAnalyzer : rack::Module {
+struct SpectrumAnalyzer : Module {
  public:
     /// Architectural constants of the module.
     enum Architecture {
@@ -104,16 +104,16 @@ struct SpectrumAnalyzer : rack::Module {
 
  private:
     /// DC-blocking filters for AC-coupled mode.
-    Filter::DCBlocker<rack::simd::float_4> dc_blocker;
+    Filter::DCBlocker<simd::float_4> dc_blocker;
 
     /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<rack::simd::float_4> delay;
+    Math::ContiguousCircularBuffer<simd::float_4> delay;
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT<rack::simd::float_4> fft{1};
+    Math::OnTheFlyRFFT<simd::float_4> fft{1};
 
     /// A copy of the low-pass filtered coefficients.
-    std::vector<std::complex<rack::simd::float_4>> filtered_coefficients;
+    std::vector<std::complex<simd::float_4>> filtered_coefficients;
 
  public:
     /// @brief Initialize a new spectrum analyzer.
@@ -203,7 +203,7 @@ struct SpectrumAnalyzer : rack::Module {
 
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
-        rack::Module::onReset();
+        Module::onReset();
         // Reset momentary button trigger states.
         is_running = true;
         // Reset hidden menu options.
@@ -216,7 +216,7 @@ struct SpectrumAnalyzer : rack::Module {
 
     /// @brief Respond to a change in sample rate from the engine.
     inline void onSampleRateChange() final {
-        rack::Module::onSampleRateChange();
+        Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
         // Set the light divider relative to the sample rate and reset it.
         light_divider.setDivision(512);
@@ -497,8 +497,8 @@ struct SpectrumAnalyzer : rack::Module {
             signals[i] = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
             gains[i] = params[PARAM_INPUT_GAIN + i].getValue();
         }
-        rack::simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
-        rack::simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
+        simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
+        simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
         // Process the input signals with the DC blocking filters.
         dc_blocker.process(signals_simd);
         // Insert the normalized and processed input signal into the delay.
@@ -606,7 +606,7 @@ struct SpectrumAnalyzer : rack::Module {
                 fft.smooth(sample_rate, to_float(frequency_smoothing));
             // Pass the coefficients through a smoothing filter.
             for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coefficients[n] = alpha * rack::simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * rack::simd::abs(fft.coefficients[n]);
+                filtered_coefficients[n] = alpha * simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * simd::abs(fft.coefficients[n]);
             make_points(0);
             make_points(1);
             make_points(2);
@@ -642,7 +642,7 @@ struct SpectrumAnalyzer : rack::Module {
 };
 
 /// @brief A display widget for rendering frequency coefficients.
-struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
+struct SpectrumAnalyzerDisplay : TransparentWidget {
  private:
     /// The vertical (top) padding for the plot.
     static constexpr size_t pad_top = 20;
@@ -669,7 +669,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
 
     /// the font for rendering text on the display
     const std::shared_ptr<Font> font = APP->window->loadFont(
-        rack::asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
+        asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
     );
 
     /// The module to render on the display.
@@ -684,12 +684,12 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
         /// whether the drag operation is being modified
         bool is_modified = false;
         /// the current position of the mouse pointer during the drag
-        rack::Vec position = {0, 0};
+        Vec position = {0, 0};
     } mouse_state;
 
     /// @brief Return the normalized position of the mouse.
-    rack::Vec get_mouse_position() {
-        rack::Vec position = mouse_state.position;
+    Vec get_mouse_position() {
+        Vec position = mouse_state.position;
         // calculate the normalized x,y positions in [0, 1]. Account for
         // padding to ensure relative position corresponds to the plot.
         position.x = (position.x - pad_left) / (box.size.x - pad_left - pad_right);
@@ -718,7 +718,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     /// @param module_ the module to render on the display.
     ///
     explicit SpectrumAnalyzerDisplay(SpectrumAnalyzer* module_) :
-        rack::TransparentWidget(),
+        TransparentWidget(),
         module(module_) { }
 
     // -----------------------------------------------------------------------
@@ -756,7 +756,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     // }
 
     /// Respond to a button event on this widget.
-    void onButton(const rack::event::Button &e) override {
+    void onButton(const event::Button &e) override {
         // Consume the event to prevent it from propagating.
         e.consume(this);
         // Set the mouse state to the hover position.
@@ -771,7 +771,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag start event on this widget.
-    void onDragStart(const rack::event::DragStart &e) override {
+    void onDragStart(const event::DragStart &e) override {
         // // lock the cursor so it does not move in the engine during the edit
         // APP->window->cursorLock();
         // consume the event to prevent it from propagating
@@ -779,7 +779,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag move event on this widget.
-    void onDragMove(const rack::event::DragMove &e) override {
+    void onDragMove(const event::DragMove &e) override {
         // consume the event to prevent it from propagating
         e.consume(this);
         // if the drag operation is not active, return early
@@ -790,7 +790,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag end event on this widget.
-    void onDragEnd(const rack::event::DragEnd &e) override {
+    void onDragEnd(const event::DragEnd &e) override {
         // // unlock the cursor to return it to its normal state
         // APP->window->cursorUnlock();
         // consume the event to prevent it from propagating
@@ -1189,7 +1189,7 @@ struct SpectrumAnalyzerDisplay : rack::TransparentWidget {
             nvgStroke(args.vg);
             nvgClosePath(args.vg);
         }
-        rack::TransparentWidget::drawLayer(args, layer);
+        TransparentWidget::drawLayer(args, layer);
     }
 };
 

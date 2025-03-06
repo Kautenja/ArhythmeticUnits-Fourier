@@ -20,7 +20,7 @@
 #include "./plugin.hpp"
 
 /// @brief A spectrogram module.
-struct Spectrogram : rack::Module {
+struct Spectrogram : Module {
  public:
     enum {
         N_FFT = 2048,
@@ -169,7 +169,7 @@ struct Spectrogram : rack::Module {
 
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
-        rack::Module::onReset();
+        Module::onReset();
         // Resent instance state of the module and menu preferences.
         is_running = true;
         hop_index = 0;
@@ -186,7 +186,7 @@ struct Spectrogram : rack::Module {
 
     /// @brief Respond to a change in sample rate from the engine.
     inline void onSampleRateChange() final {
-        rack::Module::onSampleRateChange();
+        Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
         // Set the light divider relative to the sample rate and reset it.
         light_divider.setDivision(512);
@@ -457,7 +457,7 @@ struct Spectrogram : rack::Module {
 };
 
 /// A widget that displays an image stored in a 32-bit RGBA pixel buffer.
-struct SpectralImageDisplay : rack::TransparentWidget {
+struct SpectralImageDisplay : TransparentWidget {
  private:
     /// The vertical (top) padding for the plot.
     static constexpr size_t pad_top = 20;
@@ -484,7 +484,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
 
     /// the font for rendering text on the display
     const std::shared_ptr<Font> font = APP->window->loadFont(
-        rack::asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
+        asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
     );
 
     /// The spectrogram module to render data from.
@@ -499,15 +499,15 @@ struct SpectralImageDisplay : rack::TransparentWidget {
         /// whether the drag operation is being modified
         bool is_modified = false;
         /// the current position of the mouse pointer during the drag
-        rack::Vec position = {0, 0};
+        Vec position = {0, 0};
     } mouse_state;
 
     /// a pointer to the image to draw the display to
     int screen = -1;
 
     /// @brief Return the normalized position of the mouse.
-    rack::Vec get_mouse_position() {
-        rack::Vec position = mouse_state.position;
+    Vec get_mouse_position() {
+        Vec position = mouse_state.position;
         // calculate the normalized x,y positions in [0, 1]. Account for
         // padding to ensure relative position corresponds to the plot.
         position.x = (position.x - pad_left) / (box.size.x - pad_left - pad_right);
@@ -569,7 +569,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     // }
 
     /// Respond to a button event on this widget.
-    void onButton(const rack::event::Button &e) override {
+    void onButton(const event::Button &e) override {
         // Consume the event to prevent it from propagating.
         e.consume(this);
         // Set the mouse state to the hover position.
@@ -584,7 +584,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag start event on this widget.
-    void onDragStart(const rack::event::DragStart &e) override {
+    void onDragStart(const event::DragStart &e) override {
         // // lock the cursor so it does not move in the engine during the edit
         // APP->window->cursorLock();
         // consume the event to prevent it from propagating
@@ -592,7 +592,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag move event on this widget.
-    void onDragMove(const rack::event::DragMove &e) override {
+    void onDragMove(const event::DragMove &e) override {
         // consume the event to prevent it from propagating
         e.consume(this);
         // if the drag operation is not active, return early
@@ -603,7 +603,7 @@ struct SpectralImageDisplay : rack::TransparentWidget {
     }
 
     /// @brief Respond to drag end event on this widget.
-    void onDragEnd(const rack::event::DragEnd &e) override {
+    void onDragEnd(const event::DragEnd &e) override {
         // // unlock the cursor to return it to its normal state
         // APP->window->cursorUnlock();
         // consume the event to prevent it from propagating
