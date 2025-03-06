@@ -17,13 +17,13 @@
 #include "plugin.hpp"
 
 /// the global instance of the VCV Rack plug-in
-rack::Plugin* plugin_instance;
+Plugin* plugin_instance;
 
 /// Initialize an instance of the VCV Rack plug-in.
 ///
 /// @param instance a fresh instance of the VCV Rack plug-in to initialize
 ///
-void init(rack::Plugin* instance) {
+void init(Plugin* instance) {
     plugin_instance = instance;
     instance->addModel(modelSpectrogram);
     instance->addModel(modelSpectrumAnalyzer);

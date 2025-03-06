@@ -18,11 +18,10 @@
 #define ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
 
 #include "rack.hpp"
-
 using namespace rack;
 
 /// the global instance of the VCV Rack plug-in.
-extern rack::Plugin* plugin_instance;
+extern Plugin* plugin_instance;
 
 #include "./json.hpp"
 #include "./rack_extensions/param_quantity.hpp"
@@ -32,7 +31,7 @@ extern rack::Plugin* plugin_instance;
 #include "./rack_extensions/theme.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.
-extern rack::Model *modelSpectrogram;
-extern rack::Model *modelSpectrumAnalyzer;
+extern Model *modelSpectrogram;
+extern Model *modelSpectrumAnalyzer;
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
