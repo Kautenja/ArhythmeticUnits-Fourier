@@ -1,6 +1,6 @@
 // A text based knob parameter.
 //
-// Copyright 2024 Arhythmetic Units
+// Copyright 2025 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,8 +19,8 @@
 #include "../structs.hpp"
 #include "../dsp/math.hpp"
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_
 
 /// @brief A knob that renders the label and value as text on the widget.
 struct TextKnob : rack::app::Knob {
@@ -173,4 +173,4 @@ struct FrequencySmoothingTextKnob : TextKnob {
     }
 };
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_

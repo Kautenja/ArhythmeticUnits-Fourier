@@ -1,6 +1,6 @@
 // Theme support for the plugin.
 //
-// Copyright 2024 Arhythmetic Units
+// Copyright 2025 Arhythmetic Units
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,8 +14,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_THEME_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_THEME_HPP_
 
 #include <unistd.h>
 #include <jansson.h>
@@ -123,4 +123,4 @@ struct ThemedWidget : rack::ModuleWidget {
     }
 };
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_THEME_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_THEME_HPP_
