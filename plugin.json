@@ -7,7 +7,7 @@
   "author": "Christian Kauten",
   "authorEmail": "arhythmetic.units@gmail.com",
   "sourceUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier",
-  "changelogUrl": "https://github.com/Kautenja/PotatoChips/blob/master/CHANGELOG.md",
+  "changelogUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/master/CHANGELOG.md",
   "modules": [
     {
       "slug": "SpectrumAnalyzer",
@@ -18,9 +18,9 @@
     },
     {
       "slug": "Spectrogram",
-      "name": "Sound Spectrograph (Spectrogram)",
+      "name": "Spectre (Spectrogram)",
       "description": "Highly tune-able spectrogram visualizer",
-      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Sound-Spectrograph.pdf",
+      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf",
       "tags": ["Visual"]
     }
   ]

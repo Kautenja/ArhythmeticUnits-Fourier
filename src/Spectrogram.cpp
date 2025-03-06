@@ -279,12 +279,12 @@ struct Spectrogram : Module {
 
     // N STFT
 
-    /// @brief Return the length of the STFT for a certain length of time.
-    /// @returns The length of the STFT in frames for the input duration.
-    inline size_t get_n_stft(const float& duration = 10.f) {
-        // return duration / (get_hop_length() / sample_rate);
-        return sample_rate * duration / get_hop_length();
-    }
+    // /// @brief Return the length of the STFT for a certain length of time.
+    // /// @returns The length of the STFT in frames for the input duration.
+    // inline size_t get_n_stft(const float& duration = 10.f) {
+    //     // return duration / (get_hop_length() / sample_rate);
+    //     return sample_rate * duration / get_hop_length();
+    // }
 
     // Frequency Scale
 
@@ -394,11 +394,9 @@ struct Spectrogram : Module {
     // -----------------------------------------------------------------------
 
     /// @brief Process input signal.
-    /// @details
-    /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
         // Get the input signal and convert to normalized bipolar [-1, 1].
-        const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
+        auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
         const auto gain = params[PARAM_INPUT_GAIN].getValue();
         // Pass signal through the DC blocking filter. Do this regardless
@@ -406,8 +404,10 @@ struct Spectrogram : Module {
         // between modes there is no graphical delay from the filter
         // accumulating signal data.
         dc_blocker.process(signal);
+        // If AC coupling is enabled, replace signal with DC blocker output.
+        if (is_ac_coupled) signal = dc_blocker.getValue();
         // Insert the normalized and processed input signal into the delay.
-        delay.insert(gain * (is_ac_coupled ? dc_blocker.getValue() : signal));
+        delay.insert(gain * signal);
     }
 
     /// @brief Process samples with the DFT.
