@@ -71,8 +71,20 @@ struct SpectrumAnalyzer : Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    /// The window function for windowing the FFT.
-    Math::Window::CachedWindow<float> window_function{Math::Window::Function::Boxcar, 1, false, true};
+    /// DC-blocking filter for AC-coupled mode.
+    Filter::DCBlocker<simd::float_4> dc_blocker;
+
+    /// Delay line for tracking the input signal x[t].
+    Math::ContiguousCircularBuffer<simd::float_4> delay;
+
+    /// Sampled function for windowing the FFT.
+    Math::Window::CachedWindow<float> window_function;
+
+    /// An on-the-fly FFT calculator for each input channel.
+    Math::OnTheFlyRFFT<simd::float_4> fft;
+
+    /// A copy of the low-pass filtered coefficients.
+    std::vector<std::complex<simd::float_4>> filtered_coefficients;
 
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
     std::vector<Vec> rasterized_coefficients[NUM_CHANNELS];
@@ -82,9 +94,6 @@ struct SpectrumAnalyzer : Module {
 
     /// A trigger for handling presses on the "run" button.
     Trigger::Threshold<float> run_trigger;
-
-    /// A trigger for handling presses on the "reset" button.
-    Trigger::Threshold<float> reset_trigger;
 
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
@@ -102,20 +111,6 @@ struct SpectrumAnalyzer : Module {
     /// Whether to apply AC coupling to input signal.
     bool is_ac_coupled = true;
 
- private:
-    /// DC-blocking filters for AC-coupled mode.
-    Filter::DCBlocker<simd::float_4> dc_blocker;
-
-    /// The delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<simd::float_4> delay;
-
-    /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT<simd::float_4> fft{1};
-
-    /// A copy of the low-pass filtered coefficients.
-    std::vector<std::complex<simd::float_4>> filtered_coefficients;
-
- public:
     /// @brief Initialize a new spectrum analyzer.
     SpectrumAnalyzer() : sample_rate(APP->engine->getSampleRate()) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);

@@ -732,6 +732,11 @@ struct CachedWindow {
 
  public:
     /// @brief Initialize a new pre-computed window.
+    CachedWindow() : function(Function::Boxcar), samples(1), is_symmetric(true), is_gained(false) {
+        compute_window();
+    }
+
+    /// @brief Initialize a new pre-computed window.
     /// @param function_ The window function to represent.
     /// @param N The length of the window function.
     /// @param is_symmetric_ Whether the window function is symmetric.

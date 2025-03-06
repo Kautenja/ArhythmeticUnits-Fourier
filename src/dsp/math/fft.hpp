@@ -379,10 +379,14 @@ class OnTheFlyRFFT {
     /// The output coefficients buffer containing the final FFT result.
     std::vector<std::complex<T>> coefficients;
 
+    /// @brief Initialize a new on-the-fly FFT.
+    OnTheFlyRFFT() : fft(1), twiddles(1), coefficients(1) { resize(1); }
+
     /// @brief Construct an OnTheFlyRFFT object for an N-point RFFT.
     /// @param n The length of the RFFT. Must be a power of 2.
-    explicit OnTheFlyRFFT(const size_t& n) :
-        fft(1), twiddles(1), coefficients(1) { resize(n); }
+    explicit OnTheFlyRFFT(size_t n) : fft(1), twiddles(1), coefficients(1) {
+        resize(n);
+    }
 
     /// @brief Resize and re-initialize the RFFT computation structures.
     /// @param n The new length of the RFFT. Must be a power of 2.

@@ -76,6 +76,9 @@ struct Spectrogram : Module {
     /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
     Math::STFTCoefficients coefficients;
 
+    /// The index of the current STFT hop.
+    uint32_t hop_index = 0;
+
     /// a clock divider for updating the lights every 512 frames
     Trigger::Divider light_divider;
 
@@ -84,9 +87,6 @@ struct Spectrogram : Module {
 
     /// Whether the analyzer is running or not.
     bool is_running = true;
-
-    /// The index of the current STFT hop.
-    uint32_t hop_index = 0;
 
  public:
     /// Whether to apply AC coupling to input signal.
