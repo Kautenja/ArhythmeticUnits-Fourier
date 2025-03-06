@@ -28,11 +28,6 @@ struct SpectrumAnalyzer : Module {
         NUM_CHANNELS = 4
     };
 
-    /// The names of the input lanes on the module.
-    static constexpr const char* INPUT_NAMES[NUM_CHANNELS] = {
-        "Red", "Green", "Blue", "Yellow"
-    };
-
     /// Controllable parameters on the module.
     enum ParamIds {
         ENUMS(PARAM_INPUT_GAIN, NUM_CHANNELS),
@@ -83,7 +78,7 @@ struct SpectrumAnalyzer : Module {
     /// An on-the-fly FFT calculator for each input channel.
     Math::OnTheFlyRFFT<simd::float_4> fft;
 
-    /// A copy of the low-pass filtered coefficients.
+    /// A copy of low-pass filtered DFT coefficients.
     std::vector<std::complex<simd::float_4>> filtered_coefficients;
 
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
@@ -115,6 +110,7 @@ struct SpectrumAnalyzer : Module {
     SpectrumAnalyzer() : sample_rate(APP->engine->getSampleRate()) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup input signals and gain parameters.
+        static constexpr const char* INPUT_NAMES[NUM_CHANNELS] = {"Red", "Green", "Blue", "Yellow"};
         for (std::size_t i = 0; i < NUM_CHANNELS; i++) {
             configParam(PARAM_INPUT_GAIN + i, 0.f, std::pow(10.f, 12.f / 20.f), 1.f, std::string(INPUT_NAMES[i]) + " Gain", "dB", -10, 20);
             configInput(INPUT_SIGNAL + i, INPUT_NAMES[i]);
@@ -447,16 +443,16 @@ struct SpectrumAnalyzer : Module {
     inline void process_window() {
         // Determine the length of the delay lines and associated FFTs.
         const size_t N = get_window_length();
-        window_function.set_window(get_window_function(), N, false, true);
-        if (filtered_coefficients.size() != N) {
-            filtered_coefficients.resize(N);
-            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0);
-        }
-        if (fft.size() != N)
-            fft.resize(N);
         if (delay.size() != N) {
             delay.resize(N);
             delay.clear();
+        }
+        window_function.set_window(get_window_function(), N, false, true);
+        if (fft.size() != N)
+            fft.resize(N);
+        if (filtered_coefficients.size() != N) {
+            filtered_coefficients.resize(N);
+            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0);
         }
         // Iterate over the number of channels to resize buffers.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
