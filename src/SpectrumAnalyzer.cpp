@@ -22,7 +22,6 @@
 #include "./dsp/dc_blocker.hpp"
 #include "./dsp/music_theory/western_scale.hpp"
 #include "./plugin.hpp"
-#include "./text_knob.hpp"
 
 /// @brief A frequency spectrum analyzer module.
 struct SpectrumAnalyzer : rack::Module {

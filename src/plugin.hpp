@@ -19,30 +19,17 @@
 
 #include "rack.hpp"
 
-/// @brief Compute control points for a Catmull-Rom segment from p1 to p2
-/// with tangents based on neighbors p0 and p3.
-/// @param points The points to interpolate
-/// @param control The control points to populate.
-/// @param tension Tension parameter for Catmull–Rom (typically 0.0 ~ 0.5)
-inline void catmull_rom_to_bezier(rack::Vec points[4], rack::Vec control[2], float tension = 0.5f) {
-    // One common approach is to set control points based on tangents
-    // at p1 and p2. The standard formula can vary, but typically:
-    float t = (1.0f - tension) / 6.0f;
-    control[0].x = points[1].x + (points[2].x - points[0].x) * t;
-    control[0].y = points[1].y + (points[2].y - points[0].y) * t;
-    control[1].x = points[2].x - (points[3].x - points[1].x) * t;
-    control[1].y = points[2].y - (points[3].y - points[1].y) * t;
-}
-
 using namespace rack;
 
 /// the global instance of the VCV Rack plug-in.
 extern rack::Plugin* plugin_instance;
 
 #include "./json.hpp"
-#include "./param_quantity.hpp"
-#include "./menu_item.hpp"
-#include "./theme.hpp"
+#include "./rack_extensions/param_quantity.hpp"
+#include "./rack_extensions/menu_item.hpp"
+#include "./rack_extensions/text_knob.hpp"
+#include "./rack_extensions/graphics.hpp"
+#include "./rack_extensions/theme.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.
 extern rack::Model *modelSpectrogram;

@@ -16,8 +16,8 @@
 
 #include <string>
 #include "rack.hpp"
-#include "./structs.hpp"
-#include "./dsp/math.hpp"
+#include "../structs.hpp"
+#include "../dsp/math.hpp"
 
 #ifndef ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_TEXT_KNOB_HPP_

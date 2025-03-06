@@ -19,8 +19,8 @@
 
 #include <string>
 #include "rack.hpp"
-#include "./structs.hpp"
-#include "./dsp/math.hpp"
+#include "../structs.hpp"
+#include "../dsp/math.hpp"
 
 /// @brief A parameter quantity for a boolean switch.
 struct BooleanParamQuantity : rack::ParamQuantity {
