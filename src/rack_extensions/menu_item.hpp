@@ -20,12 +20,12 @@
 #include "rack.hpp"
 
 /// @brief A menu item for changing boolean parameters.
-struct FlagMenuItem : rack::MenuItem {
+struct FlagMenuItem : MenuItem {
     /// @brief The flag to update.
     bool* flag = nullptr;
 
     /// @brief Respond to the menu item being selected.
-    inline void onAction(const rack::event::Action& e) override {
+    inline void onAction(const event::Action& e) override {
         (*flag) = !(*flag);
     }
 };

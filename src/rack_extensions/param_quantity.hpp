@@ -23,7 +23,7 @@
 #include "../dsp/math.hpp"
 
 /// @brief A parameter quantity for a boolean switch.
-struct BooleanParamQuantity : rack::ParamQuantity {
+struct BooleanParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.
     inline std::string getDisplayValueString() override {
         if (getValue()) return "On";
@@ -32,10 +32,10 @@ struct BooleanParamQuantity : rack::ParamQuantity {
 };
 
 /// @brief A parameter quantity for a trigger button.
-struct TriggerParamQuantity : rack::ParamQuantity {
+struct TriggerParamQuantity : ParamQuantity {
     /// @brief Return the parameter description instead of the value text.
     inline std::string getDisplayValueString() override {
-        return rack::ParamQuantity::getLabel();
+        return ParamQuantity::getLabel();
     }
 
     /// @brief Return the parameter description (disabled for this trigger).
@@ -43,7 +43,7 @@ struct TriggerParamQuantity : rack::ParamQuantity {
 };
 
 /// @brief A parameter quantity for window function selection.
-struct WindowFunctionParamQuantity : rack::ParamQuantity {
+struct WindowFunctionParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.
     inline std::string getDisplayValueString() final {
         return Math::Window::name(static_cast<Math::Window::Function>(getValue()));
@@ -51,7 +51,7 @@ struct WindowFunctionParamQuantity : rack::ParamQuantity {
 };
 
 /// @brief A parameter quantity for magnitude scale selection.
-struct MagnitudeScaleParamQuantity : rack::ParamQuantity {
+struct MagnitudeScaleParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.
     inline std::string getDisplayValueString() override {
         return to_string(static_cast<MagnitudeScale>(getValue()));
@@ -59,7 +59,7 @@ struct MagnitudeScaleParamQuantity : rack::ParamQuantity {
 };
 
 /// @brief A parameter quantity for frequency scale selection.
-struct FrequencyScaleParamQuantity : rack::ParamQuantity {
+struct FrequencyScaleParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.
     inline std::string getDisplayValueString() final {
         return to_string(static_cast<FrequencyScale>(getValue()));
@@ -67,7 +67,7 @@ struct FrequencyScaleParamQuantity : rack::ParamQuantity {
 };
 
 /// @brief A parameter quantity for frequency smoothing selection.
-struct FrequencySmoothingParamQuantity : rack::ParamQuantity {
+struct FrequencySmoothingParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.
     inline std::string getDisplayValueString() final {
         return to_string(static_cast<FrequencySmoothing>(getValue()));

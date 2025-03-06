@@ -24,11 +24,7 @@
 /// @param points The points to interpolate
 /// @param control The control points to populate.
 /// @param tension Tension parameter for Catmull–Rom (typically 0.0 ~ 0.5)
-static inline void catmull_rom_to_bezier(
-    rack::Vec points[4],
-    rack::Vec control[2],
-    float tension = 0.5f
-) {
+static inline void catmull_rom_to_bezier(Vec points[4], Vec control[2], float tension = 0.5f) {
     // One common approach is to set control points based on tangents
     // at p1 and p2. The standard formula can vary, but typically:
     float t = (1.0f - tension) / 6.0f;

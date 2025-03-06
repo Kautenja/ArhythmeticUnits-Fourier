@@ -37,7 +37,7 @@ static const std::vector<std::string> THEMES{
 /// @returns 0 If the operation succeeded, a positive error code otherwise.
 ///
 inline int get_theme(std::string* value) {
-    std::string path = rack::asset::user("KautenjaDSP.json");
+    std::string path = asset::user("KautenjaDSP.json");
     if (access(path.c_str(), R_OK) != 0) {  // File does not exist.
         return 1;
     }
@@ -62,7 +62,7 @@ inline int get_theme(std::string* value) {
 /// @returns 0 If the operation succeeded, a positive error code otherwise.
 ///
 inline int set_theme(const std::string& value) {
-    std::string path = rack::asset::user("KautenjaDSP.json");
+    std::string path = asset::user("KautenjaDSP.json");
     json_t* root;
     if (access(path.c_str(), R_OK) != 0) {  // File does not exist.
         root = json_object();
@@ -75,16 +75,16 @@ inline int set_theme(const std::string& value) {
 }
 
 /// A menu item for selecting themes.
-struct ThemeMenuItem : rack::MenuItem {
+struct ThemeMenuItem : MenuItem {
     /// The widget associated with the menu item.
-    rack::ModuleWidget* widget = nullptr;
+    ModuleWidget* widget = nullptr;
     /// The basename for the panel files for this menu item.
     std::string basename;
     /// The theme for this menu item.
     std::string theme;
 
     /// Respond to an action on the menu item.
-    void onAction(const rack::event::Action &e) override {
+    void onAction(const event::Action &e) override {
         set_theme(theme);
         const auto path = basename + "-" + theme + ".svg";
         widget->setPanel(APP->window->loadSvg(asset::plugin(plugin_instance, path)));
@@ -95,7 +95,7 @@ struct ThemeMenuItem : rack::MenuItem {
 /// @tparam BASENAME The basename of the module's panel paths for the plugins.
 /// Should be in the "res/ModuleName" format.
 template<const char* BASENAME>
-struct ThemedWidget : rack::ModuleWidget {
+struct ThemedWidget : ModuleWidget {
     /// Create a new themed widget.
     ThemedWidget() {
         std::string theme = THEMES[0];
@@ -109,12 +109,12 @@ struct ThemedWidget : rack::ModuleWidget {
     /// @param menu the menu to add the context items to
     ///
     inline void appendContextMenu(ui::Menu* menu) override {
-        menu->addChild(new rack::MenuSeparator);
-        menu->addChild(rack::createMenuLabel("Plugin Theme"));
+        menu->addChild(new MenuSeparator);
+        menu->addChild(createMenuLabel("Plugin Theme"));
         std::string current_theme = THEMES[0];
         get_theme(&current_theme);
         for (int i = 0; i < 2; i++) {
-            auto item = rack::createMenuItem<ThemeMenuItem>(THEMES[i], CHECKMARK(current_theme == THEMES[i]));
+            auto item = createMenuItem<ThemeMenuItem>(THEMES[i], CHECKMARK(current_theme == THEMES[i]));
             item->widget = this;
             item->basename = BASENAME;
             item->theme = THEMES[i];

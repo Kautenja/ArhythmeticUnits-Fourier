@@ -23,7 +23,7 @@
 #define ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_
 
 /// @brief A knob that renders the label and value as text on the widget.
-struct TextKnob : rack::app::Knob {
+struct TextKnob : app::Knob {
     struct {
         /// The text for the label.
         std::string text = "";
@@ -34,8 +34,8 @@ struct TextKnob : rack::app::Knob {
         /// The line height for the font.
         float line_height = 11.f;
         /// the font for rendering text on the display
-        std::shared_ptr<rack::Font> font = APP->window->loadFont(
-            rack::asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
+        std::shared_ptr<Font> font = APP->window->loadFont(
+            asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
         );
     } label, value;  // The label and value text.
 
@@ -60,7 +60,7 @@ struct TextKnob : rack::app::Knob {
                 c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
             value.text = param->getDisplayValueString() + param->getUnit();
         }
-        rack::app::Knob::onChange(e);
+        app::Knob::onChange(e);
     }
 
     /// @brief Draw the layer on the screen.
@@ -81,14 +81,14 @@ struct TextKnob : rack::app::Knob {
             nvgTextAlign(args.vg, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
             nvgText(args.vg, box.size.x / 2.f, 18, value.text.c_str(), NULL);
         }
-        rack::app::Knob::drawLayer(args, layer);
+        app::Knob::drawLayer(args, layer);
     }
 };
 
 /// @brief A menu item for changing a parameter widget value.
 struct ParamWidgetMenuItem : MenuItem {
     /// The parameter widget to update.
-    rack::app::ParamWidget* param_widget = nullptr;
+    app::ParamWidget* param_widget = nullptr;
     /// The option for this menu item.
     float value;
 
