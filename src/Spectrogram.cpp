@@ -877,22 +877,49 @@ struct SpectralImageDisplay : TransparentWidget {
         // nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
         // nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, stream.str().c_str(), NULL);
 
+
+
+        // // Determine the spectrogram area and coefficient dimensions.
+        // Rect specMask(Vec(pad_left, pad_top),
+        //               box.size.minus(Vec(pad_left + pad_right, pad_top + pad_bottom)));
+        // const int numTimeBins = module->get_coefficients().size();
+        // const int coeffHeight = module->get_coefficients()[0].size() / 2;
+
+        // // Convert mouse position into normalized coordinates within the spectrogram area.
+        // float normX = (rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right) - specMask.pos.x) / specMask.size.x;
+        // float normY = (rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top) - specMask.pos.y) / specMask.size.y;
+
+        // // Map normalized coordinates to coefficient indices.
+        // int coeff_x = std::max(0, std::min(static_cast<int>(normX * numTimeBins), numTimeBins - 1));
+        // float revNormY = 1.0f - normY;  // Reverse vertical axis: top = high frequency.
+        // int coeff_y = (module->get_frequency_scale() == FrequencyScale::Logarithmic)
+        //                 ? static_cast<int>(Math::squared(revNormY) * coeffHeight)
+        //                 : static_cast<int>(revNormY * coeffHeight);
+        // coeff_y = std::max(0, std::min(coeff_y, coeffHeight - 1));
+
+        // // Retrieve the coefficient, compute its magnitude in dB.
+        // float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
+        // float db = Math::amplitude2decibels(fabs(coeff_value));
+
+        // // Format and render the decibel value.
+        // std::ostringstream oss;
+        // oss << std::fixed << std::setprecision(1) << db << " dB";
+        // nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        // nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, oss.str().c_str(), NULL);
+
+
+
         // Determine the spectrogram area and coefficient dimensions.
         Rect specMask(Vec(pad_left, pad_top),
                       box.size.minus(Vec(pad_left + pad_right, pad_top + pad_bottom)));
         const int numTimeBins = module->get_coefficients().size();
         const int coeffHeight = module->get_coefficients()[0].size() / 2;
 
-        // Convert mouse position into normalized coordinates within the spectrogram area.
-        float normX = (rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right) - specMask.pos.x) / specMask.size.x;
-        float normY = (rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top) - specMask.pos.y) / specMask.size.y;
-
         // Map normalized coordinates to coefficient indices.
-        int coeff_x = std::max(0, std::min(static_cast<int>(normX * numTimeBins), numTimeBins - 1));
-        float revNormY = 1.0f - normY;  // Reverse vertical axis: top = high frequency.
+        int coeff_x = std::max(0, std::min(static_cast<int>(mouse_position.x * numTimeBins), numTimeBins - 1));
         int coeff_y = (module->get_frequency_scale() == FrequencyScale::Logarithmic)
-                        ? static_cast<int>(Math::squared(revNormY) * coeffHeight)
-                        : static_cast<int>(revNormY * coeffHeight);
+                        ? static_cast<int>(Math::squared(mouse_position.y) * coeffHeight)
+                        : static_cast<int>(mouse_position.y * coeffHeight);
         coeff_y = std::max(0, std::min(coeff_y, coeffHeight - 1));
 
         // Retrieve the coefficient, compute its magnitude in dB.
