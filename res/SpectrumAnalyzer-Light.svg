@@ -3,7 +3,7 @@
     <title>SpectrumAnalyzer-Light</title>
     <g id="SpectrumAnalyzer-Light" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
         <g id="Panel">
-            <rect fill="#E6E6E6" fill-rule="nonzero" x="0" y="0" width="720" height="380"></rect>
+            <rect fill="#E6E6E6" fill-rule="nonzero" x="0" y="0" width="720" height="380" rx="5"></rect>
             <g id="Brand/Dark/MediumWithLogo" transform="translate(300.1811, 365.3226)" fill="#000000">
                 <g id="Logo/Icon/LightMode" transform="translate(0, 1.5595)">
                     <g id="Icon" transform="translate(-0, 0)">

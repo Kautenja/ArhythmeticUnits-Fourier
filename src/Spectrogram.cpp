@@ -888,7 +888,7 @@ struct SpectralImageDisplay : TransparentWidget {
     ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
-            // Draw the background.
+            // Background
             nvgBeginPath(args.vg);
             nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
             nvgFillColor(args.vg, background_color);
@@ -896,31 +896,33 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgStrokeColor(args.vg, axis_stroke_color);
             nvgStroke(args.vg);
             nvgClosePath(args.vg);
-            // draw ticks for the axes of the plot.
-            switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
-            case FrequencyScale::Linear:
-                draw_y_ticks_linear(args);
-                break;
-            case FrequencyScale::Logarithmic:
-                draw_y_ticks_logarithmic(args);
-                break;
-            }
-            // Draw the spectrogram.
+            // Spectrogram plot
             if (module != nullptr) {
+                // draw ticks for the axes of the plot.
+                switch (module->get_frequency_scale()) {
+                case FrequencyScale::Linear:
+                    draw_y_ticks_linear(args);
+                    break;
+                case FrequencyScale::Logarithmic:
+                    draw_y_ticks_logarithmic(args);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid frequency scale");
+                }
                 draw_spectrogram(args);
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
                     draw_cross_hair_text(args);
                 }
+                // Border
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+                nvgStrokeWidth(args.vg, axis_stroke_width);
+                nvgStrokeColor(args.vg, axis_stroke_color);
+                nvgStroke(args.vg);
+                nvgClosePath(args.vg);
             }
-            // border
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
         }
         Widget::drawLayer(args, layer);
     }
