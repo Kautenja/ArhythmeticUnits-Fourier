@@ -935,7 +935,7 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
     explicit SpectrogramWidget(Spectrogram* module) : ThemedWidget<BASENAME>() {
         setModule(module);
         // Spectrogram display
-        SpectralImageDisplay* display = new SpectralImageDisplay(static_cast<Spectrogram*>(module));
+        SpectralImageDisplay* display = new SpectralImageDisplay(module);
         display->setPosition(Vec(45, 15));
         display->setSize(Vec(465, 350));
         addChild(display);
