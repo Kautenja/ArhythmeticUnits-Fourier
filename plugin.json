@@ -12,14 +12,14 @@
     {
       "slug": "SpectrumAnalyzer",
       "name": "Fourier (Spectrum Analyzer)",
-      "description": "Highly tune-able spectrum analyzer",
+      "description": "Tune-able spectrum analyzer",
       "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf",
       "tags": ["Visual"]
     },
     {
       "slug": "Spectrogram",
       "name": "Spectre (Spectrogram)",
-      "description": "Highly tune-able spectrogram visualizer",
+      "description": "Tune-able spectrogram visualizer",
       "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf",
       "tags": ["Visual"]
     }
