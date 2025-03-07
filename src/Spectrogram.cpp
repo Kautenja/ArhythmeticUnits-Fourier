@@ -796,19 +796,14 @@ struct SpectralImageDisplay : TransparentWidget {
         const auto mouse_position = get_mouse_position();
         // Convert normalized mouse y (0 = bottom, 1 = top) to a pixel coordinate.
         float y_pixels = rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top);
-        // (For logarithmic mode the spectrogram is drawn using a transform that maps
-        // frequencies to these same y_pixels, so we can simply use 'y_pixels'.)
-        float y_position = y_pixels;
-
         // Draw the horizontal cross-hair.
         nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, pad_left, y_position);
-        nvgLineTo(args.vg, box.size.x - pad_right, y_position);
+        nvgMoveTo(args.vg, pad_left, y_pixels);
+        nvgLineTo(args.vg, box.size.x - pad_right, y_pixels);
         nvgStrokeWidth(args.vg, 0.5);
         nvgStrokeColor(args.vg, cross_hair_stroke_color);
         nvgStroke(args.vg);
         nvgClosePath(args.vg);
-
         // Draw the vertical cross-hair (always a linear mapping).
         float x_position = rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right);
         nvgBeginPath(args.vg);
