@@ -874,7 +874,7 @@ struct SpectralImageDisplay : TransparentWidget {
         int coeff_y = module->get_coefficients()[0].size() * hover_freq / module->get_sample_rate();
         // Retrieve the coefficient, compute its magnitude in dB.
         float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
-        float db = Math::amplitude2decibels(fabs(coeff_value)) - 60.f;
+        float db = Math::amplitude2decibels(coeff_value) - 60.f;
         // Format and render the decibel value.
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1) << db << " dB";
