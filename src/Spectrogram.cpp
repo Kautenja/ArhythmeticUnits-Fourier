@@ -736,50 +736,44 @@ struct SpectralImageDisplay : TransparentWidget {
         else
             nvgUpdateImage(args.vg, screen, pixels);
 
-        // --- Compute transformation parameters based on frequency bounds ---
+        // Compute the mask rectangle from the padded region.
+        const Rect mask = Rect(
+            Vec(pad_left, pad_top),
+            box.size.minus(Vec(pad_left + pad_right, pad_top + pad_bottom))
+        );
+
+        // Compute transformation parameters based on frequency bounds
         float texture_y_low, texture_y_high;
         if (module->get_frequency_scale() == FrequencyScale::Logarithmic) {
-            // For logarithmic scale, use a square-root mapping.
             texture_y_low  = height * (1 - sqrt(get_low_frequency() / nyquist_rate));
             texture_y_high = height * (1 - sqrt(get_high_frequency() / nyquist_rate));
         } else {
-            // For linear scale, use a direct linear mapping.
             texture_y_low  = height * (1 - get_low_frequency() / nyquist_rate);
             texture_y_high = height * (1 - get_high_frequency() / nyquist_rate);
         }
         float image_section_height = texture_y_low - texture_y_high;
-        float draw_height = box.size.y - pad_top - pad_bottom;
-        float scale_y = draw_height / image_section_height;
+        float scale_y = mask.size.y / image_section_height;
 
-        // --- Apply masking so that the spectrogram is drawn only within the padded box ---
+        // Draw the spectrogram image within the mask
         nvgSave(args.vg);
-        nvgScissor(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-
-        // --- Apply vertical transformation based on frequency bounds ---
+        nvgScissor(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
         nvgSave(args.vg);
-        // Translate so that the texture coordinate corresponding to the high frequency maps to pad_top.
-        nvgTranslate(args.vg, 0, pad_top - texture_y_high * scale_y);
-        // Scale vertically so that the selected frequency band fills the drawing area.
+        // Translate so that the texture coordinate corresponding to the high frequency maps to mask.pos.y.
+        nvgTranslate(args.vg, 0, mask.pos.y - texture_y_high * scale_y);
+        // Scale vertically so that the selected frequency band fills the mask.
         nvgScale(args.vg, 1.0f, scale_y);
-
-        // Draw the full spectrogram image; the transformation displays only the desired frequency range.
         nvgBeginPath(args.vg);
-        nvgRect(args.vg, pad_left, 0, box.size.x - pad_left - pad_right, height);
-        nvgFillPaint(args.vg, nvgImagePattern(args.vg, pad_left, 0,
-                                               box.size.x - pad_left - pad_right, height,
-                                               0, screen, 1.0));
+        // Draw the spectrogram image using the mask's x position and width.
+        nvgRect(args.vg, mask.pos.x, 0, mask.size.x, height);
+        nvgFillPaint(args.vg, nvgImagePattern(args.vg, mask.pos.x, 0, mask.size.x, height, 0, screen, 1.0));
         nvgFill(args.vg);
         nvgRestore(args.vg);
-
-        // Reset the scissor for subsequent drawing.
         nvgResetScissor(args.vg);
         nvgRestore(args.vg);
-        // --- End of masked spectrogram drawing ---
 
-        // Draw a border around the spectrogram.
+        // Draw a border around the spectrogram (mask area).
         nvgBeginPath(args.vg);
-        nvgRect(args.vg, pad_left, pad_top,
-                box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+        nvgRect(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
@@ -788,8 +782,8 @@ struct SpectralImageDisplay : TransparentWidget {
         // Draw the scan-line to indicate the current hop index.
         nvgBeginPath(args.vg);
         float scan_x = module->get_hop_index() / static_cast<float>(width);
-        nvgMoveTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), pad_top);
-        nvgLineTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), box.size.y - pad_bottom);
+        nvgMoveTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y);
+        nvgLineTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y + mask.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
