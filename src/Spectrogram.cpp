@@ -869,24 +869,12 @@ struct SpectralImageDisplay : TransparentWidget {
         }
 
         // Render the coefficient magnitude.
-
-        // Determine the spectrogram area and coefficient dimensions.
-        Rect specMask(Vec(pad_left, pad_top),
-                      box.size.minus(Vec(pad_left + pad_right, pad_top + pad_bottom)));
-        const int numTimeBins = module->get_coefficients().size();
-        const int coeffHeight = module->get_coefficients()[0].size() / 2;
-
         // Map normalized coordinates to coefficient indices.
-        int coeff_x = std::max(0, std::min(static_cast<int>(mouse_position.x * numTimeBins), numTimeBins - 1));
-        int coeff_y = (module->get_frequency_scale() == FrequencyScale::Logarithmic)
-                        ? static_cast<int>(Math::squared(mouse_position.y) * coeffHeight)
-                        : static_cast<int>(mouse_position.y * coeffHeight);
-        coeff_y = std::max(0, std::min(coeff_y, coeffHeight - 1));
-
+        int coeff_x = mouse_position.x * (module->get_coefficients().size() - 1);
+        int coeff_y = module->get_coefficients()[0].size() * hover_freq / module->get_sample_rate();
         // Retrieve the coefficient, compute its magnitude in dB.
         float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
-        float db = Math::amplitude2decibels(fabs(coeff_value));
-
+        float db = Math::amplitude2decibels(fabs(coeff_value)) - 60.f;
         // Format and render the decibel value.
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1) << db << " dB";
