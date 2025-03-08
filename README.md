@@ -17,7 +17,7 @@
 **Fourier** is a highly tune-able spectrum analyzer module.
 
 <p align="center">
-<img alt="Fourier" src="manual/Fourier/img/Module.png">
+<img alt="Fourier" src="manual/Fourier/img/Module.svg">
 </p>
 
 <!--
@@ -40,5 +40,5 @@ See the [Manual][Fourier] for more information about the features of this module
 **Spectre** is a highly tune-able spectrogram visualizer module.
 
 <p align="center">
-<img alt="Spectre" src="manual/Spectre/img/Module.png">
+<img alt="Spectre" src="manual/Spectre/img/Module.svg">
 </p>
