@@ -1,4 +1,5 @@
 patches/* linguist-vendored
+design/* linguist-vendored
 dep/* linguist-vendored
 doxygen/* linguist-vendored
 manual/* linguist-vendored

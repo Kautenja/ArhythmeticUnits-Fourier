@@ -279,12 +279,12 @@ struct Spectrogram : Module {
 
     // N STFT
 
-    /// @brief Return the length of the STFT for a certain length of time.
-    /// @returns The length of the STFT in frames for the input duration.
-    inline size_t get_n_stft(const float& duration = 10.f) {
-        // return duration / (get_hop_length() / sample_rate);
-        return sample_rate * duration / get_hop_length();
-    }
+    // /// @brief Return the length of the STFT for a certain length of time.
+    // /// @returns The length of the STFT in frames for the input duration.
+    // inline size_t get_n_stft(const float& duration = 10.f) {
+    //     // return duration / (get_hop_length() / sample_rate);
+    //     return sample_rate * duration / get_hop_length();
+    // }
 
     // Frequency Scale
 
@@ -394,11 +394,9 @@ struct Spectrogram : Module {
     // -----------------------------------------------------------------------
 
     /// @brief Process input signal.
-    /// @details
-    /// Applies gain to each input signal and buffers it for DFT computation.
     inline void process_input_signal() {
         // Get the input signal and convert to normalized bipolar [-1, 1].
-        const auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
+        auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
         const auto gain = params[PARAM_INPUT_GAIN].getValue();
         // Pass signal through the DC blocking filter. Do this regardless
@@ -406,8 +404,10 @@ struct Spectrogram : Module {
         // between modes there is no graphical delay from the filter
         // accumulating signal data.
         dc_blocker.process(signal);
+        // If AC coupling is enabled, replace signal with DC blocker output.
+        if (is_ac_coupled) signal = dc_blocker.getValue();
         // Insert the normalized and processed input signal into the delay.
-        delay.insert(gain * (is_ac_coupled ? dc_blocker.getValue() : signal));
+        delay.insert(gain * signal);
     }
 
     /// @brief Process samples with the DFT.
@@ -657,47 +657,47 @@ struct SpectralImageDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call
     ///
     void draw_y_ticks_logarithmic(const DrawArgs& args) {
-        // Iterate over frequencies exponentially (base 10) starting
-        // at at least 100Hz up to the maximum frequency (at most the Nyquist
-        // frequency) I.e., follow an exponential series like 100, 1000, etc.
+        // Use the spectrogram image height (number of vertical pixels)
+        const int height = module->get_coefficients()[0].size() / 2;
+        const float nyquist_rate = module->get_sample_rate() / 2.f;
+
+        // Compute the mapping parameters using the same transformation as draw_spectrogram.
+        // These define the portion of the texture that is used for the desired frequency range.
+        float texture_y_low  = height * (1 - sqrt(get_low_frequency() / nyquist_rate));
+        float texture_y_high = height * (1 - sqrt(get_high_frequency() / nyquist_rate));
+        float image_section_height = texture_y_low - texture_y_high;
+        float draw_height = box.size.y - pad_top - pad_bottom;
+        float scale_y = draw_height / image_section_height;
+
+        // Determine the frequency range in the logarithmic domain.
         const auto min_exponent = log10(fmax(100.f, get_low_frequency()));
         const auto max_exponent = log10(get_high_frequency());
-        const auto frequency_range = get_high_frequency() - get_low_frequency();
+
+        // Iterate over base frequencies (exponential steps).
         for (float exponent = min_exponent; exponent < max_exponent; exponent++) {
-            // Iterate over harmonics of the base frequency, i.e., if
-            // we're at base 100Hz, iterate over 200Hz, 300Hz, ...
-            const float base_frequency = powf(10.f, exponent);
-            // for (float offset = 1.f; offset < 10.f; offset++) {
-            //     // Scale base frequency to offset to the n'th harmonic.
-            //     const float frequency = base_frequency * offset;
-            //     if (frequency >= get_high_frequency()) break;
-            //     nvgBeginPath(args.vg);
-            //     // Re-scale the frequency to a pixel location and render.
-            //     const auto position = sqrt((frequency - get_low_frequency()) / frequency_range);
-            //     nvgMoveTo(args.vg, pad_left, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
-            //     nvgLineTo(args.vg, box.size.x - pad_right, rescale(position, 1.f, 0.f, pad_top, box.size.y - pad_bottom));
-            //     nvgStrokeWidth(args.vg, axis_stroke_width);
-            //     nvgStrokeColor(args.vg, axis_stroke_color);
-            //     nvgStroke(args.vg);
-            //     nvgClosePath(args.vg);
-            // }
-            // Render a label with the base frequency in kHz.
+            float base_frequency = powf(10.f, exponent);
+            // Compute the texture coordinate for this frequency using the same sqrt mapping.
+            float t = height * (1 - sqrt(base_frequency / nyquist_rate));
+            // Apply the same translation and scaling as used in draw_spectrogram.
+            float point_y = pad_top + (t - texture_y_high) * scale_y;
+
+            // Format the tick label.
             std::stringstream stream;
             if (base_frequency < 1000.f)
                 stream << std::fixed << std::setprecision(0) << base_frequency << "Hz";
             else
                 stream << std::fixed << std::setprecision(0) << base_frequency / 1000.f << "kHz";
+
+            // Render the tick label.
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 1.f, 0.f, pad_top, box.size.y - pad_bottom), stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
         }
     }
 
     /// @brief Draw the spectrogram.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_spectrogram(const DrawArgs& args) {
         // The reference frequency for the slope compensation.
         static constexpr float reference_frequency = 1000.f;
@@ -709,51 +709,81 @@ struct SpectralImageDisplay : TransparentWidget {
         // Determine the dimensions of the spectral image.
         const int width = module->get_coefficients().size();
         const int height = module->get_coefficients()[0].size() / 2;
+
         // Create a pixel buffer from the spectral image in RGBA8888 format.
         uint8_t pixels[height * width * 4];
         for (int y = 0; y < height; y++) {
-            // Determine the y-scale from the frequency. The slope is provided
-            // in decibels/octave, so first determine the octave offset from
-            // the current frequency using, e.g., 1000Hz as the reference
-            // frequency for the curve. I.e., because octaves are logarithmic,
-            // we can simply compute \f$\log2(f_i / f_{reference})\f$ and
-            // multiply by the slope. Because we're dealing with y first in
-            // terms of amplitude, also convert the decibel scaling to an
-            // amplitude gain.
-            auto gain = log2f((y / (float) height) * nyquist_rate / reference_frequency + epsilon);
+            // Compute the gain based on the octave offset.
+            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + epsilon);
             gain = Math::decibels2amplitude(slope * gain);
             for (int x = 0; x < width; x++) {
                 float scaled_y = y;
                 if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
                     scaled_y = height * Math::squared(scaled_y / height);
                 auto coeff = gain * Math::interpolate_coefficients(module->get_coefficients()[x], scaled_y);
-                // range from (-inf, 0] to (0, 1] such that 1 is at 0dB.
                 auto color = Math::ColorMap::color_map(module->color_map, abs(coeff) / height);
-                pixels[4 * (width * (height - 1 - y) + x) + 0] = color.r * 255;
-                pixels[4 * (width * (height - 1 - y) + x) + 1] = color.g * 255;
-                pixels[4 * (width * (height - 1 - y) + x) + 2] = color.b * 255;
-                pixels[4 * (width * (height - 1 - y) + x) + 3] = 255;
+                int index = 4 * (width * (height - 1 - y) + x);
+                pixels[index + 0] = color.r * 255;
+                pixels[index + 1] = color.g * 255;
+                pixels[index + 2] = color.b * 255;
+                pixels[index + 3] = 255;
             }
         }
-        // create / update the image container
-        if (screen == -1)  // check if the screen has been initialized yet
+
+        // Create or update the image container.
+        if (screen == -1)
             screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels);
-        else  // update the screen with the pixel data
+        else
             nvgUpdateImage(args.vg, screen, pixels);
-        // screen from STFT pixels.
+
+        // Compute the mask rectangle from the padded region.
+        const Rect mask = Rect(
+            Vec(pad_left, pad_top),
+            box.size.minus(Vec(pad_left + pad_right, pad_top + pad_bottom))
+        );
+
+        // Compute transformation parameters based on frequency bounds
+        float texture_y_low, texture_y_high;
+        if (module->get_frequency_scale() == FrequencyScale::Logarithmic) {
+            texture_y_low  = height * (1 - sqrt(get_low_frequency() / nyquist_rate));
+            texture_y_high = height * (1 - sqrt(get_high_frequency() / nyquist_rate));
+        } else {
+            texture_y_low  = height * (1 - get_low_frequency() / nyquist_rate);
+            texture_y_high = height * (1 - get_high_frequency() / nyquist_rate);
+        }
+        float image_section_height = texture_y_low - texture_y_high;
+        float scale_y = mask.size.y / image_section_height;
+
+        // Draw the spectrogram image within the mask
+        nvgSave(args.vg);
+        nvgScissor(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
+        nvgSave(args.vg);
+        // Translate so that the texture coordinate corresponding to the high frequency maps to mask.pos.y.
+        nvgTranslate(args.vg, 0, mask.pos.y - texture_y_high * scale_y);
+        // Scale vertically so that the selected frequency band fills the mask.
+        nvgScale(args.vg, 1.0f, scale_y);
         nvgBeginPath(args.vg);
-        nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-        nvgFillPaint(args.vg, nvgImagePattern(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom, 0, screen, 1.0));
+        // Draw the spectrogram image using the mask's x position and width.
+        nvgRect(args.vg, mask.pos.x, 0, mask.size.x, height);
+        nvgFillPaint(args.vg, nvgImagePattern(args.vg, mask.pos.x, 0, mask.size.x, height, 0, screen, 1.0));
         nvgFill(args.vg);
+        nvgRestore(args.vg);
+        nvgResetScissor(args.vg);
+        nvgRestore(args.vg);
+
+        // Draw a border around the spectrogram (mask area).
+        nvgBeginPath(args.vg);
+        nvgRect(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
         nvgClosePath(args.vg);
-        // scan-line from hop index.
+
+        // Draw the scan-line to indicate the current hop index.
         nvgBeginPath(args.vg);
         float scan_x = module->get_hop_index() / static_cast<float>(width);
-        nvgMoveTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), pad_top);
-        nvgLineTo(args.vg, pad_left + scan_x * (box.size.x - pad_left - pad_right), box.size.y - pad_bottom);
+        nvgMoveTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y);
+        nvgLineTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y + mask.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
         nvgStrokeColor(args.vg, axis_stroke_color);
         nvgStroke(args.vg);
@@ -764,17 +794,18 @@ struct SpectralImageDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call.
     void draw_cross_hair(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
-        // Render the cross-hair row.
-        const float y_position = rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top);
+        // Convert normalized mouse y (0 = bottom, 1 = top) to a pixel coordinate.
+        float y_pixels = rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top);
+        // Draw the horizontal cross-hair.
         nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, pad_left, y_position);
-        nvgLineTo(args.vg, box.size.x - pad_right, y_position);
+        nvgMoveTo(args.vg, pad_left, y_pixels);
+        nvgLineTo(args.vg, box.size.x - pad_right, y_pixels);
         nvgStrokeWidth(args.vg, 0.5);
         nvgStrokeColor(args.vg, cross_hair_stroke_color);
         nvgStroke(args.vg);
         nvgClosePath(args.vg);
-        // Render the cross-hair column.
-        const float x_position = rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right);
+        // Draw the vertical cross-hair (always a linear mapping).
+        float x_position = rescale(mouse_position.x, 0, 1, pad_left, box.size.x - pad_right);
         nvgBeginPath(args.vg);
         nvgMoveTo(args.vg, x_position, pad_top);
         nvgLineTo(args.vg, x_position, box.size.y - pad_bottom);
@@ -788,58 +819,67 @@ struct SpectralImageDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
-        // Determine the frequency, frequency bin, etc. based on x.
+        // Convert the mouse's normalized Y to a pixel coordinate.
+        float y_pixels = rescale(mouse_position.y, 0, 1, box.size.y - pad_bottom, pad_top);
         float hover_freq = 0;
-        switch (module->get_frequency_scale()) {
-        case FrequencyScale::Linear:
+
+        if (module->get_frequency_scale() == FrequencyScale::Logarithmic) {
+            // 'texHeight' is the height of the spectrogram texture.
+            const int texHeight = module->get_coefficients()[0].size() / 2;
+            const float nyquist = module->get_sample_rate() / 2.f;
+            // Map the low/high frequency to texture coordinates using the square-root mapping.
+            // (Flipping vertically: low frequency is at the bottom, high frequency at the top.)
+            float texY_low  = texHeight * sqrt(get_low_frequency() / nyquist);
+            float texY_high = texHeight * sqrt(get_high_frequency() / nyquist);
+            // Compute the vertical scale factor from texture to screen.
+            float scaleY = (box.size.y - pad_top - pad_bottom) / (texY_low - texY_high);
+            // Invert the transform used when drawing the spectrogram:
+            // When drawing, we map: t = texHeight * sqrt(f / nyquist) and then
+            // y = pad_top + (t - texY_high) * scaleY.
+            // So invert that: t = texY_high + (y - pad_top) / scaleY, and then
+            // f = nyquist * (t / texHeight)².
+            float t = texY_high + (y_pixels - pad_top) / scaleY;
+            hover_freq = nyquist * powf(t / texHeight, 2);
+        } else {
+            // Linear mapping.
             hover_freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * mouse_position.y;
-            break;
-        case FrequencyScale::Logarithmic:
-            hover_freq = (get_high_frequency() - get_low_frequency()) * Math::squared(mouse_position.y) + get_low_frequency();
-            break;
-        default: break;  // TODO: raise error
         }
+
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
-        // Convert the hovered frequency to a string representation.
+
+        // Format the frequency as text.
         std::ostringstream stream;
         if (hover_freq < 1000.f)
             stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
         else
             stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
-        // Render hovered frequency above the plot in the top left.
+
+        // Render the hovered frequency at the top left.
         nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
-        // Convert the frequency to a note.
-        if (hover_freq > 0) {  // Render note, octave, and tuning (in cents.)
+
+        // Optionally, also render musical note information.
+        if (hover_freq > 0) {
             MusicTheory::TunedNote note(hover_freq);
             nvgText(args.vg, pad_left + 55, pad_top / 2, note.note_string().c_str(), NULL);
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
         }
-        // TODO:
+
         // Render the coefficient magnitude.
-        // const auto x = static_cast<int>(mouse_position.x * module->get_coefficients().size());
-        // const auto y = static_cast<int>(mouse_position.y * module->get_coefficients()[0].size() / 2);
-        // const auto magnitude = module->get_coefficients()[x][y];
-        // std::cout << Math::amplitude2decibels(magnitude) << std::endl;
-        // // // Render the y position.
-        // stream = {};
-        // // switch (module->get_magnitude_scale()) {
-        // // case MagnitudeScale::Linear:
-        // //     stream << std::fixed << std::setprecision(2) << mouse_position.y * 4 * 100 << "%";
-        // //     break;
-        // // case MagnitudeScale::Logarithmic60dB:
-        // //     stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
-        // //     break;
-        // // case MagnitudeScale::Logarithmic120dB:
-        // //     stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
-        // //     break;
-        // // default: break;  // TODO: raise error
-        // // }
-        // nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        // nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, stream.str().c_str(), NULL);
+        // Map normalized coordinates to coefficient indices.
+        int coeff_x = mouse_position.x * (module->get_coefficients().size() - 1);
+        int coeff_y = module->get_coefficients()[0].size() * hover_freq / module->get_sample_rate();
+        // Retrieve the coefficient, compute its magnitude in dB.
+        float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
+        float db = Math::amplitude2decibels(coeff_value) - 60.f;
+        // Format and render the decibel value.
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(1) << db << " dB";
+        nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, oss.str().c_str(), NULL);
     }
 
     /// @brief Draw the display on the main context.
@@ -848,7 +888,7 @@ struct SpectralImageDisplay : TransparentWidget {
     ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
-            // Draw the background.
+            // Background
             nvgBeginPath(args.vg);
             nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
             nvgFillColor(args.vg, background_color);
@@ -856,31 +896,33 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgStrokeColor(args.vg, axis_stroke_color);
             nvgStroke(args.vg);
             nvgClosePath(args.vg);
-            // draw ticks for the axes of the plot.
-            switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
-            case FrequencyScale::Linear:
-                draw_y_ticks_linear(args);
-                break;
-            case FrequencyScale::Logarithmic:
-                draw_y_ticks_logarithmic(args);
-                break;
-            }
-            // Draw the spectrogram.
+            // Spectrogram plot
             if (module != nullptr) {
+                // draw ticks for the axes of the plot.
+                switch (module->get_frequency_scale()) {
+                case FrequencyScale::Linear:
+                    draw_y_ticks_linear(args);
+                    break;
+                case FrequencyScale::Logarithmic:
+                    draw_y_ticks_logarithmic(args);
+                    break;
+                default:
+                    throw std::runtime_error("Invalid frequency scale");
+                }
                 draw_spectrogram(args);
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
                     draw_cross_hair_text(args);
                 }
+                // Border
+                nvgBeginPath(args.vg);
+                nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+                nvgStrokeWidth(args.vg, axis_stroke_width);
+                nvgStrokeColor(args.vg, axis_stroke_color);
+                nvgStroke(args.vg);
+                nvgClosePath(args.vg);
             }
-            // border
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
         }
         Widget::drawLayer(args, layer);
     }
@@ -893,7 +935,7 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
     explicit SpectrogramWidget(Spectrogram* module) : ThemedWidget<BASENAME>() {
         setModule(module);
         // Spectrogram display
-        SpectralImageDisplay* display = new SpectralImageDisplay(static_cast<Spectrogram*>(module));
+        SpectralImageDisplay* display = new SpectralImageDisplay(module);
         display->setPosition(Vec(45, 15));
         display->setSize(Vec(465, 350));
         addChild(display);

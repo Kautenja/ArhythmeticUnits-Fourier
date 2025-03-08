@@ -3,6 +3,7 @@
 -I../../dep/nanovg/src
 -I../../dep/nanosvg/src
 -I../../dep/osdialog
--Isrc/dep
+-Isrc/
 -Isrc/dsp
+-Isrc/rack_extensions
 -Idep/Catch2/single_include/catch2

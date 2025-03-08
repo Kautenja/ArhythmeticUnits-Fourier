@@ -7,20 +7,20 @@
   "author": "Christian Kauten",
   "authorEmail": "arhythmetic.units@gmail.com",
   "sourceUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier",
-  "changelogUrl": "https://github.com/Kautenja/PotatoChips/blob/master/CHANGELOG.md",
+  "changelogUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/master/CHANGELOG.md",
   "modules": [
     {
       "slug": "SpectrumAnalyzer",
       "name": "Fourier (Spectrum Analyzer)",
-      "description": "Highly tune-able spectrum analyzer",
+      "description": "Tune-able spectrum analyzer",
       "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf",
       "tags": ["Visual"]
     },
     {
       "slug": "Spectrogram",
-      "name": "Sound Spectrograph (Spectrogram)",
-      "description": "Highly tune-able spectrogram visualizer",
-      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Sound-Spectrograph.pdf",
+      "name": "Spectre (Spectrogram)",
+      "description": "Tune-able spectrogram visualizer",
+      "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf",
       "tags": ["Visual"]
     }
   ]
