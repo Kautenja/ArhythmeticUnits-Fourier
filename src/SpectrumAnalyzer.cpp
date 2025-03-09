@@ -1055,6 +1055,27 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgClosePath(args.vg);
     }
 
+    /// @brief Return the frequency that the mouse is hovering over.
+    /// @param mouse_position The position of the mouse on the screen.
+    /// @param scale The frequency scale to render the mouse transform with.
+    /// @param low_frequency The low frequency bound of the window.
+    /// @param high_frequency The high frequency bound of the window.
+    static inline float get_hover_freq(
+        const Vec& mouse_position,
+        const FrequencyScale& scale,
+        const float& low_frequency,
+        const float& high_frequency
+    ) {
+        switch (scale) {
+        case FrequencyScale::Linear:
+            return low_frequency + (high_frequency - low_frequency) * mouse_position.x;
+        case FrequencyScale::Logarithmic:
+            return (high_frequency - low_frequency) * Math::squared(mouse_position.x) + low_frequency;
+        default:
+            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(scale)));
+        }
+    }
+
     /// @brief Return a string representation of the mouse position.
     /// @param mouse_position The position of the mouse on the screen.
     /// @param scale The magnitude scale to render the mouse transform with.
@@ -1084,30 +1105,19 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
-        // Determine the frequency, frequency bin, etc. based on x.
-        float hover_freq = 0;
-        switch (module->get_frequency_scale()) {
-        case FrequencyScale::Linear:
-            hover_freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * mouse_position.x;
-            break;
-        case FrequencyScale::Logarithmic:
-            hover_freq = (get_high_frequency() - get_low_frequency()) * Math::squared(mouse_position.x) + get_low_frequency();
-            break;
-        default:
-            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
-        }
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
-        // Convert the hovered frequency to a string representation.
-        std::ostringstream stream;
-        if (hover_freq < 1000.f)
-            stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
-        else
-            stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
         // Render hovered frequency above the plot in the top left.
-        nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
+        const float hover_freq = get_hover_freq(
+            mouse_position,
+            module->get_frequency_scale(),
+            get_low_frequency(),
+            get_high_frequency()
+        );
+        const auto hover_freq_string = Math::freq_to_string(hover_freq);
+        nvgText(args.vg, pad_left + 3, pad_top / 2, hover_freq_string.c_str(), NULL);
         // Convert the frequency to a note.
         if (hover_freq > 0) {  // Render note, octave, and tuning (in cents.)
             MusicTheory::TunedNote note(hover_freq);
