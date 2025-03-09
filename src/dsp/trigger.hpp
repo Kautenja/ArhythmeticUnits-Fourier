@@ -17,12 +17,7 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_
 
-#include "trigger/boolean.hpp"
-#include "trigger/common.hpp"
 #include "trigger/divider.hpp"
-#include "trigger/hold.hpp"
 #include "trigger/threshold.hpp"
-#include "trigger/threshold_dual.hpp"
-#include "trigger/zero.hpp"
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_HPP_

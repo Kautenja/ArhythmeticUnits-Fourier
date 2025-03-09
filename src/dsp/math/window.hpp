@@ -943,9 +943,11 @@ inline size_t order(const T& a, const T& f) {
 ///
 template<typename T>
 inline T beta(const T& a) {
-    if (a > T(50))  return T(0.1102) * (a - T(8.7));
-    if (a >= T(21)) return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
-                    return 0;
+    if (a > T(50))
+        return T(0.1102) * (a - T(8.7));
+    if (a >= T(21))
+        return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
+    return 0;
 }
 
 /// @brief Calculate the value of a Kaiser window.
