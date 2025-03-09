@@ -1055,6 +1055,31 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgClosePath(args.vg);
     }
 
+    /// @brief Return a string representation of the mouse position.
+    /// @param mouse_position The position of the mouse on the screen.
+    /// @param scale The magnitude scale to render the mouse transform with.
+    static inline std::string mouse_position_to_string(
+        const Vec& mouse_position,
+        const MagnitudeScale& scale
+    ) {
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(2);
+        switch (scale) {
+        case MagnitudeScale::Linear:
+            stream << mouse_position.y * 4 * 100 << "%";
+            break;
+        case MagnitudeScale::Logarithmic60dB:
+            stream << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
+            break;
+        case MagnitudeScale::Logarithmic120dB:
+            stream << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
+            break;
+        default:
+            throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(scale)));
+        }
+        return stream.str();
+    }
+
     /// @brief Draw the cross-hair information as text.
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
@@ -1068,7 +1093,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         case FrequencyScale::Logarithmic:
             hover_freq = (get_high_frequency() - get_low_frequency()) * Math::squared(mouse_position.x) + get_low_frequency();
             break;
-        default: break;  // TODO: raise error
+        default:
+            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
         }
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
@@ -1089,22 +1115,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
         }
+        ;
         // Render the y position.
-        stream = {};
-        switch (module->get_magnitude_scale()) {
-        case MagnitudeScale::Linear:
-            stream << std::fixed << std::setprecision(2) << mouse_position.y * 4 * 100 << "%";
-            break;
-        case MagnitudeScale::Logarithmic60dB:
-            stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
-            break;
-        case MagnitudeScale::Logarithmic120dB:
-            stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
-            break;
-        default: break;  // TODO: raise error
-        }
+        const auto mouse_position_string = mouse_position_to_string(mouse_position, module->get_magnitude_scale());
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, stream.str().c_str(), NULL);
+        nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, mouse_position_string.c_str(), NULL);
     }
 
     /// @brief Draw the screen.
