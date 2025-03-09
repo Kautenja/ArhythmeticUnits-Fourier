@@ -444,6 +444,7 @@ inline T window(Function window_, const T& n, const T& N, const bool& is_symmetr
     case Function::BlackmanNuttall: return blackmannuttall<T>(n, N, is_symmetric);
     case Function::KaiserBessel:    return kaiserbessel<T>(n, N, is_symmetric);
     case Function::Flattop:         return flattop<T>(n, N, is_symmetric);
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window_)));
     }
 }
 
@@ -492,6 +493,7 @@ inline std::string name(const Function& window) {
     case Function::BlackmanNuttall: return name<Function::BlackmanNuttall>();
     case Function::KaiserBessel:    return name<Function::KaiserBessel>();
     case Function::Flattop:         return name<Function::Flattop>();
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -553,6 +555,7 @@ inline float coherent_gain(const Function& window) {
     case Function::BlackmanNuttall: return coherent_gain<Function::BlackmanNuttall>();
     case Function::KaiserBessel:    return coherent_gain<Function::KaiserBessel>();
     case Function::Flattop:         return coherent_gain<Function::Flattop>();
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -601,6 +604,7 @@ inline float side_lobe_amplitude(const Function& window) {
     case Function::BlackmanNuttall: return side_lobe_amplitude<Function::BlackmanNuttall>();
     case Function::KaiserBessel:    return side_lobe_amplitude<Function::KaiserBessel>();
     case Function::Flattop:         return side_lobe_amplitude<Function::Flattop>();
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -649,6 +653,7 @@ inline float stopband_attenuation(const Function& window) {
     case Function::BlackmanNuttall: return stopband_attenuation<Function::BlackmanNuttall>();
     case Function::KaiserBessel:    return stopband_attenuation<Function::KaiserBessel>();
     case Function::Flattop:         return stopband_attenuation<Function::Flattop>();
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -707,6 +712,7 @@ inline T transition_width(const T& N, const Function& window) {
     case Function::BlackmanNuttall: return transition_width<Function::BlackmanNuttall>() / N;
     case Function::KaiserBessel:    return transition_width<Function::KaiserBessel>() / N;
     case Function::Flattop:         return transition_width<Function::Flattop>() / N;
+    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -937,9 +943,11 @@ inline size_t order(const T& a, const T& f) {
 ///
 template<typename T>
 inline T beta(const T& a) {
-    if (a > T(50))  return T(0.1102) * (a - T(8.7));
-    if (a >= T(21)) return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
-                    return 0;
+    if (a > T(50))
+        return T(0.1102) * (a - T(8.7));
+    if (a >= T(21))
+        return T(0.5842) * pow(a - T(21), T(0.4)) + T(0.07886) * (a - T(21));
+    return 0;
 }
 
 /// @brief Calculate the value of a Kaiser window.
