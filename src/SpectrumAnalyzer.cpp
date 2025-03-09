@@ -1171,7 +1171,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             case FrequencyScale::Logarithmic:
                 draw_x_ticks_logarithmic(args);
                 break;
-            default: break;  // TODO: raise error
+            default:
+                throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
             }
             // Draw the magnitude (Y) axis.
             switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
@@ -1184,7 +1185,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             case MagnitudeScale::Logarithmic120dB:
                 draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
                 break;
-            default: break;  // TODO: raise error
+            default:
+                throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
             }
             if (module != nullptr) {
                 draw_coefficients(args, module->render_coefficients[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
