@@ -940,7 +940,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     ///
     void draw_coefficients(
         const DrawArgs& args,
-        const std::vector<Vec>& coefficients,
+        std::vector<Vec> coefficients,
         const float& stroke_width,
         const NVGcolor& stroke_color={{{0.9f, 0.85f, 0.15f, 0.75f}}},
         const NVGcolor& fill_color={{{0.9f, 0.85f, 0.15f, 0.5f}}}
