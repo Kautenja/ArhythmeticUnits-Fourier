@@ -931,12 +931,13 @@ struct SpectralImageDisplay : TransparentWidget {
     }
 };
 
-/// The base-name for the Spectrogram panel files.
-const char BASENAME[] = "res/Spectrogram";
-
-struct SpectrogramWidget : ThemedWidget<BASENAME> {
-    explicit SpectrogramWidget(Spectrogram* module) : ThemedWidget<BASENAME>() {
+struct SpectrogramWidget : ModuleWidget {
+    explicit SpectrogramWidget(Spectrogram* module) : ModuleWidget() {
         setModule(module);
+        setPanel(createPanel(
+            asset::plugin(plugin_instance, "res/Spectrogram-Light.svg"),
+            asset::plugin(plugin_instance, "res/Spectrogram-Dark.svg")
+        ));
         // Spectrogram display
         SpectralImageDisplay* display = new SpectralImageDisplay(module);
         display->setPosition(Vec(45, 15));
@@ -969,10 +970,10 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         // Slope (dB/octave @1000Hz) controls.
         addParam(createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE));
         // Screws
-        addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
-        addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-        addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-        addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+        addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
+        addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
+        addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+        addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
     }
 
     /// @brief Append the context menu to the module when right clicked.
@@ -1021,7 +1022,7 @@ struct SpectrogramWidget : ThemedWidget<BASENAME> {
         }
 
         // Call the super function.
-        ThemedWidget<BASENAME>::appendContextMenu(menu);
+        ModuleWidget::appendContextMenu(menu);
     }
 };
 
