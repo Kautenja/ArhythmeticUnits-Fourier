@@ -1,5 +1,11 @@
 # Change Log
 
+## 2.1.0 (2025-03-10)
+
+-   Support for built-in VCV dark light/dark panels
+    -   Deprecates internal management of theme in favor of built-in features
+    -   Dark panels may be selected using `View > Use dark panels if available`
+
 ## 2.0.2 (2025-03-10)
 
 -   Update manual for _Fourier_ and _Spectre_
