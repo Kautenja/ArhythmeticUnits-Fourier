@@ -1,5 +1,11 @@
 # Change Log
 
+## 2.1.1 (2025-03-TODO)
+
+-   Fix `Math::freq_to_string` to cover edge cases along unit bounds
+-   Update `SpectrumAnalyzer` and `Spectrogram` to use `Math::freq_to_string`
+    in all cases of frequency string serialization
+
 ## 2.1.0 (2025-03-10)
 
 -   Support for built-in VCV dark light/dark panels
