@@ -502,6 +502,9 @@ struct SpectralImageDisplay : TransparentWidget {
         Vec position = {0, 0};
     } mouse_state;
 
+    /// The pixels being rendered on the display.
+    std::vector<uint8_t> pixels;
+
     /// a pointer to the image to draw the display to
     int screen = -1;
 
@@ -710,8 +713,8 @@ struct SpectralImageDisplay : TransparentWidget {
         const int width = module->get_coefficients().size();
         const int height = module->get_coefficients()[0].size() / 2;
 
-        // Create a pixel buffer from the spectral image in RGBA8888 format.
-        uint8_t pixels[height * width * 4];
+        // Update the pixel buffer based on the spectrogram dimensions.
+        pixels.resize(height * width * 4);
         for (int y = 0; y < height; y++) {
             // Compute the gain based on the octave offset.
             auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + epsilon);
@@ -732,9 +735,9 @@ struct SpectralImageDisplay : TransparentWidget {
 
         // Create or update the image container.
         if (screen == -1)
-            screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels);
+            screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels.data());
         else
-            nvgUpdateImage(args.vg, screen, pixels);
+            nvgUpdateImage(args.vg, screen, pixels.data());
 
         // Compute the mask rectangle from the padded region.
         const Rect mask = Rect(
