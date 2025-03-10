@@ -79,10 +79,10 @@ struct SpectrumAnalyzer : Module {
     Math::OnTheFlyRFFT<simd::float_4> fft;
 
     /// A copy of low-pass filtered DFT coefficients.
-    std::vector<std::complex<simd::float_4>> filtered_coefficients;
+    std::vector<std::complex<simd::float_4>> filtered_coeffs;
 
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> rasterized_coefficients[NUM_CHANNELS];
+    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
 
     /// A clock divider for updating the lights at a lower sampling rate.
     Trigger::Divider light_divider;
@@ -450,20 +450,16 @@ struct SpectrumAnalyzer : Module {
         window_function.set_window(get_window_function(), N, false, true);
         if (fft.size() != N)
             fft.resize(N);
-        if (filtered_coefficients.size() != N) {
-            filtered_coefficients.resize(N);
-            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0);
+        if (filtered_coeffs.size() != N) {
+            filtered_coeffs.resize(N);
+            std::fill(filtered_coeffs.begin(), filtered_coeffs.end(), 0);
         }
-        // Iterate over the number of channels to resize buffers.
+        // Update the rasterized coefficients from the FFT length.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (rasterized_coefficients[i].size() == N / 2.f + 1) continue;
-            // Update the rasterized coefficients from the FFT length.
-            rasterized_coefficients[i].resize(N / 2.f + 1);
-            for (auto& coeff : rasterized_coefficients[i]) {
-                coeff.x = 0.f;
-                coeff.y = 0.f;
-            }
-            render_coefficients[i] = rasterized_coefficients[i];
+            if (raster_coeffs[i].size() == N / 2.f + 1) continue;
+            raster_coeffs[i].resize(N / 2.f + 1);
+            std::fill(raster_coeffs[i].begin(), raster_coeffs[i].end(), Vec(0.f, 0.f));
+            render_coefficients[i] = raster_coeffs[i];
         }
     }
 
@@ -539,10 +535,10 @@ struct SpectrumAnalyzer : Module {
         const auto frequency_scale = get_frequency_scale();
         const auto magnitude_scale = get_magnitude_scale();
         // Determine the non-repeated coefficients.
-        const float N = filtered_coefficients.size() / 2.f + 1.f;
+        const float N = filtered_coeffs.size() / 2.f + 1.f;
         for (size_t n = 0; n < static_cast<size_t>(N); n++) {
             // Set the point to a reference from the rasterized point buffer.
-            Vec& point = rasterized_coefficients[lane_index][n];
+            Vec& point = raster_coeffs[lane_index][n];
             // Set the X point to the normalized linear coefficient offset.
             point.x = n / N;
             // Determine the y-scale from the frequency. The slope is provided
@@ -567,7 +563,7 @@ struct SpectrumAnalyzer : Module {
             // Set the Y point to the linear coefficient percentage. Apply the
             // gain that was previously calculated from the scaling function.
             const float max_amplitude = Math::decibels2amplitude(max_magnitude);
-            point.y = gain * abs(filtered_coefficients[n]).s[lane_index] / (max_amplitude * N);
+            point.y = gain * abs(filtered_coeffs[n]).s[lane_index] / (max_amplitude * N);
             // Apply magnitude scaling to the Y point.
             switch (magnitude_scale) {
             case MagnitudeScale::Linear:
@@ -581,7 +577,7 @@ struct SpectrumAnalyzer : Module {
             default: break;
             }
         }
-        render_coefficients[lane_index] = rasterized_coefficients[lane_index];
+        render_coefficients[lane_index] = raster_coeffs[lane_index];
     }
 
     /// @brief Process samples with the DFT.
@@ -597,7 +593,7 @@ struct SpectrumAnalyzer : Module {
                 fft.smooth(sample_rate, to_float(frequency_smoothing));
             // Pass the coefficients through a smoothing filter.
             for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coefficients[n] = alpha * simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * simd::abs(fft.coefficients[n]);
+                filtered_coeffs[n] = alpha * abs(filtered_coeffs[n]) + (1.0 - alpha) * abs(fft.coefficients[n]);
             make_points(0);
             make_points(1);
             make_points(2);
