@@ -18,6 +18,9 @@
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
 
 #include <complex>  // std::complex
+#include <string>   // std::string
+#include <ostream>  // std::ostringstream
+#include <iomanip>  // std::fixed, std::setprecision
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -49,6 +52,24 @@ inline constexpr T e() {
 ///
 template<typename T>
 inline constexpr std::complex<T> j() { return std::complex<T>(0, 1); }
+
+/// @brief Return a string representation of the frequency.
+/// @tparam T the type (i.e., precision) of the returned value.
+/// @returns A string representation of the frequency with units.
+template<typename T>
+inline static std::string freq_to_string(const T& freq) {
+    std::ostringstream stream;
+    stream << std::fixed << std::setprecision(2);
+    if (freq > 1e9)
+        stream << freq / 1e9 << "GHz";
+    else if (freq > 1e6)
+        stream << freq / 1e6 << "MHz";
+    else if (freq > 1e3)
+        stream << freq / 1e3 << "KHz";
+    else
+        stream << freq << "Hz";
+    return stream.str();
+}
 
 }  // namespace Math
 

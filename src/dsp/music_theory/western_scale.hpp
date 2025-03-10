@@ -60,6 +60,7 @@ inline const char* to_string(const Note& note) {
     case Note::A:      return "A";
     case Note::ASharp: return "A#";
     case Note::B:      return "B";
+    default: throw std::runtime_error("Invalid note " + std::to_string(static_cast<int>(note)));
     }
 }
 

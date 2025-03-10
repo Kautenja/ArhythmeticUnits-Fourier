@@ -636,27 +636,27 @@ struct SpectrumAnalyzer : Module {
 struct SpectrumAnalyzerDisplay : TransparentWidget {
  private:
     /// The vertical (top) padding for the plot.
-    static constexpr size_t pad_top = 20;
+    const size_t pad_top = 20;
     /// The vertical (bottom) padding for the plot.
-    static constexpr size_t pad_bottom = 50;
+    const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    static constexpr size_t pad_left = 30;
+    const size_t pad_left = 30;
     /// The horizontal (right) padding for the plot.
-    static constexpr size_t pad_right = 5;
+    const size_t pad_right = 5;
     /// The radius of the rounded corners of the screen
-    static constexpr int corner_radius = 5;
+    const int corner_radius = 5;
     /// The background color of the screen
-    static constexpr NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    const NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     /// The stroke color for the axis lines
-    static constexpr NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+    const NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
     /// The width of the lines to render for axes.
-    static constexpr float axis_stroke_width = 1;
+    const float axis_stroke_width = 1;
     /// The font color for the axis text.
-    static constexpr NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
+    const NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
     /// The font size for the axis text.
-    static constexpr float axis_font_size = 8;
+    const float axis_font_size = 8;
     /// The stroke color for the cross-hair
-    static constexpr NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
+    const NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
 
     /// the font for rendering text on the display
     const std::shared_ptr<Font> font = APP->window->loadFont(
@@ -940,7 +940,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     ///
     void draw_coefficients(
         const DrawArgs& args,
-        const std::vector<Vec>& coefficients,
+        std::vector<Vec> coefficients,
         const float& stroke_width,
         const NVGcolor& stroke_color={{{0.9f, 0.85f, 0.15f, 0.75f}}},
         const NVGcolor& fill_color={{{0.9f, 0.85f, 0.15f, 0.5f}}}
@@ -1055,33 +1055,69 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgClosePath(args.vg);
     }
 
+    /// @brief Return the frequency that the mouse is hovering over.
+    /// @param mouse_position The position of the mouse on the screen.
+    /// @param scale The frequency scale to render the mouse transform with.
+    /// @param low_frequency The low frequency bound of the window.
+    /// @param high_frequency The high frequency bound of the window.
+    static inline float get_hover_freq(
+        const Vec& mouse_position,
+        const FrequencyScale& scale,
+        const float& low_frequency,
+        const float& high_frequency
+    ) {
+        switch (scale) {
+        case FrequencyScale::Linear:
+            return low_frequency + (high_frequency - low_frequency) * mouse_position.x;
+        case FrequencyScale::Logarithmic:
+            return (high_frequency - low_frequency) * Math::squared(mouse_position.x) + low_frequency;
+        default:
+            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(scale)));
+        }
+    }
+
+    /// @brief Return a string representation of the mouse position.
+    /// @param mouse_position The position of the mouse on the screen.
+    /// @param scale The magnitude scale to render the mouse transform with.
+    static inline std::string mouse_position_to_string(
+        const Vec& mouse_position,
+        const MagnitudeScale& scale
+    ) {
+        std::ostringstream stream;
+        stream << std::fixed << std::setprecision(2);
+        switch (scale) {
+        case MagnitudeScale::Linear:
+            stream << mouse_position.y * 4 * 100 << "%";
+            break;
+        case MagnitudeScale::Logarithmic60dB:
+            stream << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
+            break;
+        case MagnitudeScale::Logarithmic120dB:
+            stream << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
+            break;
+        default:
+            throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(scale)));
+        }
+        return stream.str();
+    }
+
     /// @brief Draw the cross-hair information as text.
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
-        // Determine the frequency, frequency bin, etc. based on x.
-        float hover_freq = 0;
-        switch (module->get_frequency_scale()) {
-        case FrequencyScale::Linear:
-            hover_freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * mouse_position.x;
-            break;
-        case FrequencyScale::Logarithmic:
-            hover_freq = (get_high_frequency() - get_low_frequency()) * Math::squared(mouse_position.x) + get_low_frequency();
-            break;
-        default: break;  // TODO: raise error
-        }
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
-        // Convert the hovered frequency to a string representation.
-        std::ostringstream stream;
-        if (hover_freq < 1000.f)
-            stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
-        else
-            stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
         // Render hovered frequency above the plot in the top left.
-        nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
+        const float hover_freq = get_hover_freq(
+            mouse_position,
+            module->get_frequency_scale(),
+            get_low_frequency(),
+            get_high_frequency()
+        );
+        const auto hover_freq_string = Math::freq_to_string(hover_freq);
+        nvgText(args.vg, pad_left + 3, pad_top / 2, hover_freq_string.c_str(), NULL);
         // Convert the frequency to a note.
         if (hover_freq > 0) {  // Render note, octave, and tuning (in cents.)
             MusicTheory::TunedNote note(hover_freq);
@@ -1089,22 +1125,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
         }
+        ;
         // Render the y position.
-        stream = {};
-        switch (module->get_magnitude_scale()) {
-        case MagnitudeScale::Linear:
-            stream << std::fixed << std::setprecision(2) << mouse_position.y * 4 * 100 << "%";
-            break;
-        case MagnitudeScale::Logarithmic60dB:
-            stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -60, 12) << "dB";
-            break;
-        case MagnitudeScale::Logarithmic120dB:
-            stream << std::fixed << std::setprecision(2) << rescale(mouse_position.y, 0, 1, -120, 12) << "dB";
-            break;
-        default: break;  // TODO: raise error
-        }
+        const auto mouse_position_string = mouse_position_to_string(mouse_position, module->get_magnitude_scale());
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, stream.str().c_str(), NULL);
+        nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, mouse_position_string.c_str(), NULL);
     }
 
     /// @brief Draw the screen.
@@ -1146,7 +1171,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             case FrequencyScale::Logarithmic:
                 draw_x_ticks_logarithmic(args);
                 break;
-            default: break;  // TODO: raise error
+            default:
+                throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
             }
             // Draw the magnitude (Y) axis.
             switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
@@ -1159,7 +1185,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             case MagnitudeScale::Logarithmic120dB:
                 draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
                 break;
-            default: break;  // TODO: raise error
+            default:
+                throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
             }
             if (module != nullptr) {
                 draw_coefficients(args, module->render_coefficients[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});

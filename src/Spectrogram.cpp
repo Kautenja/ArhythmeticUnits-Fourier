@@ -460,27 +460,27 @@ struct Spectrogram : Module {
 struct SpectralImageDisplay : TransparentWidget {
  private:
     /// The vertical (top) padding for the plot.
-    static constexpr size_t pad_top = 20;
+    const size_t pad_top = 20;
     /// The vertical (bottom) padding for the plot.
-    static constexpr size_t pad_bottom = 50;
+    const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    static constexpr size_t pad_left = 30;
+    const size_t pad_left = 30;
     /// The horizontal (right) padding for the plot.
-    static constexpr size_t pad_right = 5;
+    const size_t pad_right = 5;
     /// The radius of the rounded corners of the screen
-    static constexpr int corner_radius = 5;
+    const int corner_radius = 5;
     /// The background color of the screen
-    static constexpr NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    const NVGcolor background_color = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     /// The stroke color for the axis lines
-    static constexpr NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+    const NVGcolor axis_stroke_color = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
     /// The width of the lines to render for axes.
-    static constexpr float axis_stroke_width = 1;
+    const float axis_stroke_width = 1;
     /// The font color for the axis text.
-    static constexpr NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
+    const NVGcolor axis_font_color = {{{1.0f, 1.0f, 1.0f, 1.0f}}};
     /// The font size for the axis text.
-    static constexpr float axis_font_size = 8;
+    const float axis_font_size = 8;
     /// The stroke color for the cross-hair
-    static constexpr NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
+    const NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
 
     /// the font for rendering text on the display
     const std::shared_ptr<Font> font = APP->window->loadFont(
@@ -501,6 +501,9 @@ struct SpectralImageDisplay : TransparentWidget {
         /// the current position of the mouse pointer during the drag
         Vec position = {0, 0};
     } mouse_state;
+
+    /// The pixels being rendered on the display.
+    std::vector<uint8_t> pixels;
 
     /// a pointer to the image to draw the display to
     int screen = -1;
@@ -710,8 +713,8 @@ struct SpectralImageDisplay : TransparentWidget {
         const int width = module->get_coefficients().size();
         const int height = module->get_coefficients()[0].size() / 2;
 
-        // Create a pixel buffer from the spectral image in RGBA8888 format.
-        uint8_t pixels[height * width * 4];
+        // Update the pixel buffer based on the spectrogram dimensions.
+        pixels.resize(height * width * 4);
         for (int y = 0; y < height; y++) {
             // Compute the gain based on the octave offset.
             auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + epsilon);
@@ -732,9 +735,9 @@ struct SpectralImageDisplay : TransparentWidget {
 
         // Create or update the image container.
         if (screen == -1)
-            screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels);
+            screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels.data());
         else
-            nvgUpdateImage(args.vg, screen, pixels);
+            nvgUpdateImage(args.vg, screen, pixels.data());
 
         // Compute the mask rectangle from the padded region.
         const Rect mask = Rect(
