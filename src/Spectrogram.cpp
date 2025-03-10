@@ -14,9 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>
-#include <string>
-#include <iomanip>
+#include <algorithm>  // std::fill
+#include <string>     // std::string
+#include <limits>     // std::numeric_limits
+#include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
 
 /// @brief A spectrogram module.
@@ -643,15 +644,11 @@ struct SpectralImageDisplay : TransparentWidget {
             // nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            std::stringstream stream;
-            if (freq < 1000.f)
-                stream << std::fixed << std::setprecision(0) << freq << "Hz";
-            else
-                stream << std::fixed << std::setprecision(1) << freq / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
@@ -684,18 +681,12 @@ struct SpectralImageDisplay : TransparentWidget {
             // Apply the same translation and scaling as used in draw_spectrogram.
             float point_y = pad_top + (t - texture_y_high) * scale_y;
 
-            // Format the tick label.
-            std::stringstream stream;
-            if (base_frequency < 1000.f)
-                stream << std::fixed << std::setprecision(0) << base_frequency << "Hz";
-            else
-                stream << std::fixed << std::setprecision(0) << base_frequency / 1000.f << "kHz";
-
             // Render the tick label.
+            const auto freq_string = Math::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
@@ -707,8 +698,6 @@ struct SpectralImageDisplay : TransparentWidget {
         const auto slope = module->get_slope();
         // Determine the Nyquist rate from the sample rate.
         const float nyquist_rate = module->get_sample_rate() / 2.f;
-        // A small constant for numerical stability.
-        static constexpr float epsilon = 1e-6f;
         // Determine the dimensions of the spectral image.
         const int width = module->get_coefficients().size();
         const int height = module->get_coefficients()[0].size() / 2;
@@ -717,7 +706,7 @@ struct SpectralImageDisplay : TransparentWidget {
         pixels.resize(height * width * 4);
         for (int y = 0; y < height; y++) {
             // Compute the gain based on the octave offset.
-            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + epsilon);
+            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
             gain = Math::decibels2amplitude(slope * gain);
             for (int x = 0; x < width; x++) {
                 float scaled_y = y;
@@ -853,15 +842,9 @@ struct SpectralImageDisplay : TransparentWidget {
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
 
-        // Format the frequency as text.
-        std::ostringstream stream;
-        if (hover_freq < 1000.f)
-            stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
-        else
-            stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
-
         // Render the hovered frequency at the top left.
-        nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
+        const auto freq_string = Math::freq_to_string(hover_freq);
+        nvgText(args.vg, pad_left + 3, pad_top / 2, freq_string.c_str(), NULL);
 
         // Optionally, also render musical note information.
         if (hover_freq > 0) {

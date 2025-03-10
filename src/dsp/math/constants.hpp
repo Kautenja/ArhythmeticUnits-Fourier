@@ -60,11 +60,11 @@ template<typename T>
 inline static std::string freq_to_string(const T& freq) {
     std::ostringstream stream;
     stream << std::fixed << std::setprecision(2);
-    if (freq > 1e9)
+    if (freq >= 1e9)
         stream << freq / 1e9 << "GHz";
-    else if (freq > 1e6)
+    else if (freq >= 1e6)
         stream << freq / 1e6 << "MHz";
-    else if (freq > 1e3)
+    else if (freq >= 1e3)
         stream << freq / 1e3 << "KHz";
     else
         stream << freq << "Hz";

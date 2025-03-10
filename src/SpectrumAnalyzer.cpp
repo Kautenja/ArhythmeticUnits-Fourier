@@ -14,9 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>
-#include <string>
-#include <iomanip>
+#include <algorithm>  // std::fill
+#include <string>     // std::string
+#include <limits>     // std::numeric_limits
+#include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
 
 /// @brief A spectrum analyzer module.
@@ -520,8 +521,6 @@ struct SpectrumAnalyzer : Module {
     /// frequency to render change from their default values.
     ///
     void make_points(const size_t& lane_index) {
-        // A small constant for numerical stability.
-        static constexpr float epsilon = 1e-6f;
         // The reference frequency for the slope compensation.
         static constexpr float reference_frequency = 1000.f;
         // The maximum amplitude for logarithmic mode.
@@ -549,7 +548,7 @@ struct SpectrumAnalyzer : Module {
             // multiply by the slope. Because we're dealing with y first in
             // terms of amplitude, also convert the decibel scaling to an
             // amplitude gain.
-            auto gain = log2f(point.x * nyquist_rate / reference_frequency + epsilon);
+            auto gain = log2f(point.x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
             gain = Math::decibels2amplitude(slope * gain);
             // Normalize X point based on the minimum and maximum frequencies.
             point.x -= low_frequency / nyquist_rate;
@@ -814,15 +813,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            std::stringstream stream;
-            if (freq < 1000.f)
-                stream << std::fixed << std::setprecision(0) << freq << "Hz";
-            else
-                stream << std::fixed << std::setprecision(1) << freq / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, point_x, box.size.y - pad_bottom + 8, stream.str().c_str(), NULL);
+            nvgText(args.vg, point_x, box.size.y - pad_bottom + 8, freq_string.c_str(), NULL);
         }
     }
 
@@ -856,15 +851,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 nvgClosePath(args.vg);
             }
             // Render a label with the base frequency in kHz.
-            std::stringstream stream;
-            if (base_frequency < 1000.f)
-                stream << std::fixed << std::setprecision(0) << base_frequency << "Hz";
-            else
-                stream << std::fixed << std::setprecision(0) << base_frequency / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 8, stream.str().c_str(), NULL);
+            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 8, freq_string.c_str(), NULL);
         }
     }
 
