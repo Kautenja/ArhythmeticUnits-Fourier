@@ -56,11 +56,8 @@ inline Color interpolate_color(const Color& c1, const Color& c2, float t) {
 template<typename T, size_t N>
 inline Color get_colormap_value(const T (&colormap)[N], float value) {
     static const int TABLE_SIZE = N;
-    // Clamp input to [0, 1]
-    if (value < 0.f) value = 0.f;
-    if (value > 1.f) value = 1.f;
-    // Find the segment in the colormap
-    float scaled_value = value * (TABLE_SIZE - 1);
+    // Clamp input to [0, 1] and find the segment in the color-map.
+    float scaled_value = Math::clip(value, 0.f, 1.f) * (TABLE_SIZE - 1);
     int index = static_cast<int>(scaled_value);
     float t = scaled_value - index;
     // Interpolate between the two nearest colors
