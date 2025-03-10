@@ -28,7 +28,6 @@ extern Plugin* plugin_instance;
 #include "./rack_extensions/menu_item.hpp"
 #include "./rack_extensions/param_quantity.hpp"
 #include "./rack_extensions/text_knob.hpp"
-#include "./rack_extensions/theme.hpp"
 
 // DSP library and mathematical utilities
 #include "./dsp/filter.hpp"

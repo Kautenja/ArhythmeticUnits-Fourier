@@ -1211,22 +1211,18 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 };
 
-/// The base-name for the panel files.
-const char BASENAME[] = "res/SpectrumAnalyzer";
-
 /// @brief The widget for the spectrum analyzer module.
-struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
+struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @brief Create a new spectrum analyzer widget.
     ///
     /// @param module The back-end module to interact with. Can be a nullptr.
     ///
-    explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ThemedWidget<BASENAME>() {
+    explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ModuleWidget() {
         setModule(module);
-        // Screws
-        addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, 0)));
-        addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
-        addChild(createWidget<ScrewBlack>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
-        addChild(createWidget<ScrewBlack>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+        setPanel(createPanel(
+            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Light.svg"),
+            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Dark.svg")
+        ));
         // Input signals, gains, output signals, and meters.
         for (std::size_t i = 0; i < SpectrumAnalyzer::NUM_CHANNELS; i++) {
             addInput(createInput<PJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
@@ -1270,6 +1266,11 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
         addParam(createParam<TextKnob>(Vec(50 + 8 * 66, 330), module, SpectrumAnalyzer::PARAM_HIGH_FREQUENCY));
         // Slope (dB/octave @1000Hz) controls.
         addParam(createParam<TextKnob>(Vec(50 + 9 * 66, 330), module, SpectrumAnalyzer::PARAM_SLOPE));
+        // Screws
+        addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
+        addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
+        addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
+        addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
     }
 
     /// @brief Append the context menu to the module when right clicked.
@@ -1294,7 +1295,7 @@ struct SpectrumAnalyzerWidget : ThemedWidget<BASENAME> {
         ac_coupling_item->flag = &module->is_ac_coupled;
         menu->addChild(ac_coupling_item);
         // Call the super function.
-        ThemedWidget<BASENAME>::appendContextMenu(menu);
+        ModuleWidget::appendContextMenu(menu);
     }
 };
 
