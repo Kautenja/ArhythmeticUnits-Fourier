@@ -624,9 +624,9 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// The vertical (bottom) padding for the plot.
     const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    const size_t pad_left = 30;
+    const size_t pad_left = 35;
     /// The horizontal (right) padding for the plot.
-    const size_t pad_right = 5;
+    const size_t pad_right = 15;
     /// The radius of the rounded corners of the screen
     const int corner_radius = 5;
     /// The background color of the screen
@@ -801,7 +801,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, point_x, box.size.y - pad_bottom + 8, freq_string.c_str(), NULL);
+            nvgText(args.vg, point_x, box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
         }
     }
 
@@ -839,7 +839,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 8, freq_string.c_str(), NULL);
+            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
         }
     }
 
@@ -863,7 +863,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2, y_position, label.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
         }
     }
 
@@ -898,7 +898,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2, y_position, label.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
         }
     }
 

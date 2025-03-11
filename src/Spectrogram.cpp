@@ -466,7 +466,7 @@ struct SpectralImageDisplay : TransparentWidget {
     /// The horizontal (left) padding for the plot.
     const size_t pad_left = 40;
     /// The horizontal (right) padding for the plot.
-    const size_t pad_right = 5;
+    const size_t pad_right = 15;
     /// The radius of the rounded corners of the screen
     const int corner_radius = 5;
     /// The background color of the screen
