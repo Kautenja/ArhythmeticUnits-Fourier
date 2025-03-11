@@ -122,8 +122,7 @@ struct SpectrumAnalyzer : Module {
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configParam<WindowFunctionParamQuantity>(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window");
-        getParamQuantity(PARAM_WINDOW_FUNCTION)->snapEnabled = true;
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::function_names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
@@ -1222,7 +1221,7 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
         addChild(display);
         // Screen controls.
         // Window function control with custom angles to match discrete range.
-        auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_FUNCTION);
+        auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_FUNCTION);
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
         // Window length control with custom angles to match discrete range.

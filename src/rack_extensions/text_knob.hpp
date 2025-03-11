@@ -98,21 +98,6 @@ struct ParamWidgetMenuItem : MenuItem {
     }
 };
 
-/// @brief A text knob with window function option selection when right-clicked.
-struct WindowFunctionTextKnob : TextKnob {
-    void appendContextMenu(Menu* menu) override {
-        menu->addChild(new MenuSeparator);
-        for (size_t i = 0; i < 15; i++) {  // TODO: get total number of windows automatically
-            const auto label = Math::Window::name(static_cast<Math::Window::Function>(i));
-            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
-            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
-            item->value = i;
-            item->param_widget = this;
-            menu->addChild(item);
-        }
-    }
-};
-
 /// @brief A text knob with window length option selection when right-clicked.
 struct WindowLengthTextKnob : TextKnob {
     void appendContextMenu(Menu* menu) override {

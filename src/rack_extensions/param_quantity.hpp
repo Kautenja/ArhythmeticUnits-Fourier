@@ -22,12 +22,4 @@
 #include "../structs.hpp"
 #include "../dsp/math.hpp"
 
-/// @brief A parameter quantity for window function selection.
-struct WindowFunctionParamQuantity : ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() final {
-        return Math::Window::name(static_cast<Math::Window::Function>(getValue()));
-    }
-};
-
 #endif  // ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_PARAM_QUANTITY_HPP_

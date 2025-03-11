@@ -417,6 +417,27 @@ enum class Function {
     Flattop,
 };
 
+static const std::vector<std::string>& function_names() {
+    static const std::vector<std::string> names = {
+        "Boxcar",
+        "Bartlett",
+        "BartlettHann",
+        "Parzen",
+        "Welch",
+        "Cosine",
+        "Bohman",
+        "Lanczos",
+        "Hann",
+        "Hamming",
+        "Blackman",
+        "BlackmanHarris",
+        "BlackmanNuttall",
+        "KaiserBessel",
+        "Flattop"
+    };
+    return names;
+}
+
 /// @brief Calculate the value of a standard window.
 ///
 /// @tparam T the type of data to calculate the window value
