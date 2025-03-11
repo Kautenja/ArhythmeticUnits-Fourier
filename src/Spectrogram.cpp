@@ -965,18 +965,8 @@ struct SpectrogramWidget : ModuleWidget {
     ///
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
-        // get a pointer to the module
-        Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
-
-        // -------------------------------------------------------------------
-        // MARK: A/C Coupling
-        // -------------------------------------------------------------------
-
+        menu->addChild(createMenuLabel("Render Settings"));
         menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
-
-        // -------------------------------------------------------------------
-        // MARK: Color Map
-        // -------------------------------------------------------------------
 
         /// A menu item for changing the color map.
         struct ColorMapItem : MenuItem {
@@ -994,10 +984,10 @@ struct SpectrogramWidget : ModuleWidget {
         menu->addChild(createMenuLabel("Color Map"));
         for (unsigned i = 0; i < static_cast<int>(Math::ColorMap::Function::NumFunctions); i++) {
             const auto color_map = static_cast<Math::ColorMap::Function>(i);
-            const auto check = CHECKMARK(module->color_map == color_map);
+            const auto check = CHECKMARK(getModule<Spectrogram>()->color_map == color_map);
             auto item = createMenuItem<ColorMapItem>(Math::ColorMap::name(color_map), check);
             item->color_map = color_map;
-            item->module = module;
+            item->module = getModule<Spectrogram>();
             menu->addChild(item);
         }
 
