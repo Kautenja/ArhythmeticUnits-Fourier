@@ -34,6 +34,7 @@ enum class FrequencyScale {
     NumOptions
 };
 
+/// @brief Return a vector of frequency scale names.
 static const std::vector<std::string>& frequency_scale_names() {
     static const std::vector<std::string> names = {
         "Linear",
@@ -58,6 +59,7 @@ enum class MagnitudeScale {
     NumOptions
 };
 
+/// @brief Return a vector of magnitude scale names.
 static const std::vector<std::string>& magnitude_scale_names() {
     static const std::vector<std::string> names = {
         "Linear",
@@ -114,6 +116,7 @@ enum class FrequencySmoothing {
     NumOptions
 };
 
+/// @brief Return a vector of frequency smoothing names.
 static const std::vector<std::string>& frequency_smoothing_names() {
     static const std::vector<std::string> names = {
         "None",

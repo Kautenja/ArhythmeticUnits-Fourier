@@ -417,6 +417,7 @@ enum class Function {
     Flattop,
 };
 
+/// @brief Return a vector of window function names.
 static const std::vector<std::string>& function_names() {
     static const std::vector<std::string> names = {
         "Boxcar",
@@ -466,55 +467,6 @@ inline T window(Function window_, const T& n, const T& N, const bool& is_symmetr
     case Function::KaiserBessel:    return kaiserbessel<T>(n, N, is_symmetric);
     case Function::Flattop:         return flattop<T>(n, N, is_symmetric);
     default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window_)));
-    }
-}
-
-/// @brief Return the name of the window as a string.
-///
-/// @tparam window the window function to get the side-lobe amplitude of
-/// @returns the string name for the window.
-///
-template<Function window>
-std::string name();
-template<> inline std::string name<Function::Boxcar>()          { return "Boxcar";           }
-template<> inline std::string name<Function::Bartlett>()        { return "Bartlett";         }
-template<> inline std::string name<Function::BartlettHann>()    { return "Bartlett-Hann";    }
-template<> inline std::string name<Function::Parzen>()          { return "Parzen";           }
-template<> inline std::string name<Function::Welch>()           { return "Welch";            }
-template<> inline std::string name<Function::Cosine>()          { return "Cosine";           }
-template<> inline std::string name<Function::Bohman>()          { return "Bohman";           }
-template<> inline std::string name<Function::Lanczos>()         { return "Lanczos";          }
-template<> inline std::string name<Function::Hann>()            { return "Hann";             }
-template<> inline std::string name<Function::Hamming>()         { return "Hamming";          }
-template<> inline std::string name<Function::Blackman>()        { return "Blackman";         }
-template<> inline std::string name<Function::BlackmanHarris>()  { return "Blackman-Harris";  }
-template<> inline std::string name<Function::BlackmanNuttall>() { return "Blackman-Nuttall"; }
-template<> inline std::string name<Function::KaiserBessel>()    { return "Kaiser-Bessel";    }
-template<> inline std::string name<Function::Flattop>()         { return "Flattop";          }
-
-/// @brief Return the name of the window as a string.
-///
-/// @param window the window function to get the side-lobe amplitude of
-/// @returns the string name for the window.
-///
-inline std::string name(const Function& window) {
-    switch (window) {
-    case Function::Boxcar:          return name<Function::Boxcar>();
-    case Function::Bartlett:        return name<Function::Bartlett>();
-    case Function::BartlettHann:    return name<Function::BartlettHann>();
-    case Function::Parzen:          return name<Function::Parzen>();
-    case Function::Welch:           return name<Function::Welch>();
-    case Function::Cosine:          return name<Function::Cosine>();
-    case Function::Bohman:          return name<Function::Bohman>();
-    case Function::Lanczos:         return name<Function::Lanczos>();
-    case Function::Hann:            return name<Function::Hann>();
-    case Function::Hamming:         return name<Function::Hamming>();
-    case Function::Blackman:        return name<Function::Blackman>();
-    case Function::BlackmanHarris:  return name<Function::BlackmanHarris>();
-    case Function::BlackmanNuttall: return name<Function::BlackmanNuttall>();
-    case Function::KaiserBessel:    return name<Function::KaiserBessel>();
-    case Function::Flattop:         return name<Function::Flattop>();
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
