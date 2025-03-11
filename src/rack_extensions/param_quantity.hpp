@@ -30,22 +30,6 @@ struct WindowFunctionParamQuantity : ParamQuantity {
     }
 };
 
-/// @brief A parameter quantity for magnitude scale selection.
-struct MagnitudeScaleParamQuantity : ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() override {
-        return to_string(static_cast<MagnitudeScale>(getValue()));
-    }
-};
-
-/// @brief A parameter quantity for frequency scale selection.
-struct FrequencyScaleParamQuantity : ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() final {
-        return to_string(static_cast<FrequencyScale>(getValue()));
-    }
-};
-
 /// @brief A parameter quantity for frequency smoothing selection.
 struct FrequencySmoothingParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.

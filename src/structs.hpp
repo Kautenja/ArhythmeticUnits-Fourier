@@ -17,6 +17,9 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_STRUCTS_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_STRUCTS_HPP_
 
+#include <vector>
+#include <string>
+
 // ---------------------------------------------------------------------------
 // MARK: Frequency Scale
 // ---------------------------------------------------------------------------
@@ -31,15 +34,12 @@ enum class FrequencyScale {
     NumOptions
 };
 
-/// @brief Convert the given frequency scale option to a string.
-/// @param value The frequency scale value to serialize to a string.
-/// @returns The string representation of the given frequency scale value.
-inline const char* to_string(const FrequencyScale& value) {
-    switch (value) {
-    case FrequencyScale::Linear: return "Linear";
-    case FrequencyScale::Logarithmic: return "Logarithmic";
-    default: return "";
-    }
+static const std::vector<std::string>& frequency_scale_names() {
+    static const std::vector<std::string> names = {
+        "Linear",
+        "Logarithmic"
+    };
+    return names;
 }
 
 // ---------------------------------------------------------------------------
@@ -58,16 +58,13 @@ enum class MagnitudeScale {
     NumOptions
 };
 
-/// @brief Convert the given magnitude scale option to a string.
-/// @param value The magnitude scale value to serialize to a string.
-/// @returns The string representation of the given magnitude scale value.
-inline const char* to_string(const MagnitudeScale& value) {
-    switch (value) {
-    case MagnitudeScale::Linear:           return "Linear";
-    case MagnitudeScale::Logarithmic60dB:  return "Log 60dB";
-    case MagnitudeScale::Logarithmic120dB: return "Log 120dB";
-    default: return "";
-    }
+static const std::vector<std::string>& magnitude_scale_names() {
+    static const std::vector<std::string> names = {
+        "Linear",
+        "Log 60dB",
+        "Log 120dB"
+    };
+    return names;
 }
 
 // ---------------------------------------------------------------------------

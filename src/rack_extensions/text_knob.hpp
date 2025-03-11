@@ -128,36 +128,6 @@ struct WindowLengthTextKnob : TextKnob {
     }
 };
 
-/// @brief A text knob with frequency scale option selection when right-clicked.
-struct FrequencyScaleTextKnob : TextKnob {
-    void appendContextMenu(Menu* menu) override {
-        menu->addChild(new MenuSeparator);
-        for (size_t i = 0; i < static_cast<size_t>(FrequencyScale::NumOptions); i++) {
-            const auto label = to_string(static_cast<FrequencyScale>(i));
-            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
-            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
-            item->value = i;
-            item->param_widget = this;
-            menu->addChild(item);
-        }
-    }
-};
-
-/// @brief A text knob with magnitude scale option selection when right-clicked.
-struct MagnitudeScaleTextKnob : TextKnob {
-    void appendContextMenu(Menu* menu) override {
-        menu->addChild(new MenuSeparator);
-        for (size_t i = 0; i < static_cast<size_t>(MagnitudeScale::NumOptions); i++) {
-            const auto label = to_string(static_cast<MagnitudeScale>(i));
-            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
-            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
-            item->value = i;
-            item->param_widget = this;
-            menu->addChild(item);
-        }
-    }
-};
-
 /// @brief A text knob with frequency smoothing option selection when right-clicked.
 struct FrequencySmoothingTextKnob : TextKnob {
     void appendContextMenu(Menu* menu) override {

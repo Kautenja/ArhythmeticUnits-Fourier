@@ -140,14 +140,13 @@ struct SpectrumAnalyzer : Module {
             "The hop size for the time-domain segmentation (STFT.)\n"
             "The analyzer computes a new FFT along this period.";
         // Setup the discrete frequency scale selector.
-        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale");
-        getParamQuantity(PARAM_FREQUENCY_SCALE)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
             "a logarithmic scale.";
         // Setup the discrete magnitude scale selector.
-        configParam<MagnitudeScaleParamQuantity>(PARAM_MAGNITUDE_SCALE, 0, 2, 1, "Y Scale");
+        configSwitch(PARAM_MAGNITUDE_SCALE, 0, 2, 1, "Y Scale", magnitude_scale_names());
         getParamQuantity(PARAM_MAGNITUDE_SCALE)->snapEnabled = true;
         getParamQuantity(PARAM_MAGNITUDE_SCALE)->description =
             "The magnitude scale on the display. The DFT spaces\n"
@@ -1235,11 +1234,11 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
         // Hop length control.
         addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, SpectrumAnalyzer::PARAM_HOP_LENGTH));
         // Frequency scale control with custom angles to match discrete range.
-        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 3 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
+        auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
         addParam(frequency_scale_param);
         // Magnitude scale control with custom angles to match discrete range.
-        auto magnitude_scale_param = createParam<MagnitudeScaleTextKnob>(Vec(50 + 4 * 66, 330), module, SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE);
+        auto magnitude_scale_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE);
         magnitude_scale_param->maxAngle = 0.6 * M_PI;
         addParam(magnitude_scale_param);
         // Time smoothing control.
