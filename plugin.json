@@ -18,7 +18,7 @@
     },
     {
       "slug": "Spectrogram",
-      "name": "Spectre (Spectrogram)",
+      "name": "Spectre (Spectrogram Visualizer)",
       "description": "Tune-able spectrogram visualizer",
       "manualUrl": "https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf",
       "tags": ["Visual"]
