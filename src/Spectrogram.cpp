@@ -114,7 +114,7 @@ struct Spectrogram : Module {
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configSwitch(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::function_names());
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";

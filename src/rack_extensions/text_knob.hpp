@@ -16,8 +16,6 @@
 
 #include <string>
 #include "rack.hpp"
-#include "../structs.hpp"
-#include "../dsp/math.hpp"
 
 #ifndef ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_TEXT_KNOB_HPP_
@@ -82,34 +80,6 @@ struct TextKnob : app::Knob {
             nvgText(args.vg, box.size.x / 2.f, 18, value.text.c_str(), NULL);
         }
         app::Knob::drawLayer(args, layer);
-    }
-};
-
-/// @brief A menu item for changing a parameter widget value.
-struct ParamWidgetMenuItem : MenuItem {
-    /// The parameter widget to update.
-    app::ParamWidget* param_widget = nullptr;
-    /// The option for this menu item.
-    float value;
-
-    /// @brief Respond to the menu item being selected.
-    inline void onAction(const event::Action& e) override {
-        param_widget->getParamQuantity()->setValue(value);
-    }
-};
-
-/// @brief A text knob with window length option selection when right-clicked.
-struct WindowLengthTextKnob : TextKnob {
-    void appendContextMenu(Menu* menu) override {
-        menu->addChild(new MenuSeparator);
-        for (size_t i = 7; i < 15; i++) {
-            const auto label = std::to_string(1 << i);
-            const auto check = CHECKMARK(getParamQuantity()->getValue() == i);
-            auto item = createMenuItem<ParamWidgetMenuItem>(label, check);
-            item->value = i;
-            item->param_widget = this;
-            menu->addChild(item);
-        }
     }
 };
 
