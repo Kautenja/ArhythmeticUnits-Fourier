@@ -749,15 +749,7 @@ struct SpectralImageDisplay : TransparentWidget {
         nvgResetScissor(args.vg);
         nvgRestore(args.vg);
 
-        // Draw a border around the spectrogram (mask area).
-        nvgBeginPath(args.vg);
-        nvgRect(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
-        nvgStrokeWidth(args.vg, axis_stroke_width);
-        nvgStrokeColor(args.vg, axis_stroke_color);
-        nvgStroke(args.vg);
-        nvgClosePath(args.vg);
-
-        // Draw the scan-line to indicate the current hop index.
+        // Draw a scan-line to indicate the current hop index.
         nvgBeginPath(args.vg);
         float scan_x = module->get_hop_index() / static_cast<float>(width);
         nvgMoveTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y);
@@ -889,14 +881,14 @@ struct SpectralImageDisplay : TransparentWidget {
                     draw_cross_hair(args);
                     draw_cross_hair_text(args);
                 }
-                // Border
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-                nvgStrokeWidth(args.vg, axis_stroke_width);
-                nvgStrokeColor(args.vg, axis_stroke_color);
-                nvgStroke(args.vg);
-                nvgClosePath(args.vg);
             }
+            // Border
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+            nvgStrokeWidth(args.vg, axis_stroke_width);
+            nvgStrokeColor(args.vg, axis_stroke_color);
+            nvgStroke(args.vg);
+            nvgClosePath(args.vg);
         }
         Widget::drawLayer(args, layer);
     }
