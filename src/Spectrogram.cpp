@@ -566,50 +566,50 @@ struct SpectralImageDisplay : TransparentWidget {
     //     e.consume(this);
     // }
 
-    /// Respond to a button event on this widget.
-    void onButton(const event::Button &e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the mouse state to the hover position.
-        mouse_state.position = e.pos;
-        // setup the drag state.
-        mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
-        // if the action is a press copy the waveform before updating
-        mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
-        // Handle right clicks.
-        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
-            dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
-    }
+    // /// Respond to a button event on this widget.
+    // void onButton(const event::Button &e) override {
+    //     // Consume the event to prevent it from propagating.
+    //     e.consume(this);
+    //     // Set the mouse state to the hover position.
+    //     mouse_state.position = e.pos;
+    //     // setup the drag state.
+    //     mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
+    //     // if the action is a press copy the waveform before updating
+    //     mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
+    //     // Handle right clicks.
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
+    //         dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
+    // }
 
-    /// @brief Respond to drag start event on this widget.
-    void onDragStart(const event::DragStart &e) override {
-        // // lock the cursor so it does not move in the engine during the edit
-        // APP->window->cursorLock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-    }
+    // /// @brief Respond to drag start event on this widget.
+    // void onDragStart(const event::DragStart &e) override {
+    //     // // lock the cursor so it does not move in the engine during the edit
+    //     // APP->window->cursorLock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    // }
 
-    /// @brief Respond to drag move event on this widget.
-    void onDragMove(const event::DragMove &e) override {
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        // if the drag operation is not active, return early
-        if (!mouse_state.is_pressed) return;
-        // update the drag state based on the change in position from the mouse
-        mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
-        mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
-    }
+    // /// @brief Respond to drag move event on this widget.
+    // void onDragMove(const event::DragMove &e) override {
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     // if the drag operation is not active, return early
+    //     if (!mouse_state.is_pressed) return;
+    //     // update the drag state based on the change in position from the mouse
+    //     mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
+    //     mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
+    // }
 
-    /// @brief Respond to drag end event on this widget.
-    void onDragEnd(const event::DragEnd &e) override {
-        // // unlock the cursor to return it to its normal state
-        // APP->window->cursorUnlock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        if (!mouse_state.is_pressed) return;
-        // disable the press state.
-        mouse_state.is_pressed = false;
-    }
+    // /// @brief Respond to drag end event on this widget.
+    // void onDragEnd(const event::DragEnd &e) override {
+    //     // // unlock the cursor to return it to its normal state
+    //     // APP->window->cursorUnlock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     if (!mouse_state.is_pressed) return;
+    //     // disable the press state.
+    //     mouse_state.is_pressed = false;
+    // }
 
     // -----------------------------------------------------------------------
     // MARK: Rendering
