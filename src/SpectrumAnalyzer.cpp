@@ -483,7 +483,6 @@ struct SpectrumAnalyzer : Module {
     }
 
     /// @brief Create a point from a spectral coefficient.
-    ///
     /// @param index The index of the frequency bin.
     /// @param coefficient The value of the frequency bin.
     /// @param length Half the length of the FFT, i.e., \f$\frac{N}{2}\f$.
@@ -508,7 +507,6 @@ struct SpectrumAnalyzer : Module {
     /// \f$[0, 1]\f$. Points outside this range should likely be removed
     /// before plotting. This can occur when the minimum and/or maximum
     /// frequency to render change from their default values.
-    ///
     void make_points(const size_t& lane_index) {
         // The reference frequency for the slope compensation.
         static constexpr float reference_frequency = 1000.f;
@@ -594,9 +592,7 @@ struct SpectrumAnalyzer : Module {
     }
 
     /// @brief Set the lights on the panel.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     inline void process_lights(const ProcessArgs& args) {
         if (!light_divider.process()) return;
         const auto light_time = args.sampleTime * light_divider.getDivision();
@@ -604,9 +600,7 @@ struct SpectrumAnalyzer : Module {
     }
 
     /// @brief Process a sample.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     void process(const ProcessArgs& args) final {
         process_window();
         process_run_button();
@@ -684,9 +678,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
 
  public:
     /// @brief Initialize a new spectrum analyzer display widget.
-    ///
     /// @param module_ the module to render on the display.
-    ///
     explicit SpectrumAnalyzerDisplay(SpectrumAnalyzer* module_) :
         TransparentWidget(),
         module(module_) { }
@@ -775,9 +767,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     // -----------------------------------------------------------------------
 
     /// @brief Draw the X ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_x_ticks_linear(const DrawArgs& args) {
         static constexpr float xticks = 10;
         for (float i = 1; i < xticks; i++) {
@@ -806,9 +796,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 
     /// @brief Draw the X ticks with an exponential scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_x_ticks_logarithmic(const DrawArgs& args) {
         // Iterate over frequencies exponentially (base 10) starting
         // at at least 100Hz up to the maximum frequency (at most the Nyquist
@@ -844,9 +832,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 
     /// @brief Draw the Y ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_linear(const DrawArgs& args) {
         // Iterate over the levels from 25%-400% in steps of 25%.
         for (int level_offset = 0; level_offset < 17; level_offset++) {
@@ -868,13 +854,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 
     /// @brief Draw the Y ticks with a logarithmic scale.
-    ///
     /// @tparam L the data type for the levels.
     /// @param args The arguments for the current draw call.
     /// @param minimum_level The minimum level to render.
     /// @param maximum_level The maximum level to render.
     /// @param levels The individual magnitude levels to render and label.
-    ///
     template<typename L>
     void draw_y_ticks_logarithmic(
         const DrawArgs& args,
@@ -908,7 +892,6 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param stroke_width The width of the stroke.
     /// @param stroke_color The color of the stroke.
     /// @param fill_color The color of the fill.
-    ///
     void draw_coefficients(
         const DrawArgs& args,
         std::vector<Vec> coefficients,
@@ -1106,9 +1089,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 
     /// @brief Draw the screen.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // Render as a light/display w/o dimming features
             // Draw the background.
@@ -1187,9 +1168,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
 /// @brief The widget for the spectrum analyzer module.
 struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @brief Create a new spectrum analyzer widget.
-    ///
     /// @param module The back-end module to interact with. Can be a nullptr.
-    ///
     explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ModuleWidget() {
         setModule(module);
         setPanel(createPanel(
@@ -1262,9 +1241,7 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     }
 
     /// @brief Append the context menu to the module when right clicked.
-    ///
     /// @param menu the menu object to add context items for the module to
-    ///
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));

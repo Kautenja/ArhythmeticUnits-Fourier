@@ -433,9 +433,7 @@ struct Spectrogram : Module {
     }
 
     /// @brief Process a sample.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     void process(const ProcessArgs& args) final {
         // Update the window function. We need asymmetric windows for FFT
         // analysis and need coherent gain to be integrated into the window.
@@ -844,9 +842,7 @@ struct SpectralImageDisplay : TransparentWidget {
     }
 
     /// @brief Draw the display on the main context.
-    ///
     /// @param args the arguments for the draw context for this widget
-    ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
             // Background
@@ -946,9 +942,7 @@ struct SpectrogramWidget : ModuleWidget {
     }
 
     /// @brief Append the context menu to the module when right clicked.
-    ///
     /// @param menu the menu object to add context items for the module to
-    ///
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
