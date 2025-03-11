@@ -642,11 +642,6 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// The stroke color for the cross-hair
     const NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
 
-    /// the font for rendering text on the display
-    const std::shared_ptr<Font> font = APP->window->loadFont(
-        asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
-    );
-
     /// The module to render on the display.
     SpectrumAnalyzer* module = nullptr;
 
@@ -1081,6 +1076,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
+        auto font_path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
+        const std::shared_ptr<Font> font = APP->window->loadFont(font_path);
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});

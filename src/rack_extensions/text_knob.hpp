@@ -31,10 +31,6 @@ struct TextKnob : app::Knob {
         float font_size = 10.f;
         /// The line height for the font.
         float line_height = 11.f;
-        /// the font for rendering text on the display
-        std::shared_ptr<Font> font = APP->window->loadFont(
-            asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
-        );
     } label, value;  // The label and value text.
 
     /// @brief Initialize a new text knob.
@@ -63,17 +59,19 @@ struct TextKnob : app::Knob {
 
     /// @brief Draw the layer on the screen.
     void drawLayer(const DrawArgs& args, int layer) override {
+        auto path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
+        std::shared_ptr<Font> font = APP->window->loadFont(path);
         if (layer == 1) {
             // render the label.
             nvgFontSize(args.vg, label.font_size);
-            nvgFontFaceId(args.vg, label.font->handle);
+            nvgFontFaceId(args.vg, font->handle);
             nvgFillColor(args.vg, label.color);
             nvgTextLineHeight(args.vg, label.line_height);
             nvgTextAlign(args.vg, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
             nvgText(args.vg, box.size.x / 2.f, 0, label.text.c_str(), NULL);
             // Render the value.
             nvgFontSize(args.vg, value.font_size);
-            nvgFontFaceId(args.vg, value.font->handle);
+            nvgFontFaceId(args.vg, font->handle);
             nvgFillColor(args.vg, value.color);
             nvgTextLineHeight(args.vg, value.line_height);
             nvgTextAlign(args.vg, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
