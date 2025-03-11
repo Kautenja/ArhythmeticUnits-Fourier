@@ -9,6 +9,8 @@
 -   Update `Spectrogram` to use `createIndexPtrSubmenuItem` instead of custom
     defined menu options for window function selection
 -   Replace `configParam<TriggerParamQuantity>(...)` with `configButton(...)`
+-   Replace `NumOptions` with name vector `.size()` call, which is more direct
+    and readable
 
 ## 2.1.0 (2025-03-10)
 
