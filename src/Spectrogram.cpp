@@ -967,31 +967,7 @@ struct SpectrogramWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
         menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
-
-        /// A menu item for changing the color map.
-        struct ColorMapItem : MenuItem {
-            /// The module to update.
-            Spectrogram* module = nullptr;
-            /// The color map option for this menu item.
-            Math::ColorMap::Function color_map;
-
-            inline void onAction(const event::Action& e) override {
-                module->color_map = color_map;
-            }
-        };
-        // add the color map selection item to the menu
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuLabel("Color Map"));
-        for (unsigned i = 0; i < static_cast<int>(Math::ColorMap::Function::NumFunctions); i++) {
-            const auto color_map = static_cast<Math::ColorMap::Function>(i);
-            const auto check = CHECKMARK(getModule<Spectrogram>()->color_map == color_map);
-            auto item = createMenuItem<ColorMapItem>(Math::ColorMap::name(color_map), check);
-            item->color_map = color_map;
-            item->module = getModule<Spectrogram>();
-            menu->addChild(item);
-        }
-
-        // Call the super function.
+        menu->addChild(createIndexPtrSubmenuItem("Color Map", Math::ColorMap::names(), reinterpret_cast<int*>(&getModule<Spectrogram>()->color_map)));
         ModuleWidget::appendContextMenu(menu);
     }
 };
