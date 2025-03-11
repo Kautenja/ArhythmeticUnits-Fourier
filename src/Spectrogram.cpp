@@ -616,9 +616,7 @@ struct SpectralImageDisplay : TransparentWidget {
     // -----------------------------------------------------------------------
 
     /// @brief Draw the Y ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_linear(const DrawArgs& args) {
         static constexpr float xticks = 10;
         for (float i = 1; i < xticks; i++) {
@@ -647,14 +645,11 @@ struct SpectralImageDisplay : TransparentWidget {
     }
 
     /// @brief Draw the Y ticks with an exponential scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_logarithmic(const DrawArgs& args) {
         // Use the spectrogram image height (number of vertical pixels)
         const int height = module->get_coefficients()[0].size() / 2;
         const float nyquist_rate = module->get_sample_rate() / 2.f;
-
         // Compute the mapping parameters using the same transformation as draw_spectrogram.
         // These define the portion of the texture that is used for the desired frequency range.
         float texture_y_low  = height * (1 - sqrt(get_low_frequency() / nyquist_rate));
@@ -662,11 +657,9 @@ struct SpectralImageDisplay : TransparentWidget {
         float image_section_height = texture_y_low - texture_y_high;
         float draw_height = box.size.y - pad_top - pad_bottom;
         float scale_y = draw_height / image_section_height;
-
         // Determine the frequency range in the logarithmic domain.
         const auto min_exponent = log10(fmax(100.f, get_low_frequency()));
         const auto max_exponent = log10(get_high_frequency());
-
         // Iterate over base frequencies (exponential steps).
         for (float exponent = min_exponent; exponent < max_exponent; exponent++) {
             float base_frequency = powf(10.f, exponent);
@@ -674,7 +667,6 @@ struct SpectralImageDisplay : TransparentWidget {
             float t = height * (1 - sqrt(base_frequency / nyquist_rate));
             // Apply the same translation and scaling as used in draw_spectrogram.
             float point_y = pad_top + (t - texture_y_high) * scale_y;
-
             // Render the tick label.
             const auto freq_string = Math::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
