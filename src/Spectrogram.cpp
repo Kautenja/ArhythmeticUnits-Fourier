@@ -803,11 +803,6 @@ struct SpectralImageDisplay : TransparentWidget {
             float texY_high = texHeight * sqrt(get_high_frequency() / nyquist);
             // Compute the vertical scale factor from texture to screen.
             float scaleY = (box.size.y - pad_top - pad_bottom) / (texY_low - texY_high);
-            // Invert the transform used when drawing the spectrogram:
-            // When drawing, we map: t = texHeight * sqrt(f / nyquist) and then
-            // y = pad_top + (t - texY_high) * scaleY.
-            // So invert that: t = texY_high + (y - pad_top) / scaleY, and then
-            // f = nyquist * (t / texHeight)².
             float t = texY_high + (y_pixels - pad_top) / scaleY;
             hover_freq = nyquist * powf(t / texHeight, 2);
         } else {
