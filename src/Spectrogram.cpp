@@ -972,10 +972,7 @@ struct SpectrogramWidget : ModuleWidget {
         // MARK: A/C Coupling
         // -------------------------------------------------------------------
 
-        // Create an option for enabling AC-coupled mode.
-        auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
-        ac_coupling_item->flag = &module->is_ac_coupled;
-        menu->addChild(ac_coupling_item);
+        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
 
         // -------------------------------------------------------------------
         // MARK: Color Map

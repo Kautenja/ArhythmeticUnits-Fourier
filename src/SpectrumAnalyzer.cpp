@@ -1267,21 +1267,9 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
-        // get a pointer to the module.
-        SpectrumAnalyzer* const module = dynamic_cast<SpectrumAnalyzer*>(this->module);
-        // Create an option for filling the plots.
-        auto filled_display_item = createMenuItem<FlagMenuItem>("Filled Display", CHECKMARK(module->is_fill_enabled));
-        filled_display_item->flag = &module->is_fill_enabled;
-        menu->addChild(filled_display_item);
-        // Create an option for enabling Bezier smoothing.
-        auto bezier_curve_item = createMenuItem<FlagMenuItem>("Bezier Curve", CHECKMARK(module->is_bezier_enabled));
-        bezier_curve_item->flag = &module->is_bezier_enabled;
-        menu->addChild(bezier_curve_item);
-        // Create an option for enabling AC-coupled mode.
-        auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
-        ac_coupling_item->flag = &module->is_ac_coupled;
-        menu->addChild(ac_coupling_item);
-        // Call the super function.
+        menu->addChild(createBoolPtrMenuItem("Filled Display", "", &getModule<SpectrumAnalyzer>()->is_fill_enabled));
+        menu->addChild(createBoolPtrMenuItem("Bezier Curve", "", &getModule<SpectrumAnalyzer>()->is_bezier_enabled));
+        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<SpectrumAnalyzer>()->is_ac_coupled));
         ModuleWidget::appendContextMenu(menu);
     }
 };

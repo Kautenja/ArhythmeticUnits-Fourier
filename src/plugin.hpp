@@ -25,7 +25,6 @@ extern Plugin* plugin_instance;
 
 // Extensions to the VCV rack framework.
 #include "./rack_extensions/graphics.hpp"
-#include "./rack_extensions/menu_item.hpp"
 #include "./rack_extensions/param_quantity.hpp"
 #include "./rack_extensions/text_knob.hpp"
 
