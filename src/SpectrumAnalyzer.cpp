@@ -122,7 +122,7 @@ struct SpectrumAnalyzer : Module {
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configSwitch(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, Math::Window::names().size() - 1, static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
@@ -139,13 +139,13 @@ struct SpectrumAnalyzer : Module {
             "The hop size for the time-domain segmentation (STFT.)\n"
             "The analyzer computes a new FFT along this period.";
         // Setup the discrete frequency scale selector.
-        configSwitch(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale", frequency_scale_names());
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "X Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
             "a logarithmic scale.";
         // Setup the discrete magnitude scale selector.
-        configSwitch(PARAM_MAGNITUDE_SCALE, 0, 2, 1, "Y Scale", magnitude_scale_names());
+        configSwitch(PARAM_MAGNITUDE_SCALE, 0, magnitude_scale_names().size() - 1, static_cast<size_t>(MagnitudeScale::Logarithmic60dB), "Y Scale", magnitude_scale_names());
         getParamQuantity(PARAM_MAGNITUDE_SCALE)->description =
             "The magnitude scale on the display. The DFT spaces\n"
             "magnitude linearly but humans hear volume along\n"
@@ -160,7 +160,7 @@ struct SpectrumAnalyzer : Module {
             "more slowly to provide a general impression of signal\n"
             "frequency content.";
         // Setup frequency smoothing as a custom discrete enumeration.
-        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, frequency_smoothing_names().size() - 1, 0, "Smooth", frequency_smoothing_names());
+        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, frequency_smoothing_names().size() - 1, static_cast<size_t>(FrequencySmoothing::None), "Smooth", frequency_smoothing_names());
         getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"
