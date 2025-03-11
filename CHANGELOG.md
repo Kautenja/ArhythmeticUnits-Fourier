@@ -13,6 +13,8 @@
     and readable
 -   Simplify JSON code for the plugin
 -   Refactor font use following API guidelines (in functions not instances)
+-   Update "screen" padding to prevent graphical glitches and improve over-all
+    look of _Fourier_ and _Spectre_ in the module view within VCV Rack
 
 ## 2.1.0 (2025-03-10)
 
