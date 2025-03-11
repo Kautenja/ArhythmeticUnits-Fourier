@@ -6,6 +6,9 @@
 -   Update `SpectrumAnalyzer` and `Spectrogram` to use `Math::freq_to_string`
     in all cases of frequency string serialization
 -   Remove `FlagMenuItem` in favor of built-in `createBoolPtrMenuItem`
+-   Update `Spectrogram` to use `createIndexPtrSubmenuItem` instead of custom
+    defined menu options for window function selection
+-   Replace `configParam<TriggerParamQuantity>(...)` with `configButton(...)`
 
 ## 2.1.0 (2025-03-10)
 
