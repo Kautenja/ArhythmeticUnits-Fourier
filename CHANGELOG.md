@@ -12,6 +12,7 @@
 -   Replace `NumOptions` with name vector `.size()` call, which is more direct
     and readable
 -   Simplify JSON code for the plugin
+-   Refactor font use following API guidelines (in functions not instances)
 
 ## 2.1.0 (2025-03-10)
 
