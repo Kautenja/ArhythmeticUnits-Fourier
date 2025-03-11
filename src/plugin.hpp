@@ -17,6 +17,7 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_
 
+#include <jansson.h>
 #include "rack.hpp"
 using namespace rack;
 
@@ -32,11 +33,6 @@ extern Plugin* plugin_instance;
 #include "./dsp/math.hpp"
 #include "./dsp/music_theory.hpp"
 #include "./dsp/trigger.hpp"
-
-// Extensions for working with JSON data.
-#include "./json.hpp"
-
-// Structures used in the module.
 #include "./structs.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.

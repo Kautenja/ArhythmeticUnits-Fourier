@@ -228,35 +228,28 @@ struct SpectrumAnalyzer : Module {
     // -----------------------------------------------------------------------
 
     /// @brief Convert the module's state to a JSON object.
-    ///
-    /// @returns a pointer to a new json_t object with the module's state
-    ///
+    /// @returns a pointer to a new json_t object with the module's state.
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
-        JSON::set<bool>(rootJ, "is_running", is_running);
-        JSON::set<bool>(rootJ, "is_fill_enabled", is_fill_enabled);
-        JSON::set<bool>(rootJ, "is_bezier_enabled", is_bezier_enabled);
-        JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
+        json_object_set_new(rootJ, "is_running", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_running));
         return rootJ;
     }
 
     /// @brief Load the module's state from a JSON object.
-    ///
-    /// @param rootJ a pointer to a json_t with state data for this module
-    ///
+    /// @param rootJ a pointer to a json_t with state data for this module.
     inline void dataFromJson(json_t* rootJ) final {
-        JSON::get<bool>(rootJ, "is_running", [&](const bool& value) {
-            is_running = value;
-        });
-        JSON::get<bool>(rootJ, "is_fill_enabled", [&](const bool& value) {
-            is_fill_enabled = value;
-        });
-        JSON::get<bool>(rootJ, "is_bezier_enabled", [&](const bool& value) {
-            is_bezier_enabled = value;
-        });
-        JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) {
-            is_ac_coupled = value;
-        });
+        json_t* opt = nullptr;
+        if ((opt = json_object_get(rootJ, "is_running")))
+            is_running = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_fill_enabled")))
+            is_fill_enabled = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_bezier_enabled")))
+            is_bezier_enabled = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_ac_coupled")))
+            is_ac_coupled = json_boolean_value(opt);
     }
 
     // -----------------------------------------------------------------------
