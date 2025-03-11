@@ -931,23 +931,34 @@ struct SpectrogramWidget : ModuleWidget {
         // Screen controls.
         // Window function control with custom angles to match discrete range.
         auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
+        window_function_param->label.text = "WINDOW";
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
         // Frequency scale control with custom angles to match discrete range.
         auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
+        frequency_scale_param->label.text = "Y SCALE";
         addParam(frequency_scale_param);
         // Time smoothing control.
-        addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
+        auto time_smoothing_param = createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING);
+        time_smoothing_param->label.text = "AVERAGE";
+        addParam(time_smoothing_param);
         // Frequency smoothing control with custom angles to match discrete range.
         auto frequency_smoothing_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        frequency_smoothing_param->label.text = "SMOOTH";
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY));
-        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
+        auto low_freq_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY);
+        low_freq_param->label.text = "LO FREQ";
+        addParam(low_freq_param);
+        auto high_freq_param = createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY);
+        high_freq_param->label.text = "HI FREQ";
+        addParam(high_freq_param);
         // Slope (dB/octave @1000Hz) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE));
+        auto slope_param = createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE);
+        slope_param->label.text = "SLOPE";
+        addParam(slope_param);
         // Screws
         addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
