@@ -605,7 +605,7 @@ struct CachedWindow {
 
     /// @brief Compute the window for the current set of parameters.
     inline void compute_window() {
-        const float gain = is_gained ? T(1) / coherent_gain(function) : T(1);
+        const T gain = is_gained ? T(1) / coherent_gain(function) : T(1);
         for (size_t n = 0; n < samples.size(); n++)
             samples[n] = gain * window<T>(function, n, samples.size(), is_symmetric);
     }
@@ -663,13 +663,13 @@ struct CachedWindow {
     /// @brief Return the window function sample at the given index.
     /// @param index The index of the window function sample to return.
     /// @returns The window function sample at the given index.
-    inline float operator[](const size_t& index) { return samples[index]; }
+    inline T operator[](const size_t& index) { return samples[index]; }
 
     /// @brief Return the current window function.
     inline const Function& get_function() const { return function; }
 
     /// @brief Return the sample buffer.
-    inline std::vector<float>& get_samples() { return samples; }
+    inline std::vector<T>& get_samples() { return samples; }
 
     /// @brief Return true for symmetric window, false for asymmetric.
     inline const bool& get_is_symmetric() const { return is_symmetric; }
