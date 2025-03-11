@@ -22,26 +22,6 @@
 #include "../structs.hpp"
 #include "../dsp/math.hpp"
 
-/// @brief A parameter quantity for a boolean switch.
-struct BooleanParamQuantity : ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() override {
-        if (getValue()) return "On";
-        return "Off";
-    }
-};
-
-/// @brief A parameter quantity for a trigger button.
-struct TriggerParamQuantity : ParamQuantity {
-    /// @brief Return the parameter description instead of the value text.
-    inline std::string getDisplayValueString() override {
-        return ParamQuantity::getLabel();
-    }
-
-    /// @brief Return the parameter description (disabled for this trigger).
-    inline std::string getLabel() override { return ""; }
-};
-
 /// @brief A parameter quantity for window function selection.
 struct WindowFunctionParamQuantity : ParamQuantity {
     /// @brief Return the value as a formatted string.

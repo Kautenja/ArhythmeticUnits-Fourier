@@ -109,7 +109,7 @@ struct Spectrogram : Module {
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
         configInput(INPUT_SIGNAL, "TODO");
         // Configure the run button.
-        configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
+        configButton(PARAM_RUN, "Run");
         getParamQuantity(PARAM_RUN)->description =
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
