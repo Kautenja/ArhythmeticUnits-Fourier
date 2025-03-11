@@ -36,6 +36,7 @@ extern Plugin* plugin_instance;
 // Extensions for working with JSON data.
 #include "./json.hpp"
 
+// Structures used in the module.
 #include "./structs.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.

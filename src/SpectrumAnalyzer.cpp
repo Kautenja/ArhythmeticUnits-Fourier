@@ -160,7 +160,7 @@ struct SpectrumAnalyzer : Module {
             "more slowly to provide a general impression of signal\n"
             "frequency content.";
         // Setup frequency smoothing as a custom discrete enumeration.
-        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth", frequency_smoothing_names());
+        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, frequency_smoothing_names().size() - 1, 0, "Smooth", frequency_smoothing_names());
         getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"

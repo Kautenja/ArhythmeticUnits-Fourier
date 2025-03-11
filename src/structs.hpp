@@ -29,9 +29,7 @@ enum class FrequencyScale {
     /// Linear frequency rendering along a fixed offset.
     Linear = 0,
     /// Logarithmic frequency rendering along base 10 harmonics.
-    Logarithmic,
-    /// The total number of frequency smoothing options
-    NumOptions
+    Logarithmic
 };
 
 /// @brief Return a vector of frequency scale names.
@@ -54,9 +52,7 @@ enum class MagnitudeScale {
     /// Logarithmic magnitude rendering from -60dB to 12dB.
     Logarithmic60dB,
     /// Logarithmic magnitude rendering from -120dB to 12dB.
-    Logarithmic120dB,
-    /// The total number of frequency smoothing options
-    NumOptions
+    Logarithmic120dB
 };
 
 /// @brief Return a vector of magnitude scale names.
@@ -111,9 +107,7 @@ enum class FrequencySmoothing {
     /// 2 octaves.
     _2_1,
     /// 2.5 octaves.
-    _5_2,
-    /// The total number of frequency smoothing options
-    NumOptions
+    _5_2
 };
 
 /// @brief Return a vector of frequency smoothing names.
@@ -159,7 +153,7 @@ inline float to_float(const FrequencySmoothing& value) {
     case FrequencySmoothing::_3_2:  return 1.5f;
     case FrequencySmoothing::_2_1:  return 2.f;
     case FrequencySmoothing::_5_2:  return 2.5f;
-    default: return 0.f;
+    default: throw std::runtime_error("Invalid frequency smoothing " + std::to_string(static_cast<int>(value)));
     }
 }
 
