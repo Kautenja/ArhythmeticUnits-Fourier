@@ -59,7 +59,7 @@ inline constexpr std::complex<T> j() { return std::complex<T>(0, 1); }
 template<typename T>
 inline static std::string freq_to_string(const T& freq) {
     std::ostringstream stream;
-    stream << std::fixed << std::setprecision(2);
+    stream << std::fixed << std::setprecision(1);
     if (freq >= 1e9)
         stream << freq / 1e9 << "GHz";
     else if (freq >= 1e6)

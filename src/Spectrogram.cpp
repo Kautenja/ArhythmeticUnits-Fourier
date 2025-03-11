@@ -464,7 +464,7 @@ struct SpectralImageDisplay : TransparentWidget {
     /// The vertical (bottom) padding for the plot.
     const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    const size_t pad_left = 30;
+    const size_t pad_left = 40;
     /// The horizontal (right) padding for the plot.
     const size_t pad_right = 5;
     /// The radius of the rounded corners of the screen
@@ -642,7 +642,7 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
@@ -680,7 +680,7 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
