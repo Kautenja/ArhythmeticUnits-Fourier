@@ -134,8 +134,7 @@ struct Spectrogram : Module {
             "more slowly to provide a general impression of signal\n"
             "frequency content.";
         // Setup frequency smoothing as a custom discrete enumeration.
-        configParam<FrequencySmoothingParamQuantity>(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth");
-        getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth", frequency_smoothing_names());
         getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"
@@ -943,7 +942,7 @@ struct SpectrogramWidget : ModuleWidget {
         // Time smoothing control.
         addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
         // Frequency smoothing control with custom angles to match discrete range.
-        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        auto frequency_smoothing_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.

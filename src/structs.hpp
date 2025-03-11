@@ -114,29 +114,26 @@ enum class FrequencySmoothing {
     NumOptions
 };
 
-/// @brief Convert the given frequency smoothing option to a string.
-/// @param value The frequency smoothing value to serialize to a string.
-/// @returns The string representation of the given frequency smoothing value.
-inline const char* to_string(const FrequencySmoothing& value) {
-    switch (value) {
-    case FrequencySmoothing::None:  return "None";
-    case FrequencySmoothing::_1_48: return "1/48 oct";
-    case FrequencySmoothing::_1_24: return "1/24 oct";
-    case FrequencySmoothing::_1_12: return "1/12 oct";
-    case FrequencySmoothing::_1_9:  return "1/9 oct";
-    case FrequencySmoothing::_1_6:  return "1/6 oct";
-    case FrequencySmoothing::_1_5:  return "1/5 oct";
-    case FrequencySmoothing::_1_4:  return "1/4 oct";
-    case FrequencySmoothing::_1_3:  return "1/3 oct";
-    case FrequencySmoothing::_1_2:  return "1/2 oct";
-    case FrequencySmoothing::_2_3:  return "2/3 oct";
-    case FrequencySmoothing::_3_4:  return "3/4 oct";
-    case FrequencySmoothing::_1_1:  return "1 oct";
-    case FrequencySmoothing::_3_2:  return "1.5 oct";
-    case FrequencySmoothing::_2_1:  return "2 oct";
-    case FrequencySmoothing::_5_2:  return "2.5 oct";
-    default: return "";
-    }
+static const std::vector<std::string>& frequency_smoothing_names() {
+    static const std::vector<std::string> names = {
+        "None",
+        "1/48 oct",
+        "1/24 oct",
+        "1/12 oct",
+        "1/9 oct",
+        "1/6 oct",
+        "1/5 oct",
+        "1/4 oct",
+        "1/3 oct",
+        "1/2 oct",
+        "2/3 oct",
+        "3/4 oct",
+        "1 oct",
+        "1.5 oct",
+        "2 oct",
+        "2.5 oct"
+    };
+    return names;
 }
 
 /// @brief Convert the given frequency smoothing option to its float value.

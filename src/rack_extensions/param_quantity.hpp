@@ -30,12 +30,4 @@ struct WindowFunctionParamQuantity : ParamQuantity {
     }
 };
 
-/// @brief A parameter quantity for frequency smoothing selection.
-struct FrequencySmoothingParamQuantity : ParamQuantity {
-    /// @brief Return the value as a formatted string.
-    inline std::string getDisplayValueString() final {
-        return to_string(static_cast<FrequencySmoothing>(getValue()));
-    }
-};
-
 #endif  // ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_PARAM_QUANTITY_HPP_
