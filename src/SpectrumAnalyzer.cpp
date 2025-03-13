@@ -94,6 +94,9 @@ struct SpectrumAnalyzer : Module {
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
 
+    /// A flag determining whether the coefficients can be rendered.
+    bool is_ready_to_render = false;
+
  public:
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
     std::vector<Vec> render_coefficients[NUM_CHANNELS];
@@ -194,6 +197,7 @@ struct SpectrumAnalyzer : Module {
         Module::onReset();
         // Reset momentary button trigger states.
         is_running = true;
+        is_ready_to_render = false;
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
@@ -259,6 +263,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the current sample rate of the module.
     /// @returns The sample rate of the module.
     inline float get_sample_rate() const { return sample_rate; }
+
+    /// @brief Return a flag determining whether module outputs can be rendered.
+    inline bool get_is_ready_to_render() const { return is_ready_to_render; }
 
     // Window Function
 
@@ -586,6 +593,8 @@ struct SpectrumAnalyzer : Module {
             make_points(3);
             // Add the delay line to the FFT pipeline.
             fft.buffer(delay.contiguous(), window_function.get_samples());
+            // Mark the module as render-able
+            is_ready_to_render = true;
         }
         // Perform the number of FFT steps required at this hop-rate.
         fft.step(get_hop_length());
@@ -1142,7 +1151,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             default:
                 throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
             }
-            if (module != nullptr) {
+            if (module != nullptr && module->get_is_ready_to_render()) {
                 draw_coefficients(args, module->render_coefficients[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
                 draw_coefficients(args, module->render_coefficients[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
                 draw_coefficients(args, module->render_coefficients[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
