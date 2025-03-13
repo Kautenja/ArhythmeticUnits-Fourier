@@ -82,9 +82,6 @@ struct SpectrumAnalyzer : Module {
     /// A copy of low-pass filtered DFT coefficients.
     std::vector<std::complex<simd::float_4>> filtered_coeffs;
 
-    /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
-
     /// A clock divider for updating the lights at a lower sampling rate.
     Trigger::Divider light_divider;
 
@@ -99,7 +96,7 @@ struct SpectrumAnalyzer : Module {
 
  public:
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> render_coefficients[NUM_CHANNELS];
+    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
 
     /// Whether to fill the plots.
     bool is_fill_enabled = false;
@@ -456,7 +453,6 @@ struct SpectrumAnalyzer : Module {
             if (raster_coeffs[i].size() == N / 2.f + 1) continue;
             raster_coeffs[i].resize(N / 2.f + 1);
             std::fill(raster_coeffs[i].begin(), raster_coeffs[i].end(), Vec(0.f, 0.f));
-            render_coefficients[i] = raster_coeffs[i];
         }
     }
 
@@ -570,7 +566,6 @@ struct SpectrumAnalyzer : Module {
             default: break;
             }
         }
-        render_coefficients[lane_index] = raster_coeffs[lane_index];
     }
 
     /// @brief Process samples with the DFT.
@@ -1152,10 +1147,10 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
             }
             if (module != nullptr && module->get_is_ready_to_render()) {
-                draw_coefficients(args, module->render_coefficients[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
