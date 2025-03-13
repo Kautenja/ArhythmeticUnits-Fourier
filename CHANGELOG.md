@@ -1,5 +1,21 @@
 # Change Log
 
+## 2.1.1 (2025-03-TODO)
+
+-   Fix `Math::freq_to_string` to cover edge cases along unit bounds
+-   Update `SpectrumAnalyzer` and `Spectrogram` to use `Math::freq_to_string`
+    in all cases of frequency string serialization
+-   Remove `FlagMenuItem` in favor of built-in `createBoolPtrMenuItem`
+-   Update `Spectrogram` to use `createIndexPtrSubmenuItem` instead of custom
+    defined menu options for window function selection
+-   Replace `configParam<TriggerParamQuantity>(...)` with `configButton(...)`
+-   Replace `NumOptions` with name vector `.size()` call, which is more direct
+    and readable
+-   Simplify JSON code for the plugin
+-   Refactor font use following API guidelines (in functions not instances)
+-   Update "screen" padding to prevent graphical glitches and improve over-all
+    look of _Fourier_ and _Spectre_ in the module view within VCV Rack
+
 ## 2.1.0 (2025-03-10)
 
 -   Support for built-in VCV dark light/dark panels

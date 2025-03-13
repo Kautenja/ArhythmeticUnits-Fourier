@@ -414,8 +414,30 @@ enum class Function {
     BlackmanHarris,
     BlackmanNuttall,
     KaiserBessel,
-    Flattop,
+    Flattop
 };
+
+/// @brief Return a vector of window function names.
+static const std::vector<std::string>& names() {
+    static const std::vector<std::string> names = {
+        "Boxcar",
+        "Bartlett",
+        "BartlettHann",
+        "Parzen",
+        "Welch",
+        "Cosine",
+        "Bohman",
+        "Lanczos",
+        "Hann",
+        "Hamming",
+        "Blackman",
+        "BlackmanHarris",
+        "BlackmanNuttall",
+        "KaiserBessel",
+        "Flattop"
+    };
+    return names;
+}
 
 /// @brief Calculate the value of a standard window.
 ///
@@ -444,88 +466,9 @@ inline T window(Function window_, const T& n, const T& N, const bool& is_symmetr
     case Function::BlackmanNuttall: return blackmannuttall<T>(n, N, is_symmetric);
     case Function::KaiserBessel:    return kaiserbessel<T>(n, N, is_symmetric);
     case Function::Flattop:         return flattop<T>(n, N, is_symmetric);
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window_)));
+    default: throw std::runtime_error("Invalid window " + std::to_string(static_cast<int>(window_)));
     }
 }
-
-/// @brief Return the name of the window as a string.
-///
-/// @tparam window the window function to get the side-lobe amplitude of
-/// @returns the string name for the window.
-///
-template<Function window>
-std::string name();
-template<> inline std::string name<Function::Boxcar>()          { return "Boxcar";           }
-template<> inline std::string name<Function::Bartlett>()        { return "Bartlett";         }
-template<> inline std::string name<Function::BartlettHann>()    { return "Bartlett-Hann";    }
-template<> inline std::string name<Function::Parzen>()          { return "Parzen";           }
-template<> inline std::string name<Function::Welch>()           { return "Welch";            }
-template<> inline std::string name<Function::Cosine>()          { return "Cosine";           }
-template<> inline std::string name<Function::Bohman>()          { return "Bohman";           }
-template<> inline std::string name<Function::Lanczos>()         { return "Lanczos";          }
-template<> inline std::string name<Function::Hann>()            { return "Hann";             }
-template<> inline std::string name<Function::Hamming>()         { return "Hamming";          }
-template<> inline std::string name<Function::Blackman>()        { return "Blackman";         }
-template<> inline std::string name<Function::BlackmanHarris>()  { return "Blackman-Harris";  }
-template<> inline std::string name<Function::BlackmanNuttall>() { return "Blackman-Nuttall"; }
-template<> inline std::string name<Function::KaiserBessel>()    { return "Kaiser-Bessel";    }
-template<> inline std::string name<Function::Flattop>()         { return "Flattop";          }
-
-/// @brief Return the name of the window as a string.
-///
-/// @param window the window function to get the side-lobe amplitude of
-/// @returns the string name for the window.
-///
-inline std::string name(const Function& window) {
-    switch (window) {
-    case Function::Boxcar:          return name<Function::Boxcar>();
-    case Function::Bartlett:        return name<Function::Bartlett>();
-    case Function::BartlettHann:    return name<Function::BartlettHann>();
-    case Function::Parzen:          return name<Function::Parzen>();
-    case Function::Welch:           return name<Function::Welch>();
-    case Function::Cosine:          return name<Function::Cosine>();
-    case Function::Bohman:          return name<Function::Bohman>();
-    case Function::Lanczos:         return name<Function::Lanczos>();
-    case Function::Hann:            return name<Function::Hann>();
-    case Function::Hamming:         return name<Function::Hamming>();
-    case Function::Blackman:        return name<Function::Blackman>();
-    case Function::BlackmanHarris:  return name<Function::BlackmanHarris>();
-    case Function::BlackmanNuttall: return name<Function::BlackmanNuttall>();
-    case Function::KaiserBessel:    return name<Function::KaiserBessel>();
-    case Function::Flattop:         return name<Function::Flattop>();
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
-    }
-}
-
-/// @brief Return the coherent gain for the given windowing function.
-///
-/// @tparam window the window function to get the coherent gain of
-/// @returns the coherent for the given window in decibels
-/// @details
-/// The coherent gain should be applied to windowed DFTs to account for pass
-/// band attenuation of the filter. i.e., H[s] / (getCoherentGain(...) * N).
-/// The coherent gain is calculated as the integral of the window. I.e., we
-/// can simply take the expectation of the window as N approaches infinity. In
-/// practice the coherent gain is calculated as the average amplitude of the
-/// window with length N = 1024.
-///
-template<Function window>
-float coherent_gain();
-template<> inline constexpr float coherent_gain<Function::Boxcar>()          { return 1.000000; }
-template<> inline constexpr float coherent_gain<Function::Bartlett>()        { return 0.500000; }
-template<> inline constexpr float coherent_gain<Function::BartlettHann>()    { return 0.500000; }
-template<> inline constexpr float coherent_gain<Function::Parzen>()          { return 0.375000; }
-template<> inline constexpr float coherent_gain<Function::Welch>()           { return 0.667317; }
-template<> inline constexpr float coherent_gain<Function::Cosine>()          { return 0.637240; }
-template<> inline constexpr float coherent_gain<Function::Bohman>()          { return 0.405285; }
-template<> inline constexpr float coherent_gain<Function::Lanczos>()         { return 0.589490; }
-template<> inline constexpr float coherent_gain<Function::Hann>()            { return 0.500000; }
-template<> inline constexpr float coherent_gain<Function::Hamming>()         { return 0.540000; }
-template<> inline constexpr float coherent_gain<Function::Blackman>()        { return 0.420000; }
-template<> inline constexpr float coherent_gain<Function::BlackmanHarris>()  { return 0.358750; }
-template<> inline constexpr float coherent_gain<Function::BlackmanNuttall>() { return 0.363582; }
-template<> inline constexpr float coherent_gain<Function::KaiserBessel>()    { return 0.402000; }
-template<> inline constexpr float coherent_gain<Function::Flattop>()         { return 0.215579; }
 
 /// @brief Return the coherent gain for the given windowing function.
 ///
@@ -540,47 +483,24 @@ template<> inline constexpr float coherent_gain<Function::Flattop>()         { r
 ///
 inline float coherent_gain(const Function& window) {
     switch (window) {
-    case Function::Boxcar:          return coherent_gain<Function::Boxcar>();
-    case Function::Bartlett:        return coherent_gain<Function::Bartlett>();
-    case Function::BartlettHann:    return coherent_gain<Function::BartlettHann>();
-    case Function::Parzen:          return coherent_gain<Function::Parzen>();
-    case Function::Welch:           return coherent_gain<Function::Welch>();
-    case Function::Cosine:          return coherent_gain<Function::Cosine>();
-    case Function::Bohman:          return coherent_gain<Function::Bohman>();
-    case Function::Lanczos:         return coherent_gain<Function::Lanczos>();
-    case Function::Hann:            return coherent_gain<Function::Hann>();
-    case Function::Hamming:         return coherent_gain<Function::Hamming>();
-    case Function::Blackman:        return coherent_gain<Function::Blackman>();
-    case Function::BlackmanHarris:  return coherent_gain<Function::BlackmanHarris>();
-    case Function::BlackmanNuttall: return coherent_gain<Function::BlackmanNuttall>();
-    case Function::KaiserBessel:    return coherent_gain<Function::KaiserBessel>();
-    case Function::Flattop:         return coherent_gain<Function::Flattop>();
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
+    case Function::Boxcar:          return 1.000000;
+    case Function::Bartlett:        return 0.500000;
+    case Function::BartlettHann:    return 0.500000;
+    case Function::Parzen:          return 0.375000;
+    case Function::Welch:           return 0.667317;
+    case Function::Cosine:          return 0.637240;
+    case Function::Bohman:          return 0.405285;
+    case Function::Lanczos:         return 0.589490;
+    case Function::Hann:            return 0.500000;
+    case Function::Hamming:         return 0.540000;
+    case Function::Blackman:        return 0.420000;
+    case Function::BlackmanHarris:  return 0.358750;
+    case Function::BlackmanNuttall: return 0.363582;
+    case Function::KaiserBessel:    return 0.402000;
+    case Function::Flattop:         return 0.215579;
+    default: throw std::runtime_error("Invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
-
-/// @brief Return the side-lobe amplitude for the given windowing function.
-///
-/// @tparam window the window function to get the side-lobe amplitude of
-/// @returns the side-lobe amplitude for the given window in decibels
-///
-template<Function window>
-float side_lobe_amplitude();
-template<> inline constexpr float side_lobe_amplitude<Function::Boxcar>()          { return -13.2; }
-template<> inline constexpr float side_lobe_amplitude<Function::Bartlett>()        { return -26.4; }
-template<> inline constexpr float side_lobe_amplitude<Function::BartlettHann>()    { return -35.7; }
-template<> inline constexpr float side_lobe_amplitude<Function::Parzen>()          { return -53.0; }
-template<> inline constexpr float side_lobe_amplitude<Function::Welch>()           { return -21.2; }
-template<> inline constexpr float side_lobe_amplitude<Function::Cosine>()          { return -22.8; }
-template<> inline constexpr float side_lobe_amplitude<Function::Bohman>()          { return -46.0; }
-template<> inline constexpr float side_lobe_amplitude<Function::Lanczos>()         { return -26.3; }
-template<> inline constexpr float side_lobe_amplitude<Function::Hann>()            { return -31.5; }
-template<> inline constexpr float side_lobe_amplitude<Function::Hamming>()         { return -41.7; }
-template<> inline constexpr float side_lobe_amplitude<Function::Blackman>()        { return -58.1; }
-template<> inline constexpr float side_lobe_amplitude<Function::BlackmanHarris>()  { return -91.8; }
-template<> inline constexpr float side_lobe_amplitude<Function::BlackmanNuttall>() { return -88.7; }
-template<> inline constexpr float side_lobe_amplitude<Function::KaiserBessel>()    { return -65.4; }
-template<> inline constexpr float side_lobe_amplitude<Function::Flattop>()         { return -83.0; }
 
 /// @brief Return the side-lobe amplitude for the given windowing function.
 ///
@@ -589,47 +509,24 @@ template<> inline constexpr float side_lobe_amplitude<Function::Flattop>()      
 ///
 inline float side_lobe_amplitude(const Function& window) {
     switch (window) {
-    case Function::Boxcar:          return side_lobe_amplitude<Function::Boxcar>();
-    case Function::Bartlett:        return side_lobe_amplitude<Function::Bartlett>();
-    case Function::BartlettHann:    return side_lobe_amplitude<Function::BartlettHann>();
-    case Function::Parzen:          return side_lobe_amplitude<Function::Parzen>();
-    case Function::Welch:           return side_lobe_amplitude<Function::Welch>();
-    case Function::Cosine:          return side_lobe_amplitude<Function::Cosine>();
-    case Function::Bohman:          return side_lobe_amplitude<Function::Bohman>();
-    case Function::Lanczos:         return side_lobe_amplitude<Function::Lanczos>();
-    case Function::Hann:            return side_lobe_amplitude<Function::Hann>();
-    case Function::Hamming:         return side_lobe_amplitude<Function::Hamming>();
-    case Function::Blackman:        return side_lobe_amplitude<Function::Blackman>();
-    case Function::BlackmanHarris:  return side_lobe_amplitude<Function::BlackmanHarris>();
-    case Function::BlackmanNuttall: return side_lobe_amplitude<Function::BlackmanNuttall>();
-    case Function::KaiserBessel:    return side_lobe_amplitude<Function::KaiserBessel>();
-    case Function::Flattop:         return side_lobe_amplitude<Function::Flattop>();
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
+    case Function::Boxcar:          return -13.2;
+    case Function::Bartlett:        return -26.4;
+    case Function::BartlettHann:    return -35.7;
+    case Function::Parzen:          return -53.0;
+    case Function::Welch:           return -21.2;
+    case Function::Cosine:          return -22.8;
+    case Function::Bohman:          return -46.0;
+    case Function::Lanczos:         return -26.3;
+    case Function::Hann:            return -31.5;
+    case Function::Hamming:         return -41.7;
+    case Function::Blackman:        return -58.1;
+    case Function::BlackmanHarris:  return -91.8;
+    case Function::BlackmanNuttall: return -88.7;
+    case Function::KaiserBessel:    return -65.4;
+    case Function::Flattop:         return -83.0;
+    default: throw std::runtime_error("Invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
-
-/// @brief Return the stop-band attenuation for the given windowing function.
-///
-/// @tparam window the window function to get the stop-band attenuation of
-/// @returns the stop-band attenuation for the given window in decibels
-///
-template<Function window>
-float stopband_attenuation();
-template<> inline constexpr float stopband_attenuation<Function::Boxcar>()          { return -21; }
-template<> inline constexpr float stopband_attenuation<Function::Bartlett>()        { return -25; }
-template<> inline constexpr float stopband_attenuation<Function::BartlettHann>()    { return -42; }
-template<> inline constexpr float stopband_attenuation<Function::Parzen>()          { return -31; }
-template<> inline constexpr float stopband_attenuation<Function::Welch>()           { return -31; }
-template<> inline constexpr float stopband_attenuation<Function::Cosine>()          { return -33; }
-template<> inline constexpr float stopband_attenuation<Function::Bohman>()          { return -28; }
-template<> inline constexpr float stopband_attenuation<Function::Lanczos>()         { return -28; }
-template<> inline constexpr float stopband_attenuation<Function::Hann>()            { return -44; }
-template<> inline constexpr float stopband_attenuation<Function::Hamming>()         { return -53; }
-template<> inline constexpr float stopband_attenuation<Function::Blackman>()        { return -74; }
-template<> inline constexpr float stopband_attenuation<Function::BlackmanHarris>()  { return -92; }
-template<> inline constexpr float stopband_attenuation<Function::BlackmanNuttall>() { return -93; }
-template<> inline constexpr float stopband_attenuation<Function::KaiserBessel>()    { return -60; }
-template<> inline constexpr float stopband_attenuation<Function::Flattop>()         { return -99; }
 
 /// @brief Return the stop-band attenuation for the given windowing function.
 ///
@@ -638,47 +535,24 @@ template<> inline constexpr float stopband_attenuation<Function::Flattop>()     
 ///
 inline float stopband_attenuation(const Function& window) {
     switch (window) {
-    case Function::Boxcar:          return stopband_attenuation<Function::Boxcar>();
-    case Function::Bartlett:        return stopband_attenuation<Function::Bartlett>();
-    case Function::BartlettHann:    return stopband_attenuation<Function::BartlettHann>();
-    case Function::Parzen:          return stopband_attenuation<Function::Parzen>();
-    case Function::Welch:           return stopband_attenuation<Function::Welch>();
-    case Function::Cosine:          return stopband_attenuation<Function::Cosine>();
-    case Function::Bohman:          return stopband_attenuation<Function::Bohman>();
-    case Function::Lanczos:         return stopband_attenuation<Function::Lanczos>();
-    case Function::Hann:            return stopband_attenuation<Function::Hann>();
-    case Function::Hamming:         return stopband_attenuation<Function::Hamming>();
-    case Function::Blackman:        return stopband_attenuation<Function::Blackman>();
-    case Function::BlackmanHarris:  return stopband_attenuation<Function::BlackmanHarris>();
-    case Function::BlackmanNuttall: return stopband_attenuation<Function::BlackmanNuttall>();
-    case Function::KaiserBessel:    return stopband_attenuation<Function::KaiserBessel>();
-    case Function::Flattop:         return stopband_attenuation<Function::Flattop>();
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
+    case Function::Boxcar:          return -21;
+    case Function::Bartlett:        return -25;
+    case Function::BartlettHann:    return -42;
+    case Function::Parzen:          return -31;
+    case Function::Welch:           return -31;
+    case Function::Cosine:          return -33;
+    case Function::Bohman:          return -28;
+    case Function::Lanczos:         return -28;
+    case Function::Hann:            return -44;
+    case Function::Hamming:         return -53;
+    case Function::Blackman:        return -74;
+    case Function::BlackmanHarris:  return -92;
+    case Function::BlackmanNuttall: return -93;
+    case Function::KaiserBessel:    return -60;
+    case Function::Flattop:         return -99;
+    default: throw std::runtime_error("Invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
-
-/// @brief Return the transition band width for the given window.
-///
-/// @tparam window the window function to calculate the transition band of
-/// @returns the transition band width for the window.
-///
-template<Function window>
-float transition_width();
-template<> inline constexpr float transition_width<Function::Boxcar>()          { return 0.9; }
-template<> inline constexpr float transition_width<Function::Bartlett>()        { return 1.8; }
-template<> inline constexpr float transition_width<Function::BartlettHann>()    { return 3.2; }  // slightly wider than Hann
-template<> inline constexpr float transition_width<Function::Parzen>()          { return 4.0; }  // broader transition for smoother roll‐off
-template<> inline constexpr float transition_width<Function::Welch>()           { return 3.3; }  // comparable to Hamming
-template<> inline constexpr float transition_width<Function::Cosine>()          { return 3.1; }  // similar to Hann
-template<> inline constexpr float transition_width<Function::Bohman>()          { return 3.3; }  // nearly the same as Welch/Hamming
-template<> inline constexpr float transition_width<Function::Lanczos>()         { return 3.3; }  // for a typical Lanczos parameter (e.g. a = 3)
-template<> inline constexpr float transition_width<Function::Hann>()            { return 3.1; }
-template<> inline constexpr float transition_width<Function::Hamming>()         { return 3.3; }
-template<> inline constexpr float transition_width<Function::Blackman>()        { return 5.5; }
-template<> inline constexpr float transition_width<Function::BlackmanHarris>()  { return 6.3; }  // wider main lobe for extra sidelobe suppression
-template<> inline constexpr float transition_width<Function::BlackmanNuttall>() { return 6.4; }
-template<> inline constexpr float transition_width<Function::KaiserBessel>()    { return 3.6; }  // value depends on the chosen beta (here, ~-60 dB design)
-template<> inline constexpr float transition_width<Function::Flattop>()         { return 7.5; }  // very wide to ensure amplitude flatnes
 
 /// @brief Return the transition band width for the given window.
 ///
@@ -695,24 +569,24 @@ template<> inline constexpr float transition_width<Function::Flattop>()         
 /// \f$N = \f$`TRANSITION_WIDTHS[i]`\f$/ \Delta f\f$
 ///
 template<typename T>
-inline T transition_width(const T& N, const Function& window) {
+inline T transition_width(const Function& window, const T& N) {
     switch (window) {
-    case Function::Boxcar:          return transition_width<Function::Boxcar>() / N;
-    case Function::Bartlett:        return transition_width<Function::Bartlett>() / N;
-    case Function::BartlettHann:    return transition_width<Function::BartlettHann>() / N;
-    case Function::Parzen:          return transition_width<Function::Parzen>() / N;
-    case Function::Welch:           return transition_width<Function::Welch>() / N;
-    case Function::Cosine:          return transition_width<Function::Cosine>() / N;
-    case Function::Bohman:          return transition_width<Function::Bohman>() / N;
-    case Function::Lanczos:         return transition_width<Function::Lanczos>() / N;
-    case Function::Hann:            return transition_width<Function::Hann>() / N;
-    case Function::Hamming:         return transition_width<Function::Hamming>() / N;
-    case Function::Blackman:        return transition_width<Function::Blackman>() / N;
-    case Function::BlackmanHarris:  return transition_width<Function::BlackmanHarris>() / N;
-    case Function::BlackmanNuttall: return transition_width<Function::BlackmanNuttall>() / N;
-    case Function::KaiserBessel:    return transition_width<Function::KaiserBessel>() / N;
-    case Function::Flattop:         return transition_width<Function::Flattop>() / N;
-    default: throw std::runtime_error("Received invalid window " + std::to_string(static_cast<int>(window)));
+    case Function::Boxcar:          return 0.9 / N;
+    case Function::Bartlett:        return 1.8 / N;
+    case Function::BartlettHann:    return 3.2 / N;
+    case Function::Parzen:          return 4.0 / N;
+    case Function::Welch:           return 3.3 / N;
+    case Function::Cosine:          return 3.1 / N;
+    case Function::Bohman:          return 3.3 / N;
+    case Function::Lanczos:         return 3.3 / N;
+    case Function::Hann:            return 3.1 / N;
+    case Function::Hamming:         return 3.3 / N;
+    case Function::Blackman:        return 5.5 / N;
+    case Function::BlackmanHarris:  return 6.3 / N;
+    case Function::BlackmanNuttall: return 6.4 / N;
+    case Function::KaiserBessel:    return 3.6 / N;
+    case Function::Flattop:         return 7.5 / N;
+    default: throw std::runtime_error("Invalid window " + std::to_string(static_cast<int>(window)));
     }
 }
 
@@ -731,7 +605,7 @@ struct CachedWindow {
 
     /// @brief Compute the window for the current set of parameters.
     inline void compute_window() {
-        const float gain = is_gained ? T(1) / coherent_gain(function) : T(1);
+        const T gain = is_gained ? T(1) / coherent_gain(function) : T(1);
         for (size_t n = 0; n < samples.size(); n++)
             samples[n] = gain * window<T>(function, n, samples.size(), is_symmetric);
     }
@@ -789,13 +663,13 @@ struct CachedWindow {
     /// @brief Return the window function sample at the given index.
     /// @param index The index of the window function sample to return.
     /// @returns The window function sample at the given index.
-    inline float operator[](const size_t& index) { return samples[index]; }
+    inline T operator[](const size_t& index) { return samples[index]; }
 
     /// @brief Return the current window function.
     inline const Function& get_function() const { return function; }
 
     /// @brief Return the sample buffer.
-    inline std::vector<float>& get_samples() { return samples; }
+    inline std::vector<T>& get_samples() { return samples; }
 
     /// @brief Return true for symmetric window, false for asymmetric.
     inline const bool& get_is_symmetric() const { return is_symmetric; }

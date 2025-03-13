@@ -14,9 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>
-#include <string>
-#include <iomanip>
+#include <algorithm>  // std::fill
+#include <string>     // std::string
+#include <limits>     // std::numeric_limits
+#include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
 
 /// @brief A spectrogram module.
@@ -108,19 +109,17 @@ struct Spectrogram : Module {
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
         configInput(INPUT_SIGNAL, "TODO");
         // Configure the run button.
-        configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
+        configButton(PARAM_RUN, "Run");
         getParamQuantity(PARAM_RUN)->description =
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configParam<WindowFunctionParamQuantity>(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window");
-        getParamQuantity(PARAM_WINDOW_FUNCTION)->snapEnabled = true;
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, Math::Window::names().size() - 1, static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
         // Setup the discrete frequency scale selector.
-        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "Y Scale");
-        getParamQuantity(PARAM_FREQUENCY_SCALE)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "Y Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
@@ -134,8 +133,7 @@ struct Spectrogram : Module {
             "more slowly to provide a general impression of signal\n"
             "frequency content.";
         // Setup frequency smoothing as a custom discrete enumeration.
-        configParam<FrequencySmoothingParamQuantity>(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth");
-        getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, frequency_smoothing_names().size() - 1, static_cast<size_t>(FrequencySmoothing::None), "Smooth", frequency_smoothing_names());
         getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"
@@ -205,28 +203,30 @@ struct Spectrogram : Module {
         dc_blocker.reset();
     }
 
+    // -----------------------------------------------------------------------
+    // MARK: Serialization
+    // -----------------------------------------------------------------------
+
     /// @brief Convert the module's state to a JSON object.
-    ///
-    /// @returns a pointer to a new json_t object with the module's state
-    ///
+    /// @returns a pointer to a new json_t object with the module's state.
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
-        JSON::set<bool>(rootJ, "is_running", is_running);
-        JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
-        JSON::set<int>(rootJ,  "color_map", static_cast<int>(color_map));
+        json_object_set_new(rootJ, "is_running", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_ac_coupled));
+        json_object_set_new(rootJ, "color_map", json_integer(static_cast<int>(color_map)));
         return rootJ;
     }
 
     /// @brief Load the module's state from a JSON object.
-    ///
-    /// @param rootJ a pointer to a json_t with state data for this module
-    ///
+    /// @param rootJ a pointer to a json_t with state data for this module.
     inline void dataFromJson(json_t* rootJ) final {
-        JSON::get<bool>(rootJ, "is_running", [&](const bool& value) { is_running = value; });
-        JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) { is_ac_coupled = value; });
-        JSON::get<int>(rootJ,  "color_map", [&](const int& value) {
-            color_map = static_cast<Math::ColorMap::Function>(value);
-        });
+        json_t* opt = nullptr;
+        if ((opt = json_object_get(rootJ, "is_running")))
+            is_running = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_ac_coupled")))
+            is_ac_coupled = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "color_map")))
+            color_map = static_cast<Math::ColorMap::Function>(json_integer_value(opt));
     }
 
     // -----------------------------------------------------------------------
@@ -433,9 +433,7 @@ struct Spectrogram : Module {
     }
 
     /// @brief Process a sample.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     void process(const ProcessArgs& args) final {
         // Update the window function. We need asymmetric windows for FFT
         // analysis and need coherent gain to be integrated into the window.
@@ -464,9 +462,9 @@ struct SpectralImageDisplay : TransparentWidget {
     /// The vertical (bottom) padding for the plot.
     const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    const size_t pad_left = 30;
+    const size_t pad_left = 40;
     /// The horizontal (right) padding for the plot.
-    const size_t pad_right = 5;
+    const size_t pad_right = 15;
     /// The radius of the rounded corners of the screen
     const int corner_radius = 5;
     /// The background color of the screen
@@ -481,11 +479,6 @@ struct SpectralImageDisplay : TransparentWidget {
     const float axis_font_size = 8;
     /// The stroke color for the cross-hair
     const NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
-
-    /// the font for rendering text on the display
-    const std::shared_ptr<Font> font = APP->window->loadFont(
-        asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
-    );
 
     /// The spectrogram module to render data from.
     Spectrogram* module = nullptr;
@@ -571,59 +564,57 @@ struct SpectralImageDisplay : TransparentWidget {
     //     e.consume(this);
     // }
 
-    /// Respond to a button event on this widget.
-    void onButton(const event::Button &e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the mouse state to the hover position.
-        mouse_state.position = e.pos;
-        // setup the drag state.
-        mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
-        // if the action is a press copy the waveform before updating
-        mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
-        // Handle right clicks.
-        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
-            dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
-    }
+    // /// Respond to a button event on this widget.
+    // void onButton(const event::Button &e) override {
+    //     // Consume the event to prevent it from propagating.
+    //     e.consume(this);
+    //     // Set the mouse state to the hover position.
+    //     mouse_state.position = e.pos;
+    //     // setup the drag state.
+    //     mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
+    //     // if the action is a press copy the waveform before updating
+    //     mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
+    //     // Handle right clicks.
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
+    //         dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
+    // }
 
-    /// @brief Respond to drag start event on this widget.
-    void onDragStart(const event::DragStart &e) override {
-        // // lock the cursor so it does not move in the engine during the edit
-        // APP->window->cursorLock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-    }
+    // /// @brief Respond to drag start event on this widget.
+    // void onDragStart(const event::DragStart &e) override {
+    //     // // lock the cursor so it does not move in the engine during the edit
+    //     // APP->window->cursorLock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    // }
 
-    /// @brief Respond to drag move event on this widget.
-    void onDragMove(const event::DragMove &e) override {
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        // if the drag operation is not active, return early
-        if (!mouse_state.is_pressed) return;
-        // update the drag state based on the change in position from the mouse
-        mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
-        mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
-    }
+    // /// @brief Respond to drag move event on this widget.
+    // void onDragMove(const event::DragMove &e) override {
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     // if the drag operation is not active, return early
+    //     if (!mouse_state.is_pressed) return;
+    //     // update the drag state based on the change in position from the mouse
+    //     mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
+    //     mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
+    // }
 
-    /// @brief Respond to drag end event on this widget.
-    void onDragEnd(const event::DragEnd &e) override {
-        // // unlock the cursor to return it to its normal state
-        // APP->window->cursorUnlock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        if (!mouse_state.is_pressed) return;
-        // disable the press state.
-        mouse_state.is_pressed = false;
-    }
+    // /// @brief Respond to drag end event on this widget.
+    // void onDragEnd(const event::DragEnd &e) override {
+    //     // // unlock the cursor to return it to its normal state
+    //     // APP->window->cursorUnlock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     if (!mouse_state.is_pressed) return;
+    //     // disable the press state.
+    //     mouse_state.is_pressed = false;
+    // }
 
     // -----------------------------------------------------------------------
     // MARK: Rendering
     // -----------------------------------------------------------------------
 
     /// @brief Draw the Y ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_linear(const DrawArgs& args) {
         static constexpr float xticks = 10;
         for (float i = 1; i < xticks; i++) {
@@ -643,27 +634,20 @@ struct SpectralImageDisplay : TransparentWidget {
             // nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            std::stringstream stream;
-            if (freq < 1000.f)
-                stream << std::fixed << std::setprecision(0) << freq << "Hz";
-            else
-                stream << std::fixed << std::setprecision(1) << freq / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
     /// @brief Draw the Y ticks with an exponential scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_logarithmic(const DrawArgs& args) {
         // Use the spectrogram image height (number of vertical pixels)
         const int height = module->get_coefficients()[0].size() / 2;
         const float nyquist_rate = module->get_sample_rate() / 2.f;
-
         // Compute the mapping parameters using the same transformation as draw_spectrogram.
         // These define the portion of the texture that is used for the desired frequency range.
         float texture_y_low  = height * (1 - sqrt(get_low_frequency() / nyquist_rate));
@@ -671,11 +655,9 @@ struct SpectralImageDisplay : TransparentWidget {
         float image_section_height = texture_y_low - texture_y_high;
         float draw_height = box.size.y - pad_top - pad_bottom;
         float scale_y = draw_height / image_section_height;
-
         // Determine the frequency range in the logarithmic domain.
         const auto min_exponent = log10(fmax(100.f, get_low_frequency()));
         const auto max_exponent = log10(get_high_frequency());
-
         // Iterate over base frequencies (exponential steps).
         for (float exponent = min_exponent; exponent < max_exponent; exponent++) {
             float base_frequency = powf(10.f, exponent);
@@ -683,19 +665,12 @@ struct SpectralImageDisplay : TransparentWidget {
             float t = height * (1 - sqrt(base_frequency / nyquist_rate));
             // Apply the same translation and scaling as used in draw_spectrogram.
             float point_y = pad_top + (t - texture_y_high) * scale_y;
-
-            // Format the tick label.
-            std::stringstream stream;
-            if (base_frequency < 1000.f)
-                stream << std::fixed << std::setprecision(0) << base_frequency << "Hz";
-            else
-                stream << std::fixed << std::setprecision(0) << base_frequency / 1000.f << "kHz";
-
             // Render the tick label.
+            const auto freq_string = Math::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2 * axis_stroke_width, point_y, stream.str().c_str(), NULL);
+            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
         }
     }
 
@@ -707,8 +682,6 @@ struct SpectralImageDisplay : TransparentWidget {
         const auto slope = module->get_slope();
         // Determine the Nyquist rate from the sample rate.
         const float nyquist_rate = module->get_sample_rate() / 2.f;
-        // A small constant for numerical stability.
-        static constexpr float epsilon = 1e-6f;
         // Determine the dimensions of the spectral image.
         const int width = module->get_coefficients().size();
         const int height = module->get_coefficients()[0].size() / 2;
@@ -717,7 +690,7 @@ struct SpectralImageDisplay : TransparentWidget {
         pixels.resize(height * width * 4);
         for (int y = 0; y < height; y++) {
             // Compute the gain based on the octave offset.
-            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + epsilon);
+            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
             gain = Math::decibels2amplitude(slope * gain);
             for (int x = 0; x < width; x++) {
                 float scaled_y = y;
@@ -774,15 +747,7 @@ struct SpectralImageDisplay : TransparentWidget {
         nvgResetScissor(args.vg);
         nvgRestore(args.vg);
 
-        // Draw a border around the spectrogram (mask area).
-        nvgBeginPath(args.vg);
-        nvgRect(args.vg, mask.pos.x, mask.pos.y, mask.size.x, mask.size.y);
-        nvgStrokeWidth(args.vg, axis_stroke_width);
-        nvgStrokeColor(args.vg, axis_stroke_color);
-        nvgStroke(args.vg);
-        nvgClosePath(args.vg);
-
-        // Draw the scan-line to indicate the current hop index.
+        // Draw a scan-line to indicate the current hop index.
         nvgBeginPath(args.vg);
         float scan_x = module->get_hop_index() / static_cast<float>(width);
         nvgMoveTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y);
@@ -836,11 +801,6 @@ struct SpectralImageDisplay : TransparentWidget {
             float texY_high = texHeight * sqrt(get_high_frequency() / nyquist);
             // Compute the vertical scale factor from texture to screen.
             float scaleY = (box.size.y - pad_top - pad_bottom) / (texY_low - texY_high);
-            // Invert the transform used when drawing the spectrogram:
-            // When drawing, we map: t = texHeight * sqrt(f / nyquist) and then
-            // y = pad_top + (t - texY_high) * scaleY.
-            // So invert that: t = texY_high + (y - pad_top) / scaleY, and then
-            // f = nyquist * (t / texHeight)².
             float t = texY_high + (y_pixels - pad_top) / scaleY;
             hover_freq = nyquist * powf(t / texHeight, 2);
         } else {
@@ -848,20 +808,16 @@ struct SpectralImageDisplay : TransparentWidget {
             hover_freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * mouse_position.y;
         }
 
+        auto font_path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
+        const std::shared_ptr<Font> font = APP->window->loadFont(font_path);
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
 
-        // Format the frequency as text.
-        std::ostringstream stream;
-        if (hover_freq < 1000.f)
-            stream << std::fixed << std::setprecision(2) << hover_freq << "Hz";
-        else
-            stream << std::fixed << std::setprecision(2) << hover_freq / 1000.f << "kHz";
-
         // Render the hovered frequency at the top left.
-        nvgText(args.vg, pad_left + 3, pad_top / 2, stream.str().c_str(), NULL);
+        const auto freq_string = Math::freq_to_string(hover_freq);
+        nvgText(args.vg, pad_left + 3, pad_top / 2, freq_string.c_str(), NULL);
 
         // Optionally, also render musical note information.
         if (hover_freq > 0) {
@@ -886,9 +842,7 @@ struct SpectralImageDisplay : TransparentWidget {
     }
 
     /// @brief Draw the display on the main context.
-    ///
     /// @param args the arguments for the draw context for this widget
-    ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
             // Background
@@ -918,14 +872,14 @@ struct SpectralImageDisplay : TransparentWidget {
                     draw_cross_hair(args);
                     draw_cross_hair_text(args);
                 }
-                // Border
-                nvgBeginPath(args.vg);
-                nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
-                nvgStrokeWidth(args.vg, axis_stroke_width);
-                nvgStrokeColor(args.vg, axis_stroke_color);
-                nvgStroke(args.vg);
-                nvgClosePath(args.vg);
             }
+            // Border
+            nvgBeginPath(args.vg);
+            nvgRect(args.vg, pad_left, pad_top, box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom);
+            nvgStrokeWidth(args.vg, axis_stroke_width);
+            nvgStrokeColor(args.vg, axis_stroke_color);
+            nvgStroke(args.vg);
+            nvgClosePath(args.vg);
         }
         Widget::drawLayer(args, layer);
     }
@@ -951,24 +905,35 @@ struct SpectrogramWidget : ModuleWidget {
         addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, Spectrogram::LIGHT_RUN));
         // Screen controls.
         // Window function control with custom angles to match discrete range.
-        auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
+        auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
+        window_function_param->label.text = "WINDOW";
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
         // Frequency scale control with custom angles to match discrete range.
-        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
+        auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
+        frequency_scale_param->label.text = "Y SCALE";
         addParam(frequency_scale_param);
         // Time smoothing control.
-        addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING));
+        auto time_smoothing_param = createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING);
+        time_smoothing_param->label.text = "AVERAGE";
+        addParam(time_smoothing_param);
         // Frequency smoothing control with custom angles to match discrete range.
-        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        auto frequency_smoothing_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        frequency_smoothing_param->label.text = "SMOOTH";
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY));
-        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY));
+        auto low_freq_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY);
+        low_freq_param->label.text = "LO FREQ";
+        addParam(low_freq_param);
+        auto high_freq_param = createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY);
+        high_freq_param->label.text = "HI FREQ";
+        addParam(high_freq_param);
         // Slope (dB/octave @1000Hz) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE));
+        auto slope_param = createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE);
+        slope_param->label.text = "SLOPE";
+        addParam(slope_param);
         // Screws
         addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -977,51 +942,12 @@ struct SpectrogramWidget : ModuleWidget {
     }
 
     /// @brief Append the context menu to the module when right clicked.
-    ///
     /// @param menu the menu object to add context items for the module to
-    ///
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
-        // get a pointer to the module
-        Spectrogram* const module = dynamic_cast<Spectrogram*>(this->module);
-
-        // -------------------------------------------------------------------
-        // MARK: A/C Coupling
-        // -------------------------------------------------------------------
-
-        // Create an option for enabling AC-coupled mode.
-        auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
-        ac_coupling_item->flag = &module->is_ac_coupled;
-        menu->addChild(ac_coupling_item);
-
-        // -------------------------------------------------------------------
-        // MARK: Color Map
-        // -------------------------------------------------------------------
-
-        /// A menu item for changing the color map.
-        struct ColorMapItem : MenuItem {
-            /// The module to update.
-            Spectrogram* module = nullptr;
-            /// The color map option for this menu item.
-            Math::ColorMap::Function color_map;
-
-            inline void onAction(const event::Action& e) override {
-                module->color_map = color_map;
-            }
-        };
-        // add the color map selection item to the menu
-        menu->addChild(new MenuSeparator);
-        menu->addChild(createMenuLabel("Color Map"));
-        for (unsigned i = 0; i < static_cast<int>(Math::ColorMap::Function::NumFunctions); i++) {
-            const auto color_map = static_cast<Math::ColorMap::Function>(i);
-            const auto check = CHECKMARK(module->color_map == color_map);
-            auto item = createMenuItem<ColorMapItem>(Math::ColorMap::name(color_map), check);
-            item->color_map = color_map;
-            item->module = module;
-            menu->addChild(item);
-        }
-
-        // Call the super function.
+        menu->addChild(createMenuLabel("Render Settings"));
+        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
+        menu->addChild(createIndexPtrSubmenuItem("Color Map", Math::ColorMap::names(), reinterpret_cast<int*>(&getModule<Spectrogram>()->color_map)));
         ModuleWidget::appendContextMenu(menu);
     }
 };

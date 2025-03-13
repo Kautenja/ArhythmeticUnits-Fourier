@@ -477,7 +477,7 @@ class OnTheFlyRFFT {
             const float f_center = n * bin_width;
             // Skip bins outside the allowed frequency range.
             if (f_center > f_max) {
-                coefficients[n] = std::complex<float>(0.f, 0.f);
+                coefficients[n] = std::complex<T>(0.f, 0.f);
                 continue;
             }
             // Define the initial smoothing window.
@@ -492,7 +492,7 @@ class OnTheFlyRFFT {
             size_t low_idx  = std::floor(f_low / bin_width);
             size_t high_idx = std::floor(f_high / bin_width);
             if (low_idx >= N) {
-                coefficients[n] = std::complex<float>(0.f, 0.f);
+                coefficients[n] = std::complex<T>(0.f, 0.f);
                 continue;
             }
             high_idx = std::min(high_idx, N - 1);

@@ -14,9 +14,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>
-#include <string>
-#include <iomanip>
+#include <algorithm>  // std::fill
+#include <string>     // std::string
+#include <limits>     // std::numeric_limits
+#include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
 
 /// @brief A spectrum analyzer module.
@@ -79,10 +80,7 @@ struct SpectrumAnalyzer : Module {
     Math::OnTheFlyRFFT<simd::float_4> fft;
 
     /// A copy of low-pass filtered DFT coefficients.
-    std::vector<std::complex<simd::float_4>> filtered_coefficients;
-
-    /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> rasterized_coefficients[NUM_CHANNELS];
+    std::vector<std::complex<simd::float_4>> filtered_coeffs;
 
     /// A clock divider for updating the lights at a lower sampling rate.
     Trigger::Divider light_divider;
@@ -93,9 +91,12 @@ struct SpectrumAnalyzer : Module {
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
 
+    /// A flag determining whether the coefficients can be rendered.
+    bool is_ready_to_render = false;
+
  public:
     /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> render_coefficients[NUM_CHANNELS];
+    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
 
     /// Whether to fill the plots.
     bool is_fill_enabled = false;
@@ -116,13 +117,12 @@ struct SpectrumAnalyzer : Module {
             configInput(INPUT_SIGNAL + i, INPUT_NAMES[i]);
         }
         // Configure the run button.
-        configParam<TriggerParamQuantity>(PARAM_RUN, 0.f, 1.f, 0.f, "Run");
+        configButton(PARAM_RUN, "Run");
         getParamQuantity(PARAM_RUN)->description =
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configParam<WindowFunctionParamQuantity>(PARAM_WINDOW_FUNCTION, 0, static_cast<size_t>(Math::Window::Function::Flattop), static_cast<size_t>(Math::Window::Function::Flattop), "Window");
-        getParamQuantity(PARAM_WINDOW_FUNCTION)->snapEnabled = true;
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, Math::Window::names().size() - 1, static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
@@ -139,15 +139,13 @@ struct SpectrumAnalyzer : Module {
             "The hop size for the time-domain segmentation (STFT.)\n"
             "The analyzer computes a new FFT along this period.";
         // Setup the discrete frequency scale selector.
-        configParam<FrequencyScaleParamQuantity>(PARAM_FREQUENCY_SCALE, 0, 1, 1, "X Scale");
-        getParamQuantity(PARAM_FREQUENCY_SCALE)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "X Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
             "a logarithmic scale.";
         // Setup the discrete magnitude scale selector.
-        configParam<MagnitudeScaleParamQuantity>(PARAM_MAGNITUDE_SCALE, 0, 2, 1, "Y Scale");
-        getParamQuantity(PARAM_MAGNITUDE_SCALE)->snapEnabled = true;
+        configSwitch(PARAM_MAGNITUDE_SCALE, 0, magnitude_scale_names().size() - 1, static_cast<size_t>(MagnitudeScale::Logarithmic60dB), "Y Scale", magnitude_scale_names());
         getParamQuantity(PARAM_MAGNITUDE_SCALE)->description =
             "The magnitude scale on the display. The DFT spaces\n"
             "magnitude linearly but humans hear volume along\n"
@@ -162,8 +160,7 @@ struct SpectrumAnalyzer : Module {
             "more slowly to provide a general impression of signal\n"
             "frequency content.";
         // Setup frequency smoothing as a custom discrete enumeration.
-        configParam<FrequencySmoothingParamQuantity>(PARAM_FREQUENCY_SMOOTHING, 0, static_cast<float>(FrequencySmoothing::NumOptions) - 1, 0, "Smooth");
-        getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->snapEnabled = true;
+        configSwitch(PARAM_FREQUENCY_SMOOTHING, 0, frequency_smoothing_names().size() - 1, static_cast<size_t>(FrequencySmoothing::None), "Smooth", frequency_smoothing_names());
         getParamQuantity(PARAM_FREQUENCY_SMOOTHING)->description =
             "The fractional-octave smoothing filter of the DFT. For\n"
             "example, 1/6-oct smoothing reduces fine details in the\n"
@@ -197,6 +194,7 @@ struct SpectrumAnalyzer : Module {
         Module::onReset();
         // Reset momentary button trigger states.
         is_running = true;
+        is_ready_to_render = false;
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
@@ -231,35 +229,28 @@ struct SpectrumAnalyzer : Module {
     // -----------------------------------------------------------------------
 
     /// @brief Convert the module's state to a JSON object.
-    ///
-    /// @returns a pointer to a new json_t object with the module's state
-    ///
+    /// @returns a pointer to a new json_t object with the module's state.
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
-        JSON::set<bool>(rootJ, "is_running", is_running);
-        JSON::set<bool>(rootJ, "is_fill_enabled", is_fill_enabled);
-        JSON::set<bool>(rootJ, "is_bezier_enabled", is_bezier_enabled);
-        JSON::set<bool>(rootJ, "is_ac_coupled", is_ac_coupled);
+        json_object_set_new(rootJ, "is_running", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_running));
         return rootJ;
     }
 
     /// @brief Load the module's state from a JSON object.
-    ///
-    /// @param rootJ a pointer to a json_t with state data for this module
-    ///
+    /// @param rootJ a pointer to a json_t with state data for this module.
     inline void dataFromJson(json_t* rootJ) final {
-        JSON::get<bool>(rootJ, "is_running", [&](const bool& value) {
-            is_running = value;
-        });
-        JSON::get<bool>(rootJ, "is_fill_enabled", [&](const bool& value) {
-            is_fill_enabled = value;
-        });
-        JSON::get<bool>(rootJ, "is_bezier_enabled", [&](const bool& value) {
-            is_bezier_enabled = value;
-        });
-        JSON::get<bool>(rootJ, "is_ac_coupled", [&](const bool& value) {
-            is_ac_coupled = value;
-        });
+        json_t* opt = nullptr;
+        if ((opt = json_object_get(rootJ, "is_running")))
+            is_running = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_fill_enabled")))
+            is_fill_enabled = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_bezier_enabled")))
+            is_bezier_enabled = json_boolean_value(opt);
+        if ((opt = json_object_get(rootJ, "is_ac_coupled")))
+            is_ac_coupled = json_boolean_value(opt);
     }
 
     // -----------------------------------------------------------------------
@@ -269,6 +260,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the current sample rate of the module.
     /// @returns The sample rate of the module.
     inline float get_sample_rate() const { return sample_rate; }
+
+    /// @brief Return a flag determining whether module outputs can be rendered.
+    inline bool get_is_ready_to_render() const { return is_ready_to_render; }
 
     // Window Function
 
@@ -450,20 +444,15 @@ struct SpectrumAnalyzer : Module {
         window_function.set_window(get_window_function(), N, false, true);
         if (fft.size() != N)
             fft.resize(N);
-        if (filtered_coefficients.size() != N) {
-            filtered_coefficients.resize(N);
-            std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0);
+        if (filtered_coeffs.size() != N) {
+            filtered_coeffs.resize(N);
+            std::fill(filtered_coeffs.begin(), filtered_coeffs.end(), 0);
         }
-        // Iterate over the number of channels to resize buffers.
+        // Update the rasterized coefficients from the FFT length.
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (rasterized_coefficients[i].size() == N / 2.f + 1) continue;
-            // Update the rasterized coefficients from the FFT length.
-            rasterized_coefficients[i].resize(N / 2.f + 1);
-            for (auto& coeff : rasterized_coefficients[i]) {
-                coeff.x = 0.f;
-                coeff.y = 0.f;
-            }
-            render_coefficients[i] = rasterized_coefficients[i];
+            if (raster_coeffs[i].size() == N / 2.f + 1) continue;
+            raster_coeffs[i].resize(N / 2.f + 1);
+            std::fill(raster_coeffs[i].begin(), raster_coeffs[i].end(), Vec(0.f, 0.f));
         }
     }
 
@@ -497,7 +486,6 @@ struct SpectrumAnalyzer : Module {
     }
 
     /// @brief Create a point from a spectral coefficient.
-    ///
     /// @param index The index of the frequency bin.
     /// @param coefficient The value of the frequency bin.
     /// @param length Half the length of the FFT, i.e., \f$\frac{N}{2}\f$.
@@ -522,10 +510,7 @@ struct SpectrumAnalyzer : Module {
     /// \f$[0, 1]\f$. Points outside this range should likely be removed
     /// before plotting. This can occur when the minimum and/or maximum
     /// frequency to render change from their default values.
-    ///
     void make_points(const size_t& lane_index) {
-        // A small constant for numerical stability.
-        static constexpr float epsilon = 1e-6f;
         // The reference frequency for the slope compensation.
         static constexpr float reference_frequency = 1000.f;
         // The maximum amplitude for logarithmic mode.
@@ -539,10 +524,10 @@ struct SpectrumAnalyzer : Module {
         const auto frequency_scale = get_frequency_scale();
         const auto magnitude_scale = get_magnitude_scale();
         // Determine the non-repeated coefficients.
-        const float N = filtered_coefficients.size() / 2.f + 1.f;
+        const float N = filtered_coeffs.size() / 2.f + 1.f;
         for (size_t n = 0; n < static_cast<size_t>(N); n++) {
             // Set the point to a reference from the rasterized point buffer.
-            Vec& point = rasterized_coefficients[lane_index][n];
+            Vec& point = raster_coeffs[lane_index][n];
             // Set the X point to the normalized linear coefficient offset.
             point.x = n / N;
             // Determine the y-scale from the frequency. The slope is provided
@@ -553,7 +538,7 @@ struct SpectrumAnalyzer : Module {
             // multiply by the slope. Because we're dealing with y first in
             // terms of amplitude, also convert the decibel scaling to an
             // amplitude gain.
-            auto gain = log2f(point.x * nyquist_rate / reference_frequency + epsilon);
+            auto gain = log2f(point.x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
             gain = Math::decibels2amplitude(slope * gain);
             // Normalize X point based on the minimum and maximum frequencies.
             point.x -= low_frequency / nyquist_rate;
@@ -567,7 +552,7 @@ struct SpectrumAnalyzer : Module {
             // Set the Y point to the linear coefficient percentage. Apply the
             // gain that was previously calculated from the scaling function.
             const float max_amplitude = Math::decibels2amplitude(max_magnitude);
-            point.y = gain * abs(filtered_coefficients[n]).s[lane_index] / (max_amplitude * N);
+            point.y = gain * abs(filtered_coeffs[n]).s[lane_index] / (max_amplitude * N);
             // Apply magnitude scaling to the Y point.
             switch (magnitude_scale) {
             case MagnitudeScale::Linear:
@@ -581,7 +566,6 @@ struct SpectrumAnalyzer : Module {
             default: break;
             }
         }
-        render_coefficients[lane_index] = rasterized_coefficients[lane_index];
     }
 
     /// @brief Process samples with the DFT.
@@ -597,22 +581,22 @@ struct SpectrumAnalyzer : Module {
                 fft.smooth(sample_rate, to_float(frequency_smoothing));
             // Pass the coefficients through a smoothing filter.
             for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coefficients[n] = alpha * simd::abs(filtered_coefficients[n]) + (1.0 - alpha) * simd::abs(fft.coefficients[n]);
+                filtered_coeffs[n] = alpha * abs(filtered_coeffs[n]) + (1.0 - alpha) * abs(fft.coefficients[n]);
             make_points(0);
             make_points(1);
             make_points(2);
             make_points(3);
             // Add the delay line to the FFT pipeline.
             fft.buffer(delay.contiguous(), window_function.get_samples());
+            // Mark the module as render-able
+            is_ready_to_render = true;
         }
         // Perform the number of FFT steps required at this hop-rate.
         fft.step(get_hop_length());
     }
 
     /// @brief Set the lights on the panel.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     inline void process_lights(const ProcessArgs& args) {
         if (!light_divider.process()) return;
         const auto light_time = args.sampleTime * light_divider.getDivision();
@@ -620,9 +604,7 @@ struct SpectrumAnalyzer : Module {
     }
 
     /// @brief Process a sample.
-    ///
     /// @param args the sample arguments (sample rate, sample time, etc.)
-    ///
     void process(const ProcessArgs& args) final {
         process_window();
         process_run_button();
@@ -640,9 +622,9 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// The vertical (bottom) padding for the plot.
     const size_t pad_bottom = 50;
     /// The horizontal (left) padding for the plot.
-    const size_t pad_left = 30;
+    const size_t pad_left = 35;
     /// The horizontal (right) padding for the plot.
-    const size_t pad_right = 5;
+    const size_t pad_right = 15;
     /// The radius of the rounded corners of the screen
     const int corner_radius = 5;
     /// The background color of the screen
@@ -657,11 +639,6 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     const float axis_font_size = 8;
     /// The stroke color for the cross-hair
     const NVGcolor cross_hair_stroke_color = {{{0.2f, 0.2f, 0.2f, 1.0f}}};
-
-    /// the font for rendering text on the display
-    const std::shared_ptr<Font> font = APP->window->loadFont(
-        asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf")
-    );
 
     /// The module to render on the display.
     SpectrumAnalyzer* module = nullptr;
@@ -705,9 +682,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
 
  public:
     /// @brief Initialize a new spectrum analyzer display widget.
-    ///
     /// @param module_ the module to render on the display.
-    ///
     explicit SpectrumAnalyzerDisplay(SpectrumAnalyzer* module_) :
         TransparentWidget(),
         module(module_) { }
@@ -746,59 +721,57 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     //     e.consume(this);
     // }
 
-    /// Respond to a button event on this widget.
-    void onButton(const event::Button &e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the mouse state to the hover position.
-        mouse_state.position = e.pos;
-        // setup the drag state.
-        mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
-        // if the action is a press copy the waveform before updating
-        mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
-        // Handle right clicks.
-        if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
-            dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
-    }
+    // /// Respond to a button event on this widget.
+    // void onButton(const event::Button &e) override {
+    //     // Consume the event to prevent it from propagating.
+    //     e.consume(this);
+    //     // Set the mouse state to the hover position.
+    //     mouse_state.position = e.pos;
+    //     // setup the drag state.
+    //     mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
+    //     // if the action is a press copy the waveform before updating
+    //     mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
+    //     // Handle right clicks.
+    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
+    //         dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
+    // }
 
-    /// @brief Respond to drag start event on this widget.
-    void onDragStart(const event::DragStart &e) override {
-        // // lock the cursor so it does not move in the engine during the edit
-        // APP->window->cursorLock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-    }
+    // /// @brief Respond to drag start event on this widget.
+    // void onDragStart(const event::DragStart &e) override {
+    //     // // lock the cursor so it does not move in the engine during the edit
+    //     // APP->window->cursorLock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    // }
 
-    /// @brief Respond to drag move event on this widget.
-    void onDragMove(const event::DragMove &e) override {
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        // if the drag operation is not active, return early
-        if (!mouse_state.is_pressed) return;
-        // update the drag state based on the change in position from the mouse
-        mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
-        mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
-    }
+    // /// @brief Respond to drag move event on this widget.
+    // void onDragMove(const event::DragMove &e) override {
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     // if the drag operation is not active, return early
+    //     if (!mouse_state.is_pressed) return;
+    //     // update the drag state based on the change in position from the mouse
+    //     mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
+    //     mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
+    // }
 
-    /// @brief Respond to drag end event on this widget.
-    void onDragEnd(const event::DragEnd &e) override {
-        // // unlock the cursor to return it to its normal state
-        // APP->window->cursorUnlock();
-        // consume the event to prevent it from propagating
-        e.consume(this);
-        if (!mouse_state.is_pressed) return;
-        // disable the press state.
-        mouse_state.is_pressed = false;
-    }
+    // /// @brief Respond to drag end event on this widget.
+    // void onDragEnd(const event::DragEnd &e) override {
+    //     // // unlock the cursor to return it to its normal state
+    //     // APP->window->cursorUnlock();
+    //     // consume the event to prevent it from propagating
+    //     e.consume(this);
+    //     if (!mouse_state.is_pressed) return;
+    //     // disable the press state.
+    //     mouse_state.is_pressed = false;
+    // }
 
     // -----------------------------------------------------------------------
     // MARK: Rendering
     // -----------------------------------------------------------------------
 
     /// @brief Draw the X ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_x_ticks_linear(const DrawArgs& args) {
         static constexpr float xticks = 10;
         for (float i = 1; i < xticks; i++) {
@@ -818,22 +791,16 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            std::stringstream stream;
-            if (freq < 1000.f)
-                stream << std::fixed << std::setprecision(0) << freq << "Hz";
-            else
-                stream << std::fixed << std::setprecision(1) << freq / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, point_x, box.size.y - pad_bottom + 8, stream.str().c_str(), NULL);
+            nvgText(args.vg, point_x, box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
         }
     }
 
     /// @brief Draw the X ticks with an exponential scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_x_ticks_logarithmic(const DrawArgs& args) {
         // Iterate over frequencies exponentially (base 10) starting
         // at at least 100Hz up to the maximum frequency (at most the Nyquist
@@ -860,22 +827,16 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 nvgClosePath(args.vg);
             }
             // Render a label with the base frequency in kHz.
-            std::stringstream stream;
-            if (base_frequency < 1000.f)
-                stream << std::fixed << std::setprecision(0) << base_frequency << "Hz";
-            else
-                stream << std::fixed << std::setprecision(0) << base_frequency / 1000.f << "kHz";
+            const auto freq_string = Math::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 8, stream.str().c_str(), NULL);
+            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
         }
     }
 
     /// @brief Draw the Y ticks with a linear scale.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void draw_y_ticks_linear(const DrawArgs& args) {
         // Iterate over the levels from 25%-400% in steps of 25%.
         for (int level_offset = 0; level_offset < 17; level_offset++) {
@@ -892,18 +853,16 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2, y_position, label.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
         }
     }
 
     /// @brief Draw the Y ticks with a logarithmic scale.
-    ///
     /// @tparam L the data type for the levels.
     /// @param args The arguments for the current draw call.
     /// @param minimum_level The minimum level to render.
     /// @param maximum_level The maximum level to render.
     /// @param levels The individual magnitude levels to render and label.
-    ///
     template<typename L>
     void draw_y_ticks_logarithmic(
         const DrawArgs& args,
@@ -927,7 +886,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 2, y_position, label.c_str(), NULL);
+            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
         }
     }
 
@@ -937,7 +896,6 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param stroke_width The width of the stroke.
     /// @param stroke_color The color of the stroke.
     /// @param fill_color The color of the fill.
-    ///
     void draw_coefficients(
         const DrawArgs& args,
         std::vector<Vec> coefficients,
@@ -1105,6 +1063,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call.
     void draw_cross_hair_text(const DrawArgs& args) {
         const auto mouse_position = get_mouse_position();
+        auto font_path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
+        const std::shared_ptr<Font> font = APP->window->loadFont(font_path);
         nvgFontSize(args.vg, 9);
         nvgFontFaceId(args.vg, font->handle);
         nvgFillColor(args.vg, {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}});
@@ -1133,9 +1093,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     }
 
     /// @brief Draw the screen.
-    ///
     /// @param args the arguments for the current draw call
-    ///
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // Render as a light/display w/o dimming features
             // Draw the background.
@@ -1188,11 +1146,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             default:
                 throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
             }
-            if (module != nullptr) {
-                draw_coefficients(args, module->render_coefficients[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
-                draw_coefficients(args, module->render_coefficients[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
+            if (module != nullptr && module->get_is_ready_to_render()) {
+                draw_coefficients(args, module->raster_coeffs[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
+                draw_coefficients(args, module->raster_coeffs[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
@@ -1214,9 +1172,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
 /// @brief The widget for the spectrum analyzer module.
 struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @brief Create a new spectrum analyzer widget.
-    ///
     /// @param module The back-end module to interact with. Can be a nullptr.
-    ///
     explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ModuleWidget() {
         setModule(module);
         setPanel(createPanel(
@@ -1238,34 +1194,49 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
         addChild(display);
         // Screen controls.
         // Window function control with custom angles to match discrete range.
-        auto window_function_param = createParam<WindowFunctionTextKnob>(Vec(50 + 0 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_FUNCTION);
+        auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_FUNCTION);
         window_function_param->maxAngle = 2.f * M_PI;
+        window_function_param->label.text = "WINDOW";
         addParam(window_function_param);
         // Window length control with custom angles to match discrete range.
-        auto window_length_param = createParam<WindowLengthTextKnob>(Vec(50 + 1 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_LENGTH);
+        auto window_length_param = createParam<TextKnob>(Vec(50 + 1 * 66, 330), module, SpectrumAnalyzer::PARAM_WINDOW_LENGTH);
         window_length_param->maxAngle = 1.2f * M_PI;
+        window_length_param->label.text = "LENGTH";
         addParam(window_length_param);
         // Hop length control.
-        addParam(createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, SpectrumAnalyzer::PARAM_HOP_LENGTH));
+        auto hop_length_param = createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, SpectrumAnalyzer::PARAM_HOP_LENGTH);
+        hop_length_param->label.text = "HOP";
+        addParam(hop_length_param);
         // Frequency scale control with custom angles to match discrete range.
-        auto frequency_scale_param = createParam<FrequencyScaleTextKnob>(Vec(50 + 3 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
+        auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
+        frequency_scale_param->label.text = "X SCALE";
         addParam(frequency_scale_param);
         // Magnitude scale control with custom angles to match discrete range.
-        auto magnitude_scale_param = createParam<MagnitudeScaleTextKnob>(Vec(50 + 4 * 66, 330), module, SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE);
+        auto magnitude_scale_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE);
         magnitude_scale_param->maxAngle = 0.6 * M_PI;
+        magnitude_scale_param->label.text = "Y SCALE";
         addParam(magnitude_scale_param);
         // Time smoothing control.
-        addParam(createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, SpectrumAnalyzer::PARAM_TIME_SMOOTHING));
+        auto time_smoothing_param = createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, SpectrumAnalyzer::PARAM_TIME_SMOOTHING);
+        time_smoothing_param->label.text = "AVERAGE";
+        addParam(time_smoothing_param);
         // Frequency smoothing control with custom angles to match discrete range.
-        auto frequency_smoothing_param = createParam<FrequencySmoothingTextKnob>(Vec(50 + 6 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SMOOTHING);
+        auto frequency_smoothing_param = createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SMOOTHING);
+        frequency_smoothing_param->label.text = "SMOOTH";
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 7 * 66, 330), module, SpectrumAnalyzer::PARAM_LOW_FREQUENCY));
-        addParam(createParam<TextKnob>(Vec(50 + 8 * 66, 330), module, SpectrumAnalyzer::PARAM_HIGH_FREQUENCY));
+        auto low_freq_param = createParam<TextKnob>(Vec(50 + 7 * 66, 330), module, SpectrumAnalyzer::PARAM_LOW_FREQUENCY);
+        low_freq_param->label.text = "LO FREQ";
+        addParam(low_freq_param);
+        auto high_freq_param = createParam<TextKnob>(Vec(50 + 8 * 66, 330), module, SpectrumAnalyzer::PARAM_HIGH_FREQUENCY);
+        high_freq_param->label.text = "HI FREQ";
+        addParam(high_freq_param);
         // Slope (dB/octave @1000Hz) controls.
-        addParam(createParam<TextKnob>(Vec(50 + 9 * 66, 330), module, SpectrumAnalyzer::PARAM_SLOPE));
+        auto slope_param = createParam<TextKnob>(Vec(50 + 9 * 66, 330), module, SpectrumAnalyzer::PARAM_SLOPE);
+        slope_param->label.text = "SLOPE";
+        addParam(slope_param);
         // Screws
         addChild(createWidget<ThemedScrew>(Vec(RACK_GRID_WIDTH, 0)));
         addChild(createWidget<ThemedScrew>(Vec(box.size.x - 2 * RACK_GRID_WIDTH, 0)));
@@ -1274,27 +1245,13 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     }
 
     /// @brief Append the context menu to the module when right clicked.
-    ///
     /// @param menu the menu object to add context items for the module to
-    ///
     void appendContextMenu(Menu* menu) override {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
-        // get a pointer to the module.
-        SpectrumAnalyzer* const module = dynamic_cast<SpectrumAnalyzer*>(this->module);
-        // Create an option for filling the plots.
-        auto filled_display_item = createMenuItem<FlagMenuItem>("Filled Display", CHECKMARK(module->is_fill_enabled));
-        filled_display_item->flag = &module->is_fill_enabled;
-        menu->addChild(filled_display_item);
-        // Create an option for enabling Bezier smoothing.
-        auto bezier_curve_item = createMenuItem<FlagMenuItem>("Bezier Curve", CHECKMARK(module->is_bezier_enabled));
-        bezier_curve_item->flag = &module->is_bezier_enabled;
-        menu->addChild(bezier_curve_item);
-        // Create an option for enabling AC-coupled mode.
-        auto ac_coupling_item = createMenuItem<FlagMenuItem>("AC-coupled", CHECKMARK(module->is_ac_coupled));
-        ac_coupling_item->flag = &module->is_ac_coupled;
-        menu->addChild(ac_coupling_item);
-        // Call the super function.
+        menu->addChild(createBoolPtrMenuItem("Filled Display", "", &getModule<SpectrumAnalyzer>()->is_fill_enabled));
+        menu->addChild(createBoolPtrMenuItem("Bezier Curve", "", &getModule<SpectrumAnalyzer>()->is_bezier_enabled));
+        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<SpectrumAnalyzer>()->is_ac_coupled));
         ModuleWidget::appendContextMenu(menu);
     }
 };

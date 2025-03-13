@@ -19,6 +19,7 @@
 
 #include <exception>  // std::runtime_error
 #include <string>     // std::string
+#include <vector>     // std::vector
 
 /// @brief Basic mathematical functions.
 namespace Math {
@@ -183,6 +184,20 @@ enum class Function {
     NumFunctions
 };
 
+/// @brief Return a vector of color map function names.
+static const std::vector<std::string>& names() {
+    static const std::vector<std::string> names_ = {
+        "Viridis",
+        "Cividis",
+        "Magma",
+        "Plasma",
+        "Inferno",
+        "Bone",
+        "Gray"
+    };
+    return names_;
+}
+
 /// @brief Compute the color for given color mapping and value.
 /// @param color_map_ The color map to use when mapping values.
 /// @param value The value to map to a color.
@@ -196,22 +211,6 @@ inline Color color_map(const Function& color_map_, const float& value) {
     case Function::Inferno:  return inferno(value);
     case Function::Bone:     return bone(value);
     case Function::Gray:     return gray(value);
-    default: throw std::runtime_error("Unrecognized color_map_ input.");
-    }
-}
-
-/// @brief Return the name of the given color map.
-/// @param color_map_ The color map to serialize into a string representation.
-/// @returns A descriptive string name for the color-map.
-inline std::string name(const Function& color_map_) {
-    switch (color_map_) {
-    case Function::Viridis:  return "Viridis";
-    case Function::Cividis:  return "Cividis";
-    case Function::Magma:    return "Magma";
-    case Function::Plasma:   return "Plasma";
-    case Function::Inferno:  return "Inferno";
-    case Function::Bone:     return "Bone";
-    case Function::Gray:     return "Gray";
     default: throw std::runtime_error("Unrecognized color_map_ input.");
     }
 }
