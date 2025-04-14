@@ -43,6 +43,10 @@ See the [Manual][Fourier] for more information about the features of this module
 <!-- MARK: Spectre -->
 <!-- ------------------------------------------------------------ -->
 
+<p align="center">
+<img alt="Spectre" src="manual/Spectre/img/Logo.png">
+</p>
+
 **Spectre** is a highly tune-able spectrogram visualizer module.
 
 <p align="center">
