@@ -1,6 +1,4 @@
-<p align="center">
-<img alt="Fourier" src="manual/Fourier/img/Logo.png">
-</p>
+# Fourier
 
 [![Latest Release][ReleaseBadge]][LatestRelease]
 [![VCV Library][VCVBadge]][VCVLibrary]
@@ -10,9 +8,18 @@
 [VCVBadge]: https://img.shields.io/badge/VCV-Library-white
 [VCVLibrary]: https://library.vcvrack.com/ArhythmeticUnits-Fourier
 
+This repository contains the source code for the _Fourier_ plugin by
+**Arhythmetic Units**.
+
 <!-- ------------------------------------------------------------ -->
 <!-- MARK: Fourier -->
 <!-- ------------------------------------------------------------ -->
+
+-----
+
+<p align="center">
+<img alt="Fourier" src="manual/Fourier/img/Logo.png" width="50%">
+</p>
 
 **Fourier** is a highly tune-able spectrum analyzer module.
 
@@ -43,8 +50,10 @@ See the [Manual][Fourier] for more information about the features of this module
 <!-- MARK: Spectre -->
 <!-- ------------------------------------------------------------ -->
 
+-----
+
 <p align="center">
-<img alt="Spectre" src="manual/Spectre/img/Logo.png">
+<img alt="Spectre" src="manual/Spectre/img/Logo.png" width="50%">
 </p>
 
 **Spectre** is a highly tune-able spectrogram visualizer module.
