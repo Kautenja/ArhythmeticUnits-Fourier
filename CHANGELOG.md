@@ -1,5 +1,9 @@
 # Change Log
 
+## 2.1.2 (2025-04-14)
+
+-   Wrote manual for Spectre
+
 ## 2.1.1 (2025-03-TODO)
 
 -   Fix `Math::freq_to_string` to cover edge cases along unit bounds
