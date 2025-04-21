@@ -166,93 +166,142 @@ SCENARIO("the RFFT needs to be calculated") {
     }
 }
 
-// // ---------------------------------------------------------------------------
-// // MARK: `ifft`
-// // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// MARK: `OnTheFlyIFFT`
+// ---------------------------------------------------------------------------
 
-// SCENARIO("the IFFT needs to be calculated") {
-//     GIVEN("a coefficient sequence {0}") {
-//         std::vector<std::complex<float>> sequence = {{0, 0}};
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<1>(sequence);
-//             THEN("the output has no signal content") {
-//                 REQUIRE(output.size() == 1);
-//                 REQUIRE(epsilon_equal(0.f, output[0]));
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {0, 0}") {
-//         std::vector<std::complex<float>> sequence = {{0, 0}, {0, 0}};
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<2>(sequence);
-//             THEN("the output has no signal content") {
-//                 REQUIRE(output.size() == 2);
-//                 REQUIRE(epsilon_equal(0.f, output[0]));
-//                 REQUIRE(epsilon_equal(0.f, output[1]));
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {1}") {
-//         std::vector<std::complex<float>> sequence = {{1, 0}};
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<1>(sequence);
-//             THEN("the output is correct") {
-//                 REQUIRE(output.size() == 1);
-//                 REQUIRE(epsilon_equal(1.f, output[0]));
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {1, 0}") {
-//         std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}};
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<2>(sequence);
-//             THEN("the output is correct") {
-//                 REQUIRE(output.size() == 2);
-//                 REQUIRE(epsilon_equal(1.f/2.f, output[0]));
-//                 REQUIRE(epsilon_equal(1.f/2.f, output[1]));
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {1, 0, 0, 0}") {
-//         std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}, {0, 0}, {0, 0}};
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<4>(sequence);
-//             THEN("the output is correct") {
-//                 REQUIRE(output.size() == 4);
-//                 REQUIRE(epsilon_equal(1.f/4.f, output[0]));
-//                 REQUIRE(epsilon_equal(1.f/4.f, output[1]));
-//                 REQUIRE(epsilon_equal(1.f/4.f, output[2]));
-//                 REQUIRE(epsilon_equal(1.f/4.f, output[3]));
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {0, 1, 0, 0}") {
-//         std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {0, 0}};
-//         auto expected = Math::idft_trig(sequence);
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<4>(sequence);
-//             THEN("the output matches a naive DFT") {
-//                 REQUIRE(output.size() == 4);
-//                 for (std::size_t i = 0; i < sequence.size(); i++) {
-//                     REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
-//                 }
-//             }
-//         }
-//     }
-//     GIVEN("a coefficient sequence {0, 1, 0, 1}") {
-//         std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {1, 0}};
-//         auto expected = Math::idft_trig(sequence);
-//         WHEN("the IFFT is calculated") {
-//             auto output = Math::ifft<4>(sequence);
-//             THEN("the output matches a naive DFT") {
-//                 REQUIRE(output.size() == 4);
-//                 for (std::size_t i = 0; i < sequence.size(); i++) {
-//                     REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
-//                 }
-//             }
-//         }
-//     }
-// }
+SCENARIO("the IFFT needs to be calculated") {
+    // GIVEN("a coefficient sequence {0, 0}") {
+    //     std::vector<std::complex<float>> sequence = {{0, 0}, {0, 0}};
+    //     WHEN("the IFFT is calculated") {
+    //         auto output = Math::ifft<2>(sequence);
+    //         THEN("the output has no signal content") {
+    //             REQUIRE(output.size() == 2);
+    //             REQUIRE(epsilon_equal(0.f, output[0]));
+    //             REQUIRE(epsilon_equal(0.f, output[1]));
+    //         }
+    //     }
+    // }
+    // GIVEN("a coefficient sequence {1, 0}") {
+    //     std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}};
+    //     WHEN("the IFFT is calculated") {
+    //         auto output = Math::ifft<2>(sequence);
+    //         THEN("the output is correct") {
+    //             REQUIRE(output.size() == 2);
+    //             REQUIRE(epsilon_equal(1.f/2.f, output[0]));
+    //             REQUIRE(epsilon_equal(1.f/2.f, output[1]));
+    //         }
+    //     }
+    // }
+    // GIVEN("a coefficient sequence {1, 0, 0, 0}") {
+    //     std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}, {0, 0}, {0, 0}};
+    //     WHEN("the IFFT is calculated") {
+    //         auto output = Math::ifft<4>(sequence);
+    //         THEN("the output is correct") {
+    //             REQUIRE(output.size() == 4);
+    //             REQUIRE(epsilon_equal(1.f/4.f, output[0]));
+    //             REQUIRE(epsilon_equal(1.f/4.f, output[1]));
+    //             REQUIRE(epsilon_equal(1.f/4.f, output[2]));
+    //             REQUIRE(epsilon_equal(1.f/4.f, output[3]));
+    //         }
+    //     }
+    // }
+    // GIVEN("a coefficient sequence {0, 1, 0, 0}") {
+    //     std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {0, 0}};
+    //     auto expected = Math::idft_trig(sequence);
+    //     WHEN("the IFFT is calculated") {
+    //         auto output = Math::ifft<4>(sequence);
+    //         THEN("the output matches a naive DFT") {
+    //             REQUIRE(output.size() == 4);
+    //             for (std::size_t i = 0; i < sequence.size(); i++) {
+    //                 REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
+    //             }
+    //         }
+    //     }
+    // }
+    // GIVEN("a coefficient sequence {0, 1, 0, 1}") {
+    //     std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {1, 0}};
+    //     auto expected = Math::idft_trig(sequence);
+    //     WHEN("the IFFT is calculated") {
+    //         auto output = Math::ifft<4>(sequence);
+    //         THEN("the output matches a naive DFT") {
+    //             REQUIRE(output.size() == 4);
+    //             for (std::size_t i = 0; i < sequence.size(); i++) {
+    //                 REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
+    //             }
+    //         }
+    //     }
+    // }
+    GIVEN("a sequence with no signal (length 2)") {
+        std::vector<std::complex<float>> sequence = {0, 0};
+        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        fft.buffer(sequence.data());
+        fft.compute();
+        ifft.buffer(fft.coefficients.data());
+        WHEN("the IFFT is calculated") {
+            ifft.compute();
+            THEN("the output matches the input") {
+                for (size_t i = 0; i < sequence.size(); i++)
+                    REQUIRE(epsilon_equal(sequence[i], ifft.coefficients[i]));
+            }
+        }
+    }
+    GIVEN("a sequence with the unit impulse (length 2)") {
+        std::vector<std::complex<float>> sequence = {1, 0};
+        // Compute the FFT
+        Math::OnTheFlyFFT<float> fft(sequence.size());
+        fft.buffer(sequence.data());
+        fft.compute();
+        // Compute the IFFT
+        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        ifft.buffer(fft.coefficients.data());
+        WHEN("the IFFT is calculated") {
+            ifft.compute();
+            THEN("the output matches the input") {
+                for (size_t i = 0; i < sequence.size(); i++)
+                    REQUIRE(epsilon_equal(sequence[i], ifft.coefficients[i]));
+            }
+        }
+    }
+    GIVEN("a sequence with the unit impulse (length 4)") {
+        std::vector<std::complex<float>> sequence = {1, 0, 0, 0};
+        // Compute the FFT
+        Math::OnTheFlyFFT<float> fft(sequence.size());
+        fft.buffer(sequence.data());
+        fft.compute();
+        // Compute the IFFT
+        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        ifft.buffer(fft.coefficients.data());
+        WHEN("the IFFT is calculated") {
+            ifft.compute();
+            THEN("the output matches the input") {
+                for (size_t i = 0; i < sequence.size(); i++)
+                    REQUIRE(epsilon_equal(sequence[i], ifft.coefficients[i]));
+            }
+        }
+    }
+    GIVEN("a sequence with a sinusoid at 441Hz, a sample rate of 44100Hz, and 4096 frequency bins") {
+        const float FUNDAMENTAL = 441;
+        const float SAMPLE_RATE = 44100;
+        constexpr int FFT_BINS = 4096;
+        const auto sequence = generate_sinusoid<std::complex<float>>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
+        // Compute the FFT
+        Math::OnTheFlyFFT<float> fft(sequence.size());
+        fft.buffer(sequence.data());
+        fft.compute();
+        // Compute the IFFT
+        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        ifft.buffer(fft.coefficients.data());
+        WHEN("the IFFT is calculated.") {
+            ifft.compute();
+            THEN("the output matches the input") {
+                for (size_t i = 0; i < sequence.size(); i++)
+                    REQUIRE(approx_equal<float>(abs(sequence[i]), abs(ifft.coefficients[i]), 1e-6));
+            }
+        }
+    }
+}
 
 // // ---------------------------------------------------------------------------
 // // MARK: `fft`/`ifft` integration

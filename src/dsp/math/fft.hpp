@@ -504,6 +504,52 @@ class OnTheFlyRFFT {
     }
 };
 
+template<typename T>
+class OnTheFlyIFFT {
+ private:
+    OnTheFlyFFT<T> fft;
+
+ public:
+    std::vector<std::complex<T>> coefficients;
+
+    explicit OnTheFlyIFFT(size_t n) : fft(n), coefficients(n, 0.f) {}
+
+    inline size_t size() const { return coefficients.size(); }
+
+    inline void resize(size_t n) {
+        fft.resize(n);
+        coefficients.resize(n);
+        std::fill(coefficients.begin(), coefficients.end(), 0.f);
+    }
+
+    inline void buffer(const std::complex<T>* x) {
+        // Copy and conjugate input into FFT buffer
+        std::vector<std::complex<T>> temp(size());
+        for (size_t i = 0; i < size(); ++i)
+            temp[i] = std::conj(x[i]);
+        fft.buffer(temp.data());
+    }
+
+    inline void step() {
+        if (fft.is_done_computing()) return;
+        fft.step();
+        if (fft.is_done_computing()) {
+            const T scale = T(1) / static_cast<T>(size());
+            for (size_t i = 0; i < size(); ++i)
+                coefficients[i] = std::conj(fft.coefficients[i]) * scale;
+        }
+    }
+
+    inline void step(size_t hop) {
+        auto steps = std::ceil(fft.get_total_steps() / static_cast<float>(hop));
+        for (size_t i = 0; i < steps; ++i) step();
+    }
+
+    inline void compute() { while (!fft.is_done_computing()) step(); }
+
+    inline bool is_done_computing() const { return fft.is_done_computing(); }
+};
+
 }  // namespace Math
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FFT_HPP_
