@@ -379,7 +379,7 @@ class OnTheFlyRFFT {
     /// The output coefficients buffer containing the final FFT result.
     std::vector<std::complex<T>> coefficients;
 
-    /// @brief Initialize a new on-the-fly FFT.
+    /// @brief Initialize a new on-the-fly RFFT.
     OnTheFlyRFFT() : fft(1), twiddles(1), coefficients(1) { resize(1); }
 
     /// @brief Construct an OnTheFlyRFFT object for an N-point RFFT.
@@ -504,24 +504,41 @@ class OnTheFlyRFFT {
     }
 };
 
+/// @brief An on-the-fly implementation of the Cooley-Tukey iterative IFFT.
+/// @tparam T The type for the complex coefficients.
 template<typename T>
 class OnTheFlyIFFT {
  private:
+    /// The internal FFT structure used to compute the IFFt.
     OnTheFlyFFT<T> fft;
 
  public:
+    /// The output coefficients from the transform.
     std::vector<std::complex<T>> coefficients;
 
+    /// @brief Initialize a new on-the-fly IFFT.
+    /// @param n The length of the RFFT. Must be a power of 2.
     explicit OnTheFlyIFFT(size_t n) : fft(n), coefficients(n, 0.f) {}
 
+    /// @brief Return the length of the IFFT.
+    /// @return The number of samples (N) in the IFFT.
     inline size_t size() const { return coefficients.size(); }
 
+    /// @brief Resize and re-initialize the IFFT computation structures.
+    /// @param n The new length of the IFFT. Must be a power of 2.
     inline void resize(size_t n) {
         fft.resize(n);
         coefficients.resize(n);
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
+    /// @brief Checks whether the IFFT computation has been completed.
+    /// @returns True if the underlying FFT has been fully computed and the
+    /// RFFT reconstruction is complete; false otherwise.
+    inline bool is_done_computing() const { return fft.is_done_computing(); }
+
+    /// @brief Buffer input samples and prepare the IFFT for computation.
+    /// @param x A pointer to the complex input coefficient buffer of length N.
     inline void buffer(const std::complex<T>* x) {
         // Copy and conjugate input into FFT buffer
         std::vector<std::complex<T>> temp(size());
@@ -530,6 +547,11 @@ class OnTheFlyIFFT {
         fft.buffer(temp.data());
     }
 
+    /// @brief Perform a single IFFT computation step (butterfly operation.)
+    /// @details
+    /// This method advances the underlying FFT computation by one butterfly
+    /// operation. Once the FFT computation is complete, it finalizes the
+    /// reconstruction of the full signal.
     inline void step() {
         if (fft.is_done_computing()) return;
         fft.step();
@@ -540,14 +562,20 @@ class OnTheFlyIFFT {
         }
     }
 
-    inline void step(size_t hop) {
-        auto steps = std::ceil(fft.get_total_steps() / static_cast<float>(hop));
+    /// @brief Perform a batch of IFFT steps targeting a specified hop length.
+    /// @param hop_length The number of samples between IFFT computations.
+    /// @details
+    /// This method calculates the number of IFFT steps to perform based on
+    /// the hop length and the total number of steps required. It then
+    /// iteratively calls the single-step() method, allowing the IFFT
+    /// computation to be spread across multiple processing intervals.
+    inline void step(size_t hop_length) {
+        auto steps = std::ceil(fft.get_total_steps() / static_cast<float>(hop_length));
         for (size_t i = 0; i < steps; ++i) step();
     }
 
+    /// @brief Complete the computation schedule of the FFT.
     inline void compute() { while (!fft.is_done_computing()) step(); }
-
-    inline bool is_done_computing() const { return fft.is_done_computing(); }
 };
 
 }  // namespace Math
