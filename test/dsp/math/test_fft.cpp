@@ -21,6 +21,12 @@
 // SOFTWARE.
 //
 
+#include <algorithm>
+#include <cmath>
+#include <complex>
+#include <limits>
+#include <stdexcept>
+#include <vector>
 #include "dsp/math/dft.hpp"
 #include "dsp/math/fft.hpp"
 #include "../../ieee754.hpp"
@@ -171,67 +177,6 @@ SCENARIO("the RFFT needs to be calculated") {
 // ---------------------------------------------------------------------------
 
 SCENARIO("the IFFT needs to be calculated") {
-    // GIVEN("a coefficient sequence {0, 0}") {
-    //     std::vector<std::complex<float>> sequence = {{0, 0}, {0, 0}};
-    //     WHEN("the IFFT is calculated") {
-    //         auto output = Math::ifft<2>(sequence);
-    //         THEN("the output has no signal content") {
-    //             REQUIRE(output.size() == 2);
-    //             REQUIRE(epsilon_equal(0.f, output[0]));
-    //             REQUIRE(epsilon_equal(0.f, output[1]));
-    //         }
-    //     }
-    // }
-    // GIVEN("a coefficient sequence {1, 0}") {
-    //     std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}};
-    //     WHEN("the IFFT is calculated") {
-    //         auto output = Math::ifft<2>(sequence);
-    //         THEN("the output is correct") {
-    //             REQUIRE(output.size() == 2);
-    //             REQUIRE(epsilon_equal(1.f/2.f, output[0]));
-    //             REQUIRE(epsilon_equal(1.f/2.f, output[1]));
-    //         }
-    //     }
-    // }
-    // GIVEN("a coefficient sequence {1, 0, 0, 0}") {
-    //     std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}, {0, 0}, {0, 0}};
-    //     WHEN("the IFFT is calculated") {
-    //         auto output = Math::ifft<4>(sequence);
-    //         THEN("the output is correct") {
-    //             REQUIRE(output.size() == 4);
-    //             REQUIRE(epsilon_equal(1.f/4.f, output[0]));
-    //             REQUIRE(epsilon_equal(1.f/4.f, output[1]));
-    //             REQUIRE(epsilon_equal(1.f/4.f, output[2]));
-    //             REQUIRE(epsilon_equal(1.f/4.f, output[3]));
-    //         }
-    //     }
-    // }
-    // GIVEN("a coefficient sequence {0, 1, 0, 0}") {
-    //     std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {0, 0}};
-    //     auto expected = Math::idft_trig(sequence);
-    //     WHEN("the IFFT is calculated") {
-    //         auto output = Math::ifft<4>(sequence);
-    //         THEN("the output matches a naive DFT") {
-    //             REQUIRE(output.size() == 4);
-    //             for (std::size_t i = 0; i < sequence.size(); i++) {
-    //                 REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
-    //             }
-    //         }
-    //     }
-    // }
-    // GIVEN("a coefficient sequence {0, 1, 0, 1}") {
-    //     std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}, {1, 0}};
-    //     auto expected = Math::idft_trig(sequence);
-    //     WHEN("the IFFT is calculated") {
-    //         auto output = Math::ifft<4>(sequence);
-    //         THEN("the output matches a naive DFT") {
-    //             REQUIRE(output.size() == 4);
-    //             for (std::size_t i = 0; i < sequence.size(); i++) {
-    //                 REQUIRE(approx_equal<float>(output[i], expected[i], 1e-6));
-    //             }
-    //         }
-    //     }
-    // }
     GIVEN("a sequence with no signal (length 2)") {
         std::vector<std::complex<float>> sequence = {0, 0};
         Math::OnTheFlyFFT<float> fft(sequence.size());
@@ -297,49 +242,227 @@ SCENARIO("the IFFT needs to be calculated") {
             ifft.compute();
             THEN("the output matches the input") {
                 for (size_t i = 0; i < sequence.size(); i++)
-                    REQUIRE(approx_equal<float>(abs(sequence[i]), abs(ifft.coefficients[i]), 1e-6));
+                    REQUIRE(approx_equal(sequence[i], ifft.coefficients[i], 1e-6f));
             }
         }
     }
 }
 
-// // ---------------------------------------------------------------------------
-// // MARK: `fft`/`ifft` integration
-// // ---------------------------------------------------------------------------
+TEMPLATE_TEST_CASE("IFFT reconstructs known complex signals", "[ifft]", float, double) {
+    using T = TestType;
+    using Complex = std::complex<T>;
+    const size_t n = GENERATE(1, 2, 4, 8, 32);
+    CAPTURE(n);
+    std::vector<Complex> spectrum(n, Complex(0, 0));
+    std::vector<Complex> expected(n, Complex(0, 0));
+    const Complex amplitude(T(0.75), T(-0.5));
 
-// SCENARIO("the IFFT/IFFT needs to be calculated") {
-//     GIVEN("a sequence with a sinusoid at 441Hz, a sample rate of 44100Hz, and 4096 frequency bins") {
-//         const float FUNDAMENTAL = 441;
-//         const float SAMPLE_RATE = 44100;
-//         constexpr int FFT_BINS = 4096;
-//         const auto sequence = Math::generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
-//         WHEN("the FFT/IFFT is calculated.") {
-//             auto components = Math::fft<FFT_BINS>(sequence);
-//             auto reconstruction = Math::ifft<FFT_BINS>(components);
-//             for (std::size_t i = 0; i < sequence.size(); i++) {
-//                 REQUIRE(approx_equal<float>(reconstruction[i], sequence[i], 1e-6));
-//             }
-//         }
-//     }
-// }
+    SECTION("silence") {}
+    SECTION("DC") {
+        spectrum[0] = amplitude * T(n);
+        std::fill(expected.begin(), expected.end(), amplitude);
+    }
+    SECTION("impulse") {
+        std::fill(spectrum.begin(), spectrum.end(), amplitude);
+        expected[0] = amplitude;
+    }
+    SECTION("positive frequency complex sinusoid") {
+        const size_t bin = n == 1 ? 0 : 1;
+        spectrum[bin] = amplitude * T(n);
+        for (size_t i = 0; i < n; ++i) {
+            const T angle = T(2) * Math::pi<T>() * T(bin * i) / T(n);
+            expected[i] = amplitude * Complex(std::cos(angle), std::sin(angle));
+        }
+    }
+    SECTION("Nyquist") {
+        spectrum[n / 2] = amplitude * T(n);
+        for (size_t i = 0; i < n; ++i)
+            expected[i] = (i % 2 == 0) ? amplitude : -amplitude;
+    }
 
-// SCENARIO("the IFFT/IFFT needs to be calculated in-place") {
-//     GIVEN("a sequence with a sinusoid at 441Hz, a sample rate of 44100Hz, and 4096 frequency bins") {
-//         const float FUNDAMENTAL = 441;
-//         const float SAMPLE_RATE = 44100;
-//         constexpr int FFT_BINS = 4096;
-//         const auto sequence = Math::generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
-//         std::vector<std::complex<float>> coefficients(sequence.size());
-//         for (std::size_t i = 0; i < sequence.size(); i++) coefficients[i] = sequence[i];
-//         WHEN("the FFT/IFFT is calculated.") {
-//             // Transform to the frequency domain and find the highest frequency.
-//             Math::fft_<FFT_BINS>(coefficients);
-//             auto frequency = float(Math::argmax(coefficients.data(), coefficients.size())) * SAMPLE_RATE / FFT_BINS;
-//             REQUIRE(approx_equal<float>(FUNDAMENTAL, frequency, 1));
-//             // Transform back to the time-domain and check against the input.
-//             Math::ifft_<FFT_BINS>(coefficients);
-//             for (std::size_t i = 0; i < sequence.size(); i++)
-//                 REQUIRE(approx_equal<float>(coefficients[i], sequence[i], 1e-6));
-//         }
-//     }
-// }
+    Math::OnTheFlyIFFT<T> ifft(n);
+    const auto original = spectrum;
+    ifft.buffer(spectrum.data());
+    ifft.compute();
+    REQUIRE(ifft.is_done_computing());
+    REQUIRE(spectrum == original);
+    // At most five radix-2 stages, with unit-scale inputs.
+    const T tolerance = T(32) * std::numeric_limits<T>::epsilon();
+    for (size_t i = 0; i < n; ++i) {
+        CAPTURE(i);
+        REQUIRE(std::abs(ifft.coefficients[i] - expected[i]) <= tolerance);
+    }
+}
+
+TEMPLATE_TEST_CASE("IFFT matches the complex inverse DFT", "[ifft]", float, double) {
+    using T = TestType;
+    using Complex = std::complex<T>;
+    const size_t n = GENERATE(2, 4, 8, 16, 64);
+    CAPTURE(n);
+    std::vector<Complex> spectrum(n);
+    for (size_t k = 0; k < n; ++k)
+        spectrum[k] = Complex(T(int(k % 7) - 3) / T(4),
+                              T(int(k % 5) - 2) / T(3));
+    Math::OnTheFlyIFFT<T> ifft(n);
+    ifft.buffer(spectrum.data());
+    ifft.compute();
+    // Independent O(N^2) complex reference using long double arithmetic.
+    // Math::idft returns only the real component and cannot check phase here.
+    const long double pi = std::acos(-1.L);
+    const long double tolerance = 64.L * std::numeric_limits<T>::epsilon();
+    for (size_t i = 0; i < n; ++i) {
+        std::complex<long double> expected(0, 0);
+        for (size_t k = 0; k < n; ++k) {
+            const long double angle = 2.L * pi * k * i / n;
+            expected += std::complex<long double>(spectrum[k].real(), spectrum[k].imag())
+                * std::complex<long double>(std::cos(angle), std::sin(angle));
+        }
+        expected /= n;
+        const std::complex<long double> actual(ifft.coefficients[i].real(),
+                                               ifft.coefficients[i].imag());
+        CAPTURE(i);
+        REQUIRE(std::abs(actual - expected) <= tolerance);
+    }
+}
+
+TEMPLATE_TEST_CASE("FFT and IFFT preserve complex samples", "[ifft]", float, double) {
+    using T = TestType;
+    using Complex = std::complex<T>;
+    const size_t n = GENERATE(1, 2, 16, 1024);
+    CAPTURE(n);
+    std::vector<Complex> input(n);
+    for (size_t i = 0; i < n; ++i)
+        input[i] = Complex(T(int(i % 11) - 5) / T(8),
+                           T(int(i % 7) - 3) / T(4));
+    Math::OnTheFlyFFT<T> fft(n);
+    Math::OnTheFlyIFFT<T> ifft(n);
+    fft.buffer(input.data());
+    fft.compute();
+    ifft.buffer(fft.coefficients.data());
+    ifft.compute();
+    // Allow accumulated rounding through up to ten stages in each direction.
+    const T tolerance = T(64) * std::numeric_limits<T>::epsilon();
+    for (size_t i = 0; i < n; ++i) {
+        CAPTURE(i);
+        REQUIRE(std::abs(ifft.coefficients[i] - input[i]) <= tolerance);
+    }
+}
+
+TEST_CASE("IFFT steps include incremental output normalization", "[ifft]") {
+    const size_t n = GENERATE(1, 2, 8, 32);
+    CAPTURE(n);
+    Math::OnTheFlyIFFT<float> ifft(n);
+    const std::complex<float> amplitude(2, -3);
+    std::vector<std::complex<float>> spectrum(n, 0.f);
+    spectrum[0] = amplitude * float(n);
+    size_t butterflies = 0;
+    for (size_t stage = n; stage > 1; stage >>= 1)
+        butterflies += n / 2;
+    const size_t total = butterflies + n;
+    REQUIRE(ifft.get_total_steps() == total);
+    REQUIRE(ifft.is_done_computing());
+    ifft.buffer(spectrum.data());
+    REQUIRE_FALSE(ifft.is_done_computing());
+    ifft.step(0);  // Zero hop must neither advance nor hang.
+    for (size_t step = 1; step <= total; ++step) {
+        ifft.step();
+        CAPTURE(step);
+        REQUIRE(ifft.is_done_computing() == (step == total));
+        const size_t normalized = step > butterflies ? step - butterflies : 0;
+        for (size_t i = 0; i < n; ++i)
+            REQUIRE(ifft.coefficients[i] == (i < normalized ? amplitude : 0.f));
+    }
+    const auto output = ifft.coefficients;
+    ifft.step();
+    ifft.step(1);
+    ifft.compute();
+    REQUIRE(ifft.coefficients == output);
+}
+
+TEST_CASE("IFFT hop scheduling matches complete computation", "[ifft]") {
+    const size_t n = GENERATE(1, 2, 8, 64);
+    const size_t hop = GENERATE(size_t(1), size_t(3), size_t(16), size_t(1024),
+                               std::numeric_limits<size_t>::max());
+    CAPTURE(n, hop);
+    std::vector<std::complex<float>> spectrum(n);
+    for (size_t i = 0; i < n; ++i)
+        spectrum[i] = {float(int(i % 5) - 2), float(int(i % 3) - 1)};
+    Math::OnTheFlyIFFT<float> complete(n), incremental(n);
+    complete.buffer(spectrum.data());
+    complete.compute();
+    incremental.buffer(spectrum.data());
+    // Bound the loop independently of the readiness flag to catch stuck work.
+    const size_t total = incremental.get_total_steps();
+    const size_t budget = total / hop + (total % hop != 0);
+    const size_t calls = total / budget + (total % budget != 0);
+    REQUIRE(calls <= hop);
+    for (size_t call = 0; call < calls; ++call) {
+        REQUIRE_FALSE(incremental.is_done_computing());
+        incremental.step(hop);
+    }
+    REQUIRE(incremental.is_done_computing());
+    REQUIRE(incremental.coefficients == complete.coefficients);
+}
+
+TEST_CASE("IFFT can restart and buffer its own output", "[ifft]") {
+    // Restart before work, during butterflies, during normalization, or done.
+    const size_t steps = GENERATE(0, 1, 13, 20);
+    CAPTURE(steps);
+    Math::OnTheFlyIFFT<float> ifft(8);
+    std::vector<std::complex<float>> spectrum(8, 1.f);
+    ifft.buffer(spectrum.data());
+    for (size_t i = 0; i < steps; ++i) ifft.step();
+    std::fill(spectrum.begin(), spectrum.end(), 0.f);
+    spectrum[0] = {24.f, -8.f};
+    ifft.buffer(spectrum.data());
+    // Buffer owns its copy of the input.
+    std::fill(spectrum.begin(), spectrum.end(), 0.f);
+    ifft.compute();
+    const std::complex<float> amplitude(3.f, -1.f);
+    for (const auto& sample : ifft.coefficients) REQUIRE(sample == amplitude);
+    ifft.buffer(ifft.coefficients.data());
+    ifft.compute();
+    REQUIRE(ifft.coefficients[0] == amplitude);
+    for (size_t i = 1; i < ifft.size(); ++i)
+        REQUIRE(ifft.coefficients[i] == std::complex<float>(0, 0));
+}
+
+TEST_CASE("IFFT resize clears pending work and permits reuse", "[ifft]") {
+    const size_t n = GENERATE(1, 2, 8, 32);
+    const size_t steps = GENERATE(0, 1, 13, 20);
+    CAPTURE(n, steps);
+    Math::OnTheFlyIFFT<float> ifft(8);
+    std::vector<std::complex<float>> spectrum(8, 1.f);
+    ifft.buffer(spectrum.data());
+    for (size_t i = 0; i < steps; ++i) ifft.step();
+    ifft.resize(n);
+    REQUIRE(ifft.size() == n);
+    REQUIRE(ifft.is_done_computing());
+    ifft.step();
+    ifft.compute();
+    for (const auto& sample : ifft.coefficients)
+        REQUIRE(sample == std::complex<float>(0, 0));
+    spectrum.assign(n, std::complex<float>(-2, 1));
+    ifft.buffer(spectrum.data());
+    ifft.compute();
+    REQUIRE(ifft.coefficients[0] == std::complex<float>(-2, 1));
+    for (size_t i = 1; i < n; ++i)
+        REQUIRE(ifft.coefficients[i] == std::complex<float>(0, 0));
+}
+
+TEST_CASE("IFFT rejects invalid lengths without changing pending work", "[ifft]") {
+    const size_t invalid = GENERATE(0, 3, 6);
+    CAPTURE(invalid);
+    REQUIRE_THROWS_AS(Math::OnTheFlyIFFT<float>(invalid), std::invalid_argument);
+    Math::OnTheFlyIFFT<float> ifft(4);
+    const std::vector<std::complex<float>> spectrum(4, {2.f, -1.f});
+    ifft.buffer(spectrum.data());
+    ifft.step();
+    REQUIRE_THROWS_AS(ifft.resize(invalid), std::invalid_argument);
+    REQUIRE(ifft.size() == 4);
+    REQUIRE_FALSE(ifft.is_done_computing());
+    ifft.compute();
+    REQUIRE(ifft.coefficients[0] == spectrum[0]);
+    for (size_t i = 1; i < ifft.size(); ++i)
+        REQUIRE(ifft.coefficients[i] == std::complex<float>(0, 0));
+}

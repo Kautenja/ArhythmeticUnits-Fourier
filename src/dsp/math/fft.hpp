@@ -21,6 +21,7 @@
 #include <cstddef>        // size_t
 #include <algorithm>      // min, fill, copy
 #include <complex>        // complex
+#include <stdexcept>      // invalid_argument
 #include <utility>        // swap
 #include <vector>         // vector
 #include "constants.hpp"  // M_PI, j<T>, etc.
@@ -506,76 +507,106 @@ class OnTheFlyRFFT {
 
 /// @brief An on-the-fly implementation of the Cooley-Tukey iterative IFFT.
 /// @tparam T The type for the complex coefficients.
+/// @details
+/// Accepts all N complex frequency bins in natural order (DC first), and
+/// produces N complex time-domain samples using
+/// \f$x[n] = N^{-1} \sum_{k=0}^{N-1} X[k] e^{j 2\pi kn/N}\f$.
+/// This is conjugate(FFT(conjugate(X))) / N; no window is applied or undone.
+/// Construction and resize prepare storage. Buffering is O(N), but neither
+/// buffering nor computation allocates. Each step performs one butterfly or
+/// normalizes one output sample. Instances require single-threaded ownership.
 template<typename T>
 class OnTheFlyIFFT {
  private:
-    /// The internal FFT structure used to compute the IFFt.
+    /// The internal FFT structure used to compute the IFFT.
     OnTheFlyFFT<T> fft;
 
+    /// Next output sample to normalize; N denotes completion or idle state.
+    size_t output_index;
+
+    /// @brief Reject invalid lengths before preparing the underlying FFT.
+    static size_t checked_size(size_t n) {
+        if (n == 0 || (n & (n - 1)) != 0)
+            throw std::invalid_argument("IFFT length must be a nonzero power of two");
+        return n;
+    }
+
  public:
-    /// The output coefficients from the transform.
+    /// Complex time-domain output, valid when is_done_computing() is true.
+    /// Initially zero. Updated during normalization; do not resize this vector.
     std::vector<std::complex<T>> coefficients;
 
     /// @brief Initialize a new on-the-fly IFFT.
-    /// @param n The length of the RFFT. Must be a power of 2.
-    explicit OnTheFlyIFFT(size_t n) : fft(n), coefficients(n, 0.f) {}
+    /// @param n The length of the IFFT, including the supported length 1.
+    /// @throws std::invalid_argument if n is zero or not a power of two.
+    explicit OnTheFlyIFFT(size_t n) :
+        fft(checked_size(n)), output_index(n), coefficients(n, T(0)) {}
 
     /// @brief Return the length of the IFFT.
     /// @return The number of samples (N) in the IFFT.
     inline size_t size() const { return coefficients.size(); }
 
-    /// @brief Resize and re-initialize the IFFT computation structures.
+    /// @brief Cancel pending work, resize storage, and clear the output.
     /// @param n The new length of the IFFT. Must be a power of 2.
+    /// @throws std::invalid_argument for invalid n, leaving state unchanged.
+    /// @details May allocate and invalidate output references. Call buffer()
+    /// to start a new transform after resizing, even when the size is unchanged.
     inline void resize(size_t n) {
-        fft.resize(n);
+        fft.resize(checked_size(n));
         coefficients.resize(n);
-        std::fill(coefficients.begin(), coefficients.end(), 0.f);
+        std::fill(coefficients.begin(), coefficients.end(), T(0));
+        output_index = n;
     }
 
-    /// @brief Checks whether the IFFT computation has been completed.
-    /// @returns True if the underlying FFT has been fully computed and the
-    /// RFFT reconstruction is complete; false otherwise.
-    inline bool is_done_computing() const { return fft.is_done_computing(); }
+    /// @brief Return the number of steps in a complete transform.
+    /// @returns N/2 * log2(N) butterfly steps plus N normalization steps.
+    inline size_t get_total_steps() const { return fft.get_total_steps() + size(); }
 
-    /// @brief Buffer input samples and prepare the IFFT for computation.
+    /// @brief Check whether no transform is pending, including normalization.
+    inline bool is_done_computing() const { return output_index == size(); }
+
+    /// @brief Copy a spectrum and restart computation, discarding pending work.
     /// @param x A pointer to the complex input coefficient buffer of length N.
+    /// @details Input may alias coefficients. It is no longer needed after
+    /// this call. Output storage remains unchanged until normalization starts.
     inline void buffer(const std::complex<T>* x) {
-        // Copy and conjugate input into FFT buffer
-        std::vector<std::complex<T>> temp(size());
+        fft.buffer(x);
+        // Conjugation commutes with bit reversal, so reuse the FFT storage.
         for (size_t i = 0; i < size(); ++i)
-            temp[i] = std::conj(x[i]);
-        fft.buffer(temp.data());
+            fft.coefficients[i] = std::conj(fft.coefficients[i]);
+        output_index = 0;
     }
 
-    /// @brief Perform a single IFFT computation step (butterfly operation.)
-    /// @details
-    /// This method advances the underlying FFT computation by one butterfly
-    /// operation. Once the FFT computation is complete, it finalizes the
-    /// reconstruction of the full signal.
+    /// @brief Perform one butterfly or normalize one output sample.
+    /// @details Does nothing when no computation is pending. Length 1 needs
+    /// only a normalization step, since its FFT has no butterflies.
     inline void step() {
-        if (fft.is_done_computing()) return;
-        fft.step();
-        if (fft.is_done_computing()) {
+        if (is_done_computing()) return;
+        if (!fft.is_done_computing()) {
+            fft.step();
+        } else {
             const T scale = T(1) / static_cast<T>(size());
-            for (size_t i = 0; i < size(); ++i)
-                coefficients[i] = std::conj(fft.coefficients[i]) * scale;
+            coefficients[output_index] = std::conj(fft.coefficients[output_index]) * scale;
+            ++output_index;
         }
     }
 
     /// @brief Perform a batch of IFFT steps targeting a specified hop length.
     /// @param hop_length The number of samples between IFFT computations.
     /// @details
-    /// This method calculates the number of IFFT steps to perform based on
-    /// the hop length and the total number of steps required. It then
-    /// iteratively calls the single-step() method, allowing the IFFT
-    /// computation to be spread across multiple processing intervals.
+    /// Performs ceil(get_total_steps() / hop_length) steps, including output
+    /// normalization, stopping on completion. A fixed positive hop length
+    /// completes a buffered transform in at most that many calls. Zero is
+    /// a no-op. Buffer preparation is separate from this computation budget.
     inline void step(size_t hop_length) {
-        auto steps = std::ceil(fft.get_total_steps() / static_cast<float>(hop_length));
-        for (size_t i = 0; i < steps; ++i) step();
+        if (hop_length == 0) return;
+        const size_t total = get_total_steps();
+        const size_t steps = total / hop_length + (total % hop_length != 0);
+        for (size_t i = 0; i < steps && !is_done_computing(); ++i) step();
     }
 
-    /// @brief Complete the computation schedule of the FFT.
-    inline void compute() { while (!fft.is_done_computing()) step(); }
+    /// @brief Complete all pending butterfly and normalization steps.
+    inline void compute() { while (!is_done_computing()) step(); }
 };
 
 }  // namespace Math
