@@ -77,3 +77,12 @@ See the [Manual][Fourier] for more information about the features of this module
 See the [Manual][Spectre] for more information about the features of this module.
 
 [Spectre]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf
+
+## Development
+
+Start with [AGENTS.md](AGENTS.md) for coding-agent instructions and the
+[developer guide](docs/developer-manual/development-and-testing.md) for
+dependencies, builds, tests, and manual verification. The
+[architecture map](docs/developer-manual/architecture.md) and
+[C++ style guide](docs/developer-manual/style-guide-cpp.md) describe the
+project's source structure and coding conventions.
