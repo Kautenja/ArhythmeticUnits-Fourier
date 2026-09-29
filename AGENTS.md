@@ -17,7 +17,7 @@ Read this file and the relevant contributor and style guidance before editing:
     C++ source, headers, tests, and benchmarks.
 -   [Markdown Style Guide](docs/style-guides/markdown.md):
     required for documentation changes.
--   [Spectre Manual Figures](CONTRIBUTING.md#spectre-manual-figures):
+-   [Manual Figures](CONTRIBUTING.md#manual-figures):
     required when changing manual figures or refreshing the module screenshot.
 
 These instructions and the contributor guide are self-contained. Their
@@ -78,10 +78,13 @@ a speedup.
 
 ## Manual Figures
 
-Follow [Spectre Manual Figures](CONTRIBUTING.md#spectre-manual-figures) for
+Follow [Manual Figures](CONTRIBUTING.md#manual-figures) for
 the source map, prerequisites, refresh commands, and visual checks. Refresh
-Spectre's single cover screenshot when its visible panel or controls change,
-using `make -C docs/manual-spectre screenshot` from the repository root.
+the affected module's single cover screenshot when its visible panel or
+controls change. From the repository root, use
+`make -C docs/manual-fourier screenshot` for Fourier or
+`make -C docs/manual-spectre screenshot` for Spectre. Both use the shared
+exporter; refresh only the manual relevant to the change.
 Keep explanatory figures as abstract TikZ diagrams; edit their `.tex`
 sources instead of adding more app screenshots or recreating the UI.
 
@@ -89,9 +92,7 @@ Review the generated PNG and rebuilt manual before including an update.
 The reviewed screenshot is a tracked source asset; intermediate captures and
 compiled manuals belong in ignored build directories. If native rendering
 is unavailable, preserve the existing screenshot and report that refresh as
-unverified. Do not replace it with a mockup or stale capture. Fourier has not
-yet migrated to this figure workflow; do not expand a Spectre task into that
-migration without a request.
+unverified. Do not replace it with a mockup or stale capture.
 
 ## VCV Library Releases
 

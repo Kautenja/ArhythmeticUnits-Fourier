@@ -2,7 +2,7 @@
 \usepackage[moduleName={Fourier},version={2.1.2}]{ArhythmeticUnits}
 
 \begin{document}
-\titlePage{img/Logo}{img/Module}{img/ArhythmeticUnits}{}
+\titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
 
 % ----------------------------------------------------------------------------
 % MARK: Overview
@@ -85,15 +85,14 @@ provide examples of these choices.
 
 \begin{figure}[!htp]
 \centering
-\includegraphics[width=0.90\textwidth]{img/PanelLayout}
-\caption{Fourier's inputs, Run button, and analysis and display controls.}
+\input{img/PanelLayout.tex}
+\caption{A schematic of Fourier's control groups. Positions and proportions
+are simplified; the cover shows the rendered module.}
 \end{figure}
 
-The numbered illustration identifies control positions. Its displayed values
-are examples from an earlier interface; Length is now shown in samples, and
-the former X Scale control is now labeled \textbf{Freq Scale}. Text controls
-brighten when hovered. The sections below give the
-current ranges and defaults.
+Use the left strip for the four inputs, their gains, and Run; use the lower
+strip for shared analysis and display settings. Text controls brighten when
+hovered. The sections below give the current ranges and defaults.
 
 \subsection{Input}
 
@@ -143,15 +142,13 @@ shapes and noise levels.
 
 \begin{figure}[!htp]
 \centering
-\subfloat[Boxcar]{\includegraphics[width=0.31\textwidth]{img/Window/Boxcar}}
-\hfill
-\subfloat[Hamming]{\includegraphics[width=0.31\textwidth]{img/Window/Hamming}}
-\hfill
-\subfloat[Flattop]{\includegraphics[width=0.31\textwidth]{img/Window/Flattop}}
-\caption{Sinusoids analyzed with different window functions.}
-\label{fig:window-function-sinusoids}
+\input{img/WindowTradeoffs.tex}
+\caption{Qualitative tradeoffs among three window choices at the same FFT
+length. The cards summarize behavior; they are not measured spectra.}
+\label{fig:window-tradeoffs}
 \end{figure}
 
+\clearpage
 \subsection{Length}
 
 \textbf{Length} sets the FFT frame size in samples: 128, 256, 512, 1024,
@@ -168,13 +165,12 @@ as well. Changing Length clears the captured frame.
 
 \begin{figure}[!htp]
 \centering
-\subfloat[$N=1024$]{\includegraphics[width=0.31\textwidth]{img/Length/N1024}}
-\hfill
-\subfloat[$N=4096$]{\includegraphics[width=0.31\textwidth]{img/Length/N4096}}
-\hfill
-\subfloat[$N=16384$]{\includegraphics[width=0.31\textwidth]{img/Length/N16384}}
-\caption{Sinusoids analyzed with different FFT lengths.}
-\label{fig:length-n}
+\input{img/FrameLength.tex}
+\caption{Longer frames cover more time and place frequency bins closer
+together. Durations and spacings are calculated at $48\,\mathrm{kHz}$;
+the bin diagrams show the same frequency interval, not a measured spectrum.
+Window shape also affects whether nearby tones can be separated.}
+\label{fig:frame-length}
 \end{figure}
 
 \subsection{Hop}

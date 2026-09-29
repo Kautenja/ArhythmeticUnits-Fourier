@@ -18,7 +18,7 @@ PYTHON ?= python3
 # Requires the Rack build environment, a graphical desktop, and Python/Pillow.
 screenshot:
 	$(MAKE) -C ../.. inspect-panels
-	$(PYTHON) ../../scripts/export-spectre-screenshot.py ../../.build/test/rack/panel-live-0.ppm img/PanelLayout.png
+	$(PYTHON) ../../scripts/export_manual_screenshot.py --module spectre ../../.build/test/rack/panel-live-0.ppm img/PanelLayout.png
 
 # make the manual
 manual:
