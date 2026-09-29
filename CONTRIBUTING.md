@@ -145,7 +145,7 @@ changing DSP, Rack modules, or displays.
 -   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
 -   `docs/manual/Fourier/` and `docs/manual/Spectre/` contain LaTeX user manuals
     and illustrations. Contributor guidance lives in this file; style guides
-    live in `docs/developer-manual/`.
+    live in `docs/style-guides/`.
 -   `patches/` and `presets/` provide Rack examples and saved module settings.
 
 ### Analysis Flow
@@ -931,7 +931,7 @@ Preserve file-level attribution and the source and artwork terms in
 [issues]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/issues
 [testing]: #development-and-testing
 [architecture]: #architecture
-[cpp-style]: docs/developer-manual/style-guide-cpp.md
-[markdown-style]: docs/developer-manual/style-guide-markdown.md
+[cpp-style]: docs/style-guides/cpp.md
+[markdown-style]: docs/style-guides/markdown.md
 [rack-building]: https://vcvrack.com/manual/Building
 [rack-tutorial]: https://vcvrack.com/manual/PluginDevelopmentTutorial

@@ -9,7 +9,7 @@
 /plugin.dll
 /plugin.so
 /docs/*
-!/docs/developer-manual/
+!/docs/style-guides/
 !/docs/manual/
 !/docs/whitepaper/
 .DS_Store

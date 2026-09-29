@@ -138,8 +138,8 @@ keep their embedded module settings.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, architecture,
 builds, tests, benchmarks, and the pull request workflow. The
-[C++](docs/developer-manual/style-guide-cpp.md) and
-[Markdown](docs/developer-manual/style-guide-markdown.md) style guides cover
+[C++](docs/style-guides/cpp.md) and
+[Markdown](docs/style-guides/markdown.md) style guides cover
 coding and documentation conventions. Coding agents should also follow
 [AGENTS.md](AGENTS.md).
 

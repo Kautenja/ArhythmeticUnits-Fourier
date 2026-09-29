@@ -1,7 +1,7 @@
 # C++ Style Guide
 
-This guide adapts `free-j/docs/developer-manual/style-guide-cpp.md` back to
-Fourier, whose DSP headers inspired that guide. It preserves the compact,
+This guide adapts the `free-j` project's C++ style guide back to Fourier,
+whose DSP headers inspired that guide. It preserves the compact,
 documented DSP style while using Fourier's actual language baseline,
 namespaces, build structure, and licensing.
 

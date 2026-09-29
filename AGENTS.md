@@ -13,9 +13,9 @@ Read this file and the relevant contributor and style guidance before editing:
     processing flow, Rack boundaries, and compatibility.
 -   [Development And Testing](CONTRIBUTING.md#development-and-testing):
     dependencies, build commands, tests, benchmarks, and manual checks.
--   [C++ Style Guide](docs/developer-manual/style-guide-cpp.md): required for
+-   [C++ Style Guide](docs/style-guides/cpp.md): required for
     C++ source, headers, tests, and benchmarks.
--   [Markdown Style Guide](docs/developer-manual/style-guide-markdown.md):
+-   [Markdown Style Guide](docs/style-guides/markdown.md):
     required for documentation changes.
 
 These instructions and the contributor guide are self-contained. Their
