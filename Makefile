@@ -69,3 +69,14 @@ build/test/rack/test_spectrum_points: build/test/rack/test_spectrum_points.cpp.o
 
 build/test/rack/test_spectrum_points.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
 -include build/test/rack/test_spectrum_points.cpp.d
+
+# Direct DSP agreement with Rack's SIMD type; no engine or Rack library needed.
+.PHONY: test-dc-blocker-simd
+test-dc-blocker-simd: build/test/rack/test_dc_blocker
+	$<
+
+build/test/rack/test_dc_blocker: build/test/rack/test_dc_blocker.cpp.o
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+build/test/rack/test_dc_blocker.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
+-include build/test/rack/test_dc_blocker.cpp.d

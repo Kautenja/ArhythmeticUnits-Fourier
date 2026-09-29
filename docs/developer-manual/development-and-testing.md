@@ -68,6 +68,20 @@ test passes. Seed randomized fixtures when used.
 Tests compile as C++11 without `-O3`; benchmarks use `-O3`. Scalar DSP test
 success does not prove Rack SIMD instantiations compile or behave correctly.
 
+The dedicated DC-blocker suite checks float and double impulse/step responses,
+DC rejection, Nyquist gain, transition-width configuration, and reset. Its
+separate SIMD suite requires the Rack headers and uses the plugin compiler
+flags, without linking the Rack library or creating an engine:
+
+```shell
+scons test/dsp/test_dc_blocker.cpp
+make test-dc-blocker-simd
+```
+
+The SIMD suite compares independent scalar filters with all four Rack SIMD
+lanes under different signals and settings, including reconfiguration and
+reset. It is separate from `scons test` and the standalone DSP CI workflow.
+
 ## Continuous Integration
 
 The [DSP tests workflow](../../.github/workflows/dsp-tests.yml) runs
