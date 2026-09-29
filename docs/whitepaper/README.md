@@ -92,6 +92,18 @@ actual device callbacks, or an optimized external FFT library. Observed
 maxima are not worst-case execution-time guarantees. Preserve these limits
 when reusing a result.
 
+## Current Production Measurements
+
+The [publication benchmark suite](../../benchmark/paper/README.md) measures the
+current production core and modules, with raw simulated-callback observations,
+matched batch/incremental controls built from this repository's RFFT, analyzer
+scaling, spectrum-age audits, and forward/inverse transform phases. Its runner
+preserves sources, compiler/SDK metadata, individual observations and numerical
+checks for repeated campaigns. Future external backends can share its workload
+contract. These new campaigns do not replace the historical evidence or update
+the manuscript's tables automatically; comparisons require matched workloads,
+independent sessions and explicit interpretation of the documented limits.
+
 ## Publication And Discoverability
 
 The current document is manuscript version 2, dated September 28, 2026. It

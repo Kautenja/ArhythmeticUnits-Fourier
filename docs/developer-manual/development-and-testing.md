@@ -411,6 +411,26 @@ options, repeated results, and uncertainty. A smoke run or a single comparison
 is not evidence of a speedup. A microbenchmark does not establish whole-patch
 engine or display performance.
 
+### Publication Experiments
+
+The [publication measurement protocol](../../benchmark/paper/README.md) adds
+raw callback/step observations, continuous throughput, matched fixed-cadence
+RFFT controls, scalar/SIMD and module scaling, spectrum-age audits, background
+DSP load, cache pressure, and FFT/RFFT/IFFT phase measurements. It captures
+source/SDK hashes, build flags, independent transform checks and repeated
+process observations for later backend comparisons. Run its short validation
+campaign from the repository root:
+
+```shell
+python3 benchmark/paper/run.py build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py build/paper-smoke
+```
+
+These simulate audio callbacks; compute budget exceedances are not device
+underruns. The protocol explains timing overhead, output/latency contracts,
+full matrix/custom workloads, and the additional sessions required for paper
+results. The historical manuscript campaigns are preserved separately.
+
 ### Rack DSP Processing
 
 With the normal Rack build dependencies, run from the repository root:

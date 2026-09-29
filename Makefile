@@ -108,3 +108,13 @@ build/test/rack/inspect_displays: build/test/rack/inspect_displays.cpp.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack $(DISPLAY_GL_LIBS)
 
 -include build/test/rack/inspect_displays.cpp.d
+
+# Raw paper observations, separate from Catch2's batched mean estimator.
+.PHONY: benchmark-paper-build
+benchmark-paper-build: build/benchmark/rack/paper
+benchmark-rack-build: benchmark-paper-build
+
+build/benchmark/rack/paper: build/benchmark/rack/paper.cpp.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+
+-include build/benchmark/rack/paper.cpp.d
