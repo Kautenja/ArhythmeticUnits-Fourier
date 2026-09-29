@@ -14,9 +14,22 @@ concurrency:
 
 jobs:
   test:
-    name: Standalone DSP suites
-    runs-on: ubuntu-24.04
+    name: Standalone DSP suites (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            shell: bash
+          - os: macos-14
+            shell: bash
+          - os: windows-2022
+            shell: msys2 {0}
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - name: Check out source and Catch2
         uses: actions/checkout@v7.0.1
@@ -24,12 +37,28 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Install test tools
+      - name: Install Linux test tools
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends g++ scons
 
+      - name: Install macOS test tools
+        if: runner.os == 'macOS'
+        run: brew install scons
+
+      - name: Install Windows test tools
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            scons
+
       - name: Run DSP suites
         run: |
           test -f dep/Catch2/single_include/catch2/catch.hpp
+          g++ --version
+          scons --version
           scons test

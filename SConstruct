@@ -2,6 +2,7 @@
 import os
 import fnmatch
 import re
+import sys
 
 # create a separate build directory
 VariantDir('build_src', 'src/dsp', duplicate=0)
@@ -39,8 +40,14 @@ TEST_INCLUDES = [
     '#dep/Catch2/single_include/catch2',
 ]
 
+# Catch2 2.13.3 requires a constant MINSIGSTKSZ for its optional signal
+# handler, but modern glibc computes it at runtime. Crashes still fail the
+# process without this handler; only Catch2's signal diagnostics are lost.
+CATCH_DEFINES = ['CATCH_CONFIG_NO_POSIX_SIGNALS'] if sys.platform.startswith('linux') else []
+
 TESTING_ENV = Environment(
     ENV=os.environ,
+    CPPDEFINES=CATCH_DEFINES,
     CXX='g++',
     CPPFLAGS=['-Wno-unused-value', '-Wall', '-Wextra'],
     CXXFLAGS=TEST_FLAGS,
@@ -50,6 +57,7 @@ TESTING_ENV = Environment(
 
 BENCHMARK_ENV = Environment(
     ENV=os.environ,
+    CPPDEFINES=CATCH_DEFINES,
     CXX='g++',
     CPPFLAGS=['-Wno-unused-value'],
     CXXFLAGS=PROD_FLAGS,

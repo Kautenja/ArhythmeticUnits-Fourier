@@ -73,9 +73,19 @@ success does not prove Rack SIMD instantiations compile or behave correctly.
 The [DSP tests workflow](../../.github/workflows/dsp-tests.yml) runs
 `scons test` on pull requests and pushes to `main`, including merges. Pushes
 to other branches do not trigger a separate run. It checks out dependencies
-recursively, verifies the Catch2 header is present, and installs GCC and
-SCons on one Ubuntu runner. New updates cancel older runs for the same pull
-request or branch, and each job has a 15-minute timeout to limit usage.
+recursively and verifies the Catch2 header is present. Its three jobs use
+Ubuntu 24.04 with GCC, macOS 14 with Apple Clang, and Windows 2022 with
+MSYS2 UCRT64 GCC. Windows uses MSYS2's SCons and Python to preserve POSIX
+paths and GNU build tools. Each job runs the same `scons test` command.
+
+On Linux, SCons disables Catch2 2.13.3's optional POSIX signal handler
+because it requires a constant `MINSIGSTKSZ`, which modern glibc no longer
+provides. Assertions and process failures still fail the job; only Catch2's
+extra signal diagnostics are unavailable.
+
+New updates cancel older runs for the same pull request or branch, and
+each job has a 15-minute timeout to limit usage. A failure on one platform
+does not cancel the other platforms, so their results remain available.
 
 This workflow covers the standalone suites only. Rack plugin builds,
 serialization integration tests, benchmarks, and manual UI checks remain
