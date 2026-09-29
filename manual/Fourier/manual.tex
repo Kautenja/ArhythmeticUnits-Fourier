@@ -1,8 +1,8 @@
-\documentclass[12pt,letter]{article}
+\documentclass[12pt,letterpaper]{article}
 \usepackage[moduleName={Fourier},version={2.1.2}]{ArhythmeticUnits}
 
 \begin{document}
-\titlePage{img/Logo}{img/Module}{img/ArhythmeticUnits}
+\titlePage{img/Logo}{img/Module}{img/ArhythmeticUnits}{}
 
 % ----------------------------------------------------------------------------
 % MARK: Overview
@@ -10,38 +10,65 @@
 
 \section{Overview}
 
-% \begin{picture}(0,0)
-%   \put(\paperwidth - 275,-\paperheight + 125){%
-%     \includegraphics[width=0.3\paperwidth]{img/Tag1}%
-%   }
-% \end{picture}
+\textbf{Fourier} is a four-input spectrum analyzer for VCV Rack 2. It shows
+how a signal's amplitude is distributed across frequencies. Each input has
+its own gain control and colored trace; the analysis and display controls
+are shared by all four inputs. Fourier has no audio outputs: patch a signal
+to it alongside your audio path to inspect the signal without changing it.
 
-Jean-Baptiste Joseph Fourier (see Fig.~\ref{fig:fourier-portrait}) showed
-that complex signals can be decomposed into sums of simpler trigonometric
-functions. \textbf{Fourier} brings this concept to the virtual Eurorack
-form-factor with deep control over the analysis parameters. Key features
-include:
-\begin{itemize}
-  \item \textbf{Fully Parametric STFT:} Enjoy complete control over FFT
-  length, hop size, and window function parameters, enabling precise tuning
-  for a wide range of musical and engineering applications.
-  \item \textbf{Time \& Frequency Smoothing:} Apply smoothing in both the
-  temporal and spectral domains to consolidate FFT coefficients, thereby
-  highlighting overarching trends in signal frequency content.
-  \item \textbf{Slope Scaling:} Compensate for the natural roll-off of
-  high-frequency energy, yielding a frequency representation that more
-  accurately reflects human auditory perception.
-  \item \textbf{Intuitive Interface:} A streamlined control layout delivers
-  deep functionality without the need for extensive menu diving or manual
-  exploration.
-\end{itemize}
+The analyzer uses a short-time Fourier transform (STFT), with selectable
+window functions, FFT lengths, and intervals between analyses. Time and
+frequency smoothing help reveal broad trends, while frequency bounds and
+amplitude scales let you inspect a smaller part of the spectrum. A slope
+control tilts the displayed amplitudes around $1\,\mathrm{kHz}$.
+
+The module takes its name from Jean-Baptiste Joseph Fourier
+(Fig.~\ref{fig:fourier-portrait}), whose work describes signals in terms of
+simpler trigonometric functions.
 
 \begin{figure}[!htp]
 \centering
-\includegraphics[width=0.5\textwidth]{img/FourierPortrait}
-\caption{Jean-Baptiste Joseph Fourier (March 1768 -- May 1830)}
+\includegraphics[width=0.38\textwidth]{img/FourierPortrait}
+\caption{Jean-Baptiste Joseph Fourier (March 1768 -- May 1830).}
 \label{fig:fourier-portrait}
 \end{figure}
+
+\clearpage
+\section{Quick Start}
+
+\begin{itemize}
+  \item Connect an oscillator or other audio source to the red input. Keep
+  your existing connection to the mixer or audio output if you want to hear it.
+  \item Leave the input gain at $0\,\mathrm{dB}$ and ensure \textbf{Run} is lit.
+  A new module uses a Flattop window, Length 2048, and Hop
+  $30\,\mathrm{ms}$, with no time or frequency smoothing.
+  \item For an amplitude comparison, set \textbf{Slope} to
+  $0\,\mathrm{dB/oct}$. The default $+4.5\,\mathrm{dB/oct}$ visually boosts
+  frequencies above $1\,\mathrm{kHz}$ and reduces those below it.
+  \item Connect another signal to the green, blue, or yellow input to
+  compare spectra. Use equal input gains for a level comparison.
+  \item Hover over the plot to show a crosshair, frequency, musical note
+  and tuning offset, and amplitude at the cursor position. The readout
+  describes the cursor; it does not automatically find a spectral peak.
+  \item Press \textbf{Run} to stop capturing new samples. Press it again
+  to resume. The retained audio can still be reanalyzed while capture is stopped.
+\end{itemize}
+
+\paragraph{Reading levels}
+Fourier displays spectral magnitudes, not total signal RMS, loudness, or
+sound pressure level. Its nominal amplitude reference is a
+$5\,\mathrm{V}$ peak sine wave (approximately $0\,\mathrm{dB}$ or
+$100\,\%$ with unity gain, zero slope, and no smoothing). Window choice,
+frequency alignment with FFT bins, and smoothing affect the height and width
+of a peak. The display ceiling is about $+12\,\mathrm{dB}$; a trace reaching
+that ceiling does not mean Fourier has clipped your audio path.
+
+\paragraph{Choosing settings}
+Use a longer \textbf{Length} to separate nearby frequencies, especially in
+the bass. Use a shorter \textbf{Hop} and little or no \textbf{Average} to
+follow changes more closely. Increase \textbf{Average} for a steadier trace
+and \textbf{Smooth} for a broader view of tonal balance. The factory presets
+provide examples of these choices.
 
 % ----------------------------------------------------------------------------
 % MARK: Panel Layout
@@ -50,189 +77,244 @@ include:
 \clearpage
 \section{Panel Layout}
 
-% \begin{picture}(0,0)
-%   \put(-0.025\paperwidth,-0.38\paperheight){%
-%     \includegraphics[width=0.15\paperwidth]{img/Tag4}%
-%   }
-% \end{picture}
-
 \begin{figure}[!htp]
 \centering
 \includegraphics[width=\textwidth]{img/PanelLayout}
 \end{figure}
 
+The numbered illustration identifies control positions. Its displayed values
+are examples from an earlier interface; Length is now shown in samples.
+The sections below give the current ranges and defaults.
+
 \subsection{Input}
 
-Fourier provides four independent monophonic \textbf{Input} channels. Each
-channel features an exponential input gain control ranging from $-\infty\,dB$
-(complete silence) to $12\,dB$ (approximately four times the nominal level.)
-The channels are color-coded so that each input's panel color matches the
-corresponding waveform curve. Fourier’s palette is based on simple primary
-colors (with the addition of yellow) to ensure optimal compatibility with
-rendering overlays.
+The four inputs are independent and appear as red, green, blue, and yellow
+traces, matching their panel colors. A polyphonic cable is supported, but
+\textbf{all voices on each port are summed into one analyzed signal}; voices
+are not drawn separately. Summed voices can increase the level or cancel
+one another, depending on their phase.
+
+Each input gain ranges from $-\infty\,\mathrm{dB}$ (silence) to
+$+12\,\mathrm{dB}$ (about four times the input amplitude), with a default
+of $0\,\mathrm{dB}$. Gain affects only the signal captured by Fourier.
 
 \subsection{Run}
 
-The \textbf{Run} button governs the buffering of incoming audio into the
-analysis window. When illuminated, Fourier continuously buffers and analyzes
-new input samples. When dark, Fourier maintains the display of the current
-analysis window without updating it with additional audio frames.
+When \textbf{Run} is lit, Fourier captures new audio. When dark, it stops
+adding samples to the retained analysis buffer, but continues computing the
+spectrum of that buffer. An in-progress frame may finish and time smoothing
+may continue to settle after you press the button.
 
-% TODO: This is useful for...
-% TODO: Clarify that some parameters may be changed while others not.
-% TODO: Maybe we could implement such that you can change parameters while
-%       the module is not running? This would require a change to the filter
-%       for time smoothing (and maybe increased compute). But, it also leads
-%       into the integration of the spectrogram functionality?
+Window, smoothing, slope, and display settings can still change the result
+while stopped. Input gain and AC coupling affect newly captured samples, so
+resume capture to see the effect of the new settings.
+Changing \textbf{Length} clears the retained audio buffer; resume capture to
+fill it again. Run is initially enabled.
 
+\clearpage
 \subsection{Window Function}
 
-% \begin{picture}(0,0)
-%   \put(\paperwidth - 275,-0.5 \paperheight + 20){%
-%     \includegraphics[width=0.2\paperwidth]{img/Tag8}%
-%   }
-% \end{picture}
+The \textbf{Window} control selects the function applied to each audio frame
+before the FFT. Windowing changes the balance between peak width and
+\textit{spectral leakage}, the spreading of a tone into nearby bins when
+its frequency does not fit the analysis frame exactly.
 
-When performing spectral analysis, a phenomenon known as \textit{spectral
-leakage} occurs. This effect arises because the analysis is conducted over a
-limited time frame while the underlying mathematical framework assumes the
-signal repeats infinitely. To minimize these artifacts, the audio input
-buffer is typically multiplied by a \textbf{Window Function} that tapers the
-sample edges and reduces leakage. Fourier offers a selection of 15 commonly
-used window functions, allowing you to balance the trade-off between
-frequency resolution and spectral leakage artifacts.
+The 15 choices are Boxcar, Bartlett, BartlettHann, Parzen, Welch, Cosine,
+Bohman, Lanczos, Hann, Hamming, Blackman, BlackmanHarris, BlackmanNuttall,
+KaiserBessel, and Flattop. \textbf{Flattop} is the default. These are fixed
+window shapes; the control selects a shape without additional shape parameters.
 
-Figure~\ref{fig:window-function-sinusoids} illustrates the impact of
-different window functions when analyzing sinusoidal waveform inputs. In
-Fig.~\ref{fig:window-function-sinusoids-boxcar}, the Boxcar (i.e.,
-rectangular) window is shown; it provides high frequency resolution but also
-exhibits significant spectral leakage.
-Fig.~\ref{fig:window-function-sinusoids-hamming} demonstrates the effect of a
-Hamming window, which trades some frequency resolution for reduced leakage.
-Finally, Fig.~\ref{fig:window-function-sinusoids-flattop} displays a Flat-top
-window, characterized by low frequency resolution and minimal spectral
-leakage.
+Boxcar leaves the samples untapered and has a narrow main peak but strong
+leakage for tones between bins. Hamming reduces leakage at the cost of a
+wider peak. Flattop has a broader peak and is useful for comparing tone
+amplitudes as the tone moves between bins. Fourier compensates for the
+window's coherent gain, but different windows still produce different peak
+shapes and noise levels.
 
 \begin{figure}[!htp]
 \centering
-\subfloat[\centering Boxcar Window]{\includegraphics[width=0.33\textwidth]{img/Window/Boxcar}\label{fig:window-function-sinusoids-boxcar}}
+\subfloat[Boxcar]{\includegraphics[width=0.31\textwidth]{img/Window/Boxcar}}
 \hfill
-\subfloat[\centering Hamming Window]{\includegraphics[width=0.33\textwidth]{img/Window/Hamming}\label{fig:window-function-sinusoids-hamming}}
+\subfloat[Hamming]{\includegraphics[width=0.31\textwidth]{img/Window/Hamming}}
 \hfill
-\subfloat[\centering Flat-top Window]{\includegraphics[width=0.33\textwidth]{img/Window/Flattop}\label{fig:window-function-sinusoids-flattop}}
-\caption{Sinusoids being analyzed with various window functions.}
+\subfloat[Flattop]{\includegraphics[width=0.31\textwidth]{img/Window/Flattop}}
+\caption{Sinusoids analyzed with different window functions.}
 \label{fig:window-function-sinusoids}
 \end{figure}
 
 \subsection{Length}
 
-The \textbf{Length} parameter sets the size of the audio buffer used for
-analysis. Its values follow an exponential series with base $2$, which is
-convenient for both musical and computational reasons. Essentially, the
-Length parameter defines the resolution of the analysis: longer buffers yield
-higher frequency resolution. However, larger values also demand more
-processing power. In particular, if the length is represented as an integer
-$N$, the computational cost per analysis frame scales as $O(N \log N)$.
+\textbf{Length} sets the FFT frame size in samples: 128, 256, 512, 1024,
+2048, 4096, 8192, or 16384. The default is \textbf{2048}. For sample rate
+$f_s$ and length $N$, the frame covers $N/f_s$ seconds and the FFT bin
+spacing is $f_s/N$ hertz. At $48\,\mathrm{kHz}$, a 2048-sample frame spans
+about $42.7\,\mathrm{ms}$ with $23.4\,\mathrm{Hz}$ bin spacing; 16384 samples
+span about $341.3\,\mathrm{ms}$ with $2.93\,\mathrm{Hz}$ spacing.
 
-Figure~\ref{fig:length-n} illustrates how varying the FFT length parameter
-affects the spectral analysis of sinusoidal inputs. In
-Fig.~\ref{fig:length-n-1024}, using $N = 2^{10} = 1024$ yields a relatively
-coarse frequency resolution, which may be ideal for quick analysis with
-minimal computational demand. In contrast, Fig.~\ref{fig:length-n-16384}
-shows that a longer FFT length of $N = 2^{14} = 16384$ provides a finer, more
-detailed frequency resolution at the expense of increased processing
-requirements. Fig.~\ref{fig:length-n-4096} demonstrates an intermediate
-setting, offering a balanced trade-off between resolution and computational
-load.
-
-\clearpage
+Longer frames give finer frequency detail but blend changes over a longer
+period and require more computation per analysis. Bin spacing alone does
+not determine whether two tones can be distinguished: window shape matters
+as well. Changing Length clears the captured frame.
 
 \begin{figure}[!htp]
 \centering
-\subfloat[\centering $N = 2^{10} = 1024$]{\includegraphics[width=0.33\textwidth]{img/Length/N1024}\label{fig:length-n-1024}}
+\subfloat[$N=1024$]{\includegraphics[width=0.31\textwidth]{img/Length/N1024}}
 \hfill
-\subfloat[\centering $N = 2^{12} = 4096$]{\includegraphics[width=0.33\textwidth]{img/Length/N4096}\label{fig:length-n-4096}}
+\subfloat[$N=4096$]{\includegraphics[width=0.31\textwidth]{img/Length/N4096}}
 \hfill
-\subfloat[\centering $N = 2^{14} = 16384$]{\includegraphics[width=0.33\textwidth]{img/Length/N16384}\label{fig:length-n-16384}}
-\caption{Sinusoids being analyzed with various FFT lengths.}
+\subfloat[$N=16384$]{\includegraphics[width=0.31\textwidth]{img/Length/N16384}}
+\caption{Sinusoids analyzed with different FFT lengths.}
 \label{fig:length-n}
 \end{figure}
 
-% \begin{picture}(0,0)
-%   \put(\paperwidth - 275,-0.1 \paperheight){%
-%     \includegraphics[width=0.2\paperwidth]{img/Tag7}%
-%   }
-% \end{picture}
-
 \subsection{Hop}
 
-Frequency analysis is performed continuously, providing a real-time
-visualization of the live audio feed. The resolution between successive
-analysis events is controlled by the \textbf{Hop} rate, which effectively
-determines the refresh rate of the module's display.
+\textbf{Hop} sets the target interval between analyses, from
+$5$ to $300\,\mathrm{ms}$; the default is \textbf{$30\,\mathrm{ms}$}.
+Shorter intervals provide more frequent spectrum updates and increase the
+analysis workload. Rack's display frame rate also limits how often you see
+new results, so Hop is not a guarantee of screen refresh rate or latency.
 
-\subsection{X-Scale}
+Hop and Length are independent. Successive audio frames overlap when Hop is
+shorter than the frame duration $N/f_s$. If Hop exceeds that duration, there
+are gaps between analyzed frames and a brief event may be missed.
 
-The \textbf{X-Scale} parameter determines how the frequency bins are
-displayed. In \textit{Linear} mode, the frequency bins are evenly spaced,
-reflecting the raw, linearly spaced outputs of the Fourier analysis. In
-contrast, \textit{Logarithmic} mode arranges the frequency bins on an e
-xponential scale, which more closely aligns with human pitch perception.
-While the optimal choice depends on the specific frequency patterns you wish
-to observe, the Logarithmic setting is typically preferred for its intuitive
-representation of pitch.
+\subsection{X Scale}
 
-\subsection{Y-Scale}
+\textbf{X Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the default).
+Linear places equal frequency intervals at equal distances. The mode named
+Logarithmic expands the low-frequency portion of the view. In this version,
+it uses a square-root mapping of the selected frequency range, so equal
+octaves are not equally spaced. Read the axis labels or cursor frequency
+rather than treating it as a mathematically logarithmic axis.
 
-The \textbf{Y-Scale} parameter determines how the energy levels of individual
-frequency bins are displayed. In \textit{Linear} mode, energy levels are
-rendered as percentages ranging from $0\,\%$ to $400\,\%$ of the band's
-headroom. In the logarithmic modes, Fourier displays energy levels
-exponentially, with ranges set either from $-60\,dB$ or $-120\,dB$ up to
-$12\,dB$. As with the X-Scale parameter, the optimal setting for Y-Scale
-depends on the aspects of the signal you wish to emphasize, though it is
-typically best left in logarithmic mode with a $-60\,dB$ lower limit.
+\subsection{Y Scale}
+
+\textbf{Y Scale} controls the displayed spectral amplitude:
+\begin{itemize}
+  \item \textbf{Linear}: labels from $0\,\%$ to $400\,\%$.
+  \item \textbf{Log 60dB} (default): $-60$ to $+12\,\mathrm{dB}$.
+  \item \textbf{Log 120dB}: $-120$ to $+12\,\mathrm{dB}$.
+\end{itemize}
+These are amplitude scales. The names of the logarithmic modes identify
+the lower bound; their total displayed spans are 72 and
+$132\,\mathrm{dB}$ respectively. Input gain, smoothing, and slope affect
+the plotted levels. Use zero slope for comparisons without frequency tilt.
 
 \subsection{Average}
 
-Real-time signal analysis can be noisy, which often obscures the overarching
-trends in the signal. The \textbf{Average} parameter adjusts the alpha value
-of a 1-pole exponential moving average filter, with its cut-off frequency
-expressed in temporal units. This smoothing mechanism allows Fourier to
-highlight general frequency trends that align better with human perception.
-For musical signal analysis, an averaging time of approximately
-$250\,\mathrm{ms}$ is a good starting point.
+\textbf{Average} controls exponential smoothing of spectral magnitudes over
+time, from $0$ to $2500\,\mathrm{ms}$; the default is
+\textbf{$0\,\mathrm{ms}$} (off). Higher values produce a steadier display
+that reacts more slowly. This is a recursive filter, not an arithmetic
+average over a fixed recording of the selected duration.
 
 \subsection{Smooth}
 
-In some cases, frequency analysis can be noisy, particularly when the Length
-parameter is set to a large value. To counteract this, the \textbf{Smooth}
-parameter applies a smoothing filter to the energy levels of the frequency
-analysis bins. This filter is measured in musical octaves, making it
-especially suitable for musical analysis. For example, a setting of
-$\frac{1}{6}\,Oct$ is a good starting point when using $N \geq 1024$.
+\textbf{Smooth} combines neighboring spectral magnitudes over a
+fractional-octave band. Its default is \textbf{None}. Available widths are
+$1/48$, $1/24$, $1/12$, $1/9$, $1/6$, $1/5$, $1/4$, $1/3$, $1/2$, $2/3$,
+$3/4$, 1, 1.5, 2, and 2.5 octaves. Wider settings hide more fine detail and
+can lower narrow peaks. Use None when inspecting individual harmonics.
 
 \subsection{Low Frequency}
 
-The \textbf{Low Frequency} parameter sets the minimum frequency displayed on
-the plot. Adjusting this parameter lets you focus on the lower end of the
-frequency spectrum by filtering out any frequencies below the chosen
-threshold.
+\textbf{LO Freq} sets the lower edge of the visible frequency range. Its
+range is $0$ to the Nyquist frequency, $f_s/2$, and its default is
+\textbf{$0\,\mathrm{Hz}$}. It crops the plot; it does not filter the input
+or change the FFT resolution.
 
 \subsection{High Frequency}
 
-The \textbf{High Frequency} parameter sets the maximum frequency displayed on
-the plot. By adjusting this parameter, you can concentrate on higher
-frequency content by excluding frequencies above the selected limit.
+\textbf{HI Freq} sets the upper edge of the visible frequency range, also
+from $0$ to $f_s/2$. Its default is \textbf{Nyquist}
+($24\,\mathrm{kHz}$ at a $48\,\mathrm{kHz}$ sample rate). Keep LO Freq
+strictly below HI Freq for a usable plot. The bounds are limited to the
+current Nyquist frequency when Rack's sample rate changes; check your range
+after changing sample rate.
 
 \subsection{Slope}
 
-The \textbf{Slope} parameter compensates for the natural roll-off of
-high-frequency energy in musical signals. For most sound engineering
-applications, a slope of either $4.5\,\frac{dB}{Oct}$ or $3\,\frac{dB}{Oct}$
-is recommended to enhance the perceptual balance of the frequency spectrum.
-Conversely, in engineering applications where a flat frequency response is
-desired, a slope of $0\frac{dB}{Oct}$ is typically preferred.
+\textbf{Slope} tilts the displayed spectrum from $-9$ to
+$+9\,\mathrm{dB/oct}$ around $1\,\mathrm{kHz}$. The default is
+\textbf{$+4.5\,\mathrm{dB/oct}$}. For example, $+3\,\mathrm{dB/oct}$ adds
+about $3\,\mathrm{dB}$ at $2\,\mathrm{kHz}$ and subtracts about
+$3\,\mathrm{dB}$ at $500\,\mathrm{Hz}$, leaving $1\,\mathrm{kHz}$ unchanged.
+This is a visual weighting of spectral magnitudes. Set it to zero to inspect
+relative amplitudes without that weighting.
+
+\clearpage
+\section{Context Menu And Saved Settings}
+
+Right-click the module to find these options under \textbf{Render Settings}:
+\begin{itemize}
+  \item \textbf{Filled Display} shades the area beneath each trace. It is
+  off by default.
+  \item \textbf{Bezier Curve} draws curved connections between the plotted
+  points. It is on by default. Turning it off uses straight segments and can
+  make individual bins easier to inspect. It does not change FFT resolution.
+  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
+  using a DC-blocking filter. It is on by default and can also affect very
+  low frequencies. Turn it off when inspecting DC or slow signals, and set
+  Slope to zero to avoid frequency weighting near DC.
+\end{itemize}
+
+These three menu changes support Rack's Undo and Redo commands. Panel
+settings, menu options, and the running state are saved with patches and
+presets. The captured audio and spectrum are not saved. Loading a patch
+that was saved with Run off therefore does not restore a frozen trace;
+press Run to capture a new one.
+
+\section{Factory Presets}
+
+Load these examples from Rack's module preset menu. All start running,
+with $0\,\mathrm{dB}$ input gain and Filled Display off. Frequency bounds
+are limited by the current sample rate.
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[Mastering] Broad tonal balance: Flattop, Length 4096, Hop
+  $30\,\mathrm{ms}$, Logarithmic X Scale, Log 60dB Y Scale, $0$--$20\,\mathrm{kHz}$,
+  Average $300\,\mathrm{ms}$, Smooth $1/12$ octave, Slope
+  $+4.5\,\mathrm{dB/oct}$. AC coupling and Bezier curves are on.
+  \item[Harmonics] Individual harmonics: Hann, Length 4096, Hop
+  $20\,\mathrm{ms}$, Linear X Scale, Log 60dB Y Scale, $0$--$5\,\mathrm{kHz}$.
+  Average and Smooth are off; Slope is zero. AC coupling is on and Bezier
+  curves are off.
+  \item[BassDetail] Low-frequency detail: Hann, Length 16384, Hop
+  $30\,\mathrm{ms}$, Linear X Scale, Log 60dB Y Scale, $0$--$500\,\mathrm{Hz}$,
+  Average $100\,\mathrm{ms}$. Smooth is off and Slope is zero. AC coupling
+  is on and Bezier curves are off.
+  \item[Transients] Shorter frames and frequent updates: Hann, Length 1024,
+  Hop $5\,\mathrm{ms}$, Logarithmic X Scale, Log 60dB Y Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on and Bezier curves are off.
+  \item[PluginDevelopment] Wider amplitude range: Flattop, Length 8192,
+  Hop $30\,\mathrm{ms}$, Linear X Scale, Log 120dB Y Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling and Bezier curves are off.
+\end{description}
+
+\clearpage
+\section{Troubleshooting}
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[No trace or a stale trace] Check the source signal, cable, input
+  gain, and Run light. Ensure LO Freq is below HI Freq. If you changed
+  Length or loaded a stopped patch, resume capture to fill the buffer.
+  \item[Peaks are too broad or move slowly] Reduce Smooth and Average.
+  Compare window functions. Increasing Length narrows the bin spacing but
+  also increases the time represented in each frame.
+  \item[Levels differ from another analyzer] Match input gain, window,
+  FFT length, smoothing, and amplitude reference. Set Slope to zero and
+  account for summed polyphonic voices. A spectral peak is not a broadband
+  RMS measurement.
+  \item[Display reaches the top] Reduce the relevant input gain or the
+  positive slope. The graph can exceed its visible range even though the
+  source remains unchanged.
+  \item[Analysis uses too much CPU] Try a longer Hop or shorter Length.
+  Fourier performs analysis on Rack's audio engine thread despite having no
+  audio outputs. Stopping Run stops capture but does not stop FFT processing.
+\end{description}
 
 % ----------------------------------------------------------------------------
 % MARK: Background
@@ -252,9 +334,9 @@ is defined as:
 X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j2\pi k \frac{n}{N}}
 \label{eqn:dft}
 \end{equation}
-for $k = 0, 1, \dots, N-1$. Because the DFT inherently assumes the signal is
-periodic, its spectrum is symmetric about the Nyquist frequency
-$\frac{f_s}{2}$.
+for $k = 0, 1, \dots, N-1$. For a real-valued input, the DFT has conjugate symmetry:
+$X[N-k] = X[k]^*$ for $k=1,\dots,N-1$. Its magnitude spectrum is therefore
+symmetric about the Nyquist frequency $\frac{f_s}{2}$.
 
 \subsection{Windowing Functions}
 
@@ -295,11 +377,11 @@ by stage.
     $m \gets 2^s$\;
     Compute the primitive $m$th root of unity: $W_m \gets e^{-j\frac{2\pi}{m}}$\;
     \For{$k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\}$}{
-        \For{$j \gets 0$ \KwTo $\frac{m}{2}-1$}{
-            $t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right]$\;
-            $u \gets x[k+j]$\;
-            $x[k+j] \gets u + t$\;
-            $x\left[k+j+\frac{m}{2}\right] \gets u - t$\;
+        \For{$q \gets 0$ \KwTo $\frac{m}{2}-1$}{
+            $t \gets W_m^q \cdot x\left[k+q+\frac{m}{2}\right]$\;
+            $u \gets x[k+q]$\;
+            $x[k+q] \gets u + t$\;
+            $x\left[k+q+\frac{m}{2}\right] \gets u - t$\;
         }
     }
 }
@@ -313,10 +395,11 @@ by stage.
 The butterfly computations in the FFT algorithm repeatedly use twiddle
 factors:
 $$
-W_m^j = e^{-j\frac{2\pi j}{m}},
+W_m^q = e^{-j\frac{2\pi q}{m}},
 $$
-where $m = 2^s$ for a given stage $s$ and $j = 0, 1, \ldots, \frac{m}{2}-1$.
-Since these factors depend only on $m$ and $j$, they can be precomputed and
+where $j$ is the imaginary unit, $m = 2^s$ for stage $s$, and
+$q = 0, 1, \ldots, \frac{m}{2}-1$.
+Since these factors depend only on $m$ and $q$, they can be precomputed and
 stored in a lookup table. This memoization~\citep{cormen2009introduction} not
 only avoids redundant calculations during the FFT but also contributes to
 faster and more efficient processing, especially in real-time applications or
@@ -328,10 +411,10 @@ implementations, this means:
 \begin{itemize}
   \item \textbf{Precomputation:} For each stage $s$ with block size
   $m$, compute the $\frac{m}{2}$ twiddle factors
-  $\{W_m^j\}_{j=0}^{\frac{m}{2}-1}$ before beginning the main FFT
+  $\{W_m^q\}_{q=0}^{\frac{m}{2}-1}$ before beginning the main FFT
   processing loop.
   \item \textbf{Reuse:} During the FFT computation, instead of recalculating
-  $W_m^j$ for each butterfly operation, the algorithm simply looks up the
+  $W_m^q$ for each butterfly operation, the algorithm simply looks up the
   precomputed value. This saves significant computation time, especially for
   large FFT sizes or when processing multiple FFTs of the same length.
   \item \textbf{Efficiency:} By reducing the number of complex exponential
@@ -372,10 +455,9 @@ all FFT operations of the same size.
 For example, if $N = 8$ (i.e., $r = 3$), then for $i = 3$
 (binary $011$):
 $$
-\tilde{i} = (0 \times 2^2) + (1 \times 2^1) + (1 \times 2^0) = 0 + 2 + 1 = 3,
+\tilde{i} = (1 \times 2^2) + (1 \times 2^1) + (0 \times 2^0) = 4 + 2 + 0 = 6,
 $$
-but note that when the bits are reversed (i.e., $110$), the resulting
-decimal value is 6.
+which is the decimal value of the reversed bits, $110$.
 
 This concept is expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
 The inner loop extracts each bit of the index $i$ (using bitwise
@@ -514,41 +596,18 @@ where:
 
 \subsection{Pipelining the STFT Computation}
 
-In real-time streaming contexts, the STFT is computed on successive frames of
-data separated by a hop size $H$. Typically, each STFT frame is computed
-in its entirety once $H$ new samples have arrived, which can result in
-bursty processing loads. To alleviate this, the computation of each frame can
-be pipelined across the $H$ sample intervals between successive frames.
+Fourier distributes FFT work across engine samples using the selected hop
+length, instead of computing the entire transform in one engine callback.
+The completed frame is then smoothed and prepared for display before the
+next frame enters the transform pipeline.
 
-In a pipelined approach, rather than performing the entire FFT for frame
-$m$ in one burst, the workload is evenly divided and executed
-incrementally as each new sample is acquired~\citep{hennessy2011computer}.
-This means that when a new sample is received, a small portion of the FFT
-computation for the current frame is processed. Over the course of $H$
-samples, the complete FFT for frame $m$ is computed.
-
-This strategy offers several benefits:
-\begin{itemize}
-  \item \textbf{Smooth Processing Load:} The computational effort is spread
-  out over time, preventing large bursts of processing that could otherwise
-  lead to latency or jitter.
-  \item \textbf{Improved Real-Time Performance:} Incrementally updating the
-  FFT ensures that the system can maintain a steady pace of analysis, which
-  is critical for live audio processing.
-  \item \textbf{Enhanced Responsiveness:} By distributing the workload, the
-  system can quickly adapt to changes in the incoming audio, improving the
-  responsiveness of the visualization.
-\end{itemize}
-
-In practical terms, this pipelining may be implemented by dividing the FFT
-computation into $H$ sub-steps. At each new sample, the algorithm updates
-a portion of the FFT, caching intermediate results as needed. When all
-$H$ increments have been processed, the complete FFT for the current
-frame is available, and the process repeats for the next frame.
-
-This approach helps ensure that performance trends remain consistent, rather
-than exhibiting bursty behavior tied to the hop size $H$, thereby
-optimizing the system for real-time streaming applications.
+This scheduling reduces the concentration of FFT work in a single callback,
+but it does not make every callback equally expensive. Smoothing and display
+coordinate preparation still occur when a frame completes, and changing FFT
+length can resize buffers during processing. Smaller hops and larger FFTs
+therefore still affect the patch's engine workload. Capture time, transform
+scheduling, smoothing, and Rack's display refresh all contribute to the delay
+between a signal change and its visible result.
 
 % -------------------
 % MARK: References
