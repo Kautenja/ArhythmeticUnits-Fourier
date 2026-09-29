@@ -4,10 +4,27 @@ import fnmatch
 import re
 import sys
 
+# Instrumented tests never reuse ordinary objects or production flags.
+INSTRUMENT = ARGUMENTS.get('INSTRUMENT', '')
+INSTRUMENT_FLAGS = {
+    '': [],
+    'coverage': ['-O0', '-g', '-fprofile-instr-generate', '-fcoverage-mapping'],
+    'asan-ubsan': ['-O1', '-g', '-fno-omit-frame-pointer',
+                   '-fsanitize=address,undefined', '-fno-sanitize-recover=all'],
+    'tsan': ['-O1', '-g', '-fno-omit-frame-pointer', '-fsanitize=thread'],
+}
+if INSTRUMENT not in INSTRUMENT_FLAGS:
+    Exit('INSTRUMENT must be coverage, asan-ubsan, or tsan')
+if INSTRUMENT == 'tsan' and COMMAND_LINE_TARGETS != ['test-mailbox']:
+    Exit('TSan is restricted to the standalone test-mailbox target')
+TEST_BUILD = ('build/instrumented/' + INSTRUMENT + '/standalone'
+              if INSTRUMENT else 'build_test')
+TEST_CXX = ARGUMENTS.get('CXX', 'clang++' if INSTRUMENT else 'g++')
+
 # create a separate build directory
 VariantDir('build_src', 'src/dsp', duplicate=0)
 VariantDir('build_benchmark', 'benchmark', duplicate=0)
-VariantDir('build_test', 'test', duplicate=0)
+VariantDir(TEST_BUILD, 'test', duplicate=0)
 
 # the compiler and linker flags for the production C++ environment
 PROD_FLAGS = [
@@ -48,10 +65,10 @@ CATCH_DEFINES = ['CATCH_CONFIG_NO_POSIX_SIGNALS'] if sys.platform.startswith('li
 TESTING_ENV = Environment(
     ENV=os.environ,
     CPPDEFINES=CATCH_DEFINES,
-    CXX='g++',
+    CXX=TEST_CXX,
     CPPFLAGS=['-Wno-unused-value', '-Wall', '-Wextra'],
-    CXXFLAGS=TEST_FLAGS,
-    LINKFLAGS=TEST_FLAGS,
+    CXXFLAGS=TEST_FLAGS + INSTRUMENT_FLAGS[INSTRUMENT],
+    LINKFLAGS=TEST_FLAGS + INSTRUMENT_FLAGS[INSTRUMENT],
     CPPPATH=INCLUDES + TEST_INCLUDES,
 )
 
@@ -98,7 +115,7 @@ def find_source_files(src_dir, build_dir):
 # Locate all the C++ source files (TODO main CPP file for building library)
 SRC = find_source_files('src/dsp', 'build_src')
 # create separate object files for testing and production environments
-TEST_SRC = [TESTING_ENV.Object(f.replace('.cpp', '') + '-test', f) for f in SRC]
+TEST_SRC = [TESTING_ENV.Object(f.replace('.cpp', '') + '-test-' + (INSTRUMENT or 'plain'), f) for f in SRC]
 PROD_SRC = [PRODUCTION_ENV.Object(f.replace('.cpp', '') + '-prod', f) for f in SRC]
 BENCHMARK_SRC = [BENCHMARK_ENV.Object(f.replace('.cpp', '') + '-bench', f) for f in SRC]
 
@@ -109,18 +126,26 @@ BENCHMARK_SRC = [BENCHMARK_ENV.Object(f.replace('.cpp', '') + '-bench', f) for f
 
 
 # locate all the testing source files
-TEST_FILES = find_source_files('test', 'build_test')
+TEST_FILES = find_source_files('test', TEST_BUILD)
 # Rack integration tests use the SDK and are built by Make.
-TEST_FILES = [file for file in TEST_FILES if not file.startswith('build_test/rack/')]
-# create a list to store all the test target aliases in
+TEST_FILES = [file for file in TEST_FILES if not file.startswith(TEST_BUILD + '/rack/')]
 UNIT_TEST_ALIASES = []
-for file in TEST_FILES:  # iterate over all the test source files
-    UNIT_TEST_PROGRAM = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_SRC)
-    UNIT_TEST_ALIASES.append(Alias('test/' + file.replace('build_test/', ''), [UNIT_TEST_PROGRAM], UNIT_TEST_PROGRAM[0].path))
-    AlwaysBuild(UNIT_TEST_ALIASES[-1])
+DSP_TEST_ALIASES = []
+MAILBOX_TEST_ALIASES = []
+for file in TEST_FILES:
+    program = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_SRC)
+    relative = file[len(TEST_BUILD) + 1:]
+    alias = TESTING_ENV.Alias('test/' + relative, [program], program[0].path)
+    AlwaysBuild(alias)
+    UNIT_TEST_ALIASES.append(alias)
+    if relative.startswith('dsp/'):
+        DSP_TEST_ALIASES.append(alias)
+    elif relative == 'threads/test_display_mailbox.cpp':
+        MAILBOX_TEST_ALIASES.append(alias)
 
-# create an alias to run all test suites
-Alias("test", UNIT_TEST_ALIASES)
+Alias('test', UNIT_TEST_ALIASES)
+Alias('test-dsp', DSP_TEST_ALIASES)
+Alias('test-mailbox', MAILBOX_TEST_ALIASES)
 
 
 # ----------------------------------------------------------------------------

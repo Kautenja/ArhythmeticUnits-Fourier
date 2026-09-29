@@ -1,0 +1,108 @@
+name: Coverage and sanitizers
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented:
+    name: ${{ matrix.mode }} (${{ matrix.suite }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [coverage, asan-ubsan]
+        suite: [dsp, rack]
+    env:
+      CXX: clang++-18
+      LLVM_COV: llvm-cov-18
+      LLVM_PROFDATA: llvm-profdata-18
+      ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-18
+      RACK_SDK_VERSION: '2.6.3'
+      RACK_SDK_SHA256: 9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d
+    steps:
+      - name: Check out source and Catch2
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install instrumentation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends clang-18 llvm-18 scons
+
+      - name: Install Rack dependencies
+        if: matrix.suite == 'rack'
+        run: |
+          sudo apt-get install --yes --no-install-recommends \
+            make jq curl unzip libglu1-mesa-dev libx11-dev \
+            libasound2t64 libjack-jackd2-0 libpulse0
+
+      - name: Download and verify Rack SDK
+        if: matrix.suite == 'rack'
+        run: |
+          sdk_archive="$RUNNER_TEMP/Rack-SDK.zip"
+          curl --fail --location --retry 3 \
+            "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-lin-x64.zip" \
+            --output "$sdk_archive"
+          printf '%s  %s\n' "$RACK_SDK_SHA256" "$sdk_archive" | sha256sum --check
+          unzip -q "$sdk_archive" -d "$RUNNER_TEMP"
+          echo "RACK_DIR=$RUNNER_TEMP/Rack-SDK" >> "$GITHUB_ENV"
+
+      - name: Run instrumented suites
+        run: python3 scripts/check-instrumented.py '${{ matrix.mode }}' '${{ matrix.suite }}'
+
+      - name: Add coverage summary
+        if: always() && matrix.mode == 'coverage'
+        run: |
+          test -f 'build/reports/coverage/${{ matrix.suite }}/summary.txt' || exit 0
+          echo '### ${{ matrix.suite }} coverage' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat 'build/reports/coverage/${{ matrix.suite }}/summary.txt' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save reports and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.mode }}-${{ matrix.suite }}
+          path: build/reports/${{ matrix.mode }}/${{ matrix.suite }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  mailbox-tsan:
+    name: TSan (standalone display mailbox)
+    runs-on: macos-14
+    timeout-minutes: 15
+    steps:
+      - name: Check out source and Catch2
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install SCons
+        run: brew install scons
+
+      - name: Stress the mailbox under TSan
+        run: python3 scripts/check-instrumented.py tsan mailbox
+
+      - name: Save diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: tsan-mailbox
+          path: build/reports/tsan/mailbox/
+          if-no-files-found: error
+          retention-days: 14

@@ -7,8 +7,9 @@ the VCV Rack plugin.
 ## Dependencies
 
 For standalone tests, use Python with SCons, a C++11-capable compiler
-available as `g++`, and the repository's Catch2 headers. `SConstruct` currently
-sets `CXX='g++'`; do not assume an environment `CXX` override changes it.
+available as `g++`, and the repository's Catch2 headers. SCons accepts a
+command-line compiler override such as `scons CXX=clang++ test`; an environment
+`CXX` alone does not override its default.
 On macOS, `g++` may resolve to Apple Clang.
 
 Initialize any recorded submodules after cloning:
@@ -117,6 +118,102 @@ Rack CI currently covers Linux x64 only. Plugin builds and Rack integration
 tests on macOS and Windows, benchmarks, and manual UI checks remain separate
 validation steps. The headless tests do not replace an interactive Rack session.
 
+## Coverage And Sanitizers
+
+The [instrumentation workflow](../../.github/workflows/instrumentation.yml)
+runs on pull requests, pushes to `main`, and manual dispatch. Four independent
+Ubuntu 24.04 jobs run DSP/Rack coverage and combined ASan/UBSan with Clang 18.
+Rack jobs use the same pinned Rack 2.6.3 SDK as the ordinary Rack CI job.
+A separate macOS 14 job runs only the standalone mailbox suite under TSan;
+it needs no Rack SDK or shared library. Failures do not cancel other matrix
+jobs. Reports and full compiler/test diagnostics are uploaded for 14 days,
+including diagnostics from failed runs. Coverage summaries also appear in the
+workflow summary. No external reporting account or token is required.
+
+From the repository root, use Python 3, SCons, and Clang on Linux or macOS:
+
+```shell
+python3 scripts/check-instrumented.py coverage dsp
+python3 scripts/check-instrumented.py coverage rack
+python3 scripts/check-instrumented.py asan-ubsan dsp
+python3 scripts/check-instrumented.py asan-ubsan rack
+python3 scripts/check-instrumented.py tsan mailbox
+```
+
+Rack runs additionally require Make and the normal Rack dependencies. They
+honor `RACK_DIR` or `--rack-dir /absolute/path/to/Rack-SDK`. All commands accept
+`--jobs 2` (the default). The script honors an environment `CXX` compiler
+executable, defaulting to `clang++`. Coverage also needs matching
+`llvm-profdata` and `llvm-cov`; select explicit executables with
+`LLVM_PROFDATA` and `LLVM_COV`. On macOS the script finds Xcode's tools through
+`xcrun` when they are not on `PATH`. For Ubuntu's versioned tools:
+
+```shell
+CXX=clang++-18 LLVM_PROFDATA=llvm-profdata-18 LLVM_COV=llvm-cov-18 \
+    python3 scripts/check-instrumented.py coverage dsp
+```
+
+### Coverage Reports
+
+The [LLVM source coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html)
+reports are separate by test workload:
+
+-   `build/reports/coverage/dsp/`: standalone DSP suites, reporting `src/dsp/`.
+-   `build/reports/coverage/rack/`: all five headless Rack suites, reporting
+    first-party `src/`, including DSP templates instantiated by the modules.
+
+Each contains `html/index.html`, `summary.txt`, `coverage.lcov`,
+`coverage.json`, merged `coverage.profdata`, raw profiles, `test-status.json`, and `run.log`.
+Catch2, test fixtures, SDK headers, and system libraries are excluded from
+report totals. Reports cover compiled functions, not every file in the
+repository: uninstantiated templates and unlinked code are not measured.
+The two percentages must not be added or treated as a combined whole-plugin
+coverage figure. Rack coverage includes headless display calls but does not
+establish interactive UI, OpenGL, or complete patch-loading coverage.
+
+Every invocation removes that suite's old reports and raw profiles, reruns
+its tests, and merges only the new profiles. Unique process and binary profile
+names prevent parallel tests from overwriting each other. If tests fail,
+available coverage is still exported with a failed-run label in the summary
+and `test-status.json`; the command and CI job still fail. Build failures or
+missing profiles can prevent report generation. Coverage reporting has no
+percentage threshold yet; assertion failures, missing profiles, or LLVM
+reporting failures fail the command.
+
+### Sanitizer Scope
+
+Combined [ASan](https://clang.llvm.org/docs/AddressSanitizer.html) and
+[UBSan](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html) instrument
+both standalone DSP tests and the actual module code compiled into the
+headless Rack suites. Diagnostics fail immediately, with UBSan recovery
+disabled. The runner uses `halt_on_error=1` for both runtimes and requests
+UBSan stack traces. Leak checking uses the platform runtime's default
+(enabled on Linux); no project suppression list is applied. Logs live at
+`build/reports/asan-ubsan/dsp/run.log` and
+`build/reports/asan-ubsan/rack/run.log`.
+
+[TSan](https://clang.llvm.org/docs/ThreadSanitizer.html) runs separately from
+ASan/UBSan. `test/threads/test_display_mailbox.cpp` checks retained-slot
+ownership, superseded publications, coherent concurrent payloads, monotonic
+sequence values, and final publication delivery. Its bounded producer sends
+100000 snapshots; the reader inspects held storage during publication.
+The runner sets `halt_on_error=1:exitcode=66` and saves
+`build/reports/tsan/mailbox/run.log`. This focused run checks the
+single-producer/single-consumer mailbox contract. It does not establish race
+freedom for module controls, Rack internals, or an entire engine/UI session.
+The mailbox suite also runs without instrumentation in `scons test` or alone
+with `scons test-mailbox`.
+
+Instrumented objects and executables live under `build/instrumented/`,
+separate from ordinary tests and plugin products. DSP coverage uses `-O0`;
+Rack coverage retains SDK optimization and floating-point flags. Sanitizers
+use `-O1`, debug symbols, and frame pointers, retaining Rack's configured
+floating-point behavior. Rack instrumentation covers first-party code and
+included headers, while the supplied `libRack` remains uninstrumented.
+Passing these checks is not an instrumented Rack host run or a plugin build.
+Use ordinary builds and manual Rack checks separately. Do not use these
+slower builds for performance measurements or distribute them as plugins.
+
 ## Rack Plugin Build
 
 With the default Rack layout:
@@ -177,7 +274,8 @@ texture backend. They cover context recreation while frozen, widget deletion,
 unrendered previews, repeated cleanup, texture-creation failure, and ownership
 when switching between live contexts. They also compare cached image bytes
 with the original full-image calculation, check cache invalidation and history
-wraparound, and stress the mailbox with concurrent publication and reading.
+wraparound. Standalone mailbox concurrency checks run through SCons and the
+focused TSan command above.
 They do not create an OpenGL window. In Rack, also check that Spectre resumes displaying
 its frozen history after closing and reopening a host-managed editor.
 

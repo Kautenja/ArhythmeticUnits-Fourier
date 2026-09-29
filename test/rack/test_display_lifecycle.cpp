@@ -15,7 +15,6 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cmath>
 #include <map>
 #include <memory>
@@ -24,7 +23,6 @@
 #include <vector>
 #include "../../src/Spectrogram.cpp"
 #include "../../src/SpectrumAnalyzer.cpp"
-#include <thread>
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -251,46 +249,6 @@ TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting")
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
     renderer.draw(display);
     CHECK(renderer.updated == 7);
-}
-
-TEST_CASE("Display mailbox retains the latest complete publication without overwriting a reader") {
-    struct Packet { std::array<unsigned, 64> values{}; };
-    Fourier::DisplayMailbox<Packet> mailbox;
-    CHECK(mailbox.consume() == nullptr);
-    mailbox.writable().values.fill(1);
-    mailbox.publish();
-    const auto held = mailbox.consume();
-    REQUIRE(held);
-    for (unsigned i = 2; i < 20; ++i) {
-        mailbox.writable().values.fill(i);
-        mailbox.publish();
-    }
-    CHECK(held->values.front() == 1);
-    CHECK(held->values.back() == 1);
-    REQUIRE(mailbox.consume()->values.front() == 19);
-    CHECK(mailbox.consume() == nullptr);
-
-    std::atomic<bool> done{false};
-    std::thread producer([&]() {
-        for (unsigned i = 20; i <= 100000; ++i) {
-            mailbox.writable().values.fill(i);
-            mailbox.publish();
-        }
-        done.store(true, std::memory_order_release);
-    });
-    unsigned last = 19;
-    bool consistent = true;
-    do {
-        if (const auto packet = mailbox.consume()) {
-            const unsigned value = packet->values.front();
-            consistent = consistent && value >= last;
-            for (auto element : packet->values) consistent = consistent && element == value;
-            last = value;
-        }
-    } while (!done.load(std::memory_order_acquire) || last != 100000);
-    producer.join();
-    CHECK(consistent);
-    CHECK(last == 100000);
 }
 
 template<typename Display, typename Module>
