@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use Fourier in your research or software, please cite it as below."
+message: "If you use Fourier or its scheduling analysis, please cite the technical report below and identify the software version used."
 type: software
 title: "Fourier: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
 abstract: >-
@@ -24,13 +24,16 @@ keywords:
   - VCV Rack
   - C++
 preferred-citation:
-  type: software
-  title: "Fourier: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
+  type: report
+  title: "Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis"
   authors:
     - family-names: Kauten
       given-names: Christian
-  year: 2025
-  version: "2.1.2"
-  date-released: "2025-04-14"
-  url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier"
-  license: GPL-3.0-or-later
+      affiliation: Arhythmetic Units
+  institution:
+    name: Arhythmetic Units
+  year: 2026
+  month: 9
+  version: "1"
+  url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/whitepaper"
+  notes: "Technical report manuscript; not yet deposited on arXiv. Cite the software version separately when needed for reproducibility."

@@ -89,26 +89,38 @@ project's source structure and coding conventions.
 
 ## Citation
 
-Please cite Fourier if you use it in your research or software. GitHub's
-**Cite this repository** button reads the same metadata from
-[CITATION.cff][citation-cff]. Cite the version you used; the entry below
-describes version 2.1.2.
+The [technical report](whitepaper/README.md), **Fourier: Resumable FFT
+Scheduling for Real-Time Spectral Analysis**, describes the implementation,
+its scheduling and latency model, prior work, and reproducible experiments.
+The self-contained [LaTeX source](whitepaper/fourier.tex) builds with
+`make -C whitepaper`.
+
+If you use this work, please cite the report. GitHub's **Cite this repository**
+button uses the preferred report citation in [CITATION.cff][citation-cff].
+[CITATION.bib](CITATION.bib) supplies both report and software entries.
 
 ```bibtex
-@software{kauten2025fourier,
-  author  = {Kauten, Christian},
-  title   = {{Fourier}: Spectrum Analysis and Spectrogram Visualization for {VCV Rack}},
-  year    = {2025},
-  version = {2.1.2},
-  url     = {https://github.com/Kautenja/ArhythmeticUnits-Fourier},
-  license = {GPL-3.0-or-later},
-  note    = {Arhythmetic Units plugin containing the Fourier spectrum analyzer
-             and Spectre spectrogram visualizer},
+@techreport{kauten2026fourier,
+  author      = {Kauten, Christian},
+  title       = {{Fourier}: Resumable {FFT} Scheduling for Real-Time Spectral Analysis},
+  institution = {Arhythmetic Units},
+  year        = {2026},
+  month       = sep,
+  type        = {Technical report},
+  note        = {Manuscript version 1; not yet deposited on arXiv},
+  url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/whitepaper},
 }
 ```
 
-The citation's license field describes the source code. See
-[LICENSE.md](LICENSE.md) for the separate terms covering visual assets.
+For reproducibility, also identify the software version or commit you used.
+The software entry in `CITATION.bib` describes release 2.1.2; the report's
+experiment metadata records its evaluated source revision separately. The
+source-code license is GPL-3.0-or-later; see [LICENSE.md](LICENSE.md) for the
+separate visual-asset terms.
+
+The report is currently a repository manuscript. Its citation will be updated
+with a persistent identifier after a public deposit; no arXiv identifier or
+publication acceptance is implied.
 
 ## Acknowledgments
 

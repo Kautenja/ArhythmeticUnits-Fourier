@@ -1,0 +1,50 @@
+{
+  "started_utc": "2026-09-28T23:19:57.553220+00:00",
+  "git_head": "b52e49c548ae681ec491c6e8b5ed78e4f92fe34d",
+  "source_sha256": {
+    "whitepaper/experiments/evaluate.cpp": "ffbd4e45b43d0714bd3a77cc4cac5b1dfa26b3ad00c62b5a66aab3897312c01c",
+    "whitepaper/experiments/run.py": "4db3c8f8ebde2ed547ea68e8017514359bf63070ab2bf881f0663ce6cb39f9c9",
+    "src/dsp/math/circular_buffer.hpp": "0cdb8730bfcff4dc1f516b5938216d9f8c3d3c2a0b331a4796b0906fcb5f08e4",
+    "src/dsp/math/color_map.hpp": "464f0a5df41268d449f678443de7dbd703e466c4b22da2a9958643d931e36c8c",
+    "src/dsp/math/constants.hpp": "9b7f1dcedd91166a6bddd60ffbeb69c60cf51d41709021ff6a501bdc983c9ce6",
+    "src/dsp/math/dft.hpp": "1f7bd9d0b8566b08cc31a72f06502a6b25989e46c3087a4d8b52f29e05b08a4b",
+    "src/dsp/math/eurorack.hpp": "d2e6c060d5ae8d92a824874909754d8a63d73c24edbae0548fb98e682e880e46",
+    "src/dsp/math/fft.hpp": "b2b94a63b8728a13cde31d78e2326627771433c7d67611c1ffd1cb97522d8db2",
+    "src/dsp/math/functions.hpp": "fba4fde16f0b761339f12f542a361a9545ae02772a13d3a22a89553ca7cdca87",
+    "src/dsp/math/window.hpp": "59bb711ccf6e2496d70f42bce870563d623c04076dc6036358e3a3827860bc4b"
+  },
+  "source_status": "",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+  "compile_command": [
+    "g++",
+    "-std=c++11",
+    "-O3",
+    "-DNDEBUG",
+    "-Wall",
+    "-Wextra",
+    "-pedantic",
+    "-Isrc",
+    "whitepaper/experiments/evaluate.cpp",
+    "-o",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/whitepaper/build/evaluation/evaluate"
+  ],
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "cpu": "Apple M1 Pro",
+  "memory_gib": 16,
+  "repetitions": 9,
+  "frames_per_pass": 64,
+  "warmup_frames": 16,
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 20260928,
+  "scope": "Scalar single-channel RFFT; fixed H cadence; no Rack, smoothing, graphics, or optimized external FFT baseline.",
+  "clock": {
+    "empty_timer_median_ns": 0,
+    "empty_timer_p99_ns": 42,
+    "long_double_digits": 53
+  },
+  "finished_utc": "2026-09-28T23:20:00.819176+00:00",
+  "data_sha256": {
+    "verification.csv": "5ec7adb342cbd6b9cc5cfef3697197732bab4a3ba42e2459996a4a825f541181",
+    "timing.csv": "bdab0e3757f91eb1f2e25e4c61e4349a07b9845ffd24aab74c62d7cec1571138"
+  }
+}
