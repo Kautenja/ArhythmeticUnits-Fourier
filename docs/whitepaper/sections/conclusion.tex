@@ -1,0 +1,17 @@
+\section{Conclusion}
+This implementation study illustrates how a conventional FFT can become a
+schedulable component by exposing its traversal state. The resulting operation-count budget has a
+simple completion proof and preserves the order of arithmetic. Its application
+also exposes two easily overlooked distinctions: completing within a requested
+horizon is not the same as maintaining that frame interval, and budgeting
+butterflies is not the same as budgeting a complete analysis pipeline.
+
+The one-hop successor extends the same ordered-work argument to windowing,
+packing, reconstruction, smoothing, and display preparation. Its retained-input
+ring and preallocated publication slots make the data-lifetime requirements
+explicit. The prototype comparison favored this design over adding three hops
+of overlap latency. The integrated implementation has deterministic regression
+evidence, while its device-level performance remains an open measurement task.
+This distinction between scheduling bounds, numerical tests, and empirical
+execution time is central to interpreting the contribution.
+

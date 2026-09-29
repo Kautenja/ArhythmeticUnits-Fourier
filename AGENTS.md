@@ -105,6 +105,18 @@ compiled manuals belong in ignored build directories. If native rendering
 is unavailable, preserve the existing screenshot and report that refresh as
 unverified. Do not replace it with a mockup or stale capture.
 
+## Whitepaper Sources
+
+Follow the [whitepaper guide](docs/whitepaper/README.md) for its source map,
+artifact checks, and portable export. `fourier.tex` controls manuscript order;
+keep prose in `sections/` and `appendices/`, complete figure/table environments
+in their matching directories, and typography in the paper's own preamble.
+The manuals and paper share `docs/latex/publication.mk`, not a stylesheet.
+Use literal `\input{path.tex}` lines relative to the whitepaper directory so
+the artifact checker and single-file source export include the same material.
+Preserve text, labels, and placement when reorganizing. Verify rendered-page
+equivalence for housekeeping changes and compile the exported source archive.
+
 ## VCV Library Releases
 
 Use these permanent links when preparing a release:

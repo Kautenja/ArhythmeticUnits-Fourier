@@ -13,7 +13,10 @@ import tarfile
 
 ROOT = Path(__file__).resolve().parents[3]
 PAPER = ROOT / 'docs/whitepaper'
-tex = (PAPER / 'fourier.tex').read_text()
+sys.path.insert(0, str(PAPER / 'tools'))
+from manuscript import read_manuscript
+
+tex = read_manuscript()
 meta = json.loads((PAPER / 'data/metadata.json').read_text())
 with tarfile.open(PAPER / 'data/source.tar.gz') as archive:
     for path, expected in meta['source_sha256'].items():

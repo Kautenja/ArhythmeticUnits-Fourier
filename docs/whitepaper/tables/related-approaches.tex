@@ -1,0 +1,16 @@
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.24\linewidth}>{\raggedright\arraybackslash}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.34\linewidth}@{}}
+\toprule
+Approach & What changes incrementally & Principal distinction \\
+\midrule
+Batch FFT & A complete frame per invocation & Implementation can optimize the whole call. \\
+Resumable FFT here & Traversal of one frozen frame & Caller controls work placement; no inter-frame reuse. \\
+Acquisition-aware FFT & Available subtransforms during acquisition & Depends on input-arrival order and transform graph. \\
+Sliding/hopping/tree/\allowbreak feedforward methods & Spectra or intermediate results across windows & Reuses overlap; different state and error analysis. \\
+Worker-thread FFT & Execution on another scheduled thread & Requires ownership, synchronization, and deadline policy. \\
+\bottomrule
+\end{tabular}
+\caption{Conceptual comparison. These are design distinctions, not a performance ranking.}
+\label{tab:position}
+\end{table}

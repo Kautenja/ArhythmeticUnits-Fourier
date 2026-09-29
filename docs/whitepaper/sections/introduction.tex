@@ -1,0 +1,41 @@
+\section{Introduction}
+A real-time audio system must complete the work associated with an audio buffer
+before the next buffer is required. A spectral analyzer participates in this
+constraint even when it produces no audio output: computation performed on the
+engine thread competes with oscillators, filters, and other processors. The
+relevant resource is therefore not only transforms per second, but also how
+transform work is distributed across the host's processing intervals.
+
+A conventional batch FFT interface accepts a complete frame and returns a
+complete spectrum. Such an interface is appropriate when the call fits the
+available budget, or when a worker thread can perform the analysis with an
+acceptable publication delay. A sample-based plugin may instead benefit from
+retaining an unfinished transform and performing a small amount of it whenever
+the host processes another sample. This makes scheduling visible at the DSP
+interface without introducing an additional thread.
+
+The implementation studied here belongs to the Arhythmetic Units Fourier plugin
+for VCV Rack. The plugin contains a spectrum analyzer module named Fourier and
+a spectrogram module named Spectre. These are software product names; the
+mathematical terms Fourier transform and Fourier analysis retain their
+conventional meanings. The Fourier module computes four independent spectra
+using SIMD lanes; the Spectre module maintains a scalar spectrogram history.
+Their current shared analyzer schedules the complete engine-side analysis over
+one exact hop. The earlier resumable real FFT remains available as a reusable
+DSP component and as the baseline examined here.
+
+This report makes three contributions: a derivation of the original scheduler's
+completion/cadence mismatch and residual bursts; a dependency-ordered one-hop
+design covering the complete analysis path and buffer lifetime; and executable
+correctness checks with controlled scalar measurements informing that design.
+We make no claim to a new FFT factorization, the invention of time distribution,
+or a general performance advantage over optimized transform libraries.
+
+The original DSP campaign used revision \code{b52e49c548ae}; its exact
+experiment and header sources are archived with recorded SHA-256 digests.
+Sections~\ref{sec:legacy-transform}--\ref{sec:legacy-results} describe that
+historical implementation and campaign. Section~\ref{sec:one-hop} describes the
+production successor at revision \code{9e43231}, followed by a separate
+pre-integration prototype campaign. Keeping these artifacts distinct prevents
+historical timings from being attributed to the current plugin.
+

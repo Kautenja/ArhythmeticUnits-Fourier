@@ -7,6 +7,12 @@ on:
       - docs/manual-spectre/**
       - docs/latex/**
       - docs/whitepaper/fourier.tex
+      - docs/whitepaper/preamble.tex
+      - docs/whitepaper/bibliography.tex
+      - docs/whitepaper/sections/**
+      - docs/whitepaper/appendices/**
+      - docs/whitepaper/figures/**
+      - docs/whitepaper/tables/**
       - docs/whitepaper/makefile
       - plugin.json
       - .github/workflows/manuals.yml
@@ -18,6 +24,12 @@ on:
       - docs/manual-spectre/**
       - docs/latex/**
       - docs/whitepaper/fourier.tex
+      - docs/whitepaper/preamble.tex
+      - docs/whitepaper/bibliography.tex
+      - docs/whitepaper/sections/**
+      - docs/whitepaper/appendices/**
+      - docs/whitepaper/figures/**
+      - docs/whitepaper/tables/**
       - docs/whitepaper/makefile
       - plugin.json
       - .github/workflows/manuals.yml

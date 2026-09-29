@@ -1,0 +1,98 @@
+\section{Original Scheduling, Cadence, and Latency}
+\label{sec:scheduling}
+Let $H\ge1$ be the requested computation horizon in sample calls and let $B>0$
+be the number of inner butterflies. The implementation chooses
+\begin{equation}
+ q=\ceil{B/H}
+ \label{eq:quota}
+\end{equation}
+and invokes the single-step method $q$ times per call. Once complete, further
+step invocations are no-ops. The following statements concern this integer
+model. These reusable forward classes compute the ceiling through single-precision
+floating-point division; the reported experiments verify the model over the
+tested range. Extremely large sizes or horizons require a separate analysis of
+rounding and integer overflow. Zero horizons and unsupported transform lengths
+are outside the forward-path contract examined here. We use powers of two
+$N\ge4$ for the real transform.
+
+\begin{proposition}[Completion bound]
+The transform completes after exactly $L=\ceil{B/q}$ calls, with $L\le H$.
+\end{proposition}
+\begin{proof}
+After $\ell$ calls the number of completed butterflies is
+$\min(B,\ell q)$. The least $\ell$ reaching $B$ is $\ceil{B/q}$.
+Since $qH\ge B$, this value cannot exceed $H$.
+\end{proof}
+
+This is a bound on operation counts, not execution time. In particular,
+completion \emph{within} $H$ calls does not imply completion \emph{at} call $H$.
+In the original snapshot, both visualization modules test completion at the start of their processing
+routine, publish the previous result, buffer a new frame, and then advance the
+new transform. In steady state, with constant parameters and active processing,
+frame starts are therefore separated by $L$ samples rather than necessarily by
+$H$ samples. Initialization, freeze, reset, and reconfiguration are separate
+state transitions and are not covered by this steady-state statement.
+
+\input{tables/legacy-cadence.tex}
+
+For $N=4096$ and $H=2048$, $q=6$ and $L=1878$. At 48 kHz the nominal
+interval is 42.67 ms, whereas the original steady-state interval is
+39.125 ms. The rate difference is about 9.1\%. This is not a numerical FFT
+error; it is a difference between the parameter's nominal interpretation and
+the scheduler's completion-driven frame clock.
+
+\subsection{Timestamp semantics}
+Suppose a complete input window is captured on call $t_r$ and its first batch
+runs in that same call. Its final batch runs at $t_r+L-1$, and the module
+publishes the result at the start of call $t_r+L$. Measured from the newest
+sample, publication delay is consequently $L/f_s$. Relative to the midpoint
+of the captured sample support, its age is
+\begin{equation}
+ A_{\mathrm{mid}}=\frac{(N-1)/2+L}{f_s}.
+ \label{eq:age}
+\end{equation}
+The midpoint is a timestamp convention, not a universal group-delay claim for
+arbitrary windows. The display thread may add further delay. Figure~\ref{fig:timeline}
+separates the sample support from the deferred calculation. Streaming input
+continues during calculation, but those newer samples belong to a later frame.
+
+\input{figures/legacy-timeline.tex}
+
+\subsection{Consequences for temporal smoothing}
+The original modules use an exponential magnitude smoother. Writing its intended time
+constant as $\tau$ and assuming a nominal interval $H/f_s$ gives
+\begin{equation}
+ y_r=\alpha y_{r-1}+(1-\alpha)|X_r|,\qquad
+ \alpha=\exp[-H/(f_s\tau)].
+\end{equation}
+The implementation's user-facing smoothing-time parameter corresponds to
+$10\tau$. If actual updates arrive every $L/f_s$, then after elapsed time $t$
+the old state is attenuated approximately by
+$\exp[-tH/(L\tau)]$. The effective time constant is thus
+\begin{equation}
+ \tau_{\mathrm{eff}}=\tau L/H.
+\end{equation}
+For the 4096-point example, the decay time is approximately 8.3\% shorter than
+its nominal interpretation. The one-hop successor removes this completion-driven discrepancy; the Fourier module
+still truncates its hop control to integer samples (Section~\ref{sec:one-hop}). The analysis also motivates timestamping
+spectrogram columns by captured frames rather than assuming the configured
+horizon is their spacing.
+
+\subsection{Exact-horizon alternative}
+If an application requires publication exactly every $H$ calls, it can separate
+the frame clock from completion and retain a finished result until its scheduled
+publication. Alternatively, for an ordered sequence of $B$ work units, assign
+call $s\in\{1,\ldots,H\}$ the quota
+\begin{equation}
+ q_s=\floor{sB/H}-\floor{(s-1)B/H}.
+ \label{eq:balanced}
+\end{equation}
+These quotas sum to $B$ by telescoping; each is either $\floor{B/H}$ or
+$\ceil{B/H}$. For $B>0$, the last quota is positive, so the ordered work ends
+on call $H$. Among schedules for $B$ unit-cost operations in $H$ calls, no
+schedule can have a maximum quota smaller than $\ceil{B/H}$, by the pigeonhole
+principle. Equation~\eqref{eq:balanced} attains that lower bound. This elementary
+balanced schedule is not a claimed new scheduling result. The successor applies
+it to a larger work sequence (Section~\ref{sec:one-hop}). Its unit-cost premise
+does not make unequal operations interchangeable in execution time.
+

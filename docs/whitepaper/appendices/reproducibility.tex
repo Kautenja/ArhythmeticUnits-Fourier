@@ -1,0 +1,36 @@
+\section{Reproducibility and Source Map}
+The code artifact is available at \repo. All report sources and experiment data
+are in \code{docs/whitepaper/}. The manuscript embeds its figures, listings, and
+bibliography so that one \code{.tex} file suffices for typesetting; compilation
+does not run experiments or fetch network resources.
+
+From the repository root, verify both archived campaigns and build the report:
+\begin{lstlisting}[language=bash]
+make -C docs/whitepaper check
+make -C docs/whitepaper
+\end{lstlisting}
+The original campaign's exact inputs are in
+\path{docs/whitepaper/data/source.tar.gz}; its README gives isolated extraction and
+reproduction commands. The archive restores the historical math-header paths
+and the exact driver hashes in the original metadata, without editing those
+metadata to match newer code. The current \path{docs/whitepaper/experiments/run.py}
+can also run a new same-FFT comparison, but compiles the current reusable FFT
+headers. Its results belong to a new campaign.
+
+The complete-pipeline prototype sources, including alternate schedules and
+original dependency headers, are preserved only in
+\path{docs/whitepaper/data/pipeline/source.tar.gz}. Its README describes reproduction;
+\code{metadata.json} records compiler settings and source/data hashes;
+\code{timing.csv} retains 2880 per-repetition summaries; \code{baseline.csv}
+retains 27 phase observations. Individual timed calls were not retained.
+
+The production paths are \path{src/dsp/spectrum_analysis.hpp},
+\path{src/SpectrumAnalyzer.cpp}, and \path{src/Spectrogram.cpp}.
+\path{src/rack_extensions/display_mailbox.hpp} defines snapshot ownership;
+\path{src/rack_extensions/spectrum_coordinates.hpp} maps the Fourier module's bins.
+The original \path{src/dsp/fft.hpp} remains a reusable component. Run the
+production checks using the commands in
+\path{CONTRIBUTING.md}.
+Neither archived dataset is a portable timing requirement or a measurement
+of the production successor.
+

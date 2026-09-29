@@ -151,7 +151,8 @@ and plugin versions, operating system, and steps to reproduce a bug.
 The [technical report][report], **Resumable FFT Scheduling for Real-Time
 Spectral Analysis**, explains the implementation, scheduling and latency
 model, prior work, and reproducible experiments. Its README includes build
-instructions for the self-contained [LaTeX source](docs/whitepaper/fourier.tex).
+instructions for the [LaTeX project](docs/whitepaper/fourier.tex) and its
+self-contained source export.
 
 <details>
 <summary><strong>Citation Formats And Reproducibility</strong></summary>

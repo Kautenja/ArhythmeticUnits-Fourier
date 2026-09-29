@@ -11,12 +11,14 @@ which contains the Fourier spectrum analyzer and Spectre spectrogram modules.
 
 ## Read And Build
 
-Open [fourier.tex](fourier.tex) in the built-in LaTeX editor for an editable
-source and PDF preview. The manuscript is self-contained: its vector
-figures, code listing, tables, and bibliography need no external inputs.
+Start with [fourier.tex](fourier.tex), which sets the title and manuscript
+order. Edit the included section, appendix, figure, or table sources in place.
+The manuscript is a multi-file LaTeX project; use the Make target below for
+compilation. Its vector figures, listings, tables, and bibliography remain
+local TeX sources, with no downloaded assets or generated experiment inputs.
 
 For a local PDF export, install a TeX distribution with `pdflatex`,
-`latexmk`, and the packages named in the preamble, then run from the
+`latexmk`, and the packages named in [preamble.tex](preamble.tex), then run from the
 repository root:
 
 ```shell
@@ -30,6 +32,14 @@ never runs a benchmark or fetches data. The single-column, 11-point layout
 prioritizes readable derivations, code, and numerical results. No shell
 escape or BibTeX pass is required.
 
+The paper and manuals share only the PDF build lifecycle in
+[`publication.mk`](../latex/publication.mk). The paper keeps its own preamble,
+typography, metadata, and page layout; it does not load the manual stylesheet.
+`BUILD` and `LATEXMK` can be overridden. `make -C docs/whitepaper clean`
+removes the compiled paper and its auxiliary files while preserving experiment
+results and source archives. Keep review renders outside the PDF output
+directory, for example in the repository's `.build/whitepaper-review/`.
+
 The [PDF workflow](../../.github/workflows/manuals.yml) builds the manuscript
 on relevant pull requests, changes merged to `main`, and version tags. GitHub
 release publication attaches it as `Fourier-whitepaper.pdf` alongside the two
@@ -38,9 +48,17 @@ to arXiv or a journal.
 
 ## Contents
 
--   [fourier.tex](fourier.tex): Complete manuscript, implementation-reference
-    appendix, and shared bibliography. The appendix covers bit reversal,
+-   [fourier.tex](fourier.tex): Entry point, title, and manuscript order.
+-   [preamble.tex](preamble.tex): Packages, macros, metadata, and existing style.
+-   [sections/](sections/): Abstract and one source per main section.
+-   [appendices/](appendices/): Implementation reference, reproducibility,
+    and availability. The implementation appendix covers bit reversal,
     maximum-size table reuse, batch transform pseudocode, and smoothing bounds.
+-   [figures/](figures/): TikZ/PGFPlots figures, including captions and labels.
+-   [tables/](tables/): Tables, including captions and labels.
+-   [bibliography.tex](bibliography.tex): The manuscript's cited references.
+-   [tools/manuscript.py](tools/manuscript.py): Shared source expansion for
+    consistency checks and the portable source archive.
 -   [sources.md](sources.md): Primary-source verification of references and
     the scope of the literature review.
 -   [experiments/evaluate.cpp](experiments/evaluate.cpp): Independent DFT
@@ -130,7 +148,11 @@ make -C docs/whitepaper arxiv
 ```
 
 The output is `docs/whitepaper/.build/fourier-arxiv-source.tar.gz`, containing the
-self-contained `fourier.tex`. Review the compiled PDF, author details,
+self-contained `fourier.tex`. The export expands the repository's inputs in
+place without rewriting their contents, so the archive still needs only one
+TeX file and no repository build files. Extract into an empty directory and
+run `latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' fourier.tex`
+to verify the portable manuscript. Review the compiled PDF, author details,
 claims, and license choice before submitting. Follow the current
 [arXiv TeX guidance](https://info.arxiv.org/help/submit_tex.html); submission,
 endorsement, and moderation are separate from a successful local build.
@@ -151,9 +173,24 @@ Indexing and citation counts remain external outcomes.
 Update claims and evidence together. Rerunning experiments does not
 silently update the manuscript: review the new campaign, retain its metadata,
 replace the archived data deliberately, and update the text, tables, plot,
-and expected values in the consistency check. The bibliography is embedded
-in the LaTeX file so that it remains portable; record any new verification
-source in `sources.md`.
+and expected values in the consistency check. Keep bibliography entries in
+`bibliography.tex`; they are embedded into the portable source export. Record
+any new verification source in `sources.md`.
+
+Keep TeX filenames lower case and preserve all labels when moving content.
+Use standalone `\input{path.tex}` lines with paths relative to this directory;
+the source expander intentionally handles this simple convention, not general
+TeX macros. Keep input directives out of comments and code listings. Include
+new sources from the manuscript tree so compilation, the artifact checker,
+and the source archive all see the same content. Listings and equations stay
+beside the prose that explains them; figures and tables retain their complete
+float environments and are included at their original locations. Do not use
+`\include`, which would introduce page breaks.
+
+For source-only reorganizations, build a before/after PDF and compare page
+renders, extracted text, references, and metadata. Also run the artifact check
+and compile the extracted source archive. These checks distinguish a file move
+from an accidental change to the manuscript or its pagination.
 
 The report adds no production DSP behavior. The repository's
 [license document](../../LICENSE.md) continues to govern the existing source

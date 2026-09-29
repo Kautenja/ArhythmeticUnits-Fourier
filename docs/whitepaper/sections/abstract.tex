@@ -1,0 +1,26 @@
+\begin{abstract}
+A Fourier transform that is inexpensive in aggregate can still impose an
+undesirable burst on a real-time audio engine. This report studies two
+successive schedulers in an open-source spectral analysis plugin for VCV Rack.
+The original design distributes butterflies
+but retains linear preparation and reconstruction bursts and may restart frames
+before its requested horizon. The production successor orders packing,
+windowing, butterflies, positive-bin reconstruction, magnitude smoothing, and
+display preparation into a single resumable work sequence. An integer balanced
+quota completes that sequence in exactly one hop. We derive its work count,
+publication latency, retained-input capacity, and ownership requirements.
+Reproducible scalar experiments characterize the original transform and compare
+complete-pipeline prototypes. In one representative prototype workload, the
+median observed 64-sample block maximum falls from 24.625 to 4.875 microseconds
+without the extra latency of a four-hop overlapped schedule. These observations
+motivated the one-hop implementation; they are not timings of the integrated
+plugin. Regression tests separately exercise the production scalar/SIMD paths,
+exact cadence, cancellation, and allocation-free live configuration. The
+contribution is a scheduling and implementation study within established
+time-distributed FFT work, not a new factorization. Balanced work counts remove
+frame-sized boundary passes but do not imply equal call duration or hard
+real-time guarantees.
+\end{abstract}
+\noindent\textbf{Keywords:} fast Fourier transform; short-time Fourier transform;
+cooperative scheduling; real-time audio; spectral analysis; VCV Rack.
+

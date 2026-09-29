@@ -1004,7 +1004,8 @@ The source layout is:
 ```text
 docs/latex/
   arhythmetic-manual.sty  shared typography, covers, contents, and PDF metadata
-  manual.mk              shared build and screenshot commands
+  publication.mk         common PDF build and cleanup rules
+  manual.mk              manual build and screenshot commands
   figures/               shared TikZ drawings and panel export target
 docs/manual-{fourier,spectre}/
   manual.tex             version, module identity, and section order
@@ -1236,18 +1237,34 @@ desktop session, or Pillow. Keep all other capture output in `.build/`.
 
 ### Publication Builds
 
-Build the self-contained white paper with `latexmk` and its TeX packages:
+Build the white paper with `latexmk` and its TeX packages:
 
 ```shell
 make -C docs/whitepaper
 ```
 
 This writes `docs/whitepaper/.build/paper.pdf` without running experiments.
+The entry point `docs/whitepaper/fourier.tex` includes the paper's own
+`preamble.tex`, `sections/`, `appendices/`, `figures/`, `tables/`, and
+`bibliography.tex`. Lower-case source names and stable labels follow the
+manuals' organization. The manuscript keeps its existing typography and
+content; only the build lifecycle is shared through `docs/latex/publication.mk`.
+Successful builds remove auxiliary files; failures retain diagnostics.
+`make -C docs/whitepaper clean` preserves experiment output and source archives.
+
+Run `make -C docs/whitepaper check` to validate the assembled manuscript against
+the archived evidence. `make -C docs/whitepaper arxiv` also builds and checks
+the paper, then exports one self-contained `fourier.tex` inside
+`.build/fourier-arxiv-source.tar.gz`. The source expander follows literal
+`\input{path.tex}` lines, so the checker and archive see the same sections
+as LaTeX. See the [whitepaper guide](docs/whitepaper/README.md) for the source
+map, export verification, and maintenance conventions.
 
 The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
 all three PDFs on relevant pull requests and pushes to `main`: changes to
 either manual directory, the shared `docs/latex/` directory,
-the white paper's source or Makefile, `plugin.json`,
+the white paper's entry point, preamble, bibliography, section/appendix and
+figure/table directories, or Makefile, `plugin.json`,
 or the workflow itself. Version tags matching `v*` build PDFs regardless of
 path filters. Other branch pushes do not run the workflow. New PR or `main`
 updates cancel obsolete PDF builds; tag and release runs are kept separate

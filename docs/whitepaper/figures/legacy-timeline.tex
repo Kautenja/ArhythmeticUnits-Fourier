@@ -1,0 +1,20 @@
+\begin{figure}[tb]
+\centering
+\begin{tikzpicture}[x=0.9cm,y=0.8cm,>=Stealth,font=\small]
+\draw[->] (0,0)--(12.9,0) node[right] {time};
+\fill[ink!14] (0.5,0.35) rectangle (7.1,1.05);
+\draw[ink] (0.5,0.35) rectangle (7.1,1.05);
+\node at (3.8,0.7) {captured window: $N$ samples};
+\fill[accent!18] (7.1,1.4) rectangle (11.5,2.1);
+\draw[accent] (7.1,1.4) rectangle (11.5,2.1);
+\node at (9.3,1.75) {$L$ batches};
+\draw[dashed] (7.1,-0.15)--(7.1,2.5);
+\draw[dashed] (11.5,-0.15)--(11.5,2.5);
+\node[below,align=center] at (7.1,-0.15) {snapshot\\$t_r$};
+\node[below,align=center] at (11.5,-0.15) {publish\\$t_r+L$};
+\draw[->,ink] (7.3,0.7)--(12.2,0.7);
+\node[above] at (9.6,0.7) {new input continues};
+\end{tikzpicture}
+\caption{Logical timeline, not to scale. The transform operates on an owned copy of the captured frame while the input ring continues to advance. A smaller batch quota delays publication without changing that frame's spectral contents.}
+\label{fig:timeline}
+\end{figure}

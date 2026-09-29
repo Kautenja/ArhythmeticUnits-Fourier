@@ -1,13 +1,14 @@
 # Build the standalone report without running experiments.
-.PHONY: all pdf check arxiv
+.PHONY: all check arxiv
+.DEFAULT_GOAL := all
+TEX_SOURCE := fourier.tex
+PDF_NAME := paper
+include ../latex/publication.mk
+
 all: pdf
 
-pdf:
-	latexmk -pdf -interaction=nonstopmode -halt-on-error -file-line-error -outdir=.build -jobname=paper fourier.tex
-	latexmk -c -outdir=.build -jobname=paper fourier.tex
-
 check:
-	python3 experiments/check.py
+	$(PYTHON) experiments/check.py
 
 arxiv: pdf check
-	COPYFILE_DISABLE=1 tar -czf .build/fourier-arxiv-source.tar.gz fourier.tex
+	$(PYTHON) tools/manuscript.py --archive $(BUILD)/fourier-arxiv-source.tar.gz

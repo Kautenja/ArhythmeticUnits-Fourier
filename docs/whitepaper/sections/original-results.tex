@@ -1,0 +1,62 @@
+\section{Original FFT Results}
+\label{sec:legacy-results}
+\subsection{Numerical agreement and completion}
+All 1320 incremental-versus-complete schedule cases passed, with bitwise-identical
+completed spectra within each tested type. The independent reference checked
+6048 complex bins across both precisions. The maximum scaled errors were
+$8.69\times10^{-8}$ for float (rounded upward) and
+$1.06\times10^{-14}$ for double (rounded upward). These measurements support
+correctness for the tested fixtures, sizes, and windows; they do not replace an
+error analysis of every supported type or the module's amplitude calibration.
+
+The schedule tests confirm Table~\ref{tab:cadence} and the distinction between
+``no later than $H$'' and ``exactly at $H$.'' Increasing the requested horizon
+can leave the actual completion interval unchanged until the integer quota
+changes. Thus frame rate is a staircase function of the horizon under
+completion-driven restarts, not generally its reciprocal.
+
+\subsection{Peak work placement}
+Table~\ref{tab:timing} reports the $H=N/2$ subset; the artifact also contains
+$H=N/4$. Figure~\ref{fig:peaks} includes the full range of observed maxima across
+repetitions. The median of run maxima is much smaller in incremental mode,
+but individual maxima vary considerably. At $N=2048$, for example, one
+incremental run reaches 21.209 microseconds even though its median run maximum
+is 1.625 microseconds. Such observations are consistent with an ordinary
+scheduled process and are retained rather than removed as outliers.
+
+\input{tables/legacy-timing.tex}
+
+\input{figures/peak-call-duration.tex}
+
+The incremental preparation-call medians are 0.542, 1.125, 2.709, and
+10.667 microseconds for the four lengths. Completing-call medians are 0.750,
+1.500, 3.042, and 12.375 microseconds. Their growth is consistent with the bulk
+work identified by source analysis, although timings alone do not prove an
+asymptotic bound. Distributing only the butterfly traversal leaves both ends of
+the transform visible in the cost profile.
+
+A striking measurement pitfall is that the median per-run p99 is approximately
+42 ns for \emph{both} modes at all four lengths in this subset. The complete
+mode's expensive call occurs only once per $H$ calls, below the top one percent
+for these horizons. A p99-only comparison would largely miss the burst being
+studied. Phase-specific measurements and run maxima are needed alongside
+quantiles; none of them by itself is a proven worst-case execution time.
+
+\subsection{Aggregate work and interpretation}
+The median paired incremental/complete frame-time ratios for increasing $N$
+are approximately 0.979, 0.955, 0.972, and 0.967. The corresponding percentile
+intervals are [0.973, 1.005], [0.955, 0.956], [0.960, 0.977], and
+[0.963, 0.968]. These modest differences are specific to the two loop structures
+as optimized by this compiler on this workload. They do not indicate a reduction
+in the butterfly count, nor establish an algorithmic throughput advantage. A
+different compiler, batching policy, cache state, or vectorized library could
+reverse the result. The robust interpretation of this campaign is the change
+in work placement within this implementation, with broadly comparable total
+frame cost.
+
+This original campaign uses repeated fixed inputs, warm tables, and a scalar standalone
+process. They omit ring insertion, Rack parameter access, SIMD channels,
+frequency/time smoothing, display conversion, GUI consumption, and other
+modules. They therefore cannot establish whole-patch dropout rates or a maximum
+number of safe analyzer instances. Neither timing campaign measures a running Rack session.
+

@@ -1,0 +1,15 @@
+\begin{table}[tb]
+\centering
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+$N$ & $H=N/2$ & $B_r$ & $q$ & $L$ & $H/L$ \\
+\midrule
+1,024 & 512 & 2,304 & 5 & 461 & 1.111 \\
+2,048 & 1,024 & 5,120 & 5 & 1,024 & 1.000 \\
+4,096 & 2,048 & 11,264 & 6 & 1,878 & 1.091 \\
+16,384 & 8,192 & 53,248 & 7 & 7,607 & 1.077 \\
+\bottomrule
+\end{tabular}
+\caption{Derived real-FFT schedules. $H/L$ is the actual frame rate divided by the nominal rate when a new frame starts immediately after completion. These are operation counts, not timing measurements.}
+\label{tab:cadence}
+\end{table}
