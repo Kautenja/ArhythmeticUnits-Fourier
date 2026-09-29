@@ -102,6 +102,8 @@ BENCHMARK_SRC = [BENCHMARK_ENV.Object(f.replace('.cpp', '') + '-bench', f) for f
 
 # locate all the testing source files
 TEST_FILES = find_source_files('test', 'build_test')
+# Rack integration tests use the SDK and are built by Make.
+TEST_FILES = [file for file in TEST_FILES if not file.startswith('build_test/rack/')]
 # create a list to store all the test target aliases in
 UNIT_TEST_ALIASES = []
 for file in TEST_FILES:  # iterate over all the test source files

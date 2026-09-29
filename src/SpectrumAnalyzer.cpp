@@ -233,9 +233,9 @@ struct SpectrumAnalyzer : Module {
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
         json_object_set_new(rootJ, "is_running", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_fill_enabled));
+        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_bezier_enabled));
+        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_ac_coupled));
         return rootJ;
     }
 
