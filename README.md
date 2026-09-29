@@ -95,8 +95,8 @@ its scheduling and latency model, prior work, and reproducible experiments.
 The self-contained [LaTeX source](whitepaper/fourier.tex) builds with
 `make -C whitepaper`.
 
-Use one citation for this work: the technical report. GitHub's **Cite this
-repository** button uses the preferred report citation in
+For the implementation and scheduling analysis, cite the technical report.
+GitHub's **Cite this repository** button uses the preferred report citation in
 [CITATION.cff][citation-cff], and [CITATION.bib](CITATION.bib) supplies the same
 report entry.
 
@@ -123,6 +123,19 @@ evaluated source revision. The source-code license is GPL-3.0-or-later; see
 The report is currently a repository manuscript. Its citation will be updated
 with a persistent identifier after a public deposit; no arXiv identifier or
 publication acceptance is implied.
+
+### Citing The User Manuals
+
+To reference a manual itself, use its dedicated BibTeX `@manual` entry:
+
+-   [Fourier manual citation](manual/Fourier/CITATION.bib)
+-   [Spectre manual citation](manual/Spectre/CITATION.bib)
+
+These entries identify the author, manual title, version 2.1.2, release month,
+and version-specific PDF URL. Cite the version you consulted; update the
+metadata and URL if you use another release. The `references.bib` files in
+the manual directories contain the research cited by the manuals, rather
+than citations for the manuals themselves.
 
 ## Acknowledgments
 
