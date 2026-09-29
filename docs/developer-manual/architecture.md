@@ -32,8 +32,11 @@ changing DSP, Rack modules, or displays.
 ## Analysis Flow
 
 Rack calls each module's `process(const ProcessArgs&)` for engine samples.
-The modules normalize Eurorack voltages, maintain DC-blocker state, and apply
-gain. `SpectrumAnalysis<T>` retains input and distributes windowing/packing,
+The modules normalize Eurorack voltages, maintain double-precision DC-blocker
+state per input, and apply gain. The higher-precision filter state prevents
+roundoff from accumulating as a DC offset in short repeating signals; FFT and
+display storage remain float (four SIMD lanes in Fourier).
+`SpectrumAnalysis<T>` retains input and distributes windowing/packing,
 butterflies, real-spectrum reconstruction, magnitude prefix sums,
 frequency/time smoothing, and the output callback over one exact hop.
 

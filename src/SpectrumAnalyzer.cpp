@@ -91,8 +91,9 @@ struct SpectrumAnalyzer : Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    /// DC-blocking filter for AC-coupled mode.
-    Fourier::DCBlocker<simd::float_4> dc_blocker;
+    /// Double feedback state avoids accumulated DC bias from float rounding
+    /// in short periodic inputs. Analysis and display storage remain float.
+    std::array<Fourier::DCBlocker<double>, NUM_CHANNELS> dc_blockers;
 
     /// Engine-owned analysis and a frame's latched coordinate settings.
     Fourier::SpectrumAnalysis<simd::float_4> analysis{MAX_FFT, MAX_FFT};
@@ -242,8 +243,10 @@ struct SpectrumAnalyzer : Module {
         param_high_frequency->maxValue = param_high_frequency->defaultValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
-        dc_blocker.setTransitionWidth(10.f, sample_rate);
-        dc_blocker.reset();
+        for (auto& filter : dc_blockers) {
+            filter.setTransitionWidth(10.0, sample_rate);
+            filter.reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -473,13 +476,14 @@ struct SpectrumAnalyzer : Module {
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
             signals[i] = Fourier::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
             gains[i] = params[PARAM_INPUT_GAIN + i].getValue();
+            // Keep filter history warm in bypass, as in AC-coupled mode.
+            const double filtered = dc_blockers[i].process(signals[i]);
+            if (is_ac_coupled) signals[i] = static_cast<float>(filtered);
         }
         simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
         simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
-        // Process the input signals with the DC blocking filters.
-        dc_blocker.process(signals_simd);
         // Insert the normalized and processed input signal into the delay.
-        return gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd);
+        return gains_simd * signals_simd;
     }
 
     /// @brief Latch controls and distribute all analysis/curve work over one hop.

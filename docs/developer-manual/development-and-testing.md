@@ -320,8 +320,10 @@ stale voltage storage, and AC-coupling transitions. AC expectations include the
 runs at 128, 2048, and 16384 samples; both modules run at 44.1 and 96 kHz.
 The oracle uses explicit 5 V input normalization and Fourier's historical
 `N/2+1` and +12 dB display scaling, without deriving expected amplitudes from
-module output or production DSP helpers. These are headless numerical checks,
-not a Rack UI session.
+module output or production DSP helpers. A focused input-path regression also
+checks DC rejection in short repeating sixteen-voice signals at 44.1, 96, and
+192 kHz, without involving FFT or display rounding. These are headless
+numerical checks, not a Rack UI session.
 
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+-   Prevent AC-coupled DC offsets caused by accumulated float rounding in
+    short repeating signals; both modules now retain double-precision filter
+    state.
 -   Distribute complete spectrum analysis and per-bin output work over one
     exact hop in Fourier and Spectre, including windowing, reconstruction,
     smoothing, curve preparation, and snapshot writing.

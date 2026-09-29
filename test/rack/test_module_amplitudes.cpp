@@ -252,3 +252,51 @@ TEST_CASE("Spectre publishes analytical absolute amplitudes through Rack ports")
             check_amplitudes(module, Spectrogram::N_FFT, window);
     }
 }
+
+TEMPLATE_TEST_CASE("AC coupling rejects DC in short repeating polyphonic signals",
+        "[dc-blocker]", SpectrumAnalyzer, Spectrogram) {
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    for (const float rate : {44100.f, 96000.f, 192000.f}) {
+        CAPTURE(rate);
+        context.engine->setSampleRate(rate);
+        TestType module;
+        module.is_ac_coupled = true;
+        // Four cycles per 128 samples expose repeated rounding bias in the
+        // float differentiator/feedback loop, especially at a near-unity pole.
+        std::array<float, 128> signal;
+        for (size_t n = 0; n < signal.size(); ++n)
+            signal[n] = 1.0 + 1.75 * std::cos(2.0 * std::acos(-1.0) * n / 32.0)
+                + (n % 2 ? -0.875 : 0.875);
+        for (size_t lane = 0; lane < TestType::NUM_INPUTS; ++lane) {
+            module.inputs[TestType::INPUT_SIGNAL + lane].channels = 16;
+            module.params[TestType::PARAM_INPUT_GAIN + lane].setValue(2.f);
+        }
+        std::array<double, TestType::NUM_INPUTS> sum{};
+        // Round settling to whole periods; average a further eight periods.
+        const size_t settling = size_t(std::ceil(24.0 * rate / 20.0 / signal.size()))
+            * signal.size();
+        const size_t measured = 8 * signal.size();
+        for (size_t n = 0; n < settling + measured; ++n) {
+            for (size_t lane = 0; lane < TestType::NUM_INPUTS; ++lane)
+                for (int voice = 0; voice < 16; ++voice)
+                    module.inputs[TestType::INPUT_SIGNAL + lane].setVoltage(
+                        signal[n % signal.size()], voice);
+            // Broadcast the scalar Spectre output; Fourier keeps all four lanes.
+            const rack::simd::float_4 output(module.process_input_signal());
+            if (n >= settling)
+                for (size_t lane = 0; lane < TestType::NUM_INPUTS; ++lane)
+                    sum[lane] += output[lane];
+        }
+        // Ideal steady-state DC is zero. Bound the residual to one ppm of
+        // the normalized peak after 16-voice summation and gain, including
+        // float input/output quantization. Longer settling cannot remove a
+        // rounding bias injected by the same short waveform each period.
+        const double peak = (1.0 + 1.75 + 0.875) * 16.0 / 5.0 * 2.0;
+        for (size_t lane = 0; lane < TestType::NUM_INPUTS; ++lane) {
+            CAPTURE(lane);
+            CHECK(std::abs(sum[lane] / measured) < 1e-6 * peak);
+        }
+    }
+}

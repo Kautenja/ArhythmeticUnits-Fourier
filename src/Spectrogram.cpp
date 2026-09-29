@@ -80,8 +80,9 @@ struct Spectrogram : Module {
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    /// DC-blocking filters for AC-coupled mode.
-    Fourier::DCBlocker<float> dc_blocker;
+    /// Double feedback state avoids accumulated DC bias from float rounding
+    /// in short periodic inputs. Analysis and display storage remain float.
+    Fourier::DCBlocker<double> dc_blocker;
 
     /// Engine-owned one-hop analyzer; all transform storage is prepared once.
     Fourier::SpectrumAnalysis<float> analysis{N_FFT, N_FFT / 2};
@@ -214,7 +215,7 @@ struct Spectrogram : Module {
         param_high_frequency->maxValue = param_high_frequency->defaultValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
-        dc_blocker.setTransitionWidth(10.f, sample_rate);
+        dc_blocker.setTransitionWidth(10.0, sample_rate);
         dc_blocker.reset();
     }
 
@@ -411,7 +412,7 @@ struct Spectrogram : Module {
         // accumulating signal data.
         dc_blocker.process(signal);
         // If AC coupling is enabled, replace signal with DC blocker output.
-        if (is_ac_coupled) signal = dc_blocker.getValue();
+        if (is_ac_coupled) signal = static_cast<float>(dc_blocker.getValue());
         // Insert the normalized and processed input signal into the delay.
         return gain * signal;
     }
