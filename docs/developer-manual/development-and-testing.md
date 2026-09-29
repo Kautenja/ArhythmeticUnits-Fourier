@@ -140,6 +140,19 @@ context-menu setting changes through Rack's history API, including undo, redo, u
 state, and missing modules. It does not exercise the Rack UI or loading a
 complete patch file.
 
+Run the headless Spectre texture-lifecycle checks:
+
+```shell
+make test-display-lifecycle
+```
+
+These checks exercise the actual display with NanoVG and an instrumented
+texture backend. They cover context recreation while frozen, widget deletion,
+unrendered previews, repeated cleanup, texture-creation failure, and ownership
+when switching between live contexts. They do not create an OpenGL window or
+verify rendered pixels. In Rack, also check that Spectre resumes displaying
+its frozen history after closing and reopening a host-managed editor.
+
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that
 standalone tests exercised the module widgets or patch loading.

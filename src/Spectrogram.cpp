@@ -516,8 +516,19 @@ struct SpectralImageDisplay : TransparentWidget {
     /// The pixels being rendered on the display.
     std::vector<uint8_t> pixels;
 
-    /// a pointer to the image to draw the display to
-    int screen = -1;
+    /// The NanoVG image handle, or zero when no texture has been created.
+    int screen = 0;
+    /// The live context that owns screen. Accessed only on the UI thread.
+    NVGcontext* screen_context = nullptr;
+
+    /// @brief Release the texture while its owning context is still alive.
+    /// @details Called before context destruction or ordinary widget deletion.
+    /// Clearing both fields makes subsequent cleanup safe and drawing lazy.
+    void release_screen() {
+        if (screen > 0) nvgDeleteImage(screen_context, screen);
+        screen = 0;
+        screen_context = nullptr;
+    }
 
     /// @brief Return the normalized position of the mouse.
     Vec get_mouse_position() {
@@ -547,6 +558,18 @@ struct SpectralImageDisplay : TransparentWidget {
  public:
     explicit SpectralImageDisplay(Spectrogram* module_) :
         TransparentWidget(), module(module_) { }
+
+    ~SpectralImageDisplay() override {
+        release_screen();
+    }
+
+    /// @brief Drop GPU resources before Rack destroys the graphics context.
+    /// @details Keep analysis history intact; the next draw recreates the image
+    /// in its new context, including when the analyzer is frozen.
+    void onContextDestroy(const ContextDestroyEvent& e) override {
+        release_screen();
+        TransparentWidget::onContextDestroy(e);
+    }
 
     // -----------------------------------------------------------------------
     // MARK: Interactivity
@@ -724,11 +747,16 @@ struct SpectralImageDisplay : TransparentWidget {
             }
         }
 
-        // Create or update the image container.
-        if (screen == -1)
+        // Image handles belong to the context that created them.
+        if (screen_context && screen_context != args.vg) release_screen();
+        if (screen == 0) {
             screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels.data());
-        else
+            // NanoVG returns zero on failure. Retry on a later frame.
+            if (screen == 0) return;
+            screen_context = args.vg;
+        } else {
             nvgUpdateImage(args.vg, screen, pixels.data());
+        }
 
         // Compute the mask rectangle from the padded region.
         const Rect mask = Rect(

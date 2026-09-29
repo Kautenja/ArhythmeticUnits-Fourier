@@ -19,3 +19,14 @@ build/test/rack/test_serialization: build/test/rack/test_serialization.cpp.o
 
 build/test/rack/test_serialization.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
 -include build/test/rack/test_serialization.cpp.d
+
+# Exercise Spectre's real display with a headless NanoVG texture backend.
+.PHONY: test-display-lifecycle
+test-display-lifecycle: build/test/rack/test_display_lifecycle
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
+
+build/test/rack/test_display_lifecycle: build/test/rack/test_display_lifecycle.cpp.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+
+build/test/rack/test_display_lifecycle.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
+-include build/test/rack/test_display_lifecycle.cpp.d
