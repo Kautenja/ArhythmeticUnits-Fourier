@@ -23,7 +23,7 @@ spacing, or check how a filter reshapes your sound.
 
 <p align="center">
   <img alt="Fourier module with four color-coded inputs and overlaid spectra"
-       src="docs/manual-fourier/img/Module.svg" width="720">
+       src="docs/manual-fourier/img/PanelLayout.png" width="720">
 </p>
 
 -   **Choose your resolution.** FFT lengths from 128 to 16384 samples and
@@ -46,7 +46,7 @@ harmonics, or the brief burst of energy at the start of a note.
 
 <p align="center">
   <img alt="Spectre module displaying a colored history of a signal's spectrum"
-       src="docs/manual-spectre/img/Module.svg" width="525">
+       src="docs/manual-spectre/img/PanelLayout.png" width="525">
 </p>
 
 -   **Watch the history build.** A moving scan line writes new spectra
