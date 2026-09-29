@@ -14,10 +14,12 @@ Created: September 29, 2026
 This spec supersedes the detailed plan formerly in
 [`benchmark/paper/comparisons.md`](../benchmark/paper/comparisons.md).
 The [protocol README](../benchmark/paper/README.md) defines current measurement
-semantics. Rack/PFFFT and optional FFTW adapters have matched implementation smoke
-configurations. Remaining external adapters and final campaign configurations
-are tracked below. First-party inverse and complete-chain baselines are implemented;
-their smoke validation does not constitute external comparison evidence.
+semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
+FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
+comparison. FR-7 through FR-9 are explicitly deferred for the current paper
+under the [optional contender decision](#optional-contender-decision).
+FR-10's final campaign/report tooling remains the next required stage.
+Implementation smoke checks do not constitute publication comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
 Each framework or algorithm has its own functional requirement (FR), with an
@@ -135,8 +137,8 @@ tasks, not necessarily an audio stream with N=H.
 | 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Implemented as benchmark-only adapters; wrapper/source/library identities retained. |
 | 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Implemented with explicit optional build, per-instance plans, and dependency archives. |
 | 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS float/double real and complex adapters with reusable setup, explicit packing/scaling, and retained platform identity are implemented. This is a platform baseline, not an open-source implementation. |
-| Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; optional FR-7; resolve inclusion before the final measurement phase. |
-| Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | The paper supplies algorithm descriptions; a matched CPU implementation, supported hops/windowing, and accuracy validation need feasibility review. Not a ready drop-in backend. |
+| Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Feasible portable library reserve; FR-7 deferred because the current study has no distinct minimal-dependency or embedded setup/storage question. |
+| Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | FR-8 deferred: an overlap-reuse study needs its own matched CPU, hop/window and numerical validation. Reassess the later partial-overlap formulation if reopened. |
 
 Keep `core-*` and `legacy-*` as controls. PFFFT through Rack and direct PFFFT
 are the same algorithm family, not independent contenders. A direct variant
@@ -144,8 +146,9 @@ is justified for a specific caller-owned scratch or layout question. The
 inspected Rack wrapper passes null scratch pointers; inspect the pinned PFFFT
 source and report actual scratch behavior rather than assuming it.
 
-Windowed sliding/hopping methods are a second, optional academic route when
-high overlap is an agreed research question before measurement.
+Windowed sliding/hopping methods are the highest-priority academic follow-up,
+but FR-9 is deferred for the current paper. Reopen it when high overlap or
+selected-bin tracking becomes a central comparison claim.
 [Rafii's window kernels][rafii] provide windowing context; choose a specific update algorithm with its own stability
 analysis. Check implementation availability, license, precision, supported
 hops, endpoint convention, and real-input support before committing to a
@@ -158,6 +161,104 @@ comparators, but their complete applications are different workloads.
 [Battenberg and Avizienis][battenberg] also motivate a later worker-thread
 comparison. Neither a batch library nor a new interpretation of academic
 pseudocode should be presented as the authors' measured implementation.
+
+## Optional Contender Decision
+
+September 29, 2026; reviewed implementation `4e78d2d`, current manuscript scope,
+FR-3 through FR-6 evidence paths, and the primary sources linked below.
+**Defer FR-7, FR-8 and FR-9 for this paper's current scope.** These are explicit
+scope decisions, not completed adapter implementations or measured rankings.
+No smoke timings were used to select or exclude a contender.
+
+| Stage | Decision | Marginal Evidence Value Now | Reopen When |
+| --- | --- | --- | --- |
+| FR-7: KISS FFT | DEFERRED | Adds another batch implementation; existing optimized libraries and same-arithmetic controls already address the scheduling questions. | A concrete embedded, minimal-dependency, fixed-point, or setup/storage deployment question needs a small C implementation. |
+| FR-8: Garrido feedforward STFT | DEFERRED | Adds a different cross-frame algorithm, not another implementation of the same periodic FFT job. Requires a separately validated CPU/window/hop experiment. | The paper explicitly studies full-spectrum overlap reuse or offers comparative claims about feedforward methods. |
+| FR-9: Windowed sliding/hopping | DEFERRED; first academic follow-up | Most useful challenge to high-overlap or selected-bin claims, but those are not the present contribution. | Such claims become central, or a target venue/reviewer requires an empirical overlap-reuse comparison. |
+
+### FR-7 Evidence And Rationale
+
+[KISS FFT's upstream source][kiss] provides a compact C implementation;
+its [complex API][kiss-complex-api] supports transform direction and caller
+storage for setup, and its [real API][kiss-real-api] exposes forward/inverse
+real transforms. The project documents BSD licensing and configurable
+arithmetic. Feasibility is not the reason for deferral. No local KISS build,
+allocation audit, or performance result was produced by this review.
+
+Our assessment is that another batch library has lower marginal value than
+finishing matched SIMD/channel, precision, resource and uncertainty reporting.
+FFTW and Rack/PFFFT already provide distinct portable batch baselines; vDSP
+adds the platform baseline. KISS is neither presumed slower nor dismissed as
+an inferior implementation. Reopening FR-7 requires a concrete deployment
+question and the full forward/inverse/chain contracts, not merely another row
+in a speed chart.
+
+### FR-8 Evidence And Rationale
+
+[Garrido 2016][garrido] supplies feedforward pseudocode, real-input symmetry,
+and a small MATLAB timing example; it does not establish CPU performance for
+our workloads. Its one-sample-hop rectangular formulation needs adaptation to
+our requested hops and windows. [Eleftheriadis, Garrido and Karakonstantis
+2023][fd-stft] explicitly addresses partial overlap and windowing, so a future
+study should not treat the 2016 restrictions as limits of the whole family.
+Its hardware results likewise cannot rank our software adapters.
+
+The reviewed materials do not qualify a pinned, licensed CPU package for this
+harness. This is a bounded availability review, not a claim that no such code
+exists or that reimplementation is infeasible. A local port needs explicit
+float/double behavior, real-spectrum layout, startup/endpoints, supported hops,
+window costs, buffer traffic and independent accuracy checks. It would be an
+analysis-only candidate unless inverse/chain support were separately supplied.
+These obligations answer overlap reuse rather than the current scheduling
+attribution question; retain the literature discussion and defer implementation.
+
+### FR-9 Evidence And Rationale
+
+[Rafii's window kernels][rafii] make windowed overlap reuse a credible route;
+they do not select or validate the underlying update recurrence. In particular,
+windowing and blanket assertions that recursion is unstable are not valid
+reasons to exclude it. [Lyons's 2023 author description][lyons-stable] supplies
+a specific stable single-bin update candidate, building on Lyons and Howard
+2021, with windowing discussion. Stability still does not substitute for our
+finite-precision accuracy tests.
+
+If reopened, start with that identified recurrence and an exact periodic-Hann
+kernel, checking DC/Nyquist, phase convention and the extra neighboring bins
+needed by windowing. For H>1 also assess [Park and Ko's hopping DFT][hopping],
+which targets updates by a hop; computing every sliding spectrum and discarding
+intermediate outputs is a different cost contract. Qualify source/licensing
+before reuse and label any local reimplementation. Compare matched full-bin
+and selected-bin subsets separately, charge all intervening updates and refresh
+work, and retain long-stream weak-tone, post-signal silence, complex-bin and
+thresholded phase-error evidence. This is a substantial follow-up experiment,
+not a missing inverse-transform baseline.
+
+### Consequences For The Current Paper
+
+-   Keep the contribution a same-thread scheduling/implementation study with
+    measured batch, hybrid and resumable controls. Inverse jobs and complete
+    chains remain first-class required evidence; an analysis-only overlap
+    method would not replace them.
+-   Limit any cost/age frontier or superiority statement to the measured
+    implementations and workloads. High-overlap smoke cases test coverage;
+    they do not establish superiority over sliding, hopping or feedforward
+    methods. No global best-transform, smallest-memory or universal real-time
+    claim is supported by these deferrals.
+-   Keep the existing overlap-reuse citations and complementary-experiment
+    discussion. FR-12 must state that these alternatives were not measured.
+    If the intended claims broaden, reopen FR-9 (and FR-8 where relevant)
+    before freezing that broader campaign. A reviewer can require more evidence;
+    this scope decision is not a publication-acceptance guarantee.
+-   Proceed to FR-10, then the FR-11 pilot and confirmation campaign, then
+    FR-12 integration. Resolve four-channel comparability, supported double
+    workloads, report fixtures and provenance first. Do not replace this work
+    with more library implementations or choose exclusions from favorable
+    timing results. Future scope changes need their own recorded rationale.
+
+Validation: local documentation links/anchors and referenced paths,
+`make -C docs/whitepaper check`, and `git diff --check` passed. This decision
+changes documentation only; no new DSP tests, plugin build, native adapter,
+manual Rack session or timing campaign was performed.
 
 ## Functional Requirements
 
@@ -299,10 +400,14 @@ to every candidate without duplicating them in each checklist.
 
 ### FR-7: KISS FFT (Optional)
 
+Decision: DEFERRED for the current paper; see the
+[optional contender decision](#optional-contender-decision).
+Unchecked implementation work below is conditional, not a readiness blocker.
+
 #### Implementation And Integration
 
-- [ ] Record whether the portable setup/storage question warrants inclusion.
-    If included, pin the source/license/build configuration and integrate real
+- [x] Review the portable setup/storage question and record deferral.
+- [ ] If reopened, pin the source/license/build configuration and integrate real
     and complex transforms plus matched streaming paths and independent checks.
 
 #### Benchmark Implementation
@@ -313,9 +418,13 @@ to every candidate without duplicating them in each checklist.
 
 ### FR-8: Garrido Feedforward STFT (Optional)
 
+Decision: DEFERRED for the current paper; see the
+[optional contender decision](#optional-contender-decision).
+Unchecked implementation work below is conditional, not a readiness blocker.
+
 #### Implementation And Integration
 
-- [ ] Review implementation availability/license, CPU feasibility, precision,
+- [x] Review implementation availability/license, CPU feasibility, precision,
     supported hops/windowing, endpoint convention, and real-input support.
     Record inclusion or a concrete reason for deferral.
 - [ ] If included, implement a matched overlap-reuse analysis path and verify
@@ -332,12 +441,16 @@ to every candidate without duplicating them in each checklist.
 
 ### FR-9: Windowed Sliding/Hopping Transform (Optional)
 
+Decision: DEFERRED for the current paper; highest-priority academic follow-up.
+See the [optional contender decision](#optional-contender-decision).
+Unchecked implementation work below is conditional, not a readiness blocker.
+
 #### Implementation And Integration
 
-- [ ] Select a specific update algorithm and stability analysis; Rafii's window
-    kernels supply context, not an implicit choice of transform implementation.
-    Review availability/license and the FR-8 feasibility criteria, then record
-    inclusion or deferral separately from Garrido's method.
+- [x] Identify a specific update/stability route and assess its fit separately
+    from Garrido's method. Record deferral; Rafii's window kernels alone do not
+    select a transform. Source/license and supported-subset qualification remain
+    prerequisites if the named candidate is reopened.
 - [ ] If included, integrate and independently verify the chosen algorithm,
     window kernels, endpoint/cadence contract, and long-stream stability.
 
@@ -382,7 +495,9 @@ to every candidate without duplicating them in each checklist.
 - [ ] Integrate FR-11's generated tables/figures into the paper, pin the measured
     revision, and preserve historical campaigns and their interpretation.
 - [ ] Report benefits, regressions, crossover regimes, numerical accuracy,
-    confounds, uncertainty, and measured platform scope. Update citations
+    confounds, uncertainty, and measured platform scope. Explicitly delimit
+    unmeasured overlap-reuse alternatives under the optional contender decision;
+    do not present a measured-subset frontier as a global optimum. Update citations
     consistently; an unfavorable supported result still satisfies this spec.
 - [ ] Pass artifact checks, the paper build, and PDF review; record evidence
     here and archive the completed spec only after all required criteria pass.
@@ -456,9 +571,12 @@ to every candidate without duplicating them in each checklist.
 ## Implementation Readiness Gate
 
 Before FR-11 starts, FR-1 through FR-6 and FR-10 must be complete, and each
-optional FR must either pass both steps or have a recorded deferral. Require
-independent correctness checks, supported-host builds, verified smoke artifacts,
-resolved workload inventories, explicit dependency/setup/storage/latency
+optional FR must either pass both steps or have a recorded deferral. FR-7
+through FR-9 now satisfy this decision requirement through the
+[recorded deferrals](#optional-contender-decision); they are not implemented.
+FR-10 remains required before measurement. Require independent correctness
+checks, supported-host builds, verified smoke artifacts, resolved workload
+inventories, explicit dependency/setup/storage/latency
 contracts, and tested report generation. No speedup or final metric is needed
 to pass this gate. A short run that emits timing fields validates mechanics;
 its measurements cannot establish a ranking or enter the final paper.
@@ -967,3 +1085,9 @@ changed for this baseline work.
 [garrido]: https://www.diva-portal.org/smash/get/diva2:1014928/FULLTEXT01.pdf
 [rafii]: https://zafarrafii.com/Documents/Journals/Rafii%20-%20Sliding%20Discrete%20Fourier%20Transform%20with%20Kernel%20Windowing%20-%202018.pdf
 [battenberg]: https://ericbattenberg.com/pdf/partconvDAFx2011.pdf
+
+[kiss-complex-api]: https://github.com/mborgerding/kissfft/blob/master/kiss_fft.h
+[kiss-real-api]: https://github.com/mborgerding/kissfft/blob/master/kiss_fftr.h
+[fd-stft]: https://oa.upm.es/88002/3/FD-STFT_2.pdf
+[lyons-stable]: https://www.dsprelated.com/showarticle/1533.php
+[hopping]: https://doi.org/10.1109/MSP.2013.2292891

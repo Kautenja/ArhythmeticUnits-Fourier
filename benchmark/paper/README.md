@@ -10,6 +10,9 @@ records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
 implementation status, acceptance checks, and intended publication tables and
 figures. All three providers are implemented as benchmark-only adapters;
 FFTW and macOS vDSP require explicit opt-in.
+KISS FFT and academic overlap-reuse adapters are
+[deferred for the current paper](../../specs/004-external-fft-comparison.md#optional-contender-decision);
+the decision records the evidence limits and conditions for reopening them.
 
 ## Build And Run
 
