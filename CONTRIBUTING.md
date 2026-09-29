@@ -1030,6 +1030,18 @@ search and copying; these are not claims of PDF/A or PDF/UA certification.
 After style changes, inspect both manuals, metadata, bookmarks, links, and
 page labels as well as the rendered pages.
 
+Keep the manuals' gray covers and closing pages centered on the original
+logos, module render, and brand wordmark. Reserve publication details for
+small supporting text. The shared stylesheet uses a nominal 18/13/11-point
+scale for section headings, control headings, and body text, with body-sized
+contents entries and a fixed-width column for control numbers. Contents
+titles stay dark while remaining clickable; module accent colors identify
+groups, control numbers, and references. Check both short and long headings,
+two-digit control numbers, and sections sharing a page when adjusting spacing.
+The [titlesec documentation](https://tug.ctan.org/macros/latex/contrib/titlesec/titlesec.pdf)
+describes the heading and spacing controls used here; the cover treatment
+retains this project's identity rather than adopting another maker's artwork.
+
 <a id="spectre-manual-figures"></a>
 
 #### Manual Figures

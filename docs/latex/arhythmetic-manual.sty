@@ -24,6 +24,8 @@
 \definecolor{manualInk}{HTML}{24313D}
 \definecolor{manualMuted}{HTML}{65717C}
 \definecolor{manualRule}{HTML}{CCD3D9}
+% Preserve the original manuals' gray cover stock and full-color identity.
+\definecolor{manualCover}{RGB}{202,202,202}
 \RequirePackage{graphicx,tikz}
 \RequirePackage{booktabs,tabularx}
 \RequirePackage{enumitem}
@@ -64,12 +66,14 @@
 \clubpenalty=10000
 \emergencystretch=1em
 
-\titleformat{\section}{\color{manualInk}\sffamily\fontsize{23}{27}\selectfont\bfseries}{}{0pt}{}
-\titlespacing*{\section}{0pt}{0pt}{16pt}
+% A restrained, explicit scale: 18 pt section / 13 pt control / 11 pt body.
+% Keep enough space above a section that follows another on the same page.
+\titleformat{\section}{\color{manualInk}\sffamily\fontsize{18}{22}\selectfont\bfseries\raggedright}{}{0pt}{}
+\titlespacing*{\section}{0pt}{20pt}{12pt}
 \renewcommand{\thesubsection}{\arabic{subsection}}
-\titleformat{\subsection}{\large\bfseries\color{manualInk}}
-  {\textcolor{manualAccent}{\thesubsection}}{.8em}{}
-\titlespacing*{\subsection}{0pt}{18pt}{7pt}
+\titleformat{\subsection}{\fontsize{13}{16}\selectfont\bfseries\color{manualInk}\raggedright}
+  {\makebox[1.6em][l]{\textcolor{manualAccent}{\thesubsection}}}{0pt}{}
+\titlespacing*{\subsection}{0pt}{16pt}{7pt}
 \titleformat{\paragraph}[runin]{\bfseries\color{manualInk}}{}{0pt}{}
 \titlespacing*{\paragraph}{0pt}{10pt}{.7em}
 % Include explanatory subheadings in the PDF outline without control numbers.
@@ -96,50 +100,54 @@
 \renewcommand{\contentsname}{Table of Contents}
 \newcommand{\contentsgroup}[1]{\addtocontents{toc}{\protect\manualtocgroup{#1}}}
 \newcommand{\manualtocgroup}[1]{%
-  \par\addvspace{16pt}\noindent{\small\bfseries\color{manualAccent}\MakeUppercase{#1}}\par
-  \vspace{3pt}{\color{manualRule}\hrule}\vspace{5pt}}
+  \par\addvspace{18pt}\noindent{\small\bfseries\color{manualAccent}\MakeUppercase{#1}}\par
+  \vspace{5pt}{\color{manualRule}\hrule}\vspace{6pt}}
 \renewcommand*{\l@section}[2]{%
-  \par\addvspace{6pt}\begingroup\let\numberline\@gobble
-  \noindent\small #1\nobreak\hfill\textcolor{manualAccent}{\bfseries #2}\par\endgroup}
+  \par\addvspace{7pt}\begingroup\let\numberline\@gobble
+  \hypersetup{linkcolor=manualInk}% Titles stay quiet; links remain active.
+  \noindent\normalsize #1\nobreak\hfill\makebox[2em][r]{\bfseries #2}\par\endgroup}
 \newcommand{\manualcontents}{%
   \pagenumbering{roman}\pdfbookmark[1]{Table of Contents}{contents}
   \tableofcontents
   \vfill
-  {\small\color{manualMuted}Select a title or page number to navigate.
+  {\footnotesize\color{manualMuted}Select a title or page number to navigate.
   The PDF outline also lists individual panel controls.}\par
   \clearpage\pagenumbering{arabic}}
 
 \newcommand{\manualcover}[1]{%
   \hypersetup{pageanchor=false}\thispagestyle{empty}\thispdfpagelabel{Cover}
   \pdfbookmark[1]{Cover}{cover}
-  {\color{manualAccent}\hrule height 3pt}\vspace{22pt}
-  {\small\bfseries\color{manualAccent}ARHYTHMETIC UNITS\hfill VCV RACK 2}\par
-  \vspace{32pt}
-  \begin{center}
-    \includegraphics[width=.82\textwidth]{img/Logo}\par
-    \vspace{14pt}{\large #1}\par
+  \pagecolor{manualCover}
+  \begingroup\centering\setlength{\parskip}{0pt}
+    \vspace*{0pt}
+    \includegraphics[width=\textwidth]{img/Logo}\par
     \vfill
-    \includegraphics[width=\textwidth,height=.39\textheight,keepaspectratio]{img/PanelLayout.png}\par
+    \includegraphics[width=\textwidth,height=.48\textheight,keepaspectratio]{img/PanelLayout.png}\par
     \vfill
-    {\Large\bfseries User Manual}\par\vspace{7pt}
-    {\small Version \manualversion\quad /\quad Christian Kauten}\par
-    \vspace{32pt}
-    \includegraphics[width=.46\textwidth]{img/ArhythmeticUnits}\par
-  \end{center}
-  \clearpage\hypersetup{pageanchor=true}}
+    \includegraphics[width=.62\textwidth]{img/ArhythmeticUnits}\par
+    \vspace{14pt}
+    {\small #1\quad /\quad User manual v\manualversion}\par
+  \endgroup
+  \clearpage\nopagecolor\hypersetup{pageanchor=true}}
 \newcommand{\manualcolophon}{%
   \clearpage\thispagestyle{empty}\thispdfpagelabel{Colophon}
-  \pdfbookmark[1]{Publication details}{colophon}\vspace*{.22\textheight}
-  {\color{manualAccent}\hrule height 2pt}\vspace{20pt}
-  {\LARGE\bfseries\manualname}\par
-  {\large User Manual / Version \manualversion}\par\vspace{12pt}
-  Written by Christian Kauten\par
-  Published by Arhythmetic Units\par\vspace{20pt}
-  {\small Copyright \textcopyright\ 2025 Arhythmetic Units. All rights reserved.\par
-  Source code and visual assets have separate license terms.
-  See the \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/main/LICENSE.md}{project license}.\par\vspace{10pt}
-  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier}{Project source and documentation}\par
-  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases}{Releases and current manuals}}\par}
+  \pdfbookmark[1]{Publication details}{colophon}\pagecolor{manualCover}
+  \begingroup\centering\setlength{\parskip}{0pt}
+  \hypersetup{urlcolor=manualInk}
+  \vspace*{.36\textheight}
+  \includegraphics[width=.68\textwidth]{img/ArhythmeticUnits}\par
+  \vspace{18pt}
+  {\small Copyright \textcopyright\ 2025 Arhythmetic Units. All rights reserved.}\par
+  \vfill
+  {\small\manualname\space User Manual\quad /\quad Version \manualversion}\par
+  \vspace{6pt}{\footnotesize Written by Christian Kauten}\par
+  \vspace{18pt}
+  {\footnotesize
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier}{Project source and documentation}\quad /\quad
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases}{Releases and manuals}\par
+  \vspace{6pt}Source code and visual assets have separate
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/main/LICENSE.md}{license terms}.}\par
+  \endgroup}
 
 % Keep figures with their control subsection, without redefining section internals.
 \AddToHook{cmd/subsection/before}{\FloatBarrier\Needspace{5\baselineskip}}
