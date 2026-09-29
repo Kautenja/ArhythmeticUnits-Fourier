@@ -15,7 +15,7 @@ def normalize_registry(document, features=()):
     if document["schema"] != 1:
         raise ValueError("Unsupported backend registry")
     features = set(features)
-    if features - {"fftw"}:
+    if features - {"fftw", "vdsp"}:
         raise ValueError("Unknown optional build feature")
     registry = {}
     for item in document["backends"]:

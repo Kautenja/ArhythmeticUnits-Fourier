@@ -10,6 +10,9 @@
 #include "../paper/synthesis.hpp"
 #include "../paper/external.hpp"
 #include "../paper/providers/pffft.hpp"
+#ifdef PAPER_HAVE_VDSP
+#include "../paper/providers/vdsp.hpp"
+#endif
 #ifdef PAPER_HAVE_FFTW
 #include "../paper/providers/fftw.hpp"
 #endif
@@ -477,6 +480,10 @@ int main(int argc, char** argv) {
             verify_synthesis<float>();
             verify_synthesis<double>();
             verify_external<float, PffftBackend>("pffft", "float");
+#ifdef PAPER_HAVE_VDSP
+            verify_external<float, VdspBackend<float>>("vdsp", "float");
+            verify_external<double, VdspBackend<double>>("vdsp", "double");
+#endif
 #ifdef PAPER_HAVE_FFTW
             verify_external<float, FftwBackend<float>>("fftw", "float");
             verify_external<double, FftwBackend<double>>("fftw", "double");
@@ -527,6 +534,12 @@ int main(int argc, char** argv) {
         else if (std::string(descriptor.provider) == "fftw") {
             if (precision == "float") external_dispatch<float, FftwBackend<float>>(c, provider_info);
             else external_dispatch<double, FftwBackend<double>>(c, provider_info);
+        }
+#endif
+#ifdef PAPER_HAVE_VDSP
+        else if (std::string(descriptor.provider) == "vdsp") {
+            if (precision == "float") external_dispatch<float, VdspBackend<float>>(c, provider_info);
+            else external_dispatch<double, VdspBackend<double>>(c, provider_info);
         }
 #endif
         else if (kind == "inverse-job" || kind == "chain") {

@@ -177,6 +177,7 @@ def main():
     parser.add_argument("--list", action="store_true", help="Print resolved workloads without building/running")
     parser.add_argument("--inventory", action="store_true", help="List capabilities, including unavailable adapters")
     parser.add_argument("--fftw-prefix", type=Path, help="Enable optional serial float/double FFTW static libraries")
+    parser.add_argument("--enable-vdsp", action="store_true", help="Enable macOS Accelerate/vDSP research adapters")
     args = parser.parse_args()
     features, external_inputs = [], {}
     if args.fftw_prefix:
@@ -186,6 +187,10 @@ def main():
         except ValueError as error:
             parser.error(str(error))
         features.append("fftw")
+    if args.enable_vdsp:
+        if platform.system() != "Darwin":
+            parser.error("vDSP is unavailable: --enable-vdsp requires macOS")
+        features.append("vdsp")
     registry = load_registry(features=features)
     if args.inventory:
         print(json.dumps(registry, indent=2, sort_keys=True))
@@ -227,8 +232,9 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     rack = args.rack_dir.resolve()
     build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
-    if args.fftw_prefix:
-        build.append("PAPER_FFTW_PREFIX="+str(args.fftw_prefix))
+    # The recorded feature set must override ambient Make environment settings.
+    build.append("PAPER_FFTW_PREFIX="+(str(args.fftw_prefix) if args.fftw_prefix else ""))
+    build.append("PAPER_VDSP="+str(int(args.enable_vdsp)))
     metadata = dict(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
                     revision=capture(["git", "rev-parse", "HEAD"]),
                     git_status=capture(["git", "status", "--porcelain"]),
@@ -240,6 +246,15 @@ def main():
                     external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
     metadata["contracts"] = {str(i): resolve_contract(c, registry) for i, c in enumerate(configs)}
     metadata["resources"] = {}
+    if args.enable_vdsp:
+        metadata["platform_framework"] = dict(name="Apple Accelerate/vDSP", binary_hash=None,
+            limitation="System framework/dyld cache; exact per-instance OS and compile SDK identity in provider_info",
+            SDKROOT=os.environ.get("SDKROOT"), default_xcrun_sdk={})
+        for key, option in (("version", "--show-sdk-version"), ("build", "--show-sdk-build-version")):
+            try:
+                metadata["platform_framework"]["default_xcrun_sdk"][key] = capture(["xcrun", "--sdk", "macosx", option])
+            except (OSError, subprocess.CalledProcessError):
+                metadata["platform_framework"]["default_xcrun_sdk"][key] = "unavailable"
     if platform.system() == "Darwin":
         try:
             metadata["cpu_model"] = capture(["sysctl", "-n", "machdep.cpu.brand_string"])

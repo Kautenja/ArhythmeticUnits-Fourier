@@ -134,7 +134,7 @@ tasks, not necessarily an audio stream with N=H.
 | --- | --- | --- | --- |
 | 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Implemented as benchmark-only adapters; wrapper/source/library identities retained. |
 | 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Implemented with explicit optional build, per-instance plans, and dependency archives. |
-| 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS real and complex transforms with reusable setup and explicit packing/scaling; adapters pending. This is a platform baseline, not an open-source implementation. |
+| 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS float/double real and complex adapters with reusable setup, explicit packing/scaling, and retained platform identity are implemented. This is a platform baseline, not an open-source implementation. |
 | Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; optional FR-7; resolve inclusion before the final measurement phase. |
 | Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | The paper supplies algorithm descriptions; a matched CPU implementation, supported hops/windowing, and accuracy validation need feasibility review. Not a ready drop-in backend. |
 
@@ -259,17 +259,17 @@ to every candidate without duplicating them in each checklist.
 
 #### Implementation And Integration
 
-- [ ] Add macOS real and complex adapters with reusable setup, explicit native
+- [x] Add macOS real and complex adapters with reusable setup, explicit native
     packing/scaling, and the matched analyzer, inverse-job, and filtering paths.
-- [ ] Verify each supported precision and transform boundary independently;
+- [x] Verify each supported precision and transform boundary independently;
     make platform unavailability explicit. Record OS/SDK/framework identity
     and what cannot be independently rebuilt or hashed.
 
 #### Benchmark Implementation
 
-- [ ] Register supported workloads, setup/storage accounting, and required
+- [x] Register supported workloads, setup/storage accounting, and required
     conversion work in the existing runner/checker with matched controls.
-- [ ] Pass macOS smoke/artifact checks and unavailable-platform regressions.
+- [x] Pass macOS smoke/artifact checks and unavailable-platform regressions.
     Keep the platform-library scope explicit in metadata and generated outputs.
 
 ### FR-6: Hybrid Scheduled Analysis
@@ -522,7 +522,7 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
     batch and incremental controls, independent all-output validation, latency
     contracts, workload configurations, and raw-artifact checks. Publication
     campaigns and external comparisons remain outstanding.
-- [ ] FR-3 through FR-5: Three primary backend adapters pass independent
+- [x] FR-3 through FR-5: Three primary backend adapters pass independent
     numerical and matched analysis/inverse/complete-chain checks on supported
     hosts; unavailable cases are explicit. Required output normalization is
     included in cost.
@@ -639,6 +639,67 @@ Validation: local links/anchors, referenced paths and command definitions,
 FR numbering and paired checklists, and `git diff --check` passed. No DSP
 tests, Rack build/session, or measurement campaign was run for this
 documentation-only change.
+
+### FR-5 Apple Accelerate/vDSP Completion
+
+September 29, 2026: implemented all seven native workload boundaries in float
+and double using optional macOS vDSP real/complex transforms. Each instance
+reuses one exact-size radix-2 setup. Timed execution includes native split
+packing, real-output factor-of-two correction, natural-order stores, and
+normalized inverse output. The shared adapters supply analysis, periodic
+inverse jobs, and complete overlap-save identity/FIR chains. Independent
+all-output fixtures cover every supported power of two from 128 to 16384.
+See [provider details](../benchmark/paper/providers/vdsp.md).
+
+`--enable-vdsp` and `PAPER_VDSP=1` enable the runner and paper executables,
+respectively. Non-macOS opt-in rejects before building; a disabled build
+rejects requested vDSP workloads explicitly. Optional features can coexist,
+and runner options override ambient Make feature variables. The provider uses
+the narrow vDSP header to avoid unrelated Apple graphics types colliding with
+Rack names. No production sources or module interfaces change.
+
+Campaigns retain actual-instance setup/storage descriptions, loaded framework
+image paths, OS product/build versions, compiler SDK/deployment macros,
+SDKROOT and the default xcrun SDK version/build. The default SDK query is
+labeled separately from the compiler macros. Apple's system framework cannot
+be independently rebuilt here; a dyld-cache image path is not a standalone
+binary hash. Native setup size, internal scratch, and native allocator counts
+remain explicitly unknown. Zero observed C++ execution allocations is not a
+claim about Apple's native allocation behavior or a hard real-time bound.
+
+Validation on Apple Silicon/macOS:
+
+-   `make benchmark-paper-build PAPER_VDSP=1` and
+    `DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify`: passed,
+    including both precisions and matched forward/inverse/complete chains.
+-   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: all
+    24 tests passed, including independent vDSP fixtures, C++ allocation
+    checks, unavailable-platform rejection, and required platform evidence.
+-   `python3 benchmark/paper/run.py .build/paper-fr5-vdsp --enable-vdsp --config benchmark/paper/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 benchmark/paper/check.py .build/paper-fr5-vdsp`: all 112
+    native/control runs and archived evidence passed. This includes startup,
+    smoothing/live analysis, staggered instances, load, and cache pressure.
+-   A separate six-run combined-feature campaign passed with
+    `--enable-vdsp --fftw-prefix .build/deps/fftw`: each provider ran float
+    inverse transforms and complete FIR chains at N=128, H=37. Its resolved
+    configurations, commands, dependencies, and sources are retained in
+    `.build/paper-fr5-combined`; its artifact checker passed. This checks
+    provider coexistence, not comparative performance.
+-   `make -j2 PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw`: plugin build
+    passed. Its compile/link commands contain no optional-provider flags;
+    `otool -L plugin.dylib` shows neither FFTW nor Accelerate as a direct
+    dependency. `make check-build`: all five build-isolation tests passed.
+-   `make benchmark-paper-build` restored the default compiled inventory;
+    it matched Python's disabled registry and rejected a requested vDSP job.
+    Artifact rechecks of FR-3 and FR-4 campaigns also passed.
+-   `make -C docs/whitepaper check`, local documentation link/path checks,
+    and `git diff --check`: passed. Existing Rack header warnings remain;
+    no interactive Rack session was run.
+
+FR-3 through FR-5 are complete and remain entirely benchmark/research code.
+These short campaigns establish implementation coverage, not a performance
+ranking. FR-6's benchmark-only hybrid comparison is the next implementation
+stage; publication pilot and confirmation measurements remain in FR-11.
 
 ### FR-4 FFTW Completion
 

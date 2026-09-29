@@ -116,6 +116,7 @@ $(PANEL_INSPECT_BINARY): .build/test/rack/inspect_panels.cpp.o
 -include .build/test/rack/inspect_panels.cpp.d
 
 # Optional research providers affect only the two paper executables.
+PAPER_VDSP ?= 0
 PAPER_FFTW_PREFIX ?=
 PAPER_FLAGS :=
 PAPER_LIBS :=
@@ -126,6 +127,17 @@ PAPER_FLAGS += -DPAPER_HAVE_FFTW -I"$(PAPER_FFTW_PREFIX)/include"
 PAPER_LIBS += "$(PAPER_FFTW_PREFIX)/lib/libfftw3f.a" "$(PAPER_FFTW_PREFIX)/lib/libfftw3.a"
 PAPER_NATIVE_INPUTS += $(PAPER_FFTW_PREFIX)/lib/libfftw3f.a $(PAPER_FFTW_PREFIX)/lib/libfftw3.a
 PAPER_FEATURES += fftw
+endif
+
+ifeq ($(PAPER_VDSP),1)
+ifndef ARCH_MAC
+$(error PAPER_VDSP=1 requires a macOS Rack SDK/toolchain)
+endif
+PAPER_FLAGS += -DPAPER_HAVE_VDSP
+PAPER_LIBS += -framework Accelerate
+PAPER_FEATURES += vdsp
+else ifneq ($(PAPER_VDSP),0)
+$(error PAPER_VDSP must be 0 or 1)
 endif
 
 # Raw paper observations, separate from Catch2's batched mean estimator.

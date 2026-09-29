@@ -2,6 +2,10 @@
 # Copyright 2026 Arhythmetic Units
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
+import io
+from contextlib import redirect_stderr
+from unittest.mock import patch
+import run
 from pathlib import Path
 import tempfile
 import unittest
@@ -13,6 +17,30 @@ from run import BASE
 
 
 class OptionalTests(unittest.TestCase):
+    def test_vdsp_is_opt_in_and_rejects_unavailable_platform(self):
+        config = dict(BASE, backend="vdsp-analysis-double")
+        with self.assertRaisesRegex(ValueError, "disabled"):
+            validate_config(config)
+        validate_config(config, load_registry(features=("vdsp",)))
+        with patch("sys.argv", ["run.py", "--inventory", "--enable-vdsp"]), \
+                patch("run.platform.system", return_value="Linux"), redirect_stderr(io.StringIO()) as errors:
+            with self.assertRaises(SystemExit) as result:
+                run.main()
+        self.assertEqual(result.exception.code, 2)
+        self.assertIn("requires macOS", errors.getvalue())
+
+    def test_vdsp_platform_evidence_required(self):
+        descriptor = load_registry(features=("vdsp",))["vdsp-analysis-double"]
+        valid = dict(provider="Apple Accelerate/vDSP", precision="double", setup_count=1,
+                     plan="radix2", framework_image="libvDSP", os_build="test", sdk_version_max_allowed=260000,
+                     setup_bytes=None, limitations="opaque framework")
+        validate_provider_info(valid, descriptor)
+        for key in ("setup_count", "framework_image", "os_build", "sdk_version_max_allowed", "setup_bytes"):
+            altered = dict(valid)
+            altered.pop(key)
+            with self.assertRaises(ValueError):
+                validate_provider_info(altered, descriptor)
+
     def test_fftw_requires_explicit_feature(self):
         config = dict(BASE, backend="fftw-analysis-float")
         with self.assertRaisesRegex(ValueError, "disabled"):

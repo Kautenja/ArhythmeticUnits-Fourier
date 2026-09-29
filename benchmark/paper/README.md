@@ -7,10 +7,9 @@ It does not update the manuscript's historical results or claim a speedup.
 
 The [external comparison spec](../../specs/004-external-fft-comparison.md)
 records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
-implementation status,
-acceptance checks, and intended publication tables and figures. Those external
-adapters are benchmark-only. Rack/PFFFT and optional FFTW are implemented; vDSP remains an optional
-integration tracked in the spec.
+implementation status, acceptance checks, and intended publication tables and
+figures. All three providers are implemented as benchmark-only adapters;
+FFTW and macOS vDSP require explicit opt-in.
 
 ## Build And Run
 
@@ -168,6 +167,25 @@ scratch. Counts and internal scratch bytes remain unknown to the C++ audit,
 and this limitation is retained with each instance. Optional dependency
 archives retain static-library/header bytes and any supplied build/source
 provenance. Prefixes without that provenance are explicitly labeled.
+
+On macOS, enable the system Accelerate/vDSP provider explicitly:
+
+```shell
+python3 benchmark/paper/run.py --inventory --enable-vdsp
+python3 benchmark/paper/run.py .build/paper-fr5-vdsp --enable-vdsp --config benchmark/paper/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-fr5-vdsp
+```
+
+Its fourteen names are `vdsp-{fft,rfft,ifft,analysis,inverse,ols-identity,ols-fir}-{float,double}`.
+Direct Make builds opt in with `PAPER_VDSP=1`. The runner can combine
+`--enable-vdsp` with `--fftw-prefix`; omitted options explicitly disable their
+features even when ambient Make environment variables request them. Non-macOS
+hosts reject the vDSP option before building. Only the paper binaries link
+Accelerate. Reports retain exact-size setup policy, split-layout conversion,
+OS/build identity, loaded framework path, SDK selection and deployment macros.
+Opaque setup/storage/allocation quantities and the system framework's missing
+binary hash remain explicit limitations. See
+[vDSP provider details](providers/vdsp.md) for scaling and independent checks.
 
 [`external.hpp`](external.hpp) provides the common immediate batch analyzer,
 periodic inverse jobs, and complete overlap-save identity/FIR paths. The

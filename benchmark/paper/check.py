@@ -134,6 +134,12 @@ def validate_provider_info(info, descriptor):
         if any(not info.get(plan) for plan in plans):
             raise ValueError("Missing measured FFTW plan")
 
+    if descriptor["provider"] == "vdsp":
+        if (info.get("setup_count") != 1 or not info.get("plan") or not info.get("framework_image")
+                or not info.get("os_build") or not info.get("sdk_version_max_allowed")
+                or "setup_bytes" not in info or not info.get("limitations")):
+            raise ValueError("Missing vDSP platform/setup evidence")
+
 
 def check(directory):
     metadata = json.loads((directory / "metadata.json").read_text())
@@ -178,6 +184,10 @@ def check(directory):
     keys = {str(i) for i in range(len(metadata["configs"]))}
     if set(metadata["contracts"]) != keys or set(metadata["resources"]) != keys:
         raise ValueError("Missing workload contracts/resources")
+    if "vdsp" in metadata.get("build_features", ()):
+        platform_info = metadata.get("platform_framework", {})
+        if platform_info.get("name") != "Apple Accelerate/vDSP" or not platform_info.get("limitation"):
+            raise ValueError("Missing platform framework identity")
     config_ids = set()
     for index, config in enumerate(metadata["configs"]):
         validate_config(config, registry, measurement=True)
