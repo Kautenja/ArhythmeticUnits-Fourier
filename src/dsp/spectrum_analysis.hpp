@@ -145,6 +145,19 @@ class SpectrumAnalysis {
             static_cast<size_t>(std::floor(high / width)));
     }
 
+    /// @brief Smooth and emit one bin, preserving the frame's output order.
+    template<typename Output>
+    void output_bin(size_t k, Output& emit) {
+        if (bands_dirty) prepare_band(k);
+        const size_t low = band_low[k], high = band_high[k];
+        const T value = settings.octave == 0.f ? magnitude[k]
+            : (prefix[high+1] - prefix[low]) / T(high-low+1);
+        using std::abs;
+        const T previous = clear_average ? T(0.f) : abs(average[k]);
+        average[k] = settings.alpha * previous + (1.f-settings.alpha) * value;
+        emit(k, average[k]);
+    }
+
  public:
     /// @brief Prepare maximum transform and retained-input capacity off the sample path.
     explicit SpectrumAnalysis(size_t length, size_t maximum_hop) :
@@ -236,24 +249,41 @@ class SpectrumAnalysis {
         quota_error += quota_remainder;
         if (quota_error >= settings.hop) { quota_error -= settings.hop; ++quota; }
         const size_t lengths[] = {size()/2, butterflies, size()/2+1, size()/2+1};
-        for (size_t i = 0; i < quota; ++i) {
-            switch (stage) {
-            case 0: prepare_pair(cursor); break;
-            case 1: butterfly(); break;
-            case 2: reconstruct(cursor); break;
-            case 3: {
-                if (bands_dirty) prepare_band(cursor);
-                const size_t low = band_low[cursor], high = band_high[cursor];
-                const T value = settings.octave == 0.f ? magnitude[cursor]
-                    : (prefix[high+1] - prefix[low]) / T(high-low+1);
-                using std::abs;
-                const T previous = clear_average ? T(0.f) : abs(average[cursor]);
-                average[cursor] = settings.alpha * previous + (1.f-settings.alpha) * value;
-                emit(cursor, average[cursor]);
-                break;
+        // Retain the simple loop when calls do at most two units. Segment
+        // setup costs more than it saves for these sparse schedules.
+        if (quota_base <= 1) {
+            for (size_t i = 0; i < quota; ++i) {
+                switch (stage) {
+                case 0: prepare_pair(cursor); break;
+                case 1: butterfly(); break;
+                case 2: reconstruct(cursor); break;
+                case 3: output_bin(cursor, emit); break;
+                }
+                if (++cursor == lengths[stage]) { cursor = 0; ++stage; }
             }
+        } else {
+            // Dispatch once per contiguous stage segment, without changing this
+            // sample's quota, arithmetic order, or per-bin callback positions.
+            while (quota) {
+                const size_t count = std::min(quota, lengths[stage] - cursor);
+                const size_t end = cursor + count;
+                switch (stage) {
+                case 0:
+                    for (; cursor < end; ++cursor) prepare_pair(cursor);
+                    break;
+                case 1:
+                    for (; cursor < end; ++cursor) butterfly();
+                    break;
+                case 2:
+                    for (; cursor < end; ++cursor) reconstruct(cursor);
+                    break;
+                case 3:
+                    for (; cursor < end; ++cursor) output_bin(cursor, emit);
+                    break;
+                }
+                quota -= count;
+                if (cursor == lengths[stage]) { cursor = 0; ++stage; }
             }
-            if (++cursor == lengths[stage]) { cursor = 0; ++stage; }
         }
         if (++phase != settings.hop) return false;
         phase = 0;

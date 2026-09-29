@@ -167,6 +167,9 @@ frequency/time smoothing, and the output callback over one exact hop.
 For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=M+B+2K work units.
 Sample s executes `floor((s+1)W/H)-floor(sW/H)` units. A quotient/remainder
 accumulator implements that schedule without per-sample quota division.
+Dense schedules dispatch contiguous units in stage segments within the same
+sample quota; sparse schedules retain the per-unit loop. This reduces dispatch
+overhead without changing the work budget or output-bin schedule.
 Frames end at input indices jH and publish at jH+H-1, starting with zero
 padding. This intentionally replaces the earlier restart-on-FFT-completion
 cadence. Settings latch at each frame start; mid-frame changes apply next hop.

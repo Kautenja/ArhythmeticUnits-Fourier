@@ -3,7 +3,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <cstdint>
 #include <cstdlib>
+#include <algorithm>
+#include <cmath>
+#include <complex>
 #include <new>
+#include <type_traits>
 #include <vector>
 #include "dsp/spectrum_analysis.hpp"
 #include "catch_amalgamated.hpp"
@@ -106,6 +110,69 @@ TEST_CASE("Scheduled magnitudes agree with an independent direct DFT") {
                 expected += value * std::complex<double>(std::cos(angle), std::sin(angle));
             }
             REQUIRE(result[k] == Catch::Approx(std::abs(expected)).margin(1e-10));
+        }
+    }
+}
+
+TEMPLATE_TEST_CASE("Quota segments preserve direct spectra through live size and hop changes",
+    "[spectrum][schedule]", float, double) {
+    using T = TestType;
+    SpectrumAnalysis<T> analysis(32, 307);
+    std::vector<T> history(32, T(0)), expected;
+    SpectrumSettings settings;
+    size_t tick = 0, previous_length = 0;
+    for (size_t n : {4u, 32u, 16u, 32u}) {
+        for (size_t hop : {1u, 3u, 37u, 307u}) {
+            settings.length = n;
+            settings.hop = hop;
+            settings.window = hop % 3 ? Fourier::Window::Function::Hann
+                                      : Fourier::Window::Function::BlackmanHarris;
+            REQUIRE(analysis.configure(settings));
+            if (n != previous_length) std::fill(history.begin(), history.end(), T(0));
+            previous_length = n;
+            Fourier::Window::CachedWindow<float> window(settings.window, n, false, true);
+            size_t next_bin = 0;
+            // Wrap the smallest retained ring, including frozen capture and
+            // quotas spanning all stages, single units, and zero-work calls.
+            const size_t frames = 2 * (32 + 307) / hop + 2;
+            for (size_t s = 0; s < frames * hop; ++s, ++tick) {
+                const T input = T(signal(tick, 5));
+                const bool capture = tick % 11 != 0;
+                if (capture) {
+                    for (size_t i = 1; i < history.size(); ++i) history[i-1] = history[i];
+                    history.back() = input;
+                }
+                if (analysis.is_frame_start()) {
+                    expected.assign(n/2+1, T(0));
+                    for (size_t k = 0; k <= n/2; ++k) {
+                        std::complex<double> sum(0, 0);
+                        for (size_t i = 0; i < n; ++i) {
+                            const T sample = history[history.size()-n+i] * window.get_samples()[i];
+                            const double angle = -2 * std::acos(-1.) * k * i / n;
+                            sum += double(sample) * std::complex<double>(std::cos(angle), std::sin(angle));
+                        }
+                        expected[k] = T(std::abs(sum));
+                    }
+                    next_bin = 0;
+                }
+                size_t emitted = 0;
+                const bool ready = analysis.process(input, [&](size_t k, T value) {
+                    CAPTURE(n, hop, tick, k);
+                    REQUIRE(k == next_bin++);
+                    REQUIRE(value == Catch::Approx(double(expected[k]))
+                        .epsilon(std::is_same<T, float>::value ? 2e-6 : 1e-12)
+                        .margin(std::is_same<T, float>::value ? 2e-5 : 1e-10));
+                    ++emitted;
+                }, capture);
+                const size_t w = analysis.work_per_frame(), bins = n/2+1;
+                const auto outputs = [=](size_t units) {
+                    return units > w-bins ? units-(w-bins) : 0;
+                };
+                const size_t phase = s % hop;
+                REQUIRE(emitted == outputs((phase+1)*w/hop)-outputs(phase*w/hop));
+                REQUIRE(ready == (phase+1 == hop));
+                if (ready) REQUIRE(next_bin == bins);
+            }
         }
     }
 }
