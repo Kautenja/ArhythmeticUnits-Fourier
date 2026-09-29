@@ -192,6 +192,24 @@ frequency scales, magnitude scales, and slope settings. They verify channel
 independence, silence, and coordinate mapping, including out-of-range bins.
 They do not render the curves or measure performance.
 
+Run the analytical amplitude regressions for both actual modules:
+
+```shell
+make test-module-amplitudes
+```
+
+These checks drive Rack input ports through `process()` and compare published
+Fourier curve ordinates and Spectre column magnitudes with closed-form Boxcar
+DFT expectations. They cover bin-centered tones, DC, Nyquist, per-port gains,
+mono and polyphonic sums, cancellation, muted gains, disconnected inputs with
+stale voltage storage, and AC-coupling transitions. AC expectations include the
+10 Hz DC blocker's steady-state frequency response after settling. Fourier
+runs at 128, 2048, and 16384 samples; both modules run at 44.1 and 96 kHz.
+The oracle uses explicit 5 V input normalization and Fourier's historical
+`N/2+1` and +12 dB display scaling, without deriving expected amplitudes from
+module output or production DSP helpers. These are headless numerical checks,
+not a Rack UI session.
+
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that
 standalone tests exercised the module widgets or patch loading.

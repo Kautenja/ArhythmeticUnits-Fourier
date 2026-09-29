@@ -80,3 +80,14 @@ build/test/rack/test_dc_blocker: build/test/rack/test_dc_blocker.cpp.o
 
 build/test/rack/test_dc_blocker.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
 -include build/test/rack/test_dc_blocker.cpp.d
+
+# Check absolute amplitudes through both actual modules and their Rack ports.
+.PHONY: test-module-amplitudes
+test-module-amplitudes: build/test/rack/test_module_amplitudes
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
+
+build/test/rack/test_module_amplitudes: build/test/rack/test_module_amplitudes.cpp.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+
+build/test/rack/test_module_amplitudes.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
+-include build/test/rack/test_module_amplitudes.cpp.d
