@@ -9,10 +9,10 @@ The **visual design of the modules** is copyright © 2025 Arhythmetic Units and
 licensed under
 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 Commercial use and derivative works **ARE NOT** allowed. This includes all
-graphics in the `design/`, `res/` and `manual/` folders.
+graphics in the `design/`, `res/` and `docs/manual/` folders.
 
 The **Arhythmetic Units logo and icon** are copyright © 2025 Arhythmetic Units
 and licensed under
 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 Commercial use and derivative works **ARE NOT** allowed. This includes all
-graphics in the `design/`, `res/` and `manual/` folders.
+graphics in the `design/`, `res/` and `docs/manual/` folders.

@@ -11,8 +11,8 @@ import subprocess
 import sys
 import tarfile
 
-ROOT = Path(__file__).resolve().parents[2]
-PAPER = ROOT / 'whitepaper'
+ROOT = Path(__file__).resolve().parents[3]
+PAPER = ROOT / 'docs/whitepaper'
 tex = (PAPER / 'fourier.tex').read_text()
 meta = json.loads((PAPER / 'data/metadata.json').read_text())
 with tarfile.open(PAPER / 'data/source.tar.gz') as archive:

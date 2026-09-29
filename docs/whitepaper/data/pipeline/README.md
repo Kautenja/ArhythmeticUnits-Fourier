@@ -85,7 +85,7 @@ includes full-spectrum smoothing/EMA and copying the positive output.
 -   [baseline.csv](baseline.csv): 27 original phase measurements.
 -   [verification.txt](verification.txt): 7,991,437 assertions in seven cases.
 
-`python3 whitepaper/data/pipeline/check.py` verifies the archived source and
+`python3 docs/whitepaper/data/pipeline/check.py` verifies the archived source and
 data hashes. These hashes describe the original experiment, not today's
 production source. The original full campaign checker remains in the source
 archive.
@@ -106,9 +106,9 @@ repository: it intentionally contains older versions of some files.
 From the repository root, using Python 3 and a C++11 compiler:
 
 ```shell
-python3 whitepaper/data/pipeline/check.py
+python3 docs/whitepaper/data/pipeline/check.py
 paper_source=$(mktemp -d /tmp/fourier-paper.XXXXXX)
-tar -xzf whitepaper/data/pipeline/source.tar.gz -C "$paper_source"
+tar -xzf docs/whitepaper/data/pipeline/source.tar.gz -C "$paper_source"
 cd "$paper_source"
 g++ -std=c++11 -O3 -DNDEBUG -Wall -Wextra -pedantic -Isrc whitepaper/experiments/pipeline/measure.cpp -o /tmp/fourier-paper-measure
 /tmp/fourier-paper-measure > /tmp/fourier-paper-timing.csv
@@ -119,4 +119,4 @@ header at `dep/Catch2/single_include/catch2/catch.hpp` to run its original test
 suite. Preserve the old campaign metadata rather than attributing its
 measurements to the production implementation. Current production validation
 commands are documented in the
-[developer manual](../../../docs/developer-manual/development-and-testing.md).
+[developer manual](../../../developer-manual/development-and-testing.md).

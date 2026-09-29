@@ -467,12 +467,12 @@ allocation-free live settings. Rack coverage adds scalar/SIMD comparison,
 curve ownership and publication, coordinate mapping, module allocation checks,
 and Spectre's exact cadence and freeze/resume behavior.
 
-The [historical pipeline campaign](../../whitepaper/data/pipeline/README.md)
+The [historical pipeline campaign](../whitepaper/data/pipeline/README.md)
 retains pre-integration timing evidence and reproduction sources in an archive.
 It is not a benchmark of the current plugin. Verify that artifact separately:
 
 ```shell
-python3 whitepaper/data/pipeline/check.py
+python3 docs/whitepaper/data/pipeline/check.py
 ```
 
 ## User Manuals And Build Products
@@ -481,10 +481,10 @@ The existing multi-file LaTeX manuals use their own Makefiles and require
 `pdflatex` and their referenced packages:
 
 ```shell
-make -C manual
+make -C docs/manual
 ```
 
-Outputs are `manual/build/Fourier.pdf` and `manual/build/Spectre.pdf`.
+Outputs are `docs/manual/build/Fourier.pdf` and `docs/manual/build/Spectre.pdf`.
 The child Makefiles recreate their local build directories and stop on
 LaTeX errors. Shell escape is disabled. Inspect rendered pages
 when changing manual content or layout.

@@ -10,6 +10,8 @@
 /plugin.so
 /docs/*
 !/docs/developer-manual/
+!/docs/manual/
+!/docs/whitepaper/
 .DS_Store
 
 # MARK: Python gitignore

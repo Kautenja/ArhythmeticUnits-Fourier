@@ -13,7 +13,7 @@ import random
 import statistics
 import subprocess
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[3]
 
 
 def output(command):
@@ -26,7 +26,7 @@ def digest(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=ROOT / "whitepaper/build/evaluation")
+    parser.add_argument("--out", type=Path, default=ROOT / "docs/whitepaper/build/evaluation")
     parser.add_argument("--cpu", default="unrecorded")
     parser.add_argument("--memory-gib", type=int)
     args = parser.parse_args()
@@ -35,9 +35,9 @@ def main():
     binary = directory / "evaluate"
     command = [os.environ.get("CXX", "g++"), "-std=c++11", "-O3", "-DNDEBUG",
                "-Wall", "-Wextra", "-pedantic", "-Isrc",
-               "whitepaper/experiments/evaluate.cpp", "-o", str(binary)]
-    source_paths = [ROOT / "whitepaper/experiments/evaluate.cpp",
-                    ROOT / "whitepaper/experiments/run.py"]
+               "docs/whitepaper/experiments/evaluate.cpp", "-o", str(binary)]
+    source_paths = [ROOT / "docs/whitepaper/experiments/evaluate.cpp",
+                    ROOT / "docs/whitepaper/experiments/run.py"]
     source_paths += sorted((ROOT / "src/dsp").glob("*.hpp"))
     before = {str(p.relative_to(ROOT)): digest(p) for p in source_paths}
     meta = {

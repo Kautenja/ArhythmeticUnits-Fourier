@@ -21,13 +21,13 @@ AC coupling, Fourier's fill and Bezier options, and Spectre's color map.
 -----
 
 <p align="center">
-<img alt="Fourier" src="manual/Fourier/img/Logo.png" width="50%">
+<img alt="Fourier" src="docs/manual/Fourier/img/Logo.png" width="50%">
 </p>
 
 **Fourier** is a highly tune-able spectrum analyzer module.
 
 <p align="center">
-<img alt="Fourier" src="manual/Fourier/img/Module.svg">
+<img alt="Fourier" src="docs/manual/Fourier/img/Module.svg">
 </p>
 
 ### Features
@@ -56,13 +56,13 @@ See the [Manual][Fourier] for more information about the features of this module
 -----
 
 <p align="center">
-<img alt="Spectre" src="manual/Spectre/img/Logo.png" width="50%">
+<img alt="Spectre" src="docs/manual/Spectre/img/Logo.png" width="50%">
 </p>
 
 **Spectre** is a highly tune-able spectrogram visualizer module.
 
 <p align="center">
-<img alt="Spectre" src="manual/Spectre/img/Module.svg">
+<img alt="Spectre" src="docs/manual/Spectre/img/Module.svg">
 </p>
 
 ### Features
@@ -127,11 +127,11 @@ project's source structure and coding conventions.
 
 ## Citation
 
-The [technical report](whitepaper/README.md), **Fourier: Resumable FFT
+The [technical report](docs/whitepaper/README.md), **Fourier: Resumable FFT
 Scheduling for Real-Time Spectral Analysis**, describes the implementation,
 its scheduling and latency model, prior work, and reproducible experiments.
-The self-contained [LaTeX source](whitepaper/fourier.tex) builds with
-`make -C whitepaper`.
+The self-contained [LaTeX source](docs/whitepaper/fourier.tex) builds with
+`make -C docs/whitepaper`.
 
 For the implementation and scheduling analysis, cite the technical report.
 GitHub's **Cite this repository** button uses the preferred report citation in
@@ -147,7 +147,7 @@ report entry.
   month       = sep,
   type        = {Technical report},
   note        = {Manuscript version 1; not yet deposited on arXiv},
-  url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/whitepaper},
+  url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper},
 }
 ```
 
@@ -166,13 +166,13 @@ publication acceptance is implied.
 
 To reference a manual itself, use its dedicated BibTeX `@manual` entry:
 
--   [Fourier manual citation](manual/Fourier/CITATION.bib)
--   [Spectre manual citation](manual/Spectre/CITATION.bib)
+-   [Fourier manual citation](docs/manual/Fourier/CITATION.bib)
+-   [Spectre manual citation](docs/manual/Spectre/CITATION.bib)
 
 These entries identify the author, manual title, version 2.1.2, release month,
 and version-specific PDF URL. Cite the version you consulted; update the
 metadata and URL if you use another release. Mathematical background and
-algorithm references are collected in the [technical report](whitepaper/README.md);
+algorithm references are collected in the [technical report](docs/whitepaper/README.md);
 the user manuals focus on operating the modules.
 
 ## Acknowledgments
@@ -181,7 +181,7 @@ Fourier builds on [VCV Rack][vcv-rack] for its modular synthesis host and
 plugin framework, and uses [Catch2][catch2] for standalone C++ DSP tests.
 
 The analysis algorithms draw on published DSP research discussed in the
-[technical report](whitepaper/README.md). If your work depends on these
+[technical report](docs/whitepaper/README.md). If your work depends on these
 methods, please also cite the relevant research:
 
 -   **Fast Fourier Transform:** James W. Cooley and John W. Tukey,

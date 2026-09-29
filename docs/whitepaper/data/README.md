@@ -88,9 +88,9 @@ have not been revised to match today's source layout or optimizations.
 From the repository root, using Python 3 and a C++11 compiler:
 
 ```shell
-make -C whitepaper check
+make -C docs/whitepaper check
 fft_source=$(mktemp -d /tmp/fourier-fft-paper.XXXXXX)
-tar -xzf whitepaper/data/source.tar.gz -C "$fft_source"
+tar -xzf docs/whitepaper/data/source.tar.gz -C "$fft_source"
 cd "$fft_source"
 g++ -std=c++11 -O3 -DNDEBUG -Wall -Wextra -pedantic -Isrc whitepaper/experiments/evaluate.cpp -o /tmp/fourier-fft-evaluate
 /tmp/fourier-fft-evaluate verify > /tmp/fourier-fft-verification.csv

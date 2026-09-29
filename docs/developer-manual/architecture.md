@@ -24,8 +24,8 @@ changing DSP, Rack modules, or displays.
     measures headless module processing and display preparation. See the
     testing article for workloads and interpretation.
 -   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
--   `manual/Fourier/` and `manual/Spectre/` contain LaTeX user manuals and
-    illustrations. Developer guidance lives here in `docs/developer-manual/`.
+-   `docs/manual/Fourier/` and `docs/manual/Spectre/` contain LaTeX user manuals
+    and illustrations. Developer guidance lives here in `docs/developer-manual/`.
 -   `patches/` and `presets/` provide Rack examples and saved module settings.
 
 ## Analysis Flow
@@ -46,7 +46,7 @@ Frames end at input indices jH and publish at jH+H-1, starting with zero
 padding. This intentionally replaces the earlier restart-on-FFT-completion
 cadence. Settings latch at each frame start; mid-frame changes apply next hop.
 The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
-The [technical report](../../whitepaper/fourier.tex) derives the work bound,
+The [technical report](../whitepaper/fourier.tex) derives the work bound,
 input lifetime, smoothing, and timestamp conventions in its production
 successor section; its appendix collects the supporting algorithms. The user
 manuals focus on controls, displays, operating behavior, and practical setting

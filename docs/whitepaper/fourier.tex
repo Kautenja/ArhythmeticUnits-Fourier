@@ -816,7 +816,7 @@ hard real-time safety.
 \section{Complete-Pipeline Prototype Evaluation}
 \label{sec:pipeline-evaluation}
 A second campaign informed the production choice. Its exact sources and raw
-summaries are archived separately in \path{whitepaper/data/pipeline/}. The
+summaries are archived separately in \path{docs/whitepaper/data/pipeline/}. The
 prototypes compare: (i) the original arithmetic with controlled exact cadence
 (\code{legacy}); (ii) candidate arithmetic executed in boundary bursts across four stage slots
 (\code{stage\_burst}); (iii) a serial balanced sequence within one hop
@@ -1055,26 +1055,26 @@ without this range average. DC has the one-bin interval $[0,0]$.
 
 \section{Reproducibility and Source Map}
 The code artifact is available at \repo. All report sources and experiment data
-are in \code{whitepaper/}. The manuscript embeds its figures, listings, and
+are in \code{docs/whitepaper/}. The manuscript embeds its figures, listings, and
 bibliography so that one \code{.tex} file suffices for typesetting; compilation
 does not run experiments or fetch network resources.
 
 From the repository root, verify both archived campaigns and build the report:
 \begin{lstlisting}[language=bash]
-make -C whitepaper check
-make -C whitepaper
+make -C docs/whitepaper check
+make -C docs/whitepaper
 \end{lstlisting}
 The original campaign's exact inputs are in
-\path{whitepaper/data/source.tar.gz}; its README gives isolated extraction and
+\path{docs/whitepaper/data/source.tar.gz}; its README gives isolated extraction and
 reproduction commands. The archive restores the historical math-header paths
 and the exact driver hashes in the original metadata, without editing those
-metadata to match newer code. The current \path{whitepaper/experiments/run.py}
+metadata to match newer code. The current \path{docs/whitepaper/experiments/run.py}
 can also run a new same-FFT comparison, but compiles the current reusable FFT
 headers. Its results belong to a new campaign.
 
 The complete-pipeline prototype sources, including alternate schedules and
 original dependency headers, are preserved only in
-\path{whitepaper/data/pipeline/source.tar.gz}. Its README describes reproduction;
+\path{docs/whitepaper/data/pipeline/source.tar.gz}. Its README describes reproduction;
 \code{metadata.json} records compiler settings and source/data hashes;
 \code{timing.csv} retains 2880 per-repetition summaries; \code{baseline.csv}
 retains 27 phase observations. Individual timed calls were not retained.

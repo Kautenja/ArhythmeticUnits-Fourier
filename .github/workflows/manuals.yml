@@ -3,13 +3,13 @@ name: User manuals
 on:
   pull_request:
     paths:
-      - manual/**
+      - docs/manual/**
       - plugin.json
       - .github/workflows/manuals.yml
   push:
     branches: [main]
     paths:
-      - manual/**
+      - docs/manual/**
       - plugin.json
       - .github/workflows/manuals.yml
   release:
@@ -47,11 +47,18 @@ jobs:
             texlive-latex-extra texlive-fonts-recommended texlive-science poppler-utils
 
       - name: Build and validate both manuals
+        id: manuals
         run: |
-          make -C manual
+          manual_dir=docs/manual
+          # Older release tags retain the original directory layout.
+          if [ ! -d "$manual_dir" ]; then
+            manual_dir=manual
+          fi
+          echo "directory=$manual_dir" >> "$GITHUB_OUTPUT"
+          make -C "$manual_dir"
           for manual in Fourier Spectre; do
-            test -s "manual/build/$manual.pdf"
-            pdfinfo "manual/build/$manual.pdf"
+            test -s "$manual_dir/build/$manual.pdf"
+            pdfinfo "$manual_dir/build/$manual.pdf"
           done
 
       - name: Save PDF manuals
@@ -59,8 +66,8 @@ jobs:
         with:
           name: user-manuals
           path: |
-            manual/build/Fourier.pdf
-            manual/build/Spectre.pdf
+            ${{ steps.manuals.outputs.directory }}/build/Fourier.pdf
+            ${{ steps.manuals.outputs.directory }}/build/Spectre.pdf
           if-no-files-found: error
 
   publish:

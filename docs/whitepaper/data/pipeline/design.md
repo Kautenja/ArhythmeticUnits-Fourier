@@ -116,7 +116,7 @@ by the caller. Temporal smoothing is maintained in producer-owned state,
 independent of which snapshots the consumer reads or drops.
 
 All processing storage and all three publication slots are prepared before
-processing. The existing [DisplayMailbox](../../../src/rack_extensions/display_mailbox.hpp)
+processing. The existing [DisplayMailbox](../../../../src/rack_extensions/display_mailbox.hpp)
 provides single-producer/single-consumer acquire/release ownership exchange.
 A producer fills its slot across the finishing stage, then publishes it.
 A consumer can hold a snapshot until its next successful consume; producer

@@ -18,10 +18,10 @@ For a local PDF export, install a TeX distribution with `pdflatex`,
 repository root:
 
 ```shell
-make -C whitepaper
+make -C docs/whitepaper
 ```
 
-This writes `whitepaper/build/Fourier-Technical-Report.pdf`. Compilation
+This writes `docs/whitepaper/build/Fourier-Technical-Report.pdf`. Compilation
 never runs a benchmark or fetches data. The single-column, 11-point layout
 prioritizes readable derivations, code, and numerical results. No shell
 escape or BibTeX pass is required.
@@ -42,13 +42,13 @@ escape or BibTeX pass is required.
     and overlapped scheduling evidence, with reproduction sources archived
     separately from the production implementation.
 -   [data/](data/): Archived raw observations and derived statistics.
--   [../CITATION.cff](../CITATION.cff) and
-    [../CITATION.bib](../CITATION.bib): The shared report citation for this work.
+-   [../../CITATION.cff](../../CITATION.cff) and
+    [../../CITATION.bib](../../CITATION.bib): The shared report citation for this work.
 
 Run the artifact consistency check from the repository root:
 
 ```shell
-make -C whitepaper check
+make -C docs/whitepaper check
 ```
 
 It verifies citation keys, local Markdown links, both campaigns' archived
@@ -71,11 +71,11 @@ A C++11 compiler available as `g++` and Python 3 are sufficient. The driver
 honors `CXX`. From the repository root, substitute your host information:
 
 ```shell
-python3 whitepaper/experiments/run.py --cpu 'YOUR CPU MODEL' --memory-gib 16
+python3 docs/whitepaper/experiments/run.py --cpu 'YOUR CPU MODEL' --memory-gib 16
 ```
 
 The hardware fields are declarations and must describe the actual machine.
-New results go to `whitepaper/build/evaluation/`; the archived campaign is
+New results go to `docs/whitepaper/build/evaluation/`; the archived campaign is
 not overwritten. Both modes use the same scalar real FFT. The timing
 experiment fixes cadence at the requested horizon to isolate work placement,
 whereas the original modules restarted when computation completed. The
@@ -101,10 +101,10 @@ Citation metadata does not itself ensure Google Scholar indexing.
 To prepare the source archive, run from the repository root:
 
 ```shell
-make -C whitepaper arxiv
+make -C docs/whitepaper arxiv
 ```
 
-The output is `whitepaper/build/fourier-arxiv-source.tar.gz`, containing the
+The output is `docs/whitepaper/build/fourier-arxiv-source.tar.gz`, containing the
 self-contained `fourier.tex`. Review the compiled PDF, author details,
 claims, and license choice before submitting. Follow the current
 [arXiv TeX guidance](https://info.arxiv.org/help/submit_tex.html); submission,
@@ -131,7 +131,7 @@ in the LaTeX file so that it remains portable; record any new verification
 source in `sources.md`.
 
 The report adds no production DSP behavior. The repository's
-[license document](../LICENSE.md) continues to govern the existing source
+[license document](../../LICENSE.md) continues to govern the existing source
 and visual assets; this manuscript does not grant new permissions for the
 plugin artwork.
 
