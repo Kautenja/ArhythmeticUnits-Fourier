@@ -30,6 +30,8 @@ exhaustive bibliometric survey.
 | `eleftheriadis2023` | [University publication record](https://pure.qub.ac.uk/en/publications/energy-efficient-short-time-fourier-transform-for-partial-window-/), [accepted manuscript](https://pureadmin.qub.ac.uk/ws/portalfiles/portal/487442168/main.pdf) | Partial-overlap frequency decomposition and frequency-domain Hann windowing; fixed-point ASIC evidence does not establish CPU performance |
 | `becoulet2021` | [Author-uploaded preprint](https://www.researchgate.net/publication/348040518_A_Depth-First_Iterative_Algorithm_for_the_Conjugate_Pair_Fast_Fourier_Transform), [published-paper record](https://www.researchgate.net/publication/349414360_A_Depth-First_Iterative_Algorithm_for_the_Conjugate_Pair_Fast_Fourier_Transform), [DOI](https://doi.org/10.1109/TSP.2021.3060279) | Iterative depth-first conjugate-pair FFT; constant auxiliary indexing space, not constant total FFT storage; motivates a separate resumable adaptation |
 | `frigo2005` | [Authors' full paper](https://fftw.org/fftw-paper-ieee.pdf), [author publication record](https://fftw.org/~athena/abstracts/abstract8.html) | Optimized FFT implementations as an unmeasured comparison class |
+| `pffft` | [VCV-maintained PFFFT repository](https://github.com/VCVRack/pffft), [Rack FFT wrapper](https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp) | Practical Rack baseline; real-transform wrapper and ordered/unordered output; software citation, with the actual measured revision and SIMD configuration to be pinned per campaign |
+| `vdsp` | [Apple vDSP Programming Guide](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/vDSP_Programming_Guide/UsingFourierTransforms/UsingFourierTransforms.html), [FFT setup API](https://developer.apple.com/documentation/accelerate/vdsp_create_fftsetup) | Platform baseline for macOS; reusable setup, real-transform packing and scaling; official API documentation rather than a research paper |
 | `vanderbyl2016` | [Publisher abstract and section summaries](https://www.sciencedirect.com/science/article/abs/pii/S1051200416000142), [DOI](https://doi.org/10.1016/j.dsp.2016.01.008) | Floating- and fixed-point error across sliding DFT structures; motivates proposed numerical checks without reproducing uninspected rankings |
 | `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
 | `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
@@ -75,6 +77,14 @@ to the indexed publisher abstract and section summaries; the full article was
 not accessible. The suggested suspension, matched-window, and long-stream
 accuracy experiments are this report's proposals, not measurements reported
 by those sources or completed experiments in this repository.
+
+PFFFT and Apple Accelerate/vDSP are named execution targets alongside FFTW.
+The [external comparison plan](../../benchmark/paper/comparisons.md) tracks
+adapter readiness, workload matching, and intended tables and figures.
+The local Rack wrapper was also inspected; it calls PFFFT's real transform
+and exposes both output orders. This establishes availability in the inspected
+SDK, not a completed benchmark adapter or timing result. No external library's
+published speed claims are imported into this report.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.

@@ -5,6 +5,11 @@ complements the Catch2 throughput benchmarks with individual observations,
 matched frame controls, and a repeatable protocol for future FFT backends.
 It does not update the manuscript's historical results or claim a speedup.
 
+The [external comparison plan](comparisons.md) records the selected FFTW,
+Rack/PFFFT, and Apple Accelerate/vDSP baselines, implementation status,
+acceptance checks, and intended publication tables and figures. Those external
+adapters are planned; the commands below currently run first-party backends.
+
 ## Build And Run
 
 From the repository root, use Python 3 and the same Rack SDK/compiler needed

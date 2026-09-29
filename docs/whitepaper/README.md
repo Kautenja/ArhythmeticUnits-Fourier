@@ -103,6 +103,9 @@ checks for repeated campaigns. Future external backends can share its workload
 contract. These new campaigns do not replace the historical evidence or update
 the manuscript's tables automatically; comparisons require matched workloads,
 independent sessions and explicit interpretation of the documented limits.
+The [external comparison plan](../../benchmark/paper/comparisons.md) tracks
+FFTW, Rack/PFFFT, and Apple Accelerate/vDSP as execution targets, their pending
+adapters, and the tables and figures to derive from matched campaigns.
 
 ## Publication And Discoverability
 
@@ -182,8 +185,10 @@ work and the display-latency discussion, and Wilhelm et al. (2008) into the
 discussion of execution-time bounds. Further additions cover Bécoulet and
 Verguet's depth-first FFT (2021), Garrido's feedforward STFT (2016), and
 Eleftheriadis et al.'s partial-overlap STFT (2023), with van der Byl and Inggs
-(2016) informing the proposed numerical-error evaluation. The manuscript
-remains version 2 and is now 22 pages with 26 cited references.
+(2016) informing the proposed numerical-error evaluation. PFFFT and Apple
+Accelerate/vDSP now join FFTW as explicit targets for external implementation
+comparisons, with a linked plan for the adapters and publication outputs.
+The manuscript remains version 2 and is now 22 pages with 28 cited references.
 Both LaTeX builds and the artifact check
 pass; the final LaTeX pass has no unresolved references or box warnings.
 All 22 rendered pages were visually inspected, and `git diff --check` passes.

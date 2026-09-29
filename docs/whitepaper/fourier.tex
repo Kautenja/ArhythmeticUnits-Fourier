@@ -229,11 +229,23 @@ transform storage. The approach offers another way to organize locality and
 traversal state. It does not itself provide our resumable scheduling contract:
 bounded suspension units and their cost would need to be established separately.
 
-Finally, optimized libraries such as FFTW use planning, generated kernels, and
+Optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
 time~\cite{frigo2005}. Our timing baseline deliberately holds the arithmetic
 implementation fixed to study work placement. It is not a comparison against
-the fastest available FFT. Table~\ref{tab:position} summarizes the distinctions
+the fastest available FFT.
+
+PFFFT is a particularly relevant practical alternative: Rack exposes its real
+transform through \code{dsp::RealFFT}~\cite{pffft}. The wrapper offers ordered
+and unordered output, so a spectral-analysis comparison must include the work
+needed to obtain the required bins. A benchmark should identify the actual
+Rack/PFFFT revision and enabled SIMD path rather than treating different forks
+as interchangeable. Apple Accelerate's vDSP provides a platform-specific
+baseline for the Apple Silicon host used in our campaigns~\cite{vdsp}.
+Its reusable setup, packed real-transform layout, and scaling conventions
+must be accounted for when matching outputs. These are software/API references;
+the present campaigns contain no measurements of either implementation.
+Table~\ref{tab:position} summarizes the distinctions
 most relevant to interpreting the present design.
 
 \begin{table}[tb]
@@ -320,7 +332,7 @@ bitwise equality within a single executable rather than asserting it across
 different compilers or FFT libraries.
 \end{proof}
 
-\begin{lstlisting}[language=C++,caption={Simplified state transition corresponding to the original complex FFT. Tables and storage are prepared separately.},label={lst:step}]
+\begin{lstlisting}[float=tbp,language=C++,caption={Simplified state transition corresponding to the original complex FFT. Tables and storage are prepared separately.},label={lst:step}]
 void step() {
     if (span > N) return;
     const size_t half = span / 2;
@@ -989,6 +1001,17 @@ an optimized batch FFT on the engine thread and, where supported, a worker
 implementation, with equivalent input windows, output processing, and requested
 cadence. It should report actual publication delay as well as engine cost.
 
+The first external-backend comparison should include FFTW, Rack's PFFFT, and
+vDSP on macOS~\cite{frigo2005,pffft,vdsp}. Plans and working buffers should be
+prepared outside timed execution, with setup cost reported separately. An
+isolated real-transform comparison and a matched complete-analysis comparison
+answer different questions; both should include required data conversion and
+label the included work. Proposed tables should report backend configuration,
+numerical error, storage, aggregate cost, callback-duration tails, and spectrum
+age. Figures should show how cost varies with transform length and how callback
+duration trades against publication delay. These are planned comparisons, not
+evidence that suspension outperforms an optimized batch transform.
+
 For a visualizer, publication is only one stage of end-to-end latency.
 The delay decomposition of Pr\r{u}\v{s}a and Holighaus~\cite{prusa2016}
 motivates measuring display consumption and repaint timing separately from
@@ -1118,7 +1141,7 @@ input at these addresses prepares the iterative decimation-in-time traversal
 of Equation~\eqref{eq:butterfly}. Listing~\ref{lst:reverse-table} constructs
 the table during initialization, not on each sample call.
 
-\begin{lstlisting}[language=C++,caption={Reference construction of a bit-reversal table for $Q=2^p$.},label={lst:reverse-table}]
+\begin{lstlisting}[float=tbp,language=C++,caption={Reference construction of a bit-reversal table for $Q=2^p$.},label={lst:reverse-table}]
 for (size_t i = 0; i < Q; ++i) {
     size_t x = i, reversed = 0;
     for (size_t bit = 0; bit < p; ++bit) {
@@ -1381,6 +1404,17 @@ Processing}, vol. 69, pp. 1537--1547, 2021.
 M. Frigo and S. G. Johnson, ``The design and implementation of FFTW3,''
 \emph{Proceedings of the IEEE}, vol. 93, no. 2, pp. 216--231, 2005.
 \href{https://doi.org/10.1109/JPROC.2004.840301}{doi:10.1109/JPROC.2004.840301}.
+
+\bibitem{pffft}
+J. Pommier and contributors, ``PFFFT: A pretty fast FFT,'' software;
+VCV Rack integration, \code{dsp::RealFFT}. Accessed September 29, 2026.
+\url{https://github.com/VCVRack/pffft}.
+\href{https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp}{Rack FFT wrapper source}.
+
+\bibitem{vdsp}
+Apple, ``Using Fourier Transforms,''
+\href{https://developer.apple.com/library/archive/documentation/Performance/Conceptual/vDSP_Programming_Guide/UsingFourierTransforms/UsingFourierTransforms.html}{\emph{vDSP Programming Guide}},
+Accelerate framework documentation. Accessed September 29, 2026.
 
 \bibitem{vanderbyl2016}
 A. van der Byl and M. R. Inggs, ``Constraining error---a sliding discrete
