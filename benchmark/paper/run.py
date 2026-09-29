@@ -17,6 +17,8 @@ import statistics
 import subprocess
 import tarfile
 
+from contracts import SYNTHESIS_BACKENDS, synthesis_contract
+
 ROOT = Path(__file__).resolve().parents[2]
 BINARY = ROOT / "build/benchmark/rack/paper"
 BASE = dict(backend="core-float", pass_name="callback", n=2048, hop=1024,
@@ -30,7 +32,9 @@ def workload(**changes):
 
 def matrix(profile):
     """Factor sweeps, not an unbounded Cartesian product; custom JSON is supported."""
-    rows = []
+    rows = synthesis_matrix(profile == "smoke")
+    if profile == "synthesis":
+        return rows
     cores = ("core-float", "core-double", "core-simd4", "legacy-batch-float",
              "legacy-incremental-float", "legacy-batch-double", "legacy-incremental-double")
     modules = ("fourier", "spectre")
@@ -79,6 +83,24 @@ def matrix(profile):
                 for mode in ("complete", "incremental", "phases", "steps"):
                     rows.append(workload(backend=f"{name}-{precision}", n=n, pass_name=mode, hop=257))
     # Duplicate base rows from independent factor sweeps need only one identity.
+    return list({json.dumps(row, sort_keys=True): row for row in rows}.values())
+
+
+def synthesis_matrix(smoke):
+    """Matched inverse and full filtering controls; independent of Rack modules."""
+    rows = []
+    for backend in sorted(SYNTHESIS_BACKENDS):
+        base = workload(backend=backend, n=128 if smoke else 2048, hop=32 if smoke else 1024)
+        for n in ((128,) if smoke else (128, 2048, 16384)):
+            for mode in ("callback", "throughput"):
+                for block in ((64,) if smoke or mode == "throughput" else (16, 64, 256)):
+                    rows.append(dict(base, n=n, hop=32 if n == 128 else 1024, pass_name=mode, block=block))
+        rows += [dict(base, state="startup"),
+                 dict(base, count=4, alignment="staggered", load=8, cache_mib=1)]
+        if not smoke:
+            rows += [dict(base, hop=257), dict(base, rate=96000),
+                     dict(base, count=16, load=64),
+                     dict(base, count=16, alignment="staggered", load=64)]
     return list({json.dumps(row, sort_keys=True): row for row in rows}.values())
 
 
@@ -138,7 +160,7 @@ def save(path, value):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path, help="New campaign directory; never overwritten")
-    parser.add_argument("--profile", choices=("smoke", "paper"), default="smoke")
+    parser.add_argument("--profile", choices=("smoke", "paper", "synthesis"), default="smoke")
     parser.add_argument("--config", type=Path, help="JSON array of complete or partial workload objects")
     parser.add_argument("--repeats", type=int, default=7)
     parser.add_argument("--hops", type=int, default=64, help="Minimum measured hops per streaming pass")
@@ -161,6 +183,11 @@ def main():
     for config in configs:
         if config.keys() - set(BASE):
             parser.error("Unknown workload keys: " + str(config.keys() - set(BASE)))
+        if config["backend"].startswith(("inverse-stream-", "ols-")):
+            try:
+                synthesis_contract(config)
+            except ValueError as error:
+                parser.error(str(error))
         config["warm_hops"] = args.warm_hops
         config["callbacks"] = (math.ceil(args.hops*config["hop"]/config["block"])
                                if config["pass_name"] in ("callback", "throughput") else
@@ -184,6 +211,9 @@ def main():
                     compiler=capture(shlex.split(args.cxx)+["--version"]), build_command=build,
                     rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
                     protocol="v1", configs=configs, runs=[])
+    metadata["synthesis_contracts"] = {
+        str(index): synthesis_contract(config) for index, config in enumerate(configs)
+        if config["backend"] in SYNTHESIS_BACKENDS}
     if platform.system() == "Darwin":
         try:
             metadata["cpu_model"] = capture(["sysctl", "-n", "machdep.cpu.brand_string"])

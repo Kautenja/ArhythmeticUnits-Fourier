@@ -1,19 +1,22 @@
 # External FFT Comparison For The Scheduling Paper
 
-Compare the production one-hop analyzer with practical FFT libraries using
-the existing publication protocol. Establish where resumable analysis earns
-its CPU, storage, and spectrum-age costs, including cases where batch
-processing is preferable.
+Compare forward transforms, inverse transforms, complete frequency-domain DSP,
+and the production one-hop analyzer with practical FFT libraries using the
+existing publication protocol. Establish where resumable execution earns its
+CPU, storage, completion-latency, and sample-delivery costs, including cases
+where batch processing is preferable. The Rack analyzer is an application
+case study, not the boundary of the reusable framework's evaluation.
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Created: September 29, 2026
 
 This spec supersedes the detailed plan formerly in
 [`benchmark/paper/comparisons.md`](../benchmark/paper/comparisons.md).
 The [protocol README](../benchmark/paper/README.md) defines current measurement
-semantics. External adapters and the campaign configurations below are future
-work; creating this spec does not constitute collecting comparison evidence.
+semantics. External adapters and external campaign configurations remain
+future work. First-party inverse and complete-chain baselines are implemented;
+their smoke validation does not constitute external comparison evidence.
 
 ## Review Of The Current Work
 
@@ -39,7 +42,7 @@ The reviewed checkout is `4e58290`. Its relevant improvements are:
 
 The main evidence gap is now external comparison and measured production
 performance. More bibliography expansion is lower priority. The current
-911-workload paper profile is a coverage matrix, not automatically a suitable
+expanded paper profile is a coverage matrix, not automatically a suitable
 first comparison campaign. Fresh processes are not independent host sessions.
 Synchronous block measurements are not device underrun measurements.
 
@@ -52,6 +55,11 @@ Synchronous block measurements are not device underrun measurements.
     reduction after the surrounding analysis passes have been scheduled?
 3.  How do these tradeoffs change with transform length, callback size,
     analyzer count, phase alignment, smoothing, and available host budget?
+4.  How does the same scheduling choice affect periodically released complex
+    inverse jobs, including buffering, normalization, and complete output?
+5.  In forward-transform -> spectral operation -> inverse-transform processing,
+    how do total cost, callback peaks, correct sample delivery, and algorithmic
+    latency compare? Does a transform-only advantage survive integration?
 
 For N=4096, H=1024, and 64-sample blocks, both adapters must represent the
 window ending at jH and emit all 2049 positive-bin magnitudes. An immediate
@@ -65,13 +73,59 @@ transform-only result cannot stand in for a smoothed analysis result. Four
 independent SIMD lanes must be compared with four independent scalar channels,
 not with one scalar transform.
 
+For an overlap-save filter with N=4096 and H=1024, a frame ending at jH
+produces the filtered samples for jH-1023 through jH. Starting their playback
+at jH+d incurs 1023+d samples of delivery delay. A batch control has d=0;
+the current incremental baseline has d=1023. That 2046-sample delivery delay
+is distinct from the 1023-sample computation delay. Verify the entire delivered
+waveform against direct filtering rather than reporting only frame completion.
+
+## First-Party Evidence Pathways
+
+Forward, inverse, and complete-chain baselines are required before external
+comparisons. The [protocol](../benchmark/paper/README.md#inverse-and-end-to-end-baselines)
+documents the implemented semantics and reproduction commands.
+
+| Family | Implemented Baseline | Required External Comparison |
+| --- | --- | --- |
+| Isolated transforms | Complex FFT, real FFT, and normalized complex IFFT; float/double; complete/incremental, buffer/compute/output phases and individual steps | Equivalent transform kind and precision, charging conversion and inverse normalization |
+| Periodic inverse jobs | `inverse-stream-{batch,incremental}-{float,double}`; analytical non-Hermitian spectra, all N output stores, exact release cadence, callback/throughput and instance/load sweeps | Same spectrum releases, full complex output, normalization, and completion-age contract |
+| End-to-end frequency-domain DSP | `ols-{identity,fir}-{batch,incremental}-{float,double}`; complex FFT, transfer multiplication, normalized IFFT, overlap-save extraction and continuous sample delivery | Same complex input, transfer function, valid outputs, delivery sink, and measured algorithmic latency |
+| Spectral analyzer | Existing production core, same-arithmetic legacy controls, and actual headless modules | Existing matched analysis contract; module costs remain separately labeled |
+
+The new benchmark-only implementation is in
+[`synthesis.hpp`](../benchmark/paper/synthesis.hpp). Its logic and independent
+verifier need no Rack types; the shared campaign executable still links Rack
+for its module workloads. Both modes preserve the current transform APIs'
+bulk buffering. Preparation inside the chain must be counted even if it is
+represented by one indivisible scheduling unit. These are executable baselines,
+not a claim that the analyzer's fully distributed preparation also exists in
+the reusable inverse or synthesis path.
+
+The inverse streaming fixtures alternate two known complex spectra without
+calling a forward transform to manufacture expected results. Isolated inverse
+passes also cover dense complex inputs. The chain includes an identity control
+and the causal FIR `[0.5, -0.25, 0.125]`, validated independently in time domain.
+Overlap-save requires H <= N-2; no STFT windows or overlap-add normalization
+are involved. The complete path includes retention, buffering, transforms,
+N spectral multiplications, normalized inverse output, H valid output stores,
+buffer exchange, and per-sample delivery through a common observable checksum.
+The short FIR is a correctness/application fixture, not a claim that FFT-based
+filtering is preferable to evaluating three taps directly.
+
+Preserve the distinction between release-to-completion delay for inverse jobs,
+frame-end-to-publication age for analysis, and input-to-delivery delay for
+filtered samples. Metadata and artifact checks must encode their different
+time origins. Inverse jobs with N outputs every H calls are periodic transform
+tasks, not necessarily an audio stream with N=H.
+
 ## Contenders And Order
 
 | Priority | Candidate | Question It Answers | Readiness And Route |
 | --- | --- | --- | --- |
-| 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Use the installed SDK's ordered `dsp::RealFFT`; wrapper inspected, external adapter pending. Pin the actual linked implementation, not an unrelated PFFFT fork. |
-| 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex first; double separately. Adapter and build/dependency capture pending. |
-| 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS-only real transform with reusable setup and documented packing/scaling conversion; adapter pending. This is a platform baseline, not an open-source implementation. |
+| 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Pin the linked implementation; adapters pending. |
+| 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Adapters and dependency capture pending. |
+| 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS real and complex transforms with reusable setup and explicit packing/scaling; adapters pending. This is a platform baseline, not an open-source implementation. |
 | Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; add only if this question remains material after the first three. |
 | Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | The paper supplies algorithm descriptions; a matched CPU implementation, supported hops/windowing, and accuracy validation need feasibility review. Not a ready drop-in backend. |
 
@@ -116,7 +170,9 @@ pseudocode should be presented as the authors' measured implementation.
     analysis including retention, windowing, magnitudes, smoothing, and K
     output stores. Native packed-layout processing may be a separately
     labeled optimization with equivalent required output. Keep module/UI
-    results separate from both.
+    results separate from both. Also require isolated complex inverse,
+    periodic inverse jobs, and complete complex filtering boundaries as
+    specified above. A forward-only adapter is not a completed contender.
 -   Share input bytes and settings with existing controls: normalized periodic
     Hann, common float window coefficients, smoothing off/on, alpha=0.8 when
     selected, and identical zero-padding and frame endpoints. Promote the same
@@ -150,10 +206,13 @@ pseudocode should be presented as the authors' measured implementation.
     Preserve maximum absolute and normalized errors and normalization/sign
     checks. Different factorizations need not be bitwise equal. Round trips
     complement independent references; they cannot detect every paired error.
--   Retain current IFFT evidence. Any external inverse comparison must match
+-   Retain current IFFT evidence and require external inverse comparisons. Match
     complex-to-complex versus complex-to-real semantics and include the
-    normalization needed for the same output contract. Complex IFFT results
-    are secondary to the forward analyzer question, not a new synthesis study.
+    normalization needed for the same output contract. Test non-Hermitian
+    spectra so that dropping the imaginary output cannot pass. Preserve
+    all-sample analytical inverse and direct identity/FIR checks in untimed
+    replay, including startup, valid-output boundaries, and delivery latency.
+    Independent references must not share the tested forward/inverse pair.
 -   Before an overlap-reuse comparison, add long-stream error traces, weak tones
     beside strong ones, and silence after a strong signal. Recompute independent
     references throughout the stream; define phase error only above a stated
@@ -181,13 +240,16 @@ needed, also supply a batch execution of the same positive-bin pipeline.
 
 1.  **Adapter gate:** Implement and verify Rack/PFFFT first, then FFTW and
     vDSP. Produce a backend inventory and a short smoke configuration for all
-    available adapters. External forward float comparisons are the first
-    deliverable, without a production-backend replacement.
+    available adapters. Require real forward analysis and complex forward,
+    inverse, periodic inverse, and end-to-end float controls; double follows
+    for supported libraries. Do not replace a production backend.
 2.  **Focused pilot:** Start with N=2048/4096/16384, H=1024, blocks of 16/64/256,
     48 kHz, float, one analyzer, steady state, smoothing off/on, and separate
     callback/throughput passes. Include the core and matched legacy controls.
     Use a resolved configuration file and report the workload count. Inspect
     timer resolution and session variability before choosing repetitions.
+    Include inverse jobs and both overlap-save controls as separate families;
+    do not combine their costs or time origins in a single ranking.
 3.  **Discriminating extensions:** Add N=128, H=257, 96 kHz, 1/4/16 analyzers,
     aligned/staggered phases, fixed background load, and startup/live/cache
     pressure as focused sweeps. Include callback-origin phase offsets where
@@ -222,8 +284,13 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 
 ## Outputs And Acceptance Criteria
 
+- [x] First-party inverse jobs and complete identity/FIR chains have batch and
+    incremental controls, independent all-output validation, latency contracts,
+    workload configurations, and raw-artifact checks. Publication campaigns
+    and external comparisons remain outstanding.
 - [ ] Three primary backend adapters pass independent numerical and matched
-    analysis checks on supported hosts; unavailable cases are explicit.
+    analysis/inverse/complete-chain checks on supported hosts; unavailable
+    cases are explicit. Required output normalization is included in cost.
 - [ ] Dependency/setup/storage/publication contracts and exact reproduction
     commands are documented. Archived artifacts identify measured sources,
     libraries, flags, workloads, and numerical checks without relying on HEAD.
@@ -238,6 +305,8 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 - [ ] Generated outputs include an implementation/provenance/error/storage
     table; matched workload/cost/age table; transform and full-analysis cost
     versus N; callback tail distributions; and cost versus spectrum-age plots.
+    Inverse and complete-chain panels report release/completion and sample
+    delivery latency, respectively, with their independent numerical evidence.
     Each output identifies its campaign and includes uncertainty or variation
     appropriate to that statistic. No upstream performance chart substitutes
     for these measurements.
@@ -250,8 +319,9 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 
 This spec does not replace the production FFT, change saved patches, optimize
 code to win a benchmark, require every cited algorithm to be implemented, or
-claim new FFT mathematics. GPU comparisons, a complete inverse synthesis
-application, and general-purpose FFT-library rankings are outside scope.
+claim new FFT mathematics. GPU comparisons, a user-facing synthesis application,
+general windowed STFT reconstruction, and general-purpose FFT-library rankings
+are outside scope. The benchmark-only overlap-save operation is in scope.
 
 Worker threads require queueing, completion, dropped-job, and contention
 measurements beyond the synchronous protocol. Actual device deadlines and
@@ -274,6 +344,21 @@ DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." build/benchmark/rack/paper --v
 make -C docs/whitepaper check
 git diff --check
 ```
+
+The Python suite now compiles the host-independent synthesis verifier using
+`CXX` (default `c++`) and C++11. It does not need Rack or Catch2 for that check.
+The following first-party configuration exists now; use new directories:
+
+```shell
+python3 benchmark/paper/run.py build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py build/paper-inverse-smoke
+python3 benchmark/paper/run.py build/paper-synthesis-session-01 --profile synthesis --list
+```
+
+The dedicated smoke config contains 48 streaming and eight isolated inverse
+workloads; the synthesis factor profile contains 216 streaming workloads.
+Its controls require no analyzer settings and reject live-window/smoothing
+options. Resolve feasible H/N combinations per family before measurement.
 
 The implementation must add tracked `external-smoke.json` and
 `external-pilot.json` under `benchmark/paper/configs/`, with explicit supported
@@ -304,8 +389,42 @@ protocol tests passed. The benchmark build target was up to date, and its
 artifact check passed both historical campaigns, 28 references, and schedule,
 table, and plot consistency checks. No new publication campaign, external
 adapter, plugin build, or interactive Rack session was performed for this spec.
-Local documentation links and `git diff --check` also passed. Implementation
-and measurement acceptance boxes remain open.
+Local documentation links and `git diff --check` also passed. At that review,
+implementation and measurement acceptance boxes remained open.
+
+### Inverse And Complete-Chain Baseline Completion
+
+September 29, 2026: added the twelve inverse-job/identity/FIR adapters,
+explicit latency contracts, full-output numerical replay, a standalone C++
+verifier, the 56-workload smoke config, and the 216-workload synthesis profile.
+The paper profile now has 1127 workloads; the general smoke profile has 129.
+Only the first-party baseline acceptance item is complete.
+
+Validation performed:
+
+-   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: nine tests
+    passed, including standalone C++11 compilation without Rack/Catch2,
+    analytical inverse and direct-filter fixtures, deliberate output/scaling
+    corruption, latency-contract checks, and missing numerical coverage.
+-   `make benchmark-paper-build` and the expanded `--verify`: passed. Existing
+    Rack SDK deprecation warnings remain. This is a benchmark executable
+    build, not a plugin build or an interactive host test.
+-   `python3 benchmark/paper/run.py build/paper-synthesis-baseline-verified
+    --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`, followed by
+    `python3 benchmark/paper/check.py build/paper-synthesis-baseline-verified`:
+    129 runs passed, including 48 new streaming runs and the existing isolated
+    inverse passes. The new runs checked 336 publications, 28672 output values,
+    and 7168 playback samples. Sources, build flags, raw observations and
+    numerical reports are retained in that ignored build directory.
+-   The dedicated smoke config resolves successfully with `--list`;
+    manuscript artifact checks, local documentation links, and
+    `git diff --check` pass. Historical paper results are unchanged.
+
+These short runs verify executable evidence pathways; they do not justify a
+speedup, tail-latency ranking, or device deadline claim. External adapters,
+the hybrid comparison, statistically justified campaigns, and publication
+figures remain open. No production DSP algorithm or plugin behavior was
+changed for this baseline work.
 
 [rack-fft]: https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp
 [fftw-real]: https://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html

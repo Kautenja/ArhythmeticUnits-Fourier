@@ -41,7 +41,7 @@ python3 benchmark/paper/run.py build/paper-session-01 --profile paper --notes 'R
 python3 benchmark/paper/check.py build/paper-session-01
 ```
 
-The paper profile has 911 distinct workloads. Defaults use seven fresh-process
+The paper profile has 1127 distinct workloads. Defaults use seven fresh-process
 repetitions per workload, at least 64 measured hops per streaming pass, 64
 frames per aggregate transform pass, two frames per individual-step pass, and
 64 warmup hops/frames. Full runs produce many raw observations and can take
@@ -66,6 +66,8 @@ criteria. The short validation commands are not publication evidence.
 | Working state | Steady, startup with zero-padded input, alternating live window/band caches, or a 32 MiB cache-pressure sweep before each timed block |
 | Actual modules | Fourier N=128/2048/16384, Spectre N=2048; H=1024, 48/96/192 kHz, mono/16-voice ports, smoothing off/on, blocks of 16/64/256 samples |
 | Transform phases | FFT/RFFT/IFFT, float/double, N=128/2048/16384; buffering, butterfly work, RFFT final butterfly plus reconstruction, IFFT normalization, every individual step, full immediate and H=257 incremental frame execution |
+| Inverse jobs | Batch/incremental complex IFFT, float/double, periodic spectrum release, all N output stores, callback/throughput, startup, instance count/alignment, background load and cache pressure |
+| Frequency-domain filtering | Complex FFT, identity or three-tap transfer function, normalized complex IFFT, overlap-save extraction and sample delivery; matched batch/incremental, float/double and the same streaming factors |
 | Driver controls | Same input traversal and background work, 1/4/16 rolling-checksum adapters, blocks of 1/16/64/256 samples, callback and throughput passes |
 
 This is a set of factor sweeps, not the Cartesian product of every factor.
@@ -94,6 +96,83 @@ python3 benchmark/paper/run.py build/paper-focused --config build/paper-workload
 actual N=2048/H=1024. Fourier rejects requested hops that panel conversion
 changes. Startup is aligned; other states permit offsets of floor(aH/count).
 Counts, capacities, and CLI values are validated before measurement.
+
+## Inverse And End-To-End Baselines
+
+The standalone transform passes already measure inverse buffering, butterflies,
+normalization, full execution, and individual steps. The following additional
+adapters make inverse and complete frequency-domain operations explicit
+streaming workloads:
+
+| Backend Family | Operation |
+| --- | --- |
+| `inverse-stream-{batch,incremental}-{float,double}` | Release one of two alternating, predetermined non-Hermitian spectra every H logical samples; compute and store all N complex inverse samples |
+| `ols-identity-{batch,incremental}-{float,double}` | Complex forward transform, N unity spectral multiplications, normalized inverse, and overlap-save output delivery |
+| `ols-fir-{batch,incremental}-{float,double}` | Same path with frequency response of the causal FIR `[0.5, -0.25, 0.125]` |
+
+These are first-party controls, not external-library adapters. Batch and
+incremental variants execute the same arithmetic and required output stores.
+Batch completes at the frame/release boundary. Incremental variants use a
+balanced work quota and publish exactly H-1 calls later, waiting for the next
+scheduled boundary. FFT input copying/permutation, inverse input conjugation,
+and the chain's frame copy remain timed bulk operations. The inverse buffer
+call inside the chain is one indivisible scheduled operation. These controls
+do not establish a uniformly bounded complete synthesis pipeline.
+
+Inverse jobs use analytically invertible complex spectra with DC and two
+non-conjugate tone bins. Inputs are prepared before timing and alternate each
+release; the common driver's scalar sample stream does not determine these
+spectra. This isolates periodic inverse work without requiring an analyzer.
+There is no synthesis window or audio playback for that family. General dense
+complex spectra remain covered by the existing inverse transform passes.
+
+The overlap-save adapters consume the common input as complex samples
+`(x, -0.25*x)`. Each frame ending at jH transforms the latest N samples, applies
+the selected transfer function, and retains the last H inverse samples. They
+require H <= N-2 so that the three-tap FIR cannot circularly alias retained
+outputs. Identity uses the same constraint and work path for comparison. No
+window is applied: this is linear convolution through overlap-save, not a
+windowed STFT synthesis or overlap-add experiment. Setup prepares the transfer
+function outside timing. Timing includes input retention/conversion, forward
+buffering/FFT, every spectral multiplication, inverse buffering/FFT/scaling,
+valid-output extraction, buffer exchange, and delivery of one sample per call.
+A common dependent checksum retains every delivered sample through the timed
+interval; its cost is included. Construction and reference preparation are
+excluded. No audio device or OS callback scheduler runs.
+
+For a publication delay d, the valid output block represents input indices
+jH-H+1 through jH and starts playback at jH+d. Algorithmic delivery delay is
+therefore H-1+d samples: H-1 for batch and 2H-2 for incremental. This includes
+block accumulation and computation scheduling, not driver/device latency or
+the FIR's own phase response. Samples before the first publication are zero.
+Compare full complex forward/inverse backends against this contract; real FFT
+or complex-to-real specializations require a separately labeled workload.
+
+The shared logic and independent verifier have no Rack dependency. Run the
+Python tests with a C++11 compiler (`CXX` selects it); they compile and run the
+standalone verifier without Catch2 or Rack:
+
+```shell
+python3 -m unittest discover -s benchmark/paper -p 'test_*.py'
+```
+
+The campaign executable still requires the Rack SDK because it also contains
+the module adapters. The tracked 56-workload configuration covers all 12 new
+adapters and eight isolated inverse passes. Use a new output directory:
+
+```shell
+python3 benchmark/paper/run.py build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py build/paper-inverse-smoke
+python3 benchmark/paper/run.py build/paper-synthesis-session-01 --profile synthesis --list
+```
+
+The `synthesis` profile has 216 streaming workloads across N=128/2048/16384,
+including selected H=257, 48/96 kHz, 1/4/16 instances, aligned/staggered
+releases, startup, load, and cache pressure. It is also part of `paper`.
+Smoothing, live analyzer controls, polyphonic voice summation, and transform
+phase pass names are rejected for the new streaming adapters. Use the existing
+`ifft-*` backends for isolated phase measurements. Smoke runs validate the
+pathway; they do not support publication performance conclusions.
 
 ## Included Work And Comparability
 
@@ -165,6 +244,15 @@ additional temporal response. Startup frames include zero padding. The replay
 is distinct from the timed observations and cannot reveal timing-dependent
 thread contention or dropped publications.
 
+For inverse jobs, `endpoint_age_samples` measures release-to-publication delay
+and `center_age_samples` equals it; no input-window midpoint is invented.
+For overlap-save, the endpoint is the newest input in the valid output block,
+and center age adds (H-1)/2, not (N-1)/2. The additive CSV column
+`playback_delay_samples` records H-1+d for overlap-save publications and -1 for
+families without audio delivery. `synthesis_contracts` in metadata identifies
+these origins, output counts, operation, and normalization. The validator
+checks these contracts and accepts older non-synthesis campaign CSVs.
+
 CSV columns `sample` and `samples` count engine samples for streaming timing,
 published sample indices for audit rows, and transform work indices/counts for
 phase rows. `kind` distinguishes those units. The metadata summaries report
@@ -188,6 +276,23 @@ Their `.stderr` files retain absolute numerical error, reference scale,
 round-trip error and work/call counts. Selected-bin references are not an
 exhaustive numerical accuracy study; the deterministic DSP regression suites
 remain necessary.
+
+The pre-campaign `--verify` also checks inverse jobs and identity/FIR chains in
+both precisions with batch/incremental scheduling. Every synthesis campaign
+then independently audits each publication during its untimed replay. Inverse
+outputs are checked against analytical complex signals. Every delivered chain
+sample and every retained output block are compared against direct time-domain
+identity/FIR evaluation at the correct delayed input index. These checks cover
+all output samples, not only selected frequency bins. Per-run stderr records
+maximum absolute error, reference scale, publication count, checked outputs,
+and checked playback samples. The artifact checker rejects missing numerical
+coverage, changed latency contracts, invalid errors, and incomplete records.
+
+The standalone verifier additionally covers silence, boundary impulses, DC,
+mixed/noisy signals, wraparound, non-dividing hops, the H=N-2 boundary, and
+deliberate normalization/output corruption. Comparisons use absolute/relative
+limits of 2e-5 for float and 1e-10 for double. This is validation of specific
+fixtures and settings, not a general error bound or a synthesis quality study.
 
 Each campaign retains:
 

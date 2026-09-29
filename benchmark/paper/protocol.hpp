@@ -54,16 +54,17 @@ struct Row {
     std::string kind;
     size_t index, analyzer, sample, samples;
     double ns, endpoint_age = 0, center_age = 0, visible_age = 0;
+    double playback_delay = -1;
     Row(std::string k, size_t i, size_t a, size_t s, size_t length, double time) :
         kind(k), index(i), analyzer(a), sample(s), samples(length), ns(time) {}
 };
 inline void print(const std::vector<Row>& rows) {
     std::cout.precision(17);
-    std::cout << "kind,index,analyzer,sample,samples,ns,endpoint_age_samples,center_age_samples,callback_visible_age_samples\n";
+    std::cout << "kind,index,analyzer,sample,samples,ns,endpoint_age_samples,center_age_samples,callback_visible_age_samples,playback_delay_samples\n";
     for (const auto& r : rows)
         std::cout << r.kind << ',' << r.index << ',' << r.analyzer << ',' << r.sample << ','
             << r.samples << ',' << r.ns << ',' << r.endpoint_age << ',' << r.center_age
-            << ',' << r.visible_age << '\n';
+            << ',' << r.visible_age << ',' << r.playback_delay << '\n';
 }
 
 /// @brief Same-thread fixed DSP load; never calibrate load to a target percentage.
@@ -82,8 +83,15 @@ struct Background {
 /// @details Adapter process() includes every output store but no audit/logging.
 /// published() is called only during the separate replay. Offsets advance each
 /// analyzer's input and schedule together, preserving the represented window.
-template<typename Adapter>
-void stream(const Config& c) {
+struct NoAudit {
+    template<typename Adapter>
+    void operator()(const Adapter&, const std::vector<float>&, size_t) const {}
+};
+
+template<typename Adapter, typename Audit = NoAudit>
+void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
+        double playback_delay = -1) {
+    if (center_offset < 0) center_offset = (c.n-1)/2.;
     const auto input = signal();
     const size_t total = c.callbacks*c.block;
     std::vector<Row> rows;
@@ -150,6 +158,7 @@ void stream(const Config& c) {
         for (size_t s = 0; s < total; ++s) {
             for (size_t a = 0; a < bank.size(); ++a) {
                 bank[a]->process(input[cursors[a]++%input.size()]);
+                audit(*bank[a], input, cursors[a]-1);
                 if (!bank[a]->published()) continue;
                 const size_t offset = c.alignment == "staggered" ? a*c.hop/c.count : 0;
                 const size_t delay = bank[a]->delay();
@@ -158,8 +167,9 @@ void stream(const Config& c) {
                 previous[a] = s;
                 Row row("publication", publications[a]++, a, s, 0, 0);
                 row.endpoint_age = delay;
-                row.center_age = row.endpoint_age + (c.n-1)/2.;
+                row.center_age = row.endpoint_age + center_offset;
                 row.visible_age = row.endpoint_age + (c.block-1-s%c.block);
+                row.playback_delay = playback_delay;
                 rows.push_back(row);
             }
         }

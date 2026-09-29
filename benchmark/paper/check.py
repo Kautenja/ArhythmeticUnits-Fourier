@@ -12,6 +12,7 @@ from pathlib import Path
 import tarfile
 
 from run import digest, summarize
+from contracts import SYNTHESIS_BACKENDS, synthesis_contract
 
 
 def validate_rows(path, config):
@@ -20,9 +21,17 @@ def validate_rows(path, config):
     publications = Counter()
     previous = {}
     backend, mode = config["backend"], config["pass_name"]
+    if backend.startswith(("ols-", "inverse-stream-")) and backend not in SYNTHESIS_BACKENDS:
+        raise ValueError("Unknown synthesis backend")
     n, hop, block = config["n"], config["hop"], config["block"]
     delay = hop-1
-    if backend.startswith("legacy-batch"):
+    center_offset, playback_delay = (n-1)/2, -1
+    if backend in SYNTHESIS_BACKENDS:
+        contract = synthesis_contract(config)
+        delay = contract["publication_delay_samples"]
+        center_offset = contract["center_offset_samples"]
+        playback_delay = contract["playback_delay_samples"]
+    elif backend.startswith("legacy-batch"):
         delay = 0
     elif backend.startswith("legacy-incremental"):
         butterflies = n//4 * ((n//2).bit_length()-1)
@@ -41,8 +50,10 @@ def validate_rows(path, config):
                 raise ValueError("Publication cadence mismatch")
             ages = (float(row["endpoint_age_samples"]), float(row["center_age_samples"]),
                     float(row["callback_visible_age_samples"]))
-            if ages != (delay, delay+(n-1)/2, delay+block-1-sample%block):
+            if ages != (delay, delay+center_offset, delay+block-1-sample%block):
                 raise ValueError("Publication age mismatch")
+            if backend in SYNTHESIS_BACKENDS and float(row.get("playback_delay_samples", "nan")) != playback_delay:
+                raise ValueError("Playback delay mismatch")
             previous[analyzer] = sample
             publications[analyzer] += 1
     expected = Counter(timer=1024)
@@ -72,6 +83,22 @@ def validate_rows(path, config):
         raise ValueError(f"Observation count mismatch: {counts} != {expected}")
 
 
+def validate_synthesis_accuracy(accuracy, config, publications):
+    """Reject missing, truncated, or numerically invalid full-output audits."""
+    contract = synthesis_contract(config)
+    playback = (config["callbacks"]*config["block"]*config["count"]
+                if contract["family"] == "overlap-save" else 0)
+    expected = playback + publications*contract["outputs_per_publication"]
+    tolerance = 2e-5 if config["backend"].endswith("float") else 1e-10
+    error, scale = accuracy["max_abs_error"], accuracy["max_reference"]
+    if (not all(math.isfinite(v) and v >= 0 for v in (error, scale))
+            or error > tolerance*max(1, scale)
+            or accuracy["checked_samples"] != expected
+            or accuracy["playback_checked_samples"] != playback
+            or accuracy["publications"] != publications or not publications):
+        raise ValueError("Invalid synthesis numerical report")
+
+
 def check(directory):
     metadata = json.loads((directory / "metadata.json").read_text())
     if metadata["schema"] != 1 or metadata["status"] != "complete":
@@ -94,6 +121,11 @@ def check(directory):
         validate_rows(directory/run["raw"], config)
         if summarize(directory/run["raw"], config) != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
+        if config["backend"] in SYNTHESIS_BACKENDS:
+            if metadata.get("synthesis_contracts", {}).get(str(run["workload"])) != synthesis_contract(config):
+                raise ValueError("Synthesis contract mismatch")
+            accuracy = json.loads((directory/run["stderr"]).read_text())
+            validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"])
         if config["pass_name"] in ("complete", "incremental", "phases", "steps"):
             accuracy = json.loads((directory/run["stderr"]).read_text())
             values = [accuracy[key] for key in ("max_abs_error", "max_reference", "roundtrip_max_abs_error")]

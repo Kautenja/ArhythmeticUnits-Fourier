@@ -7,6 +7,7 @@
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
 #include "../paper/protocol.hpp"
+#include "../paper/synthesis.hpp"
 
 Plugin* plugin_instance = nullptr;
 
@@ -405,7 +406,10 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string(argv[1]) == "--verify") {
             verify_controls<float>();
             verify_controls<double>();
-            std::cout << "Matched frame outputs and publication delays verified for 48 configurations and two controls\n";
+            verify_synthesis<float>();
+            verify_synthesis<double>();
+            std::cout << "Matched analysis frames verified for 48 configurations and two controls; "
+                << "inverse jobs and overlap-save identity/FIR verified in both precisions\n";
             return 0;
         }
         require(argc == 17, "Use benchmark/paper/run.py; expected 16 protocol arguments");
@@ -430,7 +434,13 @@ int main(int argc, char** argv) {
         require(c.backend == "fourier" || c.backend == "spectre" || c.voices == 1,
             "Voice summation is only a module workload");
         Paper::Context context(c.rate);
-        if (c.backend.compare(0, 5, "core-") == 0 || c.backend == "fourier" || c.backend == "spectre"
+        if (synthesis_backend(c.backend)) {
+            require(c.pass == "callback" || c.pass == "throughput", "Invalid synthesis streaming pass");
+            require(c.callbacks*c.block >= 2*c.hop, "Measure at least two complete hops");
+            require(c.state != "startup" || c.alignment == "aligned", "Startup must be aligned");
+            if (c.backend.find("-float") != std::string::npos) synthesis_stream<float>(c);
+            else synthesis_stream<double>(c);
+        } else if (c.backend.compare(0, 5, "core-") == 0 || c.backend == "fourier" || c.backend == "spectre"
             || c.backend.compare(0, 7, "legacy-") == 0 || c.backend == "driver") {
             require(c.pass == "callback" || c.pass == "throughput", "Invalid streaming pass");
             require(c.callbacks*c.block >= 2*c.hop, "Measure at least two complete hops");
