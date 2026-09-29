@@ -135,8 +135,8 @@ The self-contained [LaTeX source](docs/whitepaper/fourier.tex) builds with
 
 For the implementation and scheduling analysis, cite the technical report.
 GitHub's **Cite this repository** button uses the preferred report citation in
-[CITATION.cff][citation-cff], and [CITATION.bib](CITATION.bib) supplies the same
-report entry.
+[CITATION.cff][citation-cff], and [CITATION.bib](docs/whitepaper/CITATION.bib)
+supplies the same report entry.
 
 ```bibtex
 @techreport{kauten2026fourier,

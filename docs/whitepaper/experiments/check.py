@@ -97,7 +97,7 @@ for work in range(1,257):
 
 assert 'Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis' in (ROOT / 'CITATION.cff').read_text()
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
-assert 'kauten2026fourier' in (ROOT / 'CITATION.bib').read_text()
+assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')
 
 # The prototype campaign is separate from the original FFT campaign and from

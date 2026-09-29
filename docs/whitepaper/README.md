@@ -43,7 +43,7 @@ escape or BibTeX pass is required.
     separately from the production implementation.
 -   [data/](data/): Archived raw observations and derived statistics.
 -   [../../CITATION.cff](../../CITATION.cff) and
-    [../../CITATION.bib](../../CITATION.bib): The shared report citation for this work.
+    [CITATION.bib](CITATION.bib): The shared report citation for this work.
 
 Run the artifact consistency check from the repository root:
 
@@ -112,9 +112,9 @@ endorsement, and moderation are separate from a successful local build.
 Nothing in this workflow publishes the paper automatically.
 
 After a public deposit, update the report URL and identifier consistently in
-`CITATION.cff`, `CITATION.bib`, and the project README. Keep the report title
-and author spelling stable. Link the public abstract page and freely
-accessible, searchable PDF from the project. If a separate publication page
+`CITATION.cff`, `docs/whitepaper/CITATION.bib`, and the project README. Keep
+the report title and author spelling stable. Link the public abstract page
+and freely accessible, searchable PDF from the project. If a separate publication page
 is hosted, provide accurate title, author, publication-date, and PDF metadata
 as described in the
 [Google Scholar inclusion guidelines](https://scholar.google.com/intl/en/scholar/inclusion.html).
