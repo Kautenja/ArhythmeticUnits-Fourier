@@ -41,11 +41,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends g++ scons
-
-      - name: Install macOS test tools
-        if: runner.os == 'macOS'
-        run: brew install scons
+          sudo apt-get install --yes --no-install-recommends g++ make
 
       - name: Install Windows test tools
         if: runner.os == 'Windows'
@@ -54,15 +50,21 @@ jobs:
           msystem: UCRT64
           install: >-
             mingw-w64-ucrt-x86_64-gcc
-            scons
+            make
+
+      - name: Check Make build boundaries
+        if: runner.os != 'Windows'
+        run: make check-build
 
       - name: Run DSP suites
         run: |
           test -f dep/Catch2/catch_amalgamated.hpp
           test -f dep/Catch2/catch_amalgamated.cpp
           g++ --version
-          scons --version
-          scons -j2 test
+          make --version
+          make -j2 test RACK_DIR=/nonexistent-sdk
+          make -j2 benchmark-build RACK_DIR=/nonexistent-sdk
+          make -j2 benchmark BENCHMARK_ARGS="--list-tests" RACK_DIR=/nonexistent-sdk
 
   rack:
     name: Rack plugin and headless suites (${{ matrix.platform }})

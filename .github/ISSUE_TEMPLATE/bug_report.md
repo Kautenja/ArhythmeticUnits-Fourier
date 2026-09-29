@@ -49,4 +49,4 @@ Remove personal paths or other private information before sharing logs. -->
 <!-- Remove this section for ordinary Rack usage reports. For development
 failures, include the commit, exact command run from the repository root,
 compiler/tool versions, Rack SDK version if used, and relevant error output.
-Include Python/SCons versions only for failures involving those tools. -->
+Include Python/Make versions only for failures involving those tools. -->

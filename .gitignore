@@ -1,4 +1,6 @@
 # Rack and standalone DSP build outputs
+/.build/
+/.build-legacy/
 /build/
 /build_src/
 /build_test/
@@ -9,7 +11,7 @@
 /plugin.so
 /lib_KautenjaDSP.so
 
-# SCons state
+# Legacy SCons state (safe to remove locally)
 /.sconsign*
 /.sconf_temp/
 /config.log

@@ -26,7 +26,7 @@ def digest(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=ROOT / "docs/whitepaper/build/evaluation")
+    parser.add_argument("--out", type=Path, default=ROOT / "docs/whitepaper/.build/evaluation")
     parser.add_argument("--cpu", default="unrecorded")
     parser.add_argument("--memory-gib", type=int)
     args = parser.parse_args()

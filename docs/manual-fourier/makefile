@@ -6,7 +6,7 @@ default: manual
 # the source tex file basename (no `.tex`)
 SOURCE=manual
 # the build directory
-BUILD=build
+BUILD=.build
 
 # File-types to clean out from the build folder after pdf compilation
 CLEAN=*.aux *.nav *.log *.out *.snm *.toc *.bbl *.blg *.brf *.swp *.nlo *.spl

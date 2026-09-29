@@ -20,7 +20,8 @@ import tarfile
 from contracts import SYNTHESIS_BACKENDS, synthesis_contract
 
 ROOT = Path(__file__).resolve().parents[2]
-BINARY = ROOT / "build/benchmark/rack/paper"
+BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
+                 ".build/benchmark/rack/paper")
 BASE = dict(backend="core-float", pass_name="callback", n=2048, hop=1024,
             block=64, count=1, alignment="aligned", load=0, smooth=0, voices=1,
             rate=48000, state="steady", cache_mib=0)
@@ -228,7 +229,7 @@ def main():
     # Archive working sources, including uncommitted benchmark development.
     sources = sorted({p for base in (ROOT/"src", ROOT/"benchmark") for p in base.rglob("*")
                       if p.is_file() and "__pycache__" not in p.parts} |
-                     {ROOT/"Makefile", ROOT/"SConstruct", ROOT/"plugin.json"})
+                     {ROOT/"Makefile", ROOT/"plugin.json", *ROOT.glob("mk/*.mk")})
     metadata["source_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in sources}
     with tarfile.open(output/"source.tar.gz", "w:gz") as archive:
         for path in sources:

@@ -568,16 +568,16 @@ not outcomes inferred from this comparison's block measurements.
 
 ## Validation Commands
 
-Run from the repository root with Python 3, SCons, and the configured Rack SDK
+Run from the repository root with Python 3, Make, and the configured Rack SDK
 and compiler. The commands below exist today; the shown runtime library path
 assumes the default `../..` Rack layout. Substitute the configured SDK directory
 for a different layout; Windows needs its DLL search path configured.
 
 ```shell
 python3 -m unittest discover -s benchmark/paper -p 'test_*.py'
-scons test/dsp/test_spectrum_analysis.cpp
+make test/dsp/test_spectrum_analysis
 make benchmark-paper-build
-DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." build/benchmark/rack/paper --verify
+DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify
 make -C docs/whitepaper check
 git diff --check
 ```
@@ -587,9 +587,9 @@ The Python suite now compiles the host-independent synthesis verifier using
 The following first-party configuration exists now; use new directories:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py build/paper-inverse-smoke
-python3 benchmark/paper/run.py build/paper-synthesis-session-01 --profile synthesis --list
+python3 benchmark/paper/run.py .build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-inverse-smoke
+python3 benchmark/paper/run.py .build/paper-synthesis-session-01 --profile synthesis --list
 ```
 
 The dedicated smoke config contains 48 streaming and eight isolated inverse
@@ -604,16 +604,16 @@ required implementation smoke and inventory commands; output directories must
 be new. Listing the pilot resolves workloads without measuring them:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-external-smoke --config benchmark/paper/configs/external-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py build/paper-external-smoke
-python3 benchmark/paper/run.py build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json --list
+python3 benchmark/paper/run.py .build/paper-external-smoke --config benchmark/paper/configs/external-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-external-smoke
+python3 benchmark/paper/run.py .build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json --list
 ```
 
 Only in FR-11, after the readiness gate and host preparation, run the pilot:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json
-python3 benchmark/paper/check.py build/paper-external-pilot
+python3 benchmark/paper/run.py .build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json
+python3 benchmark/paper/check.py .build/paper-external-pilot
 ```
 
 Document dependency installation/build commands when versions and integration

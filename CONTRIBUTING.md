@@ -30,8 +30,8 @@ Fourier has two separate build paths:
 
 | Work | Required Tools |
 | --- | --- |
-| Standalone DSP tests | Git, Python 3, SCons, and a C++14 compiler |
-| Rack plugin and integration tests | The above, plus Make, `jq`, and a compatible Rack 2 SDK or prepared Rack source tree |
+| Standalone DSP tests | Git, GNU Make, and a C++14 compiler |
+| Rack plugin and integration tests | The above, plus `jq`, and a compatible Rack 2 SDK or prepared Rack source tree |
 | Interactive module checks | A Rack 2 installation matching your plugin's platform and architecture |
 | User manual PDFs | Make and a TeX distribution with `pdflatex` and the manual's packages |
 
@@ -48,24 +48,24 @@ Homebrew installation:
 
 ```shell
 xcode-select --install
-brew install git python scons
+brew install git python
 ```
 
 On Ubuntu or Debian, use the system packages:
 
 ```shell
 sudo apt-get update
-sudo apt-get install git build-essential python3 scons
+sudo apt-get install git build-essential python3 make
 ```
 
 On Windows, install MSYS2 and use its **UCRT64** shell for standalone tests.
 After completing MSYS2's initial package updates, install:
 
 ```shell
-pacman -S --needed git mingw-w64-ucrt-x86_64-gcc python scons
+pacman -S --needed git mingw-w64-ucrt-x86_64-gcc python make
 ```
 
-Use MSYS2's Python and SCons in that shell, as in the standalone Windows CI
+Use MSYS2's Python and Make in that shell, as in the standalone Windows CI
 environment. For Rack plugin builds, follow VCV's platform toolchain
 instructions below.
 
@@ -249,56 +249,72 @@ The root `Makefile` compiles `src/*.cpp` into the Rack plugin using the
 selected Rack tree's `plugin.mk`. Nested `.cpp` files are not automatically
 included by that wildcard.
 
-`SConstruct` builds standalone DSP tests and benchmarks and discovers
-`.cpp` files recursively under `test` and `benchmark/dsp`. DSP headers
-are included directly by each suite; there is no standalone DSP library.
-Rack benchmark and test sources are excluded and built separately by Make.
-SCons does not build the Rack modules or exercise their SIMD instantiations
-and UI.
-See [Development And Testing](#development-and-testing) for commands.
+`mk/standalone.mk` discovers standalone `.cpp` suites recursively under
+`test` (excluding `test/rack`) and `benchmark/dsp`. Each suite includes DSP
+headers directly; there is no standalone DSP library. `mk/rack.mk` supplies
+headless Rack tests and benchmarks. Standalone goals skip the SDK entirely,
+including when `RACK_DIR` points to a missing directory. Mixed invocations
+such as `make test all` load the SDK but keep standalone flags independent.
+
+All C++ objects, test/benchmark binaries, and instrumentation reports live
+under `.build/`. The plugin binary and `dist/` retain Rack's expected paths.
+The SDK's link, packaging, and installation recipes remain in control; the
+root Makefile redirects its object and dependency paths into `.build/`.
+`make clean` removes `.build/`, the plugin binaries, and `dist/` without an
+SDK. Old `build/`, `build_test/`, and `build_benchmark/` directories are not
+reused or automatically deleted; preserve any experiment results before
+removing them locally. `.build-legacy/` is ignored and can hold old outputs
+that should survive `make clean`.
 
 ## Development And Testing
 
-Run the commands below from the repository root. The two build systems
-serve different purposes: SCons verifies standalone DSP, while Make builds
-the VCV Rack plugin.
+Run the commands below from the repository root. Bare `make` builds the
+Rack plugin; standalone tests and benchmarks require explicit targets.
+`make check-build` uses Python 3 to verify build isolation, incremental
+rebuilds, failure propagation, and benchmark serialization in a temporary
+fixture without an SDK.
 
 ### Standalone DSP Tests
 
-Use Python 3, SCons, a C++14-capable compiler, and the supplied Catch2
-sources from the [environment setup](#set-up-your-environment). SCons
-defaults to `g++`, which may resolve to Apple Clang on macOS. To choose
-Clang explicitly, use `scons CXX=clang++ test`; an environment `CXX` alone
-does not override this build's default.
+Use GNU Make (including macOS's bundled Make 3.81), a C++14-capable compiler,
+and the supplied Catch2 sources. Standalone builds default to `g++`, which
+may resolve to Apple Clang on macOS; instrumentation defaults to `clang++`.
+Both environment and command-line `CXX` overrides are honored, for example
+`make CXX=clang++ test`. Python 3 is needed for instrumentation, build-system
+checks, and paper experiments, but not ordinary C++ suites.
 
-Run all suites (also the default for bare `scons`):
+Build and run all standalone suites:
 
 ```shell
-scons test
+make test
 ```
 
-Run one suite through its alias, which includes the source `.cpp` suffix:
+Run one suite through its alias (without the source `.cpp` suffix):
 
 ```shell
-scons test/dsp/test_fft.cpp
+make test/dsp/test_fft
 ```
 
 Every test `.cpp` is a separate executable linked with Catch2's supplied
 `main`. Its amalgamated implementation is compiled once per build
 configuration, with separate objects for tests, benchmarks, and each
-instrumentation mode. The SCons aliases build and execute the suites and are
-marked `AlwaysBuild`. To pass Catch2 options, build the executable target
-and invoke it directly:
+instrumentation mode. The phony aliases always execute the suites.
+`make test-build` only builds.
+Use `TEST_ARGS="--list-tests"` to pass Catch2 options through Make, or build
+the executable target and invoke it directly:
 
 ```shell
-scons build_test/dsp/test_fft
-./build_test/dsp/test_fft --list-tests --verbosity quiet
+make .build/test/standalone/dsp/test_fft
+./.build/test/standalone/dsp/test_fft --list-tests --verbosity quiet
 ```
+
+On Windows, executable paths end in `.exe`. Make tracks header dependencies
+and compiler/flag changes; unchanged builds reuse their objects.
 
 Use names returned by that executable when selecting individual cases.
 Other suites cover DFT, windows, circular buffers, math helpers, IEEE-754
 behavior, and triggers. Add focused tests directly under `test/dsp/`;
-SCons discovers new `.cpp` files without a hand-maintained suite list.
+Make discovers new `.cpp` files without a hand-maintained suite list.
 
 Prefer deterministic `SCENARIO`/`GIVEN`/`WHEN`/`THEN` or `TEST_CASE` checks.
 For transform changes, test known signals and independent expectations:
@@ -319,13 +335,13 @@ separate SIMD suite requires the Rack headers and uses the plugin compiler
 flags, without linking the Rack library or creating an engine:
 
 ```shell
-scons test/dsp/test_dc_blocker.cpp
+make test/dsp/test_dc_blocker
 make test-dc-blocker-simd
 ```
 
 The SIMD suite compares independent scalar filters with all four Rack SIMD
 lanes under different signals and settings, including reconfiguration and
-reset. It is separate from `scons test` and runs in CI's Rack job.
+reset. It is separate from `make test` and runs in CI's Rack job.
 
 ### Continuous Integration
 
@@ -335,9 +351,12 @@ pull requests, pushes to `main` (including merges), and version tags matching
 release publication only rebuilds and uploads the PDFs, avoiding a second
 six-job code matrix for the same release.
 
-The three standalone jobs run `scons -j2 test` with Ubuntu 24.04 GCC,
+The three standalone jobs run `make -j2 test` with Ubuntu 24.04 GCC,
 macOS 14 Apple Clang, and Windows 2022 MSYS2 UCRT64 GCC. Windows uses
-MSYS2's SCons and Python to preserve POSIX paths and GNU build tools.
+MSYS2's Make to preserve POSIX paths and GNU build tools. Each job also
+builds standalone benchmarks and lists their workloads without timing them.
+These commands use a missing `RACK_DIR` to verify SDK independence. Linux
+and macOS additionally run the small `make check-build` regression fixtures.
 
 Three independent Rack jobs download the official Rack 2.6.3 SDKs, verify
 pinned SHA-256 checksums, and run `make -j2 all` and `make -j2 test-rack`:
@@ -381,7 +400,7 @@ jobs. Reports and full compiler/test diagnostics are uploaded for 14 days,
 including diagnostics from failed runs. Coverage summaries also appear in the
 workflow summary. No external reporting account or token is required.
 
-From the repository root, use Python 3, SCons, and Clang on Linux or macOS:
+From the repository root, use Python 3, Make, and Clang on Linux or macOS:
 
 ```shell
 python3 scripts/check-instrumented.py coverage dsp
@@ -409,8 +428,8 @@ CXX=clang++-18 LLVM_PROFDATA=llvm-profdata-18 LLVM_COV=llvm-cov-18 \
 The [LLVM source coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html)
 reports are separate by test workload:
 
--   `build/reports/coverage/dsp/`: standalone DSP suites, reporting `src/dsp/`.
--   `build/reports/coverage/rack/`: all five headless Rack suites, reporting
+-   `.build/reports/coverage/dsp/`: standalone DSP suites, reporting `src/dsp/`.
+-   `.build/reports/coverage/rack/`: all five headless Rack suites, reporting
     first-party `src/`, including DSP templates instantiated by the modules.
 
 Each contains `html/index.html`, `summary.txt`, `coverage.lcov`,
@@ -442,8 +461,8 @@ headless Rack suites. Diagnostics fail immediately, with UBSan recovery
 disabled. The runner uses `halt_on_error=1` for both runtimes and requests
 UBSan stack traces. Leak checking uses the platform runtime's default
 (enabled on Linux); no project suppression list is applied. Logs live at
-`build/reports/asan-ubsan/dsp/run.log` and
-`build/reports/asan-ubsan/rack/run.log`.
+`.build/reports/asan-ubsan/dsp/run.log` and
+`.build/reports/asan-ubsan/rack/run.log`.
 
 [TSan](https://clang.llvm.org/docs/ThreadSanitizer.html) runs separately from
 ASan/UBSan. `test/threads/test_display_mailbox.cpp` checks retained-slot
@@ -451,13 +470,13 @@ ownership, superseded publications, coherent concurrent payloads, monotonic
 sequence values, and final publication delivery. Its bounded producer sends
 100000 snapshots; the reader inspects held storage during publication.
 The runner sets `halt_on_error=1:exitcode=66` and saves
-`build/reports/tsan/mailbox/run.log`. This focused run checks the
+`.build/reports/tsan/mailbox/run.log`. This focused run checks the
 single-producer/single-consumer mailbox contract. It does not establish race
 freedom for module controls, Rack internals, or an entire engine/UI session.
-The mailbox suite also runs without instrumentation in `scons test` or alone
-with `scons test-mailbox`.
+The mailbox suite also runs without instrumentation in `make test` or alone
+with `make test-mailbox`.
 
-Instrumented objects and executables live under `build/instrumented/`,
+Instrumented objects and executables live under `.build/instrumented/`,
 separate from ordinary tests and plugin products. DSP coverage uses `-O0`;
 Rack coverage retains SDK optimization and floating-point flags. Sanitizers
 use `-O1`, debug symbols, and frame pointers, retaining Rack's configured
@@ -502,7 +521,7 @@ Reopen Rack and test the affected modules. See the
 
 ### Choosing Validation
 
--   **DSP behavior:** Run the focused suite while iterating, then `scons test`.
+-   **DSP behavior:** Run the focused suite while iterating, then `make test`.
     Build the plugin when changed headers are consumed by Rack, especially
     for template or SIMD changes.
 -   **Module state or controls:** Build the plugin, test extracted reusable
@@ -532,7 +551,7 @@ combinations of run, fill, Bezier, and AC-coupling settings, plus missing-field
 defaults. Spectre coverage includes round trips for every supported color map
 and fallback to Magma for missing or invalid saved values, including wrong
 JSON types and out-of-range integers. The `test/rack/` tests are built by Make
-and excluded from the standalone SCons suites. The suite also checks
+and excluded from the standalone suites. The suite also checks
 context-menu setting changes through Rack's history API, including undo, redo, unchanged selections, preservation of other module
 state, and missing modules. It does not exercise the Rack UI or loading a
 complete patch file.
@@ -548,7 +567,7 @@ texture backend. They cover context recreation while frozen, widget deletion,
 unrendered previews, repeated cleanup, texture-creation failure, and ownership
 when switching between live contexts. They also compare cached image bytes
 with the original full-image calculation, check cache invalidation and history
-wraparound. Standalone mailbox concurrency checks run through SCons and the
+wraparound. Standalone mailbox concurrency checks run through Make and the
 focused TSan command above.
 They do not create an OpenGL window. In Rack, also check that Spectre resumes displaying
 its frozen history after closing and reopening a host-managed editor.
@@ -562,7 +581,7 @@ make inspect-displays
 
 This briefly creates a native window, renders both displays, recreates the
 window/context, changes scales, and changes zoom. It checks framebuffer handles
-and GL errors and saves `build/test/rack/display-*.ppm` for visual inspection.
+and GL errors and saves `.build/test/rack/display-*.ppm` for visual inspection.
 It is not a complete interactive Rack or DAW session.
 
 To inspect the complete panels and controls with the same desktop prerequisites:
@@ -575,7 +594,7 @@ This renders both real module widgets with test signals and both null-module
 browser previews. Each set covers light and dark themes, 75-percent zoom,
 one-pixel density, native pixel density, and graphics-context recreation.
 It verifies module dimensions, settled panel framebuffers, and GL errors, and
-saves `build/test/rack/panel-{live,preview}-{0,1,2,3,4}.ppm`. Scenarios 0 and 4
+saves `.build/test/rack/panel-{live,preview}-{0,1,2,3,4}.ppm`. Scenarios 0 and 4
 show the light panel before and after context recreation; 1 is dark, 2 is zoomed
 out, and 3 is dark at one-pixel density. On a standard-density desktop, native
 and one-pixel density are the same. The inspector does not open an audio device
@@ -583,12 +602,12 @@ or exercise mouse interaction or patch loading.
 
 For a visual comparison against an older panel export, the executable accepts
 an optional final directory containing that version's four panel SVGs. For
-example, with those files already saved in `build/panel-reference/`:
+example, with those files already saved in `.build/panel-reference/`:
 
 ```shell
 DYLD_LIBRARY_PATH="$PWD/../.." LD_LIBRARY_PATH="$PWD/../.." \
-    build/test/rack/inspect_panels "$PWD/../.." "$PWD" \
-    "$PWD/build/test/rack/reference" "$PWD/build/panel-reference"
+    .build/test/rack/inspect_panels "$PWD/../.." "$PWD" \
+    "$PWD/.build/test/rack/reference" "$PWD/.build/panel-reference"
 ```
 
 This example uses the default Rack source-tree layout; substitute the SDK path
@@ -650,15 +669,15 @@ They build with C++14 and `-O3`, independently of Rack. Run from the repository
 root with the same dependencies as the standalone tests:
 
 ```shell
-scons -j4 benchmark-build
-scons benchmark
-scons benchmark/dsp/benchmark_fft.cpp
+make -j4 benchmark-build
+make benchmark
+make benchmark/dsp/benchmark_fft
 ```
 
-`benchmark-build` only compiles; `benchmark` and the `.cpp` aliases always run.
-SCons excludes `benchmark/rack/`, which requires the SDK and Make. A command-line
-compiler override, such as `scons CXX=clang++ benchmark-build`, applies to the
-benchmarks too. Use the same override for the subsequent run.
+`benchmark-build` only compiles; `benchmark` and the per-suite aliases always
+run. Standalone targets exclude `benchmark/rack/`, which requires the SDK.
+A command-line compiler override, such as
+`make CXX=clang++ benchmark-build`, applies to the benchmarks too. Use the same override for the subsequent run.
 
 | Suite Under `benchmark/dsp/` | Timed Work Per Iteration |
 | --- | --- |
@@ -695,17 +714,17 @@ includes a fresh RFFT each iteration, avoiding repeated smoothing of old output.
 For a quick executable smoke check, lower the sampling cost explicitly:
 
 ```shell
-scons benchmark BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
+make benchmark BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
 ```
 
 For focused runs, listing workloads, or machine-readable Catch2 XML:
 
 ```shell
-./build_benchmark/dsp/benchmark_fft --list-tests --verbosity quiet
-./build_benchmark/dsp/benchmark_fft "[fft]" --reporter xml --out /tmp/fourier-fft.xml
+./.build/benchmark/standalone/dsp/benchmark_fft --list-tests --verbosity quiet
+./.build/benchmark/standalone/dsp/benchmark_fft "[fft]" --reporter xml --out /tmp/fourier-fft.xml
 ```
 
-Build first, then time serially on an otherwise idle host. SCons serializes
+Build first, then time serially on an otherwise idle host. Make serializes
 benchmark suites even with `-j`, but concurrent compilation or unrelated
 processes can still distort measurements. Do not run Rack and standalone
 benchmarks concurrently. For an optimization, compare baseline and candidate
@@ -726,8 +745,8 @@ process observations for later backend comparisons. Run its short validation
 campaign from the repository root:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py build/paper-smoke
+python3 benchmark/paper/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-smoke
 ```
 
 These simulate audio callbacks; compute budget exceedances are not device
@@ -740,13 +759,13 @@ results. The historical manuscript campaigns are preserved separately.
 With the normal Rack build dependencies, run from the repository root:
 
 ```shell
-make build/benchmark/rack/dsp
+make .build/benchmark/rack/dsp
 make benchmark-dsp
 make benchmark-dsp BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
 ```
 
 These targets honor `RACK_DIR` and use the SDK's optimization, architecture,
-and floating-point flags, including flags that differ from standalone SCons.
+and floating-point flags, including flags that differ from standalone builds.
 `benchmark/rack/dsp.cpp` drives the actual modules at 48 kHz. Each iteration
 processes 4096 engine samples with precomputed voltages, connected mono or
 sixteen-voice inputs, AC coupling, Hann windows, and smoothing off or one-third
@@ -767,7 +786,7 @@ both modules through their exported Rack model factories. From the repository
 root, with the usual Rack dependencies:
 
 ```shell
-make build/benchmark/rack/modules
+make .build/benchmark/rack/modules
 make benchmark-modules
 make benchmark-modules BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
 make benchmark-modules BENCHMARK_ARGS="[lifecycle]"
@@ -884,16 +903,16 @@ running, forced-rebuild, and engine-only workloads. Graphics workloads use
 120 frames; running supplies 800 engine samples per frame (48 kHz / 60 Hz).
 Engine-only supplies 32768 samples per iteration without drawing. It does not
 measure driver upload latency, GPU rendering, framebuffer speed, or whole-patch
-performance. The [raw display caching measurements](specs/archive/001-display-caching.csv)
-retain the historical before/after timings; the removed specification in Git
-history records the workload context and validation limits.
+performance. Historical display caching measurements and their removed
+specification remain in Git history, including the workload context and
+validation limits.
 
 #### One-Hop Spectrum Analysis
 
 The production analyzer is tested independently of Rack and in both modules:
 
 ```shell
-scons test/dsp/test_spectrum_analysis.cpp
+make test/dsp/test_spectrum_analysis
 make test-spectrum-points test-display-lifecycle test-serialization
 ```
 
@@ -921,8 +940,8 @@ make -C docs/manual-fourier
 make -C docs/manual-spectre
 ```
 
-Outputs are `docs/manual-fourier/build/manual.pdf` and
-`docs/manual-spectre/build/manual.pdf`. Each Makefile recreates its local
+Outputs are `docs/manual-fourier/.build/manual.pdf` and
+`docs/manual-spectre/.build/manual.pdf`. Each Makefile recreates its local
 build directory and stops on LaTeX errors. Shell escape is disabled. Inspect
 rendered pages when changing manual content or layout.
 
@@ -932,7 +951,7 @@ Build the self-contained white paper with `latexmk` and its TeX packages:
 make -C docs/whitepaper
 ```
 
-This writes `docs/whitepaper/build/paper.pdf` without running experiments.
+This writes `docs/whitepaper/.build/paper.pdf` without running experiments.
 
 The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
 all three PDFs on relevant pull requests and pushes to `main`: changes to
@@ -967,9 +986,9 @@ permissions and require no additional secrets. GitHub's built-in token does
 not trigger a release workflow when another workflow creates the release with
 that token; use the manual trigger in that case.
 
-Keep generated binaries, object files, SCons caches, PDFs, and build folders
-out of source changes. Bare `scons` builds and runs the standalone tests;
-benchmarks require the explicit targets above.
+Keep generated binaries, object files, PDFs, and build folders out of source
+changes. Bare `make` builds the Rack plugin; tests and benchmarks require
+the explicit targets above.
 
 ## Submit A Pull Request
 

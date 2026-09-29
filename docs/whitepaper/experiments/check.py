@@ -35,7 +35,7 @@ for label in re.findall(r'\\(?:eqref|ref)\{([^}]+)\}', tex):
     assert label in labels, label
 
 for path in [ROOT / 'README.md', *PAPER.rglob('*.md')]:
-    if path.is_relative_to(PAPER) and 'build' in path.relative_to(PAPER).parts:
+    if path.is_relative_to(PAPER) and {'.build', '.build-legacy', 'build'} & set(path.relative_to(PAPER).parts):
         continue
     for target in re.findall(r'\]\(([^)]+)\)', path.read_text()):
         if '://' not in target and not target.startswith('#'):

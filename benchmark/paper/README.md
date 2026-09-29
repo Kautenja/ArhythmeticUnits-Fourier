@@ -19,7 +19,7 @@ matched frame contracts independently:
 
 ```shell
 make benchmark-paper-build
-DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." build/benchmark/rack/paper --verify
+DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify
 python3 -m unittest discover -s benchmark/paper -p 'test_*.py'
 ```
 
@@ -28,17 +28,17 @@ sets the usual macOS/Linux library search variables for its child processes.
 To validate every adapter quickly:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py build/paper-smoke
+python3 benchmark/paper/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-smoke
 ```
 
 For the paper matrix, first inspect the resolved workload list, then record a
 campaign on an otherwise idle host. The output directory must be new:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-session-01 --profile paper --list
-python3 benchmark/paper/run.py build/paper-session-01 --profile paper --notes 'Record actual power mode, affinity policy and competing activity here'
-python3 benchmark/paper/check.py build/paper-session-01
+python3 benchmark/paper/run.py .build/paper-session-01 --profile paper --list
+python3 benchmark/paper/run.py .build/paper-session-01 --profile paper --notes 'Record actual power mode, affinity policy and competing activity here'
+python3 benchmark/paper/check.py .build/paper-session-01
 ```
 
 The paper profile has 1127 distinct workloads. Defaults use seven fresh-process
@@ -83,10 +83,10 @@ baseline values in `run.py`; unknown fields are rejected. For example:
 ]
 ```
 
-Save that array as `build/paper-workloads.json`, then run:
+Save that array as `.build/paper-workloads.json`, then run:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-focused --config build/paper-workloads.json
+python3 benchmark/paper/run.py .build/paper-focused --config .build/paper-workloads.json
 ```
 
 `pass_name` is `callback` or `throughput` for streaming adapters and `complete`,
@@ -161,9 +161,9 @@ the module adapters. The tracked 56-workload configuration covers all 12 new
 adapters and eight isolated inverse passes. Use a new output directory:
 
 ```shell
-python3 benchmark/paper/run.py build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py build/paper-inverse-smoke
-python3 benchmark/paper/run.py build/paper-synthesis-session-01 --profile synthesis --list
+python3 benchmark/paper/run.py .build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-inverse-smoke
+python3 benchmark/paper/run.py .build/paper-synthesis-session-01 --profile synthesis --list
 ```
 
 The `synthesis` profile has 216 streaming workloads across N=128/2048/16384,

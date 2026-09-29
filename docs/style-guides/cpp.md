@@ -8,8 +8,8 @@ namespaces, build structure, and licensing.
 ## Project Defaults
 
 -   Use C++11 for reusable DSP and the shipped Rack plugin. Tests and
-    benchmarks use C++14 for Catch2 v3, as specified by `SConstruct` and
-    the headless targets in `Makefile`. Keep newer language features out of
+    benchmarks use C++14 for Catch2 v3, as specified by `mk/standalone.mk` and
+    the headless targets in `mk/rack.mk`. Keep newer language features out of
     production headers and sources.
 -   Use `.hpp` for C++ headers and `.cpp` for implementation and test files.
     Keep templates in headers. Most current DSP is intentionally header-only.

@@ -6,7 +6,7 @@ on:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
       - docs/whitepaper/fourier.tex
-      - docs/whitepaper/Makefile
+      - docs/whitepaper/makefile
       - plugin.json
       - .github/workflows/manuals.yml
   push:
@@ -16,7 +16,7 @@ on:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
       - docs/whitepaper/fourier.tex
-      - docs/whitepaper/Makefile
+      - docs/whitepaper/makefile
       - plugin.json
       - .github/workflows/manuals.yml
   release:
@@ -59,12 +59,16 @@ jobs:
           output_dir="$RUNNER_TEMP/publication-pdfs"
           mkdir -p "$output_dir"
           if [ -d docs/manual-fourier ]; then
-            make -C docs/manual-fourier
-            make -C docs/manual-spectre
+            make -C docs/manual-fourier BUILD=.build
+            make -C docs/manual-spectre BUILD=.build
             make -C docs/whitepaper
-            cp docs/manual-fourier/build/manual.pdf "$output_dir/Fourier.pdf"
-            cp docs/manual-spectre/build/manual.pdf "$output_dir/Spectre.pdf"
-            cp docs/whitepaper/build/paper.pdf "$output_dir/Fourier-whitepaper.pdf"
+            cp docs/manual-fourier/.build/manual.pdf "$output_dir/Fourier.pdf"
+            cp docs/manual-spectre/.build/manual.pdf "$output_dir/Spectre.pdf"
+            paper_pdf=docs/whitepaper/.build/paper.pdf
+            if [ ! -f "$paper_pdf" ]; then
+              paper_pdf=docs/whitepaper/build/paper.pdf
+            fi
+            cp "$paper_pdf" "$output_dir/Fourier-whitepaper.pdf"
           else
             # Older release tags retain their original directory layout.
             manual_dir=docs/manual

@@ -91,7 +91,7 @@ def main():
 
     env = os.environ.copy()
     compiler = env.get('CXX', 'clang++')
-    report = ROOT / 'build' / 'reports' / args.mode / args.suite
+    report = ROOT / '.build' / 'reports' / args.mode / args.suite
     # Old reports/profiles must never make a failed or partial rerun look valid.
     if report.exists():
         shutil.rmtree(report)
@@ -109,20 +109,20 @@ def main():
     else:
         env['TSAN_OPTIONS'] = 'halt_on_error=1:exitcode=66'
 
-    build = ROOT / 'build' / 'instrumented' / args.mode
+    build = ROOT / '.build' / 'instrumented' / args.mode
     if args.suite == 'rack':
         rack_dir = args.rack_dir.resolve()
         if not (rack_dir / 'plugin.mk').is_file():
             raise RuntimeError(f'Rack SDK/tree missing at {rack_dir}; pass --rack-dir')
-        # Make does not track command-line flag/compiler changes. Force this
-        # small suite to rebuild, without touching normal plugin/test objects.
+        # Force a fresh Rack instrumentation build for each report, without
+        # touching normal plugin/test objects. Standalone builds use stamps.
         test_status = run(['make', '-B', '-k', f'-j{args.jobs}', 'test-rack', f'CXX={compiler}',
              f'RACK_DIR={rack_dir}', f'RACK_TEST_INSTRUMENT={args.mode}'], env, log, check=False)
         binaries = [build / 'rack' / p.stem
                     for p in sorted((ROOT / 'test/rack').glob('test_*.cpp'))]
     else:
         target = 'test-dsp' if args.suite == 'dsp' else 'test-mailbox'
-        test_status = run(['scons', '--keep-going', f'-j{args.jobs}', f'CXX={compiler}',
+        test_status = run(['make', '-k', f'-j{args.jobs}', f'CXX={compiler}',
              f'INSTRUMENT={args.mode}', target], env, log, check=False)
         test_dir = 'dsp' if args.suite == 'dsp' else 'threads'
         binaries = [build / 'standalone' / p.relative_to(ROOT / 'test').with_suffix('')

@@ -1,136 +1,43 @@
-FLAGS += \
-	-DTEST \
-	-Wno-unused-local-typedefs
+# Keep Rack's public build/package interface and SDK-free developer targets.
+.DEFAULT_GOAL := all
+.DELETE_ON_ERROR:
 
+include mk/standalone.mk
+
+# Only explicit standalone goals can bypass the SDK. Mixed invocations still
+# load Rack, while standalone flags were captured before plugin.mk modifies them.
+SDK_FREE_GOALS := test test-dsp test-mailbox test-build benchmark benchmark-build clean clean-local check-build
+SDK_FREE_GOALS += $(STANDALONE_TEST_ALIASES) $(STANDALONE_BENCHMARK_ALIASES)
+SDK_FREE_GOALS += $(filter .build/test/standalone/% .build/benchmark/standalone/%,$(MAKECMDGOALS))
+SDK_FREE_GOALS += $(foreach goal,$(filter .build/instrumented/%,$(MAKECMDGOALS)),$(if $(findstring /standalone/,$(goal)),$(goal)))
+ifneq ($(strip $(filter-out $(SDK_FREE_GOALS),$(or $(MAKECMDGOALS),all))),)
+FLAGS += -DTEST -Wno-unused-local-typedefs
 SOURCES += $(wildcard src/*.cpp)
-
 DISTRIBUTABLES += $(wildcard LICENSE*) res presets
-
 RACK_DIR ?= ../..
+
+# Rack's compile.mk hardcodes build/. Supply its object/dependency variables
+# before inclusion so the SDK's link, dist and install recipes remain intact.
+override OBJECTS := $(patsubst %,.build/%.o,$(SOURCES)) $(OBJECTS) $(patsubst %,.build/%.bin.o,$(BINARIES))
+override DEPENDENCIES := $(patsubst %,.build/%.d,$(SOURCES))
 include $(RACK_DIR)/plugin.mk
 
-# Headless suites share build flags; instrumentation stays out of the plugin.
-RACK_TEST_INSTRUMENT ?=
-RACK_TEST_BUILD := build/test/rack
-# Catch2 supplies main(), not the SDK's Windows Unicode entry point.
-RACK_TEST_FLAGS := $(filter-out -std=% -municode,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
-ifneq ($(RACK_TEST_INSTRUMENT),)
-RACK_TEST_BUILD := build/instrumented/$(RACK_TEST_INSTRUMENT)/rack
-# Clang does not support GCC's -fno-gnu-unique. Preserve SDK ABI and
-# floating-point flags while keeping useful sanitizer stacks.
-RACK_TEST_FLAGS := $(filter-out -fno-gnu-unique,$(RACK_TEST_FLAGS)) -g -fno-omit-frame-pointer
-ifeq ($(RACK_TEST_INSTRUMENT),coverage)
-# Keep complete inline mappings across the separate test executables.
-RACK_TEST_FLAGS += -fprofile-instr-generate -fcoverage-mapping -femit-all-decls
-else ifeq ($(RACK_TEST_INSTRUMENT),asan-ubsan)
-RACK_TEST_FLAGS := $(filter-out -O%,$(RACK_TEST_FLAGS)) -O1 -fsanitize=address,undefined -fno-sanitize-recover=all
+.build/%.cpp.o: %.cpp Makefile mk/rack.mk
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+include mk/rack.mk
+clean: clean-local
 else
-$(error RACK_TEST_INSTRUMENT must be coverage or asan-ubsan)
+.PHONY: clean
+clean: clean-local
+	rm -f plugin.so plugin.dylib plugin.dll
+	rm -rf dist
 endif
-endif
 
-RACK_TEST_NAMES := test_serialization test_display_lifecycle test_spectrum_points test_dc_blocker test_module_amplitudes
-# MinGW emits .exe files; name the actual targets to avoid needless rebuilds.
-RACK_TEST_SUFFIX := $(if $(ARCH_WIN),.exe)
-RACK_TEST_BINARIES := $(addprefix $(RACK_TEST_BUILD)/,$(addsuffix $(RACK_TEST_SUFFIX),$(RACK_TEST_NAMES)))
-.PHONY: test-rack test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes
+.PHONY: clean-local check-build
+clean-local:
+	rm -rf .build
 
-test-rack: test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes
-test-serialization: $(RACK_TEST_BUILD)/test_serialization$(RACK_TEST_SUFFIX)
-test-display-lifecycle: $(RACK_TEST_BUILD)/test_display_lifecycle$(RACK_TEST_SUFFIX)
-test-spectrum-points: $(RACK_TEST_BUILD)/test_spectrum_points$(RACK_TEST_SUFFIX)
-test-dc-blocker-simd: $(RACK_TEST_BUILD)/test_dc_blocker$(RACK_TEST_SUFFIX)
-test-module-amplitudes: $(RACK_TEST_BUILD)/test_module_amplitudes$(RACK_TEST_SUFFIX)
-
-test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes:
-	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
-
-$(RACK_TEST_BINARIES): $(RACK_TEST_BUILD)/%$(RACK_TEST_SUFFIX): $(RACK_TEST_BUILD)/%.cpp.o $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o
-	$(CXX) $(RACK_TEST_FLAGS) -o $@ $^ $(if $(filter test_dc_blocker,$*),,-L$(RACK_DIR) -lRack)
-
-$(addprefix $(RACK_TEST_BUILD)/,$(addsuffix .cpp.o,$(RACK_TEST_NAMES))): $(RACK_TEST_BUILD)/%.cpp.o: test/rack/%.cpp Makefile
-	@mkdir -p $(@D)
-	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
-
-# Keep instrumented Catch2 objects separate from ordinary tests and benchmarks.
-$(RACK_TEST_BUILD)/catch_amalgamated.cpp.o: dep/Catch2/catch_amalgamated.cpp Makefile
-	@mkdir -p $(@D)
-	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
-
--include $(addprefix $(RACK_TEST_BUILD)/,$(addsuffix .cpp.d,$(RACK_TEST_NAMES))) $(RACK_TEST_BUILD)/catch_amalgamated.cpp.d
-
-# CPU-side display preparation only; the instrumented renderer does not use GL.
-.PHONY: benchmark-display
-benchmark-display: build/benchmark/rack/display
-	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
-
-build/benchmark/rack/display: build/benchmark/rack/display.cpp.o
-	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
-
-build/benchmark/rack/display.cpp.o: CXXFLAGS += $(DISPLAY_BENCHMARK_FLAGS)
--include build/benchmark/rack/display.cpp.d
-
-# Catch2 Rack benchmarks use SDK optimization and floating-point flags.
-BENCHMARK_ARGS ?=
-RACK_BENCHMARK_FLAGS = $(filter-out -std=%,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
-RACK_BENCHMARK_NAMES := dsp coordinates graphics modules
-RACK_BENCHMARK_BINARIES := $(addprefix build/benchmark/rack/,$(RACK_BENCHMARK_NAMES))
-.PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules benchmark-rack-build
-benchmark-rack-build: $(RACK_BENCHMARK_BINARIES)
-benchmark-dsp: build/benchmark/rack/dsp
-benchmark-coordinates: build/benchmark/rack/coordinates
-benchmark-graphics: build/benchmark/rack/graphics
-benchmark-modules: build/benchmark/rack/modules
-
-benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules:
-	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< $(BENCHMARK_ARGS)
-
-$(RACK_BENCHMARK_BINARIES): build/benchmark/rack/%: build/benchmark/rack/%.cpp.o build/benchmark/rack/catch_amalgamated.cpp.o
-	$(CXX) $(RACK_BENCHMARK_FLAGS) -o $@ $^ -L$(RACK_DIR) -lRack
-
-$(addsuffix .cpp.o,$(RACK_BENCHMARK_BINARIES)): build/benchmark/rack/%.cpp.o: benchmark/rack/%.cpp Makefile
-	@mkdir -p $(@D)
-	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
-
-build/benchmark/rack/catch_amalgamated.cpp.o: dep/Catch2/catch_amalgamated.cpp Makefile
-	@mkdir -p $(@D)
-	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
-
--include $(addsuffix .cpp.d,$(RACK_BENCHMARK_BINARIES)) build/benchmark/rack/catch_amalgamated.cpp.d
-
-# Optional native OpenGL inspection; requires a graphical desktop session.
-ifdef ARCH_MAC
-DISPLAY_GL_LIBS = -framework OpenGL
-else ifdef ARCH_WIN
-DISPLAY_GL_LIBS = -lopengl32
-else
-DISPLAY_GL_LIBS = -lGL
-endif
-.PHONY: inspect-displays
-inspect-displays: build/test/rack/inspect_displays
-	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< "$(abspath $(RACK_DIR))" "$(CURDIR)" "$(abspath build/test/rack/display)"
-
-build/test/rack/inspect_displays: build/test/rack/inspect_displays.cpp.o
-	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack $(DISPLAY_GL_LIBS)
-
--include build/test/rack/inspect_displays.cpp.d
-
-.PHONY: inspect-panels
-PANEL_INSPECT_BINARY := build/test/rack/inspect_panels$(if $(ARCH_WIN),.exe)
-inspect-panels: $(PANEL_INSPECT_BINARY)
-	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< "$(abspath $(RACK_DIR))" "$(CURDIR)" "$(abspath build/test/rack/panel)"
-
-$(PANEL_INSPECT_BINARY): build/test/rack/inspect_panels.cpp.o
-	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(DISPLAY_GL_LIBS)
-
--include build/test/rack/inspect_panels.cpp.d
-
-# Raw paper observations, separate from Catch2's batched mean estimator.
-.PHONY: benchmark-paper-build
-benchmark-paper-build: build/benchmark/rack/paper
-benchmark-rack-build: benchmark-paper-build
-
-build/benchmark/rack/paper: build/benchmark/rack/paper.cpp.o
-	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
-
--include build/benchmark/rack/paper.cpp.d
+check-build:
+	python3 scripts/test-build.py
