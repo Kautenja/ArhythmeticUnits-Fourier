@@ -133,7 +133,7 @@ void hybrid_dispatch(const Config& c, bool provider_info) {
     stream<ScheduledAnalysis<T, Backend>>(c, HybridAudit<T, Backend>(accuracy, instances));
     if (!c.resources) {
         require(accuracy.checked && accuracy.publications, "Missing hybrid numerical audit");
-        accuracy.print("direct DFT or independent FFT; direct band sums and EMA", instances);
+        accuracy.print("direct DFT or binary64 FFT of matched frame bytes; direct band sums and EMA", instances);
     }
 }
 

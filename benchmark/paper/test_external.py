@@ -14,7 +14,7 @@ from contracts import REGISTRY
 
 
 class ExternalTests(unittest.TestCase):
-    def test_nan_output_rejected(self):
+    def test_reference_precision_and_nan_output_rejected(self):
         with tempfile.TemporaryDirectory() as temp:
             binary = Path(temp)/"verify"
             generate(Path(temp)/"registry.generated.hpp")

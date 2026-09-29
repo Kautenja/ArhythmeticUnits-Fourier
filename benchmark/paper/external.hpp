@@ -140,14 +140,17 @@ struct ExternalChain {
 };
 
 /// @brief Untimed scalar analysis oracle, independently summed bands and EMA.
-/// @details Direct DFT at small N; independent first-party complex FFT at large N.
+/// @details Direct DFT at small N; independent binary64 complex FFT at large N.
 /// Common float window/input bytes preserve the workload's precision contract.
 template<typename T>
 struct AnalysisReference {
     Config config;
-    Fourier::OnTheFlyFFT<T> forward;
+    // Binary32 oracle error can exceed the adapter tolerance near weak bins
+    // beside strong tones at large N. Widen after the matched frame product;
+    // leave the measured providers and their existing tolerances unchanged.
+    Fourier::OnTheFlyFFT<double> forward;
     Fourier::Window::CachedWindow<float> window;
-    std::vector<std::complex<T>> frame;
+    std::vector<std::complex<double>> frame;
     std::vector<T> expected;
     size_t next_endpoint = 0;
     explicit AnalysisReference(const Config& c) : config(c), forward(c.n),
@@ -352,7 +355,7 @@ void external_dispatch(const Config& c, bool provider_info = false) {
     else require(false, "Unsupported external boundary");
     if (!c.resources) {
         require(accuracy.checked && accuracy.publications, "Missing external numerical audit");
-        accuracy.print(boundary == "analysis" ? "direct DFT or independent FFT; direct band sums and EMA"
+        accuracy.print(boundary == "analysis" ? "direct DFT or binary64 FFT of matched frame bytes; direct band sums and EMA"
             : "analytical complex inverse or direct time-domain FIR", instances);
     }
 }

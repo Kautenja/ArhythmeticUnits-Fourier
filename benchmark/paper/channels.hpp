@@ -109,7 +109,7 @@ void channel_stream(const Config& c, bool provider_info = false) {
     stream<Adapter>(c, ChannelAudit(accuracy, instances, c));
     if (!c.resources) {
         require(accuracy.checked && accuracy.publications, "Missing four-channel numerical audit");
-        accuracy.print("independent-four-v1; per-channel DFT/FFT, direct bands and EMA", instances);
+        accuracy.print("independent-four-v1; per-channel DFT/binary64 FFT, direct bands and EMA", instances);
     }
 }
 

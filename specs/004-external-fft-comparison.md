@@ -18,8 +18,9 @@ semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
-FR-10's campaign/report tooling is implemented and smoke-validated. FR-11's
-prepared-host pilot is the next required stage.
+FR-10's campaign/report tooling is implemented and smoke-validated. FR-11 has
+started; its numerical acceptance issue and provisional coverage are recorded
+under [pilot evidence](#fr-11-pilot-evidence).
 Implementation smoke checks do not constitute publication comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
@@ -478,7 +479,7 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 
 ### FR-11: Final Metric Gathering
 
-- [ ] After the readiness gate passes, prepare otherwise idle measurement
+- [x] After the readiness gate passes, prepare otherwise idle measurement
     hosts and record power/thermal conditions, host activity, toolchain,
     dependency identity, and session/order policy. Build before timed passes.
 - [ ] Run and retain the focused pilot below for all included candidates and
@@ -1150,6 +1151,135 @@ as configurations, not measured or rebuilt on other hardware.
 No pilot, confirmation measurement, cross-architecture result, or paper ranking
 is produced by this stage. FR-11 must select durations/repetitions from its
 retained pilot and run on prepared hosts. FR-12 integrates final evidence.
+
+## FR-11 Pilot Evidence
+
+September 29, 2026: FR-10 was committed as `1f88307`. The user requested that
+FR-11 start while the laptop was otherwise idle. The host is an Apple M1 Pro
+with 10 logical CPUs and 16 GiB RAM, running macOS 26.6.2 (25G83), on AC power
+at 100% battery, with Low Power Mode off. `pmset -g therm` reported no recorded
+thermal/performance warnings; that is not a continuous temperature trace.
+Codex and ordinary OS services remain active. No CPU affinity, real-time
+priority, or system power setting was changed. `caffeinate -i` prevents idle
+sleep only for the campaign. Preparation snapshots, including process activity,
+are retained in `.build/paper-fr11-host/pre-pilot.json`.
+
+### Initial Pilot And Numerical Gate
+
+The full macOS matrix resolved 408 workloads. The initial pilot used three
+fresh-process repetitions, 128 measured hops/transform frames, 64 warmup hops,
+and seed 20260929. `.build/paper-fr11-pilot-01` retains four completed runs and
+the failed fifth invocation; its status remains incomplete and none of its
+observations enter a report. The failure occurred for scheduled batch PFFFT
+analysis at N=16384, H=1024, B=256, smoothing off.
+
+Investigation identified two separate issues:
+
+1.  The binary32 analysis reference itself lost weak-bin precision. At input
+    endpoint 15360, bin 4040, the direct DFT magnitude was about 0.697928914;
+    the float oracle gave 0.697670519 and PFFFT gave 0.698003888. An executable
+    direct-DFT regression failed before correcting the oracle and passed after.
+    Large analysis references now use a binary64 FFT on the same already rounded
+    frame bytes; small sizes retain direct sums. Measured provider arithmetic
+    and the existing acceptance tolerance are unchanged. The 34-test suite and
+    full native preflight pass after this correction.
+2.  With the corrected reference, actual pointwise failures remain in native
+    float PFFFT and vDSP for unsmoothed N=16384. At endpoint 39936, bin 8136,
+    PFFFT returned 0.758558571 against direct DFT 0.758989308: absolute error
+    about 0.000430737, exceeding the unchanged 0.0003 weak-bin threshold.
+    Scheduled and immediate PFFFT had identical frame bytes and output here.
+    This is distinct from the repaired reference error.
+
+An untimed diagnostic survey ran each external provider for 220000 samples
+at N=2048/4096/16384, H=1024, with smoothing off/on. It retains executable
+source and CSV under `.build/paper-fr11-host/numerical-survey.*`. All checked
+cases at 2048/4096 and smoothed 16384 passed the pointwise threshold. Among
+1761495 checked unsmoothed N=16384 bins per provider, PFFFT and vDSP each had
+three violations; FFTW had none. Maximum pointwise errors scaled by
+`max(1, abs(reference_bin))` were 0.000430763, 0.000310481, and 0.000231147,
+respectively. Maximum absolute errors divided by the largest reference
+magnitude were approximately 1.19e-7, 1.79e-7, and 1.19e-7. These are diagnostic
+error measurements on this signal, not general error bounds or speed rankings.
+
+The benchmark gate remains strict. Do not silently increase its tolerance,
+claim native algorithms are exact, or treat normwise agreement as a pointwise
+pass. A justified, documented numerical acceptance policy and stronger
+large-size/weak-tone validation are required before the full confirmation
+matrix can proceed. First-party scalar controls still have their previously
+stated preflight-only numerical coverage; this finding establishes no accuracy
+advantage for them.
+
+### Provisional Pilot Coverage
+
+To collect useful pilot evidence without choosing providers based on success,
+the whole matched group of 32 unsmoothed N=16384 analysis workloads is withheld,
+including providers/controls that did not fail. All 376 remaining workloads
+retain their original settings, including inverse jobs, identity/FIR chains,
+isolated transforms, and smoothed N=16384 analysis. The exact eligible and
+withheld arrays are retained in `.build/paper-fr11-host/pilot-eligible.json`
+and `pilot-withheld.json`. This provisional reduction is a correctness-gate
+response, not a finalized publication matrix. It cannot close FR-11.
+
+The corrected sources, including uncommitted oracle changes, are archived and
+hashed by the new campaign; the failed and corrected campaigns are never pooled.
+The invocation from the repository root is:
+
+```shell
+caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-pilot-02 --config .build/paper-fr11-host/pilot-eligible.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-02 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929 --notes 'Use the full host, numerical-gate, and provisional-exclusion notes retained in metadata.json'
+```
+
+The final argument above abbreviates human-readable notes; the actual
+campaign metadata retains their complete text. Counts/durations are initial
+pilot choices, not a precision guarantee. Session variation and confirmation
+settings remain unresolved until the correctness issue is resolved and the
+remaining pilot coverage is complete.
+
+### Provisional Pilot Results And Next Gate
+
+The corrected provisional campaign completed all 1128 runs (376 workloads,
+three process repetitions each). The report generator validated the campaign
+before emitting 376 evidence rows and 65 SVG/PNG figure pairs:
+
+```shell
+.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-pilot-02 --output .build/paper-fr11-pilot-02-report --phase pilot
+```
+
+Representative analysis, inverse-job and full-chain figures were visually
+checked. The campaign retains raw observations, numerical reports, binary and
+source/dependency archives, native resource measurements and execution order.
+The report remains PILOT and is not integrated into manuscript results.
+`pilot-statistics.json` and a checksum manifest in `.build/paper-fr11-host`
+retain descriptive summaries and diagnostic artifact identities.
+
+Within this one session, the median workload ratio of maximum to minimum
+process mean cost was 1.01768; the 90th percentile was 1.11543 and the largest
+was 1.31722 (vDSP RFFT, N=4096). These ratios describe three process repeats,
+not confidence intervals or independent session variation. Empty timer
+controls had median zero, p95/p99 of 42 ns, and an observed maximum of 45625 ns
+across the campaign. Quantization and occasional interruptions remain in the
+raw evidence; no timer correction or outlier removal was applied.
+
+Each callback process observed 8192, 2048, or 512 callbacks for blocks of
+16, 64, or 256, respectively, spanning 131072 simulated engine samples
+(about 2.731 seconds at 48 kHz). The largest blocks therefore supply only
+about five observations in the upper 1%; these runs cannot substantiate a
+precise p99 or rare-event maximum. A candidate confirmation length of 4096
+hops would produce 16384 observations even at B=256 (about 164 upper-1%
+observations), but it is not yet frozen or justified for rarer tails.
+
+Post-campaign power remained AC/100%, and macOS still reported no recorded
+thermal/performance warnings. The snapshot is retained in `post-pilot.json`.
+No continuous thermal instrumentation or external x86-64 measurement exists.
+No further benchmark is running at the end of this work.
+
+The next gate is to resolve and document numerical acceptance for strong/weak
+spectra at large N, preserving pointwise errors even if an independently
+justified normwise criterion is considered. Then restore the full matched
+pilot, execute the focused extensions, assess variation across genuinely
+separate sessions, and freeze confirmation lengths/repetitions. Three
+independent sessions remain the minimum coverage floor; process repeats here
+cannot satisfy it. FR-11 remains IN PROGRESS and no confirmation run has been
+started.
 
 [rack-fft]: https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp
 [fftw-real]: https://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html

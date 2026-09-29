@@ -1,4 +1,4 @@
-// Regression for non-finite external output being hidden by max(error, NaN).
+// Regressions for analysis reference precision and non-finite external output.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "external.hpp"
@@ -16,6 +16,17 @@ struct BrokenProvider {
     std::string info_json() const { return "{}"; }
 };
 int main() {
+    // A strong tone amplifies binary32 FFT error in a weak, distant bin.
+    // The oracle must retain rounded float frame bytes but compute in double.
+    Paper::Config reference_config{};
+    reference_config.n = 16384; reference_config.hop = 1024;
+    reference_config.rate = 48000; reference_config.state = "steady";
+    Paper::AnalysisReference<float> reference(reference_config);
+    reference.advance(Paper::signal(), 15360);
+    const std::vector<Paper::Reference::Complex> frame(reference.frame.begin(), reference.frame.end());
+    const double direct = std::abs(Paper::Reference::coefficient(frame, 4040, false));
+    Paper::require(std::abs(double(reference.expected[4040])-direct) < 1e-6,
+        "Large analysis oracle loses weak-bin precision");
     Paper::Config c{};
     c.backend = "pffft-fft-float"; c.n = 128; c.callbacks = 1;
     try { Paper::external_transform<float, BrokenProvider>(c); }
