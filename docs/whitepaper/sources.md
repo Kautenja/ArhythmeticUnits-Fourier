@@ -18,10 +18,13 @@ exhaustive bibliometric survey.
 | `lomoving1999` | [Publisher abstract](https://www.sciencedirect.com/science/article/abs/pii/S0165168499000985) | Combined scheduling and overlap reuse |
 | `hurchalla2010` | [AES abstract and paper record](https://secure.aes.org/forum/pubs/conventions/?elib=15679) | Processor/memory load distribution across input blocks in one thread for low-latency convolution; abstract only, paper 8257, 129th convention |
 | `battenberg2011` | [Author-hosted full paper](https://ericbattenberg.com/pdf/partconvDAFx2011.pdf), [author publication page](https://ericbattenberg.com/publication/partconv/) | Section 4 distributes forward transforms, spectral multiplication, and inverse transforms across callbacks; section 6 compares performance and implementation effort |
+| `wefers2015` | [University record](https://publications.rwth-aachen.de/record/466561), [full dissertation](https://publications.rwth-aachen.de/record/466561/files/466561.pdf) | Section 6.8, especially printed pp. 182-183: manual preemption and short-transform subdivision; motivates a granularity comparison, not a performance ranking for this analyzer |
 | `liu2017` | [Rutgers author bibliography](https://zoulab.engr.rutgers.edu/journal_article), [university publication record](https://www.researchwithrutgers.org/en/publications/optimal-time-distributed-fast-fourier-transform-application-to-on/) | Time-distributed FFT/IFFT in online control; volume 41, pages 114-124 |
 | `jacobsen2003` | [Jacobsen's later exposition and references](https://www.dsprelated.com/showarticle/776.php) | Sliding DFT distinction; IEEE Signal Processing Magazine 20(2), 74-80 |
 | `lyons2021` | [University author record](https://digital.library.adelaide.edu.au/items/14d4a218-cff8-47ca-aeae-eb543ab04b4f/full), [accepted manuscript](https://digital.library.adelaide.edu.au/dspace/bitstream/2440/133370/3/hdl_133370.pdf) | Abstract and bibliographic metadata: guaranteed-stable sliding networks and frequency-flexible analysis; no reproduced equations or performance ranking |
 | `richardson2019` | [Author-deposited preprint and journal metadata](https://arxiv.org/abs/1707.08213) | Tree reuse across windows; published as Algorithm 991 in ACM TOMS 45(1), article 12 |
+| `park2014` | [Author publication list](https://home.sejong.ac.kr/~cspark/2.html), [author-uploaded manuscript](https://www.researchgate.net/publication/260522366_The_Hopping_Discrete_Fourier_Transform_sp_TipsTricks) | Sections 1 and 3-4: reuse across multi-sample hops; separates arithmetic reuse from within-hop work placement |
+| `rafii2018` | [Author-hosted published paper](https://zafarrafii.com/Documents/Journals/Rafii%20-%20Sliding%20Discrete%20Fourier%20Transform%20with%20Kernel%20Windowing%20-%202018.pdf) | Printed pp. 88-90: window kernels, short Hann/Blackman kernels, and approximation when sparsifying general kernels; motivates matched windowing and accuracy checks |
 | `frigo2005` | [Authors' full paper](https://fftw.org/fftw-paper-ieee.pdf), [author publication record](https://fftw.org/~athena/abstracts/abstract8.html) | Optimized FFT implementations as an unmeasured comparison class |
 | `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
 | `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
@@ -42,6 +45,14 @@ peer-reviewed treatment, while retaining the original 2003 reference.
 The two benchmarking references motivate explicit limits and a future study;
 no new experiment was run or existing observation reinterpreted as evidence
 of cross-platform robustness.
+
+The subsequent expansion adds Park and Ko, Rafii, and Wefers. Park and Ko's
+author-uploaded text is marked as a March 2015 draft; the bibliography uses
+the journal publication's 2014 date. Rafii's published article is November
+2018, despite the IEEE society summary being dated January 2019. Wefers's
+dissertation was defended in 2014 and published in 2015. The proposed
+overlap-reuse and work-granularity experiments are this report's future work;
+none of these sources supplies measurements of Fourier's implementation.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.

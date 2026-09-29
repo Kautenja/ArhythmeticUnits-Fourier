@@ -149,13 +149,17 @@ and exact-cadence example. Historical driver extraction, compilation, and
 numerical verification also passed. Detailed documentation and production
 validation evidence remains in the removed specifications in Git history.
 
-The literature-review update retains manuscript version 2 and expands it to
-20 pages. It deepens the AES/DAFx scheduling comparison, replaces the 2015
-sliding-DFT exposition with Lyons and Howard (2021), and adds benchmarking
+The literature-review updates retain manuscript version 2 at 20 pages.
+They deepen the AES/DAFx scheduling comparison, replace the 2015
+sliding-DFT exposition with Lyons and Howard (2021), and add benchmarking
 references to distinguish existing evidence from a proposed future evaluation.
+The expanded review also includes Park and Ko's hopping DFT (2014), Rafii's
+kernel windowing (2018), and Wefers's partitioned-convolution treatment (2015).
+It proposes matched overlap-reuse and work-granularity comparisons without
+attributing new performance results to those sources.
 The built-in LaTeX compiler and `make -C docs/whitepaper` both pass; the final
 LaTeX pass has no unresolved references or box warnings. All 20 rendered pages
-were visually inspected. `make -C docs/whitepaper check` passes with 17 cited
+were visually inspected. `make -C docs/whitepaper check` passes with 20 cited
 references and unchanged campaign data, and `git diff --check` passes.
 No new timing campaign, DSP test run, Rack build, or manual Rack session was
 performed for this literature-only update. Source-access limitations are

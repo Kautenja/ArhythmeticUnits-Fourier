@@ -153,6 +153,12 @@ processing; they do not establish a performance ranking for this analyzer.
 The present study instead specifies a windowed spectral-analysis sequence,
 an exact-hop quota, retained-input capacity, cancellation, and output ownership.
 
+Wefers places these techniques in a broader treatment of real-time partitioned
+convolution~\cite{wefers2015}. Section~6.8 discusses manual preemption of
+processing chains and subdivision of FFTs into short transforms. This provides
+context for choosing the granularity of resumable work; it does not establish
+that butterfly-level suspension is optimal for a spectral analyzer.
+
 Liu, Yan, and Zou
 further study time-distributed FFT/IFFT algorithms for online control on
 general-purpose processors~\cite{liu2017}. The existence of these approaches
@@ -168,9 +174,23 @@ explicitly address stability; recursion alone is not grounds to reject it.
 Tree-based sliding-window transforms
 reuse intermediate calculations~\cite{richardson2019}. The plugin's resumable FFT
 has neither form of inter-frame reuse: each new frame begins a fresh transform.
-Selecting among these methods requires matching the required bin count, update
-cadence, window, and numerical behavior. Our experiments do not measure that
-tradeoff against sliding methods.
+
+Park and Ko's hopping DFT updates a spectrum from the spectrum one hop earlier,
+without computing every intervening sample's spectrum~\cite{park2014}.
+This makes overlap reuse relevant to multi-sample hops as well as sample-by-sample
+analysis. It changes the arithmetic across frames, whereas our quota changes
+the placement of work within a frame. Lower aggregate work alone would not
+establish a smaller processing burst.
+
+Windowing must also be matched in a comparison. Rafii derives frequency-domain
+kernels for windowed sliding transforms~\cite{rafii2018}. The Hann and Blackman
+examples have three- and five-point kernels, respectively; sparsifying more
+general kernels can introduce approximation. Efficient windowing therefore
+need not rule out overlap reuse, but its cost and accuracy depend on the window.
+These kernels do not by themselves establish the numerical stability of the
+underlying recurrence. Selecting among these methods requires matching bin
+count, hop, window convention, normalization, and numerical behavior. Our
+experiments do not measure that tradeoff against sliding or hopping methods.
 
 Finally, optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
@@ -188,7 +208,7 @@ Approach & What changes incrementally & Principal distinction \\
 Batch FFT & A complete frame per invocation & Implementation can optimize the whole call. \\
 Resumable FFT here & Traversal of one frozen frame & Caller controls work placement; no inter-frame reuse. \\
 Acquisition-aware FFT & Available subtransforms during acquisition & Depends on input-arrival order and transform graph. \\
-Sliding/tree DFT & Spectra or intermediate results across windows & Reuses overlap; different state and error analysis. \\
+Sliding/hopping/tree DFT & Spectra or intermediate results across windows & Reuses overlap; different state and error analysis. \\
 Worker-thread FFT & Execution on another scheduled thread & Requires ownership, synchronization, and deadline policy. \\
 \bottomrule
 \end{tabular}
@@ -932,6 +952,16 @@ an optimized batch FFT on the engine thread and, where supported, a worker
 implementation, with equivalent input windows, output processing, and requested
 cadence. It should report actual publication delay as well as engine cost.
 
+A complementary experiment should compare hopping and windowed sliding
+methods~\cite{park2014,rafii2018} across transform lengths, hops, and requested
+bin counts. It should retain equivalent windowing, normalization, smoothing,
+and output processing, and report memory, aggregate cost, publication delay,
+and block-duration tails. A periodic-Hann baseline would permit an exact short
+window kernel; truncated kernels should be evaluated separately. Long-running
+error checks against independent transforms, including weak tones beside
+strong ones, would test accuracy as well as execution cost. These are proposed
+comparisons, not results of the archived campaigns.
+
 Sample-call costs should also not be confused with device-buffer deadlines.
 If the host renders $D$ samples in one device callback, its relevant demand is
 the sum of the associated module work over those $D$ samples, plus other engine
@@ -961,6 +991,12 @@ and defines cancellation and ownership explicitly. Its unweighted quota still
 permits systematic cost differences between stages. Calibrated weights might
 reduce those differences, but would add machine-dependent assumptions and
 would not prove worst-case execution time on a general-purpose OS.
+Following the transform-subdivision discussion in Wefers~\cite{wefers2015},
+another experiment could compare individual butterflies with small batches or
+short subtransforms under the same hop and publication-latency constraint.
+Coarser units may improve locality and reduce scheduling overhead, but increase
+the indivisible work charged to a call. Both effects require measurement;
+the present study establishes no preferred granularity beyond its tested design.
 
 The scheduler always completes its work-count quota before advancing its
 logical hop. If a host call runs late, it does not silently overwrite an
@@ -1208,6 +1244,12 @@ convolution algorithms on conventional operating systems,'' in
 Effects (DAFx-11)}, Paris, France, September 2011.
 \url{https://ericbattenberg.com/pdf/partconvDAFx2011.pdf}.
 
+\bibitem{wefers2015}
+F. Wefers, \emph{Partitioned Convolution Algorithms for Real-Time Auralization},
+Aachener Beitr\"age zur Technischen Akustik, vol. 20. Berlin: Logos Verlag, 2015.
+Ph.D. dissertation, RWTH Aachen University, defended 2014.
+\href{https://doi.org/10.18154/RWTH-2015-02185}{doi:10.18154/RWTH-2015-02185}.
+
 \bibitem{liu2017}
 J. Liu, B. Yan, and Q. Zou, ``Optimal time-distributed fast Fourier transform:
 Application to online iterative learning control---experimental high-speed
@@ -1231,6 +1273,16 @@ discrete Fourier transform,'' \emph{ACM Transactions on Mathematical Software},
 vol. 45, no. 1, article 12, 2019.
 \href{https://doi.org/10.1145/3264426}{doi:10.1145/3264426}.
 Preprint: \url{https://arxiv.org/abs/1707.08213}.
+
+\bibitem{park2014}
+C.-S. Park and S.-J. Ko, ``The hopping discrete Fourier transform,''
+\emph{IEEE Signal Processing Magazine}, vol. 31, no. 2, pp. 135--139, 2014.
+\href{https://doi.org/10.1109/MSP.2013.2292891}{doi:10.1109/MSP.2013.2292891}.
+
+\bibitem{rafii2018}
+Z. Rafii, ``Sliding discrete Fourier transform with kernel windowing,''
+\emph{IEEE Signal Processing Magazine}, vol. 35, no. 6, pp. 88--92, 2018.
+\href{https://doi.org/10.1109/MSP.2018.2855727}{doi:10.1109/MSP.2018.2855727}.
 
 \bibitem{frigo2005}
 M. Frigo and S. G. Johnson, ``The design and implementation of FFTW3,''
