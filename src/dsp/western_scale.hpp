@@ -17,7 +17,7 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_WESTERN_SCALE_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_DSP_WESTERN_SCALE_HPP_
 
-#include <cmath>      // log2f, powf, roundf
+#include <cmath>      // isfinite, log2, round
 #include <complex>    // complex
 #include <algorithm>  // max, min
 #include <string>     // string
@@ -78,29 +78,25 @@ struct TunedNote {
     TunedNote() : note(Note::A), octave(4), cents(0) { }
 
     /// @brief Initialize a musical note by frequency.
-    /// @param freq The frequency to convert into a musical note.
-    explicit TunedNote(float freq) { set_frequency(freq); }
+    /// @param freq The frequency in Hz; invalid input leaves A4 +0 cents.
+    explicit TunedNote(float freq) : TunedNote() { set_frequency(freq); }
 
     /// @brief Convert frequency to a musical note.
-    /// @param freq The frequency to convert into a musical note.
+    /// @param freq A positive, finite frequency in Hz.
+    /// @returns 0 on success, or 1 for invalid input without changing the note.
+    /// @details Half-semitone ties round away from A4. Cents are the signed
+    /// deviation from the nearest note, in the range [-50, 50].
     inline int set_frequency(float freq) {
-        static const float base_freq = 440.f;
-        // Handle invalid frequencies
-        if (freq <= 0) return 1;
-        // Calculate semitones from reference frequency.
-        float n = 12.f * log2f(freq / base_freq);
-        // Nearest note.
-        int nearest_note = static_cast<int>(roundf(n));
-        // Calculate the note index and octave.
-        int note_index = (nearest_note + 9) % 12;  // Offset to align A4.
+        if (!std::isfinite(freq) || freq <= 0.f) return 1;
+        // Double intermediates keep even subnormal float frequencies valid.
+        const double n = 12.0 * std::log2(static_cast<double>(freq) / 440.0);
+        const int nearest_note = static_cast<int>(std::round(n));
+        // Align to C, then use a nonnegative remainder for floor division.
+        int note_index = (nearest_note + 9) % 12;
         if (note_index < 0) note_index += 12;
-        octave = 4 + (nearest_note + 9) / 12;
-        if (nearest_note < -9) octave--;
+        octave = 4 + (nearest_note + 9 - note_index) / 12;
         note = static_cast<Note>(note_index);
-        // Frequency of the nearest note
-        float nearest_freq = base_freq * powf(2.f, nearest_note / 12.f);
-        // Calculate cents difference
-        cents = 1200 * log2f(freq / nearest_freq);
+        cents = static_cast<float>(100.0 * (n - nearest_note));
         return 0;
     }
 
