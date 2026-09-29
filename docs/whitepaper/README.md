@@ -30,6 +30,12 @@ never runs a benchmark or fetches data. The single-column, 11-point layout
 prioritizes readable derivations, code, and numerical results. No shell
 escape or BibTeX pass is required.
 
+The [PDF workflow](../../.github/workflows/manuals.yml) builds the manuscript
+on relevant pull requests, changes merged to `main`, and version tags. GitHub
+release publication attaches it as `Fourier-whitepaper.pdf` alongside the two
+user manuals. This provides a versioned download; it does not submit the paper
+to arXiv or a journal.
+
 ## Contents
 
 -   [fourier.tex](fourier.tex): Complete manuscript, implementation-reference
@@ -128,7 +134,7 @@ self-contained `fourier.tex`. Review the compiled PDF, author details,
 claims, and license choice before submitting. Follow the current
 [arXiv TeX guidance](https://info.arxiv.org/help/submit_tex.html); submission,
 endorsement, and moderation are separate from a successful local build.
-Nothing in this workflow publishes the paper automatically.
+The source-archive target does not submit the paper automatically.
 
 After a public deposit, update the report URL and identifier consistently in
 `CITATION.cff`, `docs/whitepaper/CITATION.bib`, and the project README. Keep

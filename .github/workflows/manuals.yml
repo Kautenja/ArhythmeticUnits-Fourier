@@ -1,17 +1,22 @@
-name: User manuals
+name: Manuals and white paper
 
 on:
   pull_request:
     paths:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
+      - docs/whitepaper/fourier.tex
+      - docs/whitepaper/Makefile
       - plugin.json
       - .github/workflows/manuals.yml
   push:
     branches: [main]
+    tags: ['v*']
     paths:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
+      - docs/whitepaper/fourier.tex
+      - docs/whitepaper/Makefile
       - plugin.json
       - .github/workflows/manuals.yml
   release:
@@ -19,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to build and upload manuals for
+        description: Existing release tag to build and upload PDFs for
         required: true
         type: string
 
@@ -27,16 +32,16 @@ permissions:
   contents: read
 
 concurrency:
-  group: manuals-${{ inputs.tag || github.event.release.tag_name || github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
+  group: pdfs-${{ github.event_name }}-${{ inputs.tag || github.event.release.tag_name || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 jobs:
   build:
-    name: Build PDF manuals
+    name: Build manuals and white paper
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Check out manual sources
+      - name: Check out PDF sources
         uses: actions/checkout@v7.0.1
         with:
           ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
@@ -46,18 +51,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \
-            texlive-latex-extra texlive-fonts-recommended texlive-science poppler-utils
+            texlive-latex-extra texlive-fonts-recommended texlive-science latexmk lmodern poppler-utils
 
-      - name: Build and validate both manuals
-        id: manuals
+      - name: Build and validate publication PDFs
+        id: pdfs
         run: |
-          output_dir="$RUNNER_TEMP/user-manuals"
+          output_dir="$RUNNER_TEMP/publication-pdfs"
           mkdir -p "$output_dir"
           if [ -d docs/manual-fourier ]; then
             make -C docs/manual-fourier
             make -C docs/manual-spectre
+            make -C docs/whitepaper
             cp docs/manual-fourier/build/manual.pdf "$output_dir/Fourier.pdf"
             cp docs/manual-spectre/build/manual.pdf "$output_dir/Spectre.pdf"
+            cp docs/whitepaper/build/paper.pdf "$output_dir/Fourier-whitepaper.pdf"
           else
             # Older release tags retain their original directory layout.
             manual_dir=docs/manual
@@ -67,24 +74,29 @@ jobs:
             make -C "$manual_dir"
             cp "$manual_dir/build/Fourier.pdf" "$output_dir/Fourier.pdf"
             cp "$manual_dir/build/Spectre.pdf" "$output_dir/Spectre.pdf"
+            if [ -f whitepaper/Makefile ]; then
+              make -C whitepaper
+              cp whitepaper/build/paper.pdf "$output_dir/Fourier-whitepaper.pdf"
+            else
+              echo '::notice::This historical tag predates the white paper; uploading manuals only.'
+            fi
           fi
           echo "directory=$output_dir" >> "$GITHUB_OUTPUT"
-          for manual in Fourier Spectre; do
-            test -s "$output_dir/$manual.pdf"
-            pdfinfo "$output_dir/$manual.pdf"
+          for pdf in "$output_dir"/*.pdf; do
+            test -s "$pdf"
+            pdfinfo "$pdf"
           done
 
-      - name: Save PDF manuals
+      - name: Save publication PDFs
         uses: actions/upload-artifact@v7
         with:
-          name: user-manuals
-          path: |
-            ${{ steps.manuals.outputs.directory }}/Fourier.pdf
-            ${{ steps.manuals.outputs.directory }}/Spectre.pdf
+          name: publication-pdfs
+          path: ${{ steps.pdfs.outputs.directory }}/*.pdf
+          retention-days: 14
           if-no-files-found: error
 
   publish:
-    name: Attach manuals to release
+    name: Attach PDFs to release
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     needs: build
     runs-on: ubuntu-24.04
@@ -92,11 +104,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Download validated manuals
+      - name: Download validated PDFs
         uses: actions/download-artifact@v8
         with:
-          name: user-manuals
-          path: manuals
+          name: publication-pdfs
+          path: pdfs
 
       - name: Upload release assets
         env:
@@ -104,5 +116,4 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
         run: |
-          gh release upload "$RELEASE_TAG" \
-            manuals/Fourier.pdf manuals/Spectre.pdf --clobber
+          gh release upload "$RELEASE_TAG" pdfs/*.pdf --clobber

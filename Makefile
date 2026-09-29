@@ -12,7 +12,8 @@ include $(RACK_DIR)/plugin.mk
 # Headless suites share build flags; instrumentation stays out of the plugin.
 RACK_TEST_INSTRUMENT ?=
 RACK_TEST_BUILD := build/test/rack
-RACK_TEST_FLAGS := $(filter-out -std=%,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
+# Catch2 supplies main(), not the SDK's Windows Unicode entry point.
+RACK_TEST_FLAGS := $(filter-out -std=% -municode,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
 ifneq ($(RACK_TEST_INSTRUMENT),)
 RACK_TEST_BUILD := build/instrumented/$(RACK_TEST_INSTRUMENT)/rack
 # Clang does not support GCC's -fno-gnu-unique. Preserve SDK ABI and
@@ -29,23 +30,25 @@ endif
 endif
 
 RACK_TEST_NAMES := test_serialization test_display_lifecycle test_spectrum_points test_dc_blocker test_module_amplitudes
-RACK_TEST_BINARIES := $(addprefix $(RACK_TEST_BUILD)/,$(RACK_TEST_NAMES))
+# MinGW emits .exe files; name the actual targets to avoid needless rebuilds.
+RACK_TEST_SUFFIX := $(if $(ARCH_WIN),.exe)
+RACK_TEST_BINARIES := $(addprefix $(RACK_TEST_BUILD)/,$(addsuffix $(RACK_TEST_SUFFIX),$(RACK_TEST_NAMES)))
 .PHONY: test-rack test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes
 
 test-rack: test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes
-test-serialization: $(RACK_TEST_BUILD)/test_serialization
-test-display-lifecycle: $(RACK_TEST_BUILD)/test_display_lifecycle
-test-spectrum-points: $(RACK_TEST_BUILD)/test_spectrum_points
-test-dc-blocker-simd: $(RACK_TEST_BUILD)/test_dc_blocker
-test-module-amplitudes: $(RACK_TEST_BUILD)/test_module_amplitudes
+test-serialization: $(RACK_TEST_BUILD)/test_serialization$(RACK_TEST_SUFFIX)
+test-display-lifecycle: $(RACK_TEST_BUILD)/test_display_lifecycle$(RACK_TEST_SUFFIX)
+test-spectrum-points: $(RACK_TEST_BUILD)/test_spectrum_points$(RACK_TEST_SUFFIX)
+test-dc-blocker-simd: $(RACK_TEST_BUILD)/test_dc_blocker$(RACK_TEST_SUFFIX)
+test-module-amplitudes: $(RACK_TEST_BUILD)/test_module_amplitudes$(RACK_TEST_SUFFIX)
 
 test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes:
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
 
-$(RACK_TEST_BINARIES): $(RACK_TEST_BUILD)/%: $(RACK_TEST_BUILD)/%.cpp.o $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o
+$(RACK_TEST_BINARIES): $(RACK_TEST_BUILD)/%$(RACK_TEST_SUFFIX): $(RACK_TEST_BUILD)/%.cpp.o $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o
 	$(CXX) $(RACK_TEST_FLAGS) -o $@ $^ $(if $(filter test_dc_blocker,$*),,-L$(RACK_DIR) -lRack)
 
-$(addsuffix .cpp.o,$(RACK_TEST_BINARIES)): $(RACK_TEST_BUILD)/%.cpp.o: test/rack/%.cpp Makefile
+$(addprefix $(RACK_TEST_BUILD)/,$(addsuffix .cpp.o,$(RACK_TEST_NAMES))): $(RACK_TEST_BUILD)/%.cpp.o: test/rack/%.cpp Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
 
@@ -54,7 +57,7 @@ $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o: dep/Catch2/catch_amalgamated.cpp Mak
 	@mkdir -p $(@D)
 	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
 
--include $(addsuffix .cpp.d,$(RACK_TEST_BINARIES)) $(RACK_TEST_BUILD)/catch_amalgamated.cpp.d
+-include $(addprefix $(RACK_TEST_BUILD)/,$(addsuffix .cpp.d,$(RACK_TEST_NAMES))) $(RACK_TEST_BUILD)/catch_amalgamated.cpp.d
 
 # CPU-side display preparation only; the instrumented renderer does not use GL.
 .PHONY: benchmark-display

@@ -325,31 +325,45 @@ reset. It is separate from `scons test` and runs in CI's Rack job.
 
 ### Continuous Integration
 
-The [DSP tests workflow](.github/workflows/dsp-tests.yml) runs
-`scons test` on pull requests and pushes to `main`, including merges. Pushes
-to other branches do not trigger a separate run. It verifies the vendored
-Catch2 header and source are present. Its three DSP jobs use Ubuntu 24.04
-with GCC, macOS 14 with Apple Clang, and Windows 2022 with MSYS2 UCRT64 GCC.
-Windows uses MSYS2's SCons and Python to preserve POSIX
-paths and GNU build tools. Each job runs the same `scons test` command.
+The [DSP and Rack tests workflow](.github/workflows/dsp-tests.yml) runs on
+pull requests, pushes to `main` (including merges), and version tags matching
+`v*`. Other branch pushes do not trigger builds. Code checks run on tags;
+release publication only rebuilds and uploads the PDFs, avoiding a second
+six-job code matrix for the same release.
 
-A separate Ubuntu 24.04 x64 job downloads the official Rack 2.6.3 SDK,
-verifies its pinned SHA-256 checksum, and builds the plugin with `make -j2 all`.
-It then runs all five headless Rack targets: `test-dc-blocker-simd`,
-`test-serialization`, `test-display-lifecycle`, `test-spectrum-points`, and
-`test-module-amplitudes`. The SDK lives under the runner's temporary directory;
-`RACK_DIR` selects it for both the plugin and tests. System OpenGL, X11, and
-audio libraries satisfy the Rack library's runtime dependencies even though
-the tests do not open a window or audio device.
+The three standalone jobs run `scons -j2 test` with Ubuntu 24.04 GCC,
+macOS 14 Apple Clang, and Windows 2022 MSYS2 UCRT64 GCC. Windows uses
+MSYS2's SCons and Python to preserve POSIX paths and GNU build tools.
 
-New updates cancel older runs for the same pull request or branch, and
-DSP jobs have a 15-minute timeout and the Rack job has a 20-minute timeout to
-limit usage. A failure on one platform does not cancel the other platforms
-or the independent Rack job, so their results remain available.
+Three independent Rack jobs download the official Rack 2.6.3 SDKs, verify
+pinned SHA-256 checksums, and run `make -j2 all` and `make -j2 test-rack`:
 
-Rack CI currently covers Linux x64 only. Plugin builds and Rack integration
-tests on macOS and Windows, benchmarks, and manual UI checks remain separate
-validation steps. The headless tests do not replace an interactive Rack session.
+| Runner | Plugin Architecture | Toolchain |
+| --- | --- | --- |
+| Ubuntu 24.04 | Linux x64 | GCC |
+| macOS 14 | macOS ARM64 | Apple Clang |
+| Windows 2022 | Windows x64 | MSYS2 MINGW64 GCC (MSVCRT) |
+
+Each Rack job runs all five headless suites: SIMD DC blocker, serialization,
+display lifecycle, spectrum coordinates, and module amplitudes. Linux and
+macOS link and run against the SDK library. Linux installs the OpenGL, X11,
+and audio runtime dependencies. The Windows SDK has an import library only,
+so CI also verifies and extracts the matching Rack Free installer and adds
+its DLL directory to the test process's `PATH`. It does not run the installer
+or compile Rack. Windows tests use Catch2's ordinary `main()` entry point;
+the plugin retains the SDK's flags.
+
+The SDK lives under the runner's temporary directory, selected by `RACK_DIR`.
+New updates cancel older runs for the same pull request or branch. DSP jobs
+have a 15-minute timeout and Rack jobs have a 25-minute timeout. A failed
+platform does not cancel the other matrix jobs. Plugin binaries are compiled
+for validation, without packaging or publishing GitHub release binaries;
+VCV Library distribution remains a separate release step.
+
+Headless tests exercise actual module processing, state, and CPU-side display
+behavior without a window or audio device. They do not replace an interactive
+Rack session or GPU checks. Intel macOS builds, benchmarks, and manual UI
+checks remain separate validation steps.
 
 ### Coverage And Sanitizers
 
@@ -876,30 +890,46 @@ Outputs are `docs/manual-fourier/build/manual.pdf` and
 build directory and stops on LaTeX errors. Shell escape is disabled. Inspect
 rendered pages when changing manual content or layout.
 
-The [user manuals workflow](.github/workflows/manuals.yml) builds both
-PDFs on relevant pull requests and pushes to `main`, and saves them as
-`Fourier.pdf` and `Spectre.pdf` in the `user-manuals` workflow artifact.
-Ubuntu uses `texlive-latex-extra`, `texlive-fonts-recommended`,
-`texlive-science`, and `poppler-utils`; CI checks that both PDFs are nonempty
-and readable by `pdfinfo`.
+Build the self-contained white paper with `latexmk` and its TeX packages:
 
-Publishing a GitHub release triggers a build from its tag and uploads
-`Fourier.pdf` and `Spectre.pdf` as release assets. These names match the
-`manualUrl` links in `plugin.json`. A tag push alone does not publish a
-release or upload assets. Publish a regular release as the latest release
-for Rack's `/releases/latest/download/` links to resolve to these manuals;
-prerelease assets are also uploaded but do not become the latest release.
+```shell
+make -C docs/whitepaper
+```
 
-To backfill an existing release, select **Actions > User manuals > Run
-workflow** and enter its exact tag in `tag`. The workflow must first be on
-the default branch. Sources and Makefiles come from that tag, so older tags
-retain their original build behavior. The release must already exist and
-allow asset changes. Reruns replace assets with the same names without
-changing release notes or other assets. Only the upload job has
-`contents: write`; builds use read-only repository permissions and require
-no additional secrets. GitHub's built-in token does not trigger a release
-workflow when another workflow creates the release with that token; use
-the manual trigger in that case.
+This writes `docs/whitepaper/build/paper.pdf` without running experiments.
+
+The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
+all three PDFs on relevant pull requests and pushes to `main`: changes to
+either manual directory, the white paper's source or Makefile, `plugin.json`,
+or the workflow itself. Version tags matching `v*` build PDFs regardless of
+path filters. Other branch pushes do not run the workflow. New PR or `main`
+updates cancel obsolete PDF builds; tag and release runs are kept separate
+so a tag build cannot cancel release uploads.
+
+Ubuntu installs `texlive-latex-extra`, `texlive-fonts-recommended`,
+`texlive-science`, `latexmk`, `lmodern`, and `poppler-utils`. CI checks that
+all PDFs are nonempty and readable by `pdfinfo`, then saves `Fourier.pdf`,
+`Spectre.pdf`, and `Fourier-whitepaper.pdf` in the `publication-pdfs` workflow
+artifact for 14 days.
+
+Publishing a GitHub release builds from its tag and attaches all three PDFs.
+The manual asset names match `manualUrl` in `plugin.json`. A tag push builds
+an artifact but does not create a release or upload release assets. Publish a
+regular release as latest for Rack's `/releases/latest/download/` links to
+resolve to these manuals; prerelease assets are also uploaded but do not
+become the latest release. Hosting the paper on GitHub does not submit it to
+arXiv or a journal.
+
+To backfill an existing release, select **Actions > Manuals and white paper
+> Run workflow** and enter its exact tag in `tag`. The workflow must first be
+on the default branch. Sources and Makefiles come from that tag; older tags
+retain their original build behavior, and tags predating the paper upload
+only the two manuals. The release must already exist and allow asset changes.
+Reruns replace matching assets without changing release notes or other assets.
+Only the upload job has `contents: write`; builds use read-only repository
+permissions and require no additional secrets. GitHub's built-in token does
+not trigger a release workflow when another workflow creates the release with
+that token; use the manual trigger in that case.
 
 Keep generated binaries, object files, SCons caches, PDFs, and build folders
 out of source changes. Use explicit SCons targets above: bare `scons` also
