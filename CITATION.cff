@@ -1,7 +1,7 @@
 cff-version: 1.2.0
-message: "If you use Fourier or its scheduling analysis, please cite the technical report below. Link to the GitHub code artifact and identify the software version or commit used; no separate software citation is needed."
+message: "If you use the Arhythmetic Units Fourier plugin or its scheduling analysis, please cite the technical report below. Link to the GitHub code artifact and identify the software version or commit used; no separate software citation is needed."
 type: software
-title: "Fourier: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
+title: "Fourier Plugin: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
 abstract: >-
   Fourier is an Arhythmetic Units plugin for VCV Rack containing the Fourier
   spectrum analyzer and Spectre spectrogram visualizer. It provides incremental
@@ -25,7 +25,7 @@ keywords:
   - C++
 preferred-citation:
   type: report
-  title: "Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis"
+  title: "Resumable FFT Scheduling for Real-Time Spectral Analysis"
   authors:
     - family-names: Kauten
       given-names: Christian

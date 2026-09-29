@@ -1,11 +1,13 @@
-# Fourier Technical Report
+# Resumable FFT Scheduling for Real-Time Spectral Analysis
 
-**Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis** is a
+**Resumable FFT Scheduling for Real-Time Spectral Analysis** is a
 technical report by Christian Kauten (Arhythmetic Units). It examines the
 implementation, scheduling bounds, frame cadence, latency, and empirical
 cost of the original resumable FFT and its production successor, which
 distributes complete analysis over one exact hop. It presents the work as
 an implementation study within the established time-distributed FFT literature.
+The supporting software is the Arhythmetic Units Fourier plugin for VCV Rack,
+which contains the Fourier spectrum analyzer and Spectre spectrogram modules.
 
 ## Read And Build
 

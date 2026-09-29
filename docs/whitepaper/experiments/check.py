@@ -95,7 +95,14 @@ for work in range(1,257):
         assert sum(quotas) == work and quotas[-1] > 0
         assert max(quotas) == math.ceil(work/horizon)
 
-assert 'Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis' in (ROOT / 'CITATION.cff').read_text()
+title = 'Resumable FFT Scheduling for Real-Time Spectral Analysis'
+assert f'pdftitle={{{title}}}' in tex
+printed_title = re.search(r'\\title\{\\textbf\{(.*?)\}\}', tex, re.DOTALL).group(1)
+assert ' '.join(printed_title.replace(r'\\', ' ').split()) == title
+assert f'  title: "{title}"' in (ROOT / 'CITATION.cff').read_text()
+assert title in (PAPER / 'CITATION.bib').read_text().replace('{', '').replace('}', '')
+for path in [ROOT / 'README.md', PAPER / 'README.md']:
+    assert title in ' '.join(path.read_text().split()), path
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
 assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')

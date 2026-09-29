@@ -22,10 +22,10 @@
 \definecolor{ink}{HTML}{214E70}
 \definecolor{accent}{HTML}{B85C38}
 \definecolor{pale}{HTML}{F3F5F7}
-\hypersetup{pdftitle={Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis},pdfauthor={Christian Kauten},pdfsubject={Technical report on cooperative FFT scheduling, latency, and reproducible evaluation},pdfkeywords={FFT, STFT, cooperative scheduling, real-time audio, spectrum analysis, VCV Rack}}
+\hypersetup{pdftitle={Resumable FFT Scheduling for Real-Time Spectral Analysis},pdfauthor={Christian Kauten},pdfsubject={Technical report on cooperative FFT scheduling, latency, and reproducible evaluation},pdfkeywords={FFT, STFT, cooperative scheduling, real-time audio, spectrum analysis, VCV Rack}}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small\textsc{Fourier: Resumable FFT Scheduling}}
+\fancyhead[L]{\small\textsc{Resumable FFT Scheduling}}
 \fancyhead[R]{\small Technical report}
 \fancyfoot[C]{\thepage}
 \setlength{\headheight}{14pt}
@@ -37,7 +37,7 @@
 \newcommand{\floor}[1]{\left\lfloor #1\right\rfloor}
 \newcommand{\repo}{\url{https://github.com/Kautenja/ArhythmeticUnits-Fourier}}
 \lstset{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{ink}\bfseries,commentstyle=\color{black!55},stringstyle=\color{accent},backgroundcolor=\color{pale},frame=single,rulecolor=\color{black!15},breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,tabsize=4,captionpos=b,xleftmargin=0.5em,xrightmargin=0.5em}
-\title{\textbf{Fourier: Resumable FFT Scheduling\\for Real-Time Spectral Analysis}}
+\title{\textbf{Resumable FFT Scheduling\\for Real-Time Spectral Analysis}}
 \author{Christian Kauten\\\small Arhythmetic Units\\\small\href{mailto:arhythmetic.units@gmail.com}{arhythmetic.units@gmail.com}}
 \date{September 28, 2026\\\small Technical report, manuscript version 2}
 
@@ -46,8 +46,8 @@
 \begin{abstract}
 A Fourier transform that is inexpensive in aggregate can still impose an
 undesirable burst on a real-time audio engine. This report studies two
-successive schedulers in Fourier, an open-source spectrum analyzer and
-spectrogram plugin for VCV Rack. The original design distributes butterflies
+successive schedulers in an open-source spectral analysis plugin for VCV Rack.
+The original design distributes butterflies
 but retains linear preparation and reconstruction bursts and may restart frames
 before its requested horizon. The production successor orders packing,
 windowing, butterflies, positive-bin reconstruction, magnitude smoothing, and
@@ -85,11 +85,15 @@ retaining an unfinished transform and performing a small amount of it whenever
 the host processes another sample. This makes scheduling visible at the DSP
 interface without introducing an additional thread.
 
-Fourier implements this latter design. Its Fourier module computes four
-independent spectra using SIMD lanes; its Spectre module maintains a scalar
-spectrogram history. Their current shared analyzer schedules the complete
-engine-side analysis over one exact hop. The earlier resumable real FFT remains
-available as a reusable DSP component and as the baseline examined here.
+The implementation studied here belongs to the Arhythmetic Units Fourier plugin
+for VCV Rack. The plugin contains a spectrum analyzer module named Fourier and
+a spectrogram module named Spectre. These are software product names; the
+mathematical terms Fourier transform and Fourier analysis retain their
+conventional meanings. The Fourier module computes four independent spectra
+using SIMD lanes; the Spectre module maintains a scalar spectrogram history.
+Their current shared analyzer schedules the complete engine-side analysis over
+one exact hop. The earlier resumable real FFT remains available as a reusable
+DSP component and as the baseline examined here.
 
 This report makes three contributions: a derivation of the original scheduler's
 completion/cadence mismatch and residual bursts; a dependency-ordered one-hop
@@ -114,7 +118,7 @@ algorithms have a substantial independent literature, including Sorensen
 et al.~\cite{sorensen1987}. Short-time Fourier analysis and synthesis provide
 the frame-based interpretation~\cite{allen1977}; window selection and its
 spectral consequences are treated systematically by Harris~\cite{harris1978}.
-The packing and windowing used in Fourier are applications of this established
+The packing and windowing used in the plugin are applications of this established
 body of work.
 
 Time-distributed FFT computation also predates this implementation. Lo and Lee
@@ -140,7 +144,7 @@ rules out a broad novelty claim for distributing transform work in time.
 A separate family of methods reuses work between overlapping windows.
 The sliding DFT updates spectral bins recursively as samples enter and leave a
 window~\cite{jacobsen2003,jacobsen2015}. Tree-based sliding-window transforms
-reuse intermediate calculations~\cite{richardson2019}. Fourier's resumable FFT
+reuse intermediate calculations~\cite{richardson2019}. The plugin's resumable FFT
 has neither form of inter-frame reuse: each new frame begins a fresh transform.
 This distinction matters for both complexity and numerical behavior. Merely
 pausing an FFT does not introduce an indefinitely evolving spectral recurrence.
@@ -190,7 +194,7 @@ $G_c=N^{-1}\sum_m w[m]$. An isolated interior bin-centered real sinusoid can be
 scaled using $2|X_r[k]|/(NG_c)$ when the window's positive- and negative-frequency
 contributions do not overlap materially. DC and Nyquist do not receive the
 factor of two. This is amplitude calibration, not power-spectral-density
-normalization; the latter involves window energy. Fourier caches window
+normalization; the latter involves window energy. The plugin caches window
 samples and applies tabulated coherent-gain factors. Those factors should not
 be assumed to equal the exact finite-length sum for every window and length.
 The original FFT campaign uses explicit rectangular and periodic Hann samples
@@ -396,7 +400,7 @@ $\exp[-tH/(L\tau)]$. The effective time constant is thus
  \tau_{\mathrm{eff}}=\tau L/H.
 \end{equation}
 For the 4096-point example, the decay time is approximately 8.3\% shorter than
-its nominal interpretation. The one-hop successor removes this completion-driven discrepancy; Fourier
+its nominal interpretation. The one-hop successor removes this completion-driven discrepancy; the Fourier module
 still truncates its hop control to integer samples (Section~\ref{sec:one-hop}). The analysis also motivates timestamping
 spectrogram columns by captured frames rather than assuming the configured
 horizon is their spacing.
@@ -672,8 +676,9 @@ number of safe analyzer instances. Neither timing campaign measures a running Ra
 The production \code{SpectrumAnalysis<T>} replaces the modules' original
 completion-driven loop with one ordered sequence per frame. It computes the
 same windowed transform and magnitude processing while omitting unused
-conjugate bins. Fourier instantiates four independent SIMD channels; Spectre
-uses scalar samples. No alternate research scheduler is part of this path.
+conjugate bins. The Fourier module instantiates four independent SIMD channels;
+the Spectre module uses scalar samples. No alternate research scheduler is
+part of this path.
 
 \subsection{Dependency order and work bound}
 Let $M=N/2$, $K=M+1$, and $B=(M/2)\log_2 M$. Table~\ref{tab:units} defines
@@ -788,30 +793,30 @@ because a low bin's interval may require higher bins. These are magnitude
 means, not power means or constant-Q analysis.
 
 For Average control $T>0$ seconds, the retained convention is
-$\alpha=\exp(-10\Delta t/T)$; $T=0$ disables averaging. Spectre uses
-$\Delta t=H/f_s$. Fourier uses its Hop control in seconds and truncates
+$\alpha=\exp(-10\Delta t/T)$; $T=0$ disables averaging. Spectre uses $\Delta
+t=H/f_s$. The Fourier module uses its Hop control in seconds and truncates
 $\Delta t f_s$ to $H$, retaining a sub-sample quantization difference between
 the control and actual interval. The previous $L/H$ completion bias is removed.
 Window coherent-gain factors and module-specific display scaling are preserved;
 this scheduling change does not redefine amplitude units.
 
-Each output unit maps a four-channel bin into Fourier curve points, or writes
-one Spectre column magnitude. Only after all units finish does the engine
-publish the destination. A single-producer/single-consumer triple-slot mailbox
-uses acquire/release atomic exchange to transfer ownership of a completed
-slot and obtain a reusable slot. The consumer holds its slot until its next
-successful exchange; the producer never overwrites that slot. A slow consumer
-may miss intermediate snapshots. Fourier has one curve mailbox; Spectre has
-one mailbox per history column. Spectre's full image history and recoloring
-belong to the UI, outside the engine schedule.
+Each output unit maps a four-channel bin into the Fourier module's curve
+points, or writes one Spectre column magnitude. Only after all units finish
+does the engine publish the destination. A single-producer/single-consumer
+triple-slot mailbox uses acquire/release atomic exchange to transfer ownership
+of a completed slot and obtain a reusable slot. The consumer holds its slot
+until its next successful exchange; the producer never overwrites that slot. A
+slow consumer may miss intermediate snapshots. The Fourier module has one curve
+mailbox; the Spectre module has one mailbox per history column. Spectre's full
+image history and recoloring belong to the UI, outside the engine schedule.
 
-Freeze semantics remain distinct: Fourier stops capture but continues analysis
-of retained input, whereas Spectre pauses both acquisition and the schedule and
-resumes its partial hop. Continuous-input timestamp equations do not apply
-across such pauses. Host sample-rate changes cancel partial analysis; Spectre
-reset still clears and publishes its history columns. These lifecycle costs,
-UI work, other shared controls, and host scheduling prevent a broad claim of
-hard real-time safety.
+Freeze semantics remain distinct: the Fourier module stops capture but
+continues analysis of retained input, whereas Spectre pauses both acquisition
+and the schedule and resumes its partial hop. Continuous-input timestamp
+equations do not apply across such pauses. Host sample-rate changes cancel
+partial analysis; Spectre reset still clears and publishes its history columns.
+These lifecycle costs, UI work, other shared controls, and host scheduling
+prevent a broad claim of hard real-time safety.
 
 \section{Complete-Pipeline Prototype Evaluation}
 \label{sec:pipeline-evaluation}
@@ -925,8 +930,8 @@ of every window/display setting. Production regression tests add invalid-setting
 rejection and concurrent mailbox stress; they are separate from timing evidence.
 
 \section{Conclusion}
-Fourier illustrates how a conventional FFT can become a schedulable component
-by exposing its traversal state. The resulting operation-count budget has a
+This implementation study illustrates how a conventional FFT can become a
+schedulable component by exposing its traversal state. The resulting operation-count budget has a
 simple completion proof and preserves the order of arithmetic. Its application
 also exposes two easily overlooked distinctions: completing within a requested
 horizon is not the same as maintaining that frame interval, and budgeting
@@ -1082,7 +1087,7 @@ retains 27 phase observations. Individual timed calls were not retained.
 The production paths are \path{src/dsp/spectrum_analysis.hpp},
 \path{src/SpectrumAnalyzer.cpp}, and \path{src/Spectrogram.cpp}.
 \path{src/rack_extensions/display_mailbox.hpp} defines snapshot ownership;
-\path{src/rack_extensions/spectrum_coordinates.hpp} maps Fourier's bins.
+\path{src/rack_extensions/spectrum_coordinates.hpp} maps the Fourier module's bins.
 The original \path{src/dsp/fft.hpp} remains a reusable component. Run the
 production checks using the commands in
 \path{docs/developer-manual/development-and-testing.md}.

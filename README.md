@@ -127,7 +127,7 @@ project's source structure and coding conventions.
 
 ## Citation
 
-The [technical report](docs/whitepaper/README.md), **Fourier: Resumable FFT
+The [technical report](docs/whitepaper/README.md), **Resumable FFT
 Scheduling for Real-Time Spectral Analysis**, describes the implementation,
 its scheduling and latency model, prior work, and reproducible experiments.
 The self-contained [LaTeX source](docs/whitepaper/fourier.tex) builds with
@@ -141,12 +141,12 @@ supplies the same report entry.
 ```bibtex
 @techreport{kauten2026fourier,
   author      = {Kauten, Christian},
-  title       = {{Fourier}: Resumable {FFT} Scheduling for Real-Time Spectral Analysis},
+  title       = {Resumable {FFT} Scheduling for Real-Time Spectral Analysis},
   institution = {Arhythmetic Units},
   year        = {2026},
   month       = sep,
   type        = {Technical report},
-  note        = {Manuscript version 1; not yet deposited on arXiv},
+  note        = {Manuscript version 2; not yet deposited on arXiv},
   url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper},
 }
 ```
