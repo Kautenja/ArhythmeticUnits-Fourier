@@ -580,11 +580,11 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Process samples with the DFT.
     inline void process_coefficients() {
-        // Determine the alpha parameter of the low-pass smoothing filter.
-        const float alpha = get_time_smoothing_alpha();
         // Determine the setting of the frequency smoothing mode.
         const auto frequency_smoothing = get_frequency_smoothing();
         if (fft.is_done_computing()) {
+            // Compute smoothing alpha only when there is a new spectrum.
+            const float alpha = get_time_smoothing_alpha();
             // Perform octave smoothing. For an N-length FFT, smooth over the
             // first N/2 + 1 coefficients to omit reflected frequencies.
             if (frequency_smoothing != FrequencySmoothing::None)

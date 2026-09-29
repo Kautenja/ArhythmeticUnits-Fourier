@@ -334,6 +334,8 @@ class OnTheFlyFFT {
 /// factors. This approach packs the real input samples into a complex array,
 /// computes the FFT on the packed data, and then reconstructs the full
 /// N-point FFT using the symmetry properties of real signals.
+/// Construction and resize prepare scratch storage; buffer, computation, and
+/// smoothing do not allocate. Instances require single-threaded ownership.
 template<typename T>
 class OnTheFlyRFFT {
  private:
@@ -341,6 +343,10 @@ class OnTheFlyRFFT {
     OnTheFlyFFT<T> fft;
     /// Pre-computed twiddle factors for reconstructing the full N-point FFT.
     TwiddleFactors<T> twiddles;
+
+    /// Packed input and magnitude prefix sums, sized only during resize.
+    std::vector<std::complex<T>> packed;
+    std::vector<T> cumsum;
 
     /// @brief Finalize the reconstruction of the N-point FFT from the
     /// underlying N/2-point FFT.
@@ -395,6 +401,8 @@ class OnTheFlyRFFT {
         fft.resize(n >> 1);
         twiddles.resize(n);
         coefficients.resize(n);
+        packed.resize(n >> 1);
+        cumsum.resize(n + 1);
         std::fill(coefficients.begin(), coefficients.end(), 0.f);
     }
 
@@ -416,8 +424,7 @@ class OnTheFlyRFFT {
     /// @param w A vector representing the window function to be applied
     /// to the input samples.
     inline void buffer(const T* x, const std::vector<float>& w) {
-        // Create an array to interleave real samples into complex numbers.
-        std::vector<std::complex<T>> packed(fft.size());
+        // Interleave real samples into the prepared complex scratch buffer.
         for (size_t k = 0; k < packed.size(); ++k)
             packed[k] = {x[2 * k] * w[2 * k], x[2 * k + 1] * w[2 * k + 1]};
         // Since windowing is applied during packing, use no window for FFT.
@@ -468,7 +475,7 @@ class OnTheFlyRFFT {
         const float f_max = sample_rate / 2.f;
         const float bin_width = sample_rate / static_cast<float>(N);
         // Build prefix sum of magnitudes.
-        std::vector<T> cumsum(N + 1, 0.0);
+        cumsum[0] = T(0.f);
         for (size_t n = 0; n < N; ++n)
             cumsum[n + 1] = cumsum[n] + abs(coefficients[n]);
         // Apply octave-based smoothing in-place.

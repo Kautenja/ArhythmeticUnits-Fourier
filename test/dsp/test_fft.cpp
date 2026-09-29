@@ -173,6 +173,74 @@ SCENARIO("the RFFT needs to be calculated") {
 }
 
 // ---------------------------------------------------------------------------
+// MARK: RFFT storage reuse
+// ---------------------------------------------------------------------------
+
+TEMPLATE_TEST_CASE("RFFT reuse preserves windowing and smoothing", "[rfft]", float, double) {
+    using T = TestType;
+    Fourier::OnTheFlyRFFT<T> fft(4);
+    const size_t hop = GENERATE(1, 3, 64);
+    const float fraction = GENERATE(1.f, 1.f / 3.f, 1.f / 12.f);
+    for (const size_t n : {4, 32, 8, 64, 4}) {
+        fft.resize(n);
+        std::vector<T> input(n);
+        std::vector<float> window(n);
+        for (size_t frame = 0; frame < 4; ++frame) {
+            CAPTURE(n, hop, fraction, frame);
+            for (size_t i = 0; i < n; ++i) {
+                // Follow changing signals with silence to detect stale scratch.
+                input[i] = frame == 3 ? T(0) : T(int((i + frame) % 7) - 3) / T(4);
+                window[i] = frame % 2 == 0 ? 1.f : float(i % 4 + 1) / 4.f;
+            }
+            fft.buffer(input.data(), window);
+            const size_t budget = (fft.get_total_steps() + hop - 1) / hop;
+            const size_t calls = (fft.get_total_steps() + budget - 1) / budget;
+            for (size_t call = 0; call < calls; ++call) {
+                REQUIRE_FALSE(fft.is_done_computing());
+                fft.step(hop);
+            }
+            REQUIRE(fft.is_done_computing());
+            // Independent direct DFT checks packing and windowing after reuse.
+            const long double tolerance = 32.L * n * std::numeric_limits<T>::epsilon();
+            for (size_t k = 0; k < n; ++k) {
+                std::complex<long double> expected(0, 0);
+                for (size_t i = 0; i < n; ++i) {
+                    const long double angle = -2.L * std::acos(-1.L) * k * i / n;
+                    expected += static_cast<long double>(input[i]) * window[i]
+                        * std::complex<long double>(std::cos(angle), std::sin(angle));
+                }
+                const std::complex<long double> actual(fft.coefficients[k].real(),
+                                                       fft.coefficients[k].imag());
+                REQUIRE(std::abs(actual - expected) <= tolerance);
+            }
+            const auto original = fft.coefficients;
+            fft.smooth(48000.f, fraction);
+            // Sum each band directly rather than using a prefix-sum buffer.
+            const float bin_width = 48000.f / n;
+            for (size_t k = 0; k < n; ++k) {
+                T expected = 0;
+                if (k <= n / 2) {
+                    const float center = k * bin_width;
+                    float low = center / std::pow(2.f, fraction / 2.f);
+                    float high = center * std::pow(2.f, fraction / 2.f);
+                    if (high > 24000.f) {
+                        high = 24000.f;
+                        low = high / std::pow(2.f, fraction);
+                    }
+                    const size_t first = std::floor(low / bin_width);
+                    const size_t last = std::floor(high / bin_width);
+                    for (size_t bin = first; bin <= last; ++bin)
+                        expected += std::abs(original[bin]);
+                    expected /= T(last - first + 1);
+                }
+                REQUIRE(std::abs(fft.coefficients[k].real() - expected) <= tolerance);
+                REQUIRE(fft.coefficients[k].imag() == T(0));
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // MARK: `OnTheFlyIFFT`
 // ---------------------------------------------------------------------------
 
