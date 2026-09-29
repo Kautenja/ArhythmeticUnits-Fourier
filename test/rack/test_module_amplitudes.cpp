@@ -299,3 +299,101 @@ TEMPLATE_TEST_CASE("AC coupling rejects DC in short repeating polyphonic signals
         }
     }
 }
+
+TEST_CASE("Spectre intensity mapping uses exact amplitude reference and safe palette coordinates") {
+    using Intensity = Fourier::SpectrogramIntensity;
+    for (const float db : {-120.f, -90.f, -45.f, 0.f, 12.f, 24.f}) {
+        const float magnitude = 1024.f * std::pow(10.f, db / 20.f);
+        const float measured = Intensity::decibels(magnitude, 1024.f);
+        CHECK(measured == Catch::Approx(db).margin(0.0001));
+        const float expected = std::max(0.f, std::min(1.f, (db + 90.f) / 90.f));
+        CHECK(Intensity::position(measured, -90.f, 0.f) == Catch::Approx(expected).margin(1e-6));
+    }
+    const float infinity = std::numeric_limits<float>::infinity();
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    for (const float input : {0.f, infinity, nan}) {
+        const float db = Intensity::decibels(input, 1024.f);
+        const float position = Intensity::position(db, -90.f, 0.f);
+        CHECK(Intensity::finite(position));
+        CHECK(position == (Intensity::magnitude_bits(input) == 0x7f800000U ? 1.f : 0.f));
+        for (int palette = 0; palette < static_cast<int>(Fourier::ColorMap::Function::NumFunctions); ++palette) {
+            const auto color = Fourier::ColorMap::color_map(static_cast<Fourier::ColorMap::Function>(palette), position);
+            CHECK(Intensity::finite(color.r));
+            CHECK(Intensity::finite(color.g));
+            CHECK(Intensity::finite(color.b));
+        }
+    }
+    CHECK(Intensity::format(Intensity::decibels(0.f, 1024.f)) == "-inf");
+    CHECK(Intensity::format(nan) == "--");
+    for (const float invalid : {nan, infinity, -infinity}) {
+        CHECK(Intensity::endpoint(invalid, false) == -90.f);
+        CHECK(Intensity::endpoint(invalid, true) == 0.f);
+    }
+    CHECK(Intensity::endpoint(-200.f, false) == -120.f);
+    CHECK(Intensity::endpoint(20.f, false) == -1.f);
+    CHECK(Intensity::endpoint(-10.f, true) == 0.f);
+    CHECK(Intensity::endpoint(40.f, true) == 24.f);
+    Fourier::DFTCoefficients column(1025, 1024.f);
+    for (const float rate : {44100.f, 48000.f, 96000.f}) {
+        for (const bool logarithmic : {false, true}) {
+            for (const float frequency : {0.f, 500.f, 1000.f, 2000.f, rate / 2.f}) {
+                for (const float slope : {-4.5f, 0.f, 4.5f}) {
+                    CAPTURE(rate, logarithmic, frequency, slope);
+                    const float row = logarithmic ? 1024.f * std::sqrt(frequency / (rate / 2.f)) :
+                        frequency * 2048.f / rate;
+                    const float bin = Intensity::row_bin(row, 1024.f, logarithmic);
+                    const double expected = frequency == 0.f ? 0. : slope * std::log2(double(frequency) / 1000.);
+                    CHECK(Intensity::color_db(column, bin, rate, 2048.f, slope) ==
+                        Catch::Approx(expected).margin(0.0001));
+                }
+            }
+        }
+    }
+    column[40] = 1024.f;
+    column[41] = 256.f;
+    // Fractional linear interpolation is 832, not an interpolation of dB.
+    CHECK(Intensity::color_db(column, 40.25f, 48000.f, 2048.f, 0.f) ==
+        Catch::Approx(20. * std::log10(832. / 1024.)).margin(0.0001));
+    CHECK(Intensity::decibels(column[40].real(), 1024.f) == Catch::Approx(0.f).margin(0.0001));
+    column[41] = nan;
+    CHECK(Intensity::color_db(column, 40.f, 48000.f, 2048.f, 0.f) == Catch::Approx(0.f).margin(0.0001));
+    CHECK(Intensity::format(Intensity::color_db(column, 40.25f, 48000.f, 2048.f, 0.f)) == "--");
+    column[41] = infinity;
+    CHECK(Intensity::position(Intensity::color_db(column, 40.25f, 48000.f, 2048.f, 0.f), -90.f, 0.f) == 1.f);
+}
+
+TEST_CASE("Spectre five-volt tones read zero dB with unchanged DC and Nyquist conventions") {
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    for (const float rate : {44100.f, 48000.f, 96000.f}) {
+        context.engine->setSampleRate(rate);
+        for (const size_t bin : {0u, 43u, 1024u}) {
+            for (const float gain : {0.5f, 1.f, 2.f}) {
+                Spectrogram module;
+                module.is_ac_coupled = false;
+                module.set_slope(0.f);
+                module.set_window_function(Fourier::Window::Function::Hann);
+                module.params[Spectrogram::PARAM_INPUT_GAIN].setValue(gain);
+                module.inputs[0].channels = 1;
+                rack::engine::Module::ProcessArgs args = {};
+                args.sampleRate = rate;
+                args.sampleTime = 1.f / rate;
+                for (int sample = 0; sample < 4096; ++sample) {
+                    module.inputs[0].setVoltage(5. * std::cos(2. * std::acos(-1.) * bin * (sample % 2048) / 2048.));
+                    module.process(args);
+                }
+                const auto* column = module.consume_display_column(module.get_hop_index() - 1);
+                REQUIRE(column);
+                const double expected = gain * (bin == 43 ? 1024. : 2048.);
+                CHECK(column->values[bin] == Catch::Approx(expected).epsilon(2e-4));
+                const double db = 20. * std::log10(gain * (bin == 43 ? 1. : 2.));
+                CHECK(Spectrogram::Intensity::decibels(column->values[bin], 1024.f) ==
+                    Catch::Approx(db).margin(0.002));
+                const float legacy = 20.f * std::log10(column->values[bin]) - 60.f;
+                CHECK(Spectrogram::Intensity::decibels(column->values[bin], 1024.f) - legacy ==
+                    Catch::Approx(-0.2059991328).margin(0.00002));
+            }
+        }
+    }
+}

@@ -2,7 +2,7 @@
 \usepackage[moduleName={Spectre},version={2.1.2}]{ArhythmeticUnits}
 
 \begin{document}
-\titlePage{img/Logo}{img/Module}{img/ArhythmeticUnits}{}
+\titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
 
 % ----------------------------------------------------------------------------
 % MARK: Overview
@@ -27,7 +27,7 @@ Spectre uses a short-time Fourier transform (STFT) with a fixed FFT length of
 2048 samples, a hop size of 1024 samples (50\% overlap), and a history of 512
 spectra. FFT length, hop size, and history length are not adjustable. You can
 choose the window function, time and frequency smoothing, visible frequency
-range, display slope, and color map.
+range, display slope, intensity range, and color map.
 
 At sample rate $f_s$, frequency bins are spaced $f_s/2048$ Hz apart, each
 analysis window spans $2048/f_s$ seconds, and a complete display sweep takes
@@ -50,8 +50,8 @@ hear it.
   both modules to the same input gain; Fourier starts at $0\,\mathrm{dB}$.
   \item A steady sine wave produces a horizontal band. Harmonics appear as
   additional bands above it; short broadband sounds produce vertical marks.
-  \item Adjust the input gain if the image is too faint or too much of it
-  reaches the color map's brightest end. Set \textbf{Slope} to zero when you
+  \item Drag the two limits on the vertical \textbf{Color} bar to reveal quiet detail or
+  distinguish bright regions, including while frozen. Set \textbf{Slope} to zero when you
   want to compare magnitudes without frequency-dependent display weighting.
   The default is $+4.5\,\mathrm{dB/oct}$.
   \item Press \textbf{Run} to freeze the history, then hover over the plot to
@@ -62,8 +62,8 @@ hear it.
 signal RMS, loudness, or sound pressure level. Window choice, frequency
 alignment with FFT bins, and smoothing affect the height and width of a peak.
 The color map has a finite range; reaching its end color does not mean Spectre
-has clipped your audio path. The hover readout measures stored magnitudes
-before Slope weighting.
+has clipped your audio path. The \textbf{Raw} hover readout measures stored magnitudes before Slope
+weighting; \textbf{Color} measures the weighted, interpolated image sample.
 
 \paragraph{Choosing settings} Use little or no \textbf{Average} to follow
 changes more closely. Increase \textbf{Average} for a steadier image and
@@ -80,12 +80,11 @@ increasing resolution. The factory presets provide examples of these choices.
 
 \begin{figure}[!htp]
 \centering
-\includegraphics[width=\textwidth]{img/PanelLayout}
-\caption{Spectre's input, Run button, and display controls.}
+\includegraphics[width=\textwidth]{img/PanelLayout.png}
+\caption{Spectre's input, vertical color-range control, Run button, and display controls.}
 \end{figure}
 
-The numbered illustration identifies control positions. Its former Y Scale
-control is now labeled \textbf{Freq Scale}. Text controls brighten when hovered.
+The illustration shows the current panel. Text controls brighten when hovered.
 The sections below give the current ranges and defaults.
 
 \subsection{Input}
@@ -98,9 +97,41 @@ corresponds to $\pm1$ before gain.
 
 \textbf{Input Gain} ranges from silence ($-\infty\,\mathrm{dB}$) to
 $+12\,\mathrm{dB}$ and starts at $+6\,\mathrm{dB}$. It changes the signal
-being analyzed, not the gain of your audio path. Lower it if strong signals or
-summed voices saturate the color map. Gain changes affect newly acquired
+being analyzed, not the gain of your audio path. Use Floor and Ceil to
+change displayed contrast without changing capture gain. Gain changes affect newly acquired
 spectra; they do not rescale the stored history.
+
+\subsection{Vertical Color Range}
+
+The single vertical \textbf{Color} bar below Input Gain controls the display
+range. Drag its \textbf{lower-left handle} to change Floor and reveal quiet
+detail. Drag its \textbf{upper-right handle} to change Ceiling and distinguish
+bright peaks. The gradient changes immediately, showing the selected palette
+between the two limits. Outside the handles, colors saturate to the endpoint
+colors. The numbers above and below the bar give Ceiling and Floor in dB.
+
+Floor ranges from $-120$ to $-1\,\mathrm{dB}$, defaulting to
+$-90\,\mathrm{dB}$. Ceiling ranges from $0$ to $+24\,\mathrm{dB}$,
+defaulting to $0\,\mathrm{dB}$. Both handles use the same fixed vertical
+$-120$ to $+24\,\mathrm{dB}$ axis. The disjoint limits prevent the handles
+from crossing. They occupy opposite sides so both remain reachable at a
+narrow range. Each drag creates one Undo/Redo action. Hold Cmd on macOS or
+Ctrl on other platforms for fine adjustment. Right-click a handle to type
+an exact value; double-click it to reset that endpoint.
+
+Changing either limit recolors existing history immediately, including with
+Run off, without moving the scan line or changing stored magnitudes. At
+$-90$ to $0\,\mathrm{dB}$, a weighted value of $-45\,\mathrm{dB}$ maps to
+the palette midpoint. Raising Ceiling to $+12\,\mathrm{dB}$ separates
+bright positive-dB regions without recapturing audio. Slope weighting is
+included in the displayed color range.
+
+Old patches and the original factory presets load in Legacy linear mode.
+Their bar reads \textbf{LIN}, with normalized endpoints 0 and 1 and no drag
+handles. Click \textbf{Enable dB} directly below the bar to activate the
+adjustable range. This explicit, undoable action recolors the retained
+history; simply loading an old patch preserves its original colors.
+The context menu can switch back to Legacy linear at any time.
 
 \subsection{Run}
 
@@ -110,7 +141,8 @@ available for inspection. Resuming continues from the paused position; audio
 received during the pause is not captured. Run is initially enabled.
 
 While frozen, you can change \textbf{Freq Scale}, \textbf{LO Freq}, \textbf{HI
-Freq}, \textbf{Slope}, and the \textbf{Color Map} to view the same history
+Freq}, \textbf{Slope}, \textbf{Floor}, \textbf{Ceil}, intensity scale, and
+the \textbf{Color Map} to view the same history
 differently. Input gain, window, \textbf{Average}, \textbf{Smooth}, and
 AC-coupling changes affect subsequent analysis after you resume, not spectra
 already in the history.
@@ -191,9 +223,13 @@ Its range is $-9$ to $+9\,\mathrm{dB/oct}$, with a default of
 $+4.5\,\mathrm{dB/oct}$. Positive values emphasize the upper part of the
 display, negative values emphasize the lower part, and zero disables this
 weighting. It can be changed while frozen and does not alter the stored
-magnitudes or the hover dB readout.
+magnitudes or the Raw readout. The Color readout includes this weighting.
 
-The weighting is referenced to $1\,\mathrm{kHz}$ on the Linear scale. In
+In Decibels mode, weighting is $s\log_2(f/1000)$ dB, where $s$ is Slope
+and $f$ is the physical frequency of the sampled fractional bin. This holds
+on both frequency scales; DC has zero weighting.
+
+In Legacy linear mode, weighting is referenced to $1\,\mathrm{kHz}$ on the Linear scale. In
 Logarithmic mode it is applied using the image-row position before the
 frequency mapping, so it is not an exact dB-per-octave correction at the
 labeled frequencies. Use zero slope for unweighted comparisons.
@@ -211,22 +247,45 @@ does not scroll: the newest spectrum is immediately behind the scan line
 (to its left, except at the wrap), and older history lies ahead of it.
 A frozen history excludes any elapsed time while Run was off.
 
-Color represents linear magnitude after gain, windowing, smoothing, and
-Slope weighting. The color map has a finite range: magnitudes above its
-upper limit share the same end color. A bright region therefore does not
-show how far above that limit the signal is. Lower the input gain and
-acquire new history to distinguish those levels.
+In Decibels mode, color represents spectral amplitude after gain, windowing,
+smoothing, and Slope weighting. Linear magnitudes are interpolated before
+converting to dB. With magnitude $m$, the unweighted level is
+$20\log_{10}(|m|/1024)$; the weighted level adds Slope. The palette position
+is $(d-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1.
+Only colors saturate; numeric readouts remain unclamped.
+
+The analyzer divides input voltage by $5\,\mathrm{V}$, applies input gain,
+and compensates for window coherent gain. An isolated, bin-centered
+$5\,\mathrm{V}$ peak sinusoid at unity gain, with AC coupling off, smoothing
+off, and zero Slope reads approximately $0\,\mathrm{dB}$. This is a spectral
+amplitude reference, not dBFS or broadband RMS. The unchanged DC and Nyquist
+conventions give about $+6.02\,\mathrm{dB}$ for a $5\,\mathrm{V}$ constant
+or alternating signal, respectively; no endpoint factors are added.
+
+Legacy linear mode preserves the old slope-weighted magnitude divided by
+1024 and its original image-row weighting. Its normalized palette range is
+0--1, independent of Floor and Ceil. Select Decibels to inspect retained
+history with adjustable contrast.
 
 The crosshair and readouts appear only inside the plot rectangle. Moving
 onto the surrounding labels or control strip hides them.
 
-Hover over the plot for a crosshair and readouts of frequency, musical note,
-tuning offset, and magnitude in dB. The magnitude comes from the stored
-spectrum at that time and frequency, before Slope weighting. Unlike Fourier's
-amplitude readout, which describes the cursor position, Spectre's readout
-measures a stored spectral bin. The display has no time readout; use the sweep
-duration described in the overview as a guide.
+Hover over the plot for a crosshair, frequency, musical note, tuning offset,
+and levels. In Decibels mode, \textbf{Raw} measures the stored bin below the
+cursor frequency, before Slope. \textbf{Color} measures the image row's
+interpolated magnitude with Slope at that row's physical frequency, before
+texture filtering on screen. Raw and Color can differ, particularly between
+bins or with nonzero Slope. Silence reads $-\infty\,\mathrm{dB}$ and invalid
+data reads \texttt{--}. Positive infinity uses the top color; invalid data
+uses the bottom color. The legend never clamps these readouts.
 
+Legacy linear retains its historical unweighted-bin readout,
+$20\log_{10}(|m|)-60$. The exact Decibels reference is approximately
+$0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
+Spectre measures recorded spectral data. There is no time readout; use the
+sweep duration in the overview as a guide.
+
+\clearpage
 \section{Context Menu And Saved Settings}
 
 Right-click the module to find these options under \textbf{Render Settings}:
@@ -236,18 +295,25 @@ Right-click the module to find these options under \textbf{Render Settings}:
   low frequencies. Turn it off when inspecting DC or slow signals, and set
   Slope to zero to avoid frequency weighting near DC. This setting does not
   reprocess history.
+  \item \textbf{Intensity scale}: Decibels (new instances and reset) or
+  Legacy linear. Old patches and presets with no valid intensity mode load
+  in Legacy linear to preserve their colors. Missing endpoint values load
+  as $-90$ and $0\,\mathrm{dB}$, even when loading into an edited module.
+  Select Decibels explicitly to enable the range handles.
   \item \textbf{Color Map}: Viridis, Cividis, Magma, Plasma, Inferno, Bone,
   or Gray. Magma is the default. Selecting another map recolors the existing
   history, including while frozen.
 \end{itemize}
 
 These menu changes support Rack's Undo and Redo commands. Patches and module
-presets save the panel settings, Run state, AC-coupling choice, and color map.
+presets save the panel settings, Run state, AC-coupling choice, color map,
+and intensity mode.
 They do not save the recorded spectrogram. A patch saved while frozen reopens
 with no recorded history; enable Run to acquire a new image.
 
 Rack's module initialization resets the controls to their defaults, enables
-Run and AC coupling, selects Magma, and clears the history. Changing Rack's
+Run and AC coupling, selects Magma and Decibels, restores Floor/Ceil to
+$-90$/$0\,\mathrm{dB}$, and clears the history. Changing Rack's
 sample rate changes the available frequency range, bin spacing, and sweep
 duration. Existing history is not cleared automatically and is displayed
 using the new frequency mapping; allow a full sweep to replace it before
@@ -259,9 +325,14 @@ comparing frequencies at the new sample rate.
 Load these examples from Rack's module preset menu. All start running, with
 $0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
 limited by the current sample rate. Unlike Fourier's presets, these cannot
-change FFT length or hop size; both remain fixed in Spectre.
+change FFT length or hop size; both remain fixed in Spectre. The five
+original presets retain Legacy linear mode and their original appearance.
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[DecibelInspection] Decibels mode with Floor $-90\,\mathrm{dB}$ and
+  Ceil $+12\,\mathrm{dB}$: Flattop, Linear Freq Scale, $0$--$20\,\mathrm{kHz}$,
+  no smoothing, zero Slope, and AC coupling off. Freeze, then adjust the
+  endpoints to inspect quiet detail and distinguish strong peaks.
   \item[Mastering] Broad tonal balance: Flattop, Logarithmic Freq Scale,
   $0$--$20\,\mathrm{kHz}$, Average $300\,\mathrm{ms}$, Smooth $1/12$ octave,
   Slope $+4.5\,\mathrm{dB/oct}$. AC coupling is on.
@@ -295,10 +366,11 @@ change FFT length or hop size; both remain fixed in Spectre.
   account for summed polyphonic voices. Spectre starts at $+6\,\mathrm{dB}$
   input gain; Fourier starts at $0\,\mathrm{dB}$. A spectral peak is not a
   broadband RMS measurement.
-  \item[Large regions reach the same end color] Reduce input gain and
-  acquire new history. Saturated colors cannot show how far a magnitude
-  exceeds the color map's range. Recoloring alone cannot recover that
-  distinction in the displayed image.
+  \item[Large regions reach the same end color] In Decibels mode, raise
+  the upper handle to distinguish strong values in retained history. Adjust
+  the lower handle for quiet detail. If the bar reads LIN and has no handles,
+  click Enable dB below it.
+  Color saturation does not mean the stored magnitude was clipped.
   \item[Old and new bands disagree after a sample-rate change] Allow a full
   sweep to replace history acquired at the old sample rate before comparing
   frequencies. Check the frequency bounds as well.

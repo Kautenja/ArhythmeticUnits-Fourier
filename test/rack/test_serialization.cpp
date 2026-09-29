@@ -84,7 +84,9 @@ TEST_CASE("Factory presets load complete state and share names across modules") 
                 model_index == 0 ? modelSpectrumAnalyzer->createModule() : modelSpectrogram->createModule());
             auto params = json_object_get(preset.get(), "params");
             REQUIRE(json_is_array(params));
-            REQUIRE(json_array_size(params) == module->params.size());
+            const bool legacy = model_index == 1 &&
+                !json_object_get(json_object_get(preset.get(), "data"), "intensity_scale");
+            REQUIRE(json_array_size(params) == module->params.size() - (legacy ? 2 : 0));
             std::set<int> ids;
             size_t index;
             json_t* param;
@@ -125,11 +127,18 @@ TEST_CASE("Factory presets load complete state and share names across modules") 
                 CHECK(module->params[id].getValue() == Catch::Approx(expected));
             }
             Json restored(module->dataToJson(), json_decref);
-            CHECK(json_equal(restored.get(), json_object_get(preset.get(), "data")));
+            Json expected_data(json_deep_copy(json_object_get(preset.get(), "data")), json_decref);
+            if (legacy) {
+                json_object_set_new(expected_data.get(), "intensity_scale", json_string("legacy_linear"));
+                CHECK(module->params[Spectrogram::PARAM_COLOR_FLOOR].getValue() == -90.f);
+                CHECK(module->params[Spectrogram::PARAM_COLOR_CEILING].getValue() == 0.f);
+            }
+            CHECK(json_equal(restored.get(), expected_data.get()));
             CHECK(json_is_true(json_object_get(restored.get(), "is_running")));
         }
     }
     REQUIRE(names[0].size() == 5);
+    REQUIRE(names[1].erase("DecibelInspection.vcvm") == 1);
     CHECK(names[0] == names[1]);
     for (const auto& name : names[0]) {
         CAPTURE(name);
@@ -281,14 +290,14 @@ TEST_CASE("Menu setting changes participate in Rack undo and redo") {
     module->dataFromJson(state.get());
     module->params[0].setValue(0.75f);
     const char* fourier_keys[] = {"is_fill_enabled", "is_bezier_enabled", "is_ac_coupled"};
-    const char* spectre_keys[] = {"is_ac_coupled", "color_map"};
+    const char* spectre_keys[] = {"is_ac_coupled", "color_map", "intensity_scale"};
     const auto keys = model == modelSpectrumAnalyzer ? fourier_keys : spectre_keys;
-    const int count = model == modelSpectrumAnalyzer ? 3 : 2;
+    const int count = 3;
     for (int i = 0; i < count; ++i) {
         CAPTURE(model->slug, keys[i]);
         Json before(APP->engine->moduleToJson(module), json_decref);
         auto old_value = json_object_get(json_object_get(before.get(), "data"), keys[i]);
-        Json value(json_is_boolean(old_value)
+        Json value(json_is_string(old_value) ? json_string("legacy_linear") : json_is_boolean(old_value)
             ? json_boolean(!json_boolean_value(old_value))
             : json_integer(static_cast<int>(Fourier::ColorMap::Function::Gray)), json_decref);
         const auto action_count = context.context.history->actions.size();
@@ -317,4 +326,173 @@ TEST_CASE("Menu setting changes participate in Rack undo and redo") {
     CHECK_NOTHROW(context.context.history->undo());
     CHECK_NOTHROW(context.context.history->redo());
     APP->engine->addModule(module);
+}
+
+TEST_CASE("Spectre preserves numeric identities and defaults new state at full Rack load") {
+    RackContext context;
+    std::unique_ptr<Spectrogram> module(static_cast<Spectrogram*>(modelSpectrogram->createModule()));
+    const int ids[] = {Spectrogram::PARAM_INPUT_GAIN, Spectrogram::PARAM_RUN,
+        Spectrogram::PARAM_WINDOW_FUNCTION, Spectrogram::PARAM_FREQUENCY_SCALE,
+        Spectrogram::PARAM_TIME_SMOOTHING, Spectrogram::PARAM_FREQUENCY_SMOOTHING,
+        Spectrogram::PARAM_LOW_FREQUENCY, Spectrogram::PARAM_HIGH_FREQUENCY,
+        Spectrogram::PARAM_SLOPE, Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING};
+    for (int i = 0; i < 11; ++i) CHECK(ids[i] == i);
+    CHECK(Spectrogram::INPUT_SIGNAL == 0);
+    CHECK(Spectrogram::LIGHT_RUN == 0);
+    CHECK(Spectrogram::NUM_OUTPUTS == 0);
+    REQUIRE(module->intensity_scale == Spectrogram::Intensity::Scale::Decibels);
+    Json saved(module->toJson(), json_decref);
+    for (const auto malformed : {"null", "true", "3", "[]", "{}", "\"bad\""}) {
+        CAPTURE(malformed);
+        module->params[9].setValue(-10.f);
+        module->params[10].setValue(24.f);
+        module->intensity_scale = Spectrogram::Intensity::Scale::Decibels;
+        Json patch(json_deep_copy(saved.get()), json_decref);
+        json_object_set_new(json_object_get(patch.get(), "data"), "intensity_scale",
+            json_loads(malformed, JSON_DECODE_ANY, nullptr));
+        json_object_del(patch.get(), "params");
+        module->fromJson(patch.get());
+        CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::LegacyLinear);
+        CHECK(module->color_floor() == -90.f);
+        CHECK(module->color_ceiling() == 0.f);
+        // Also exercise malformed individual entries, not just absent arrays.
+        json_object_set(patch.get(), "params", json_object_get(saved.get(), "params"));
+        for (int id : {9, 10}) json_object_set_new(
+            json_array_get(json_object_get(patch.get(), "params"), id), "value",
+            json_loads(malformed, JSON_DECODE_ANY, nullptr));
+        module->fromJson(patch.get());
+        CHECK(module->color_floor() == (std::string(malformed) == "3" ? -1.f : -90.f));
+        CHECK(module->color_ceiling() == (std::string(malformed) == "3" ? 3.f : 0.f));
+    }
+    json_object_del(saved.get(), "data");
+    json_object_del(saved.get(), "params");
+    module->params[9].setValue(-1.f);
+    module->fromJson(saved.get());
+    CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::LegacyLinear);
+    CHECK(module->color_floor() == -90.f);
+
+    for (const auto mode : {Spectrogram::Intensity::Scale::Decibels,
+                           Spectrogram::Intensity::Scale::LegacyLinear}) {
+        module->intensity_scale = mode;
+        module->params[9].setValue(-67.3f);
+        module->params[10].setValue(12.4f);
+        Json roundtrip(module->toJson(), json_decref);
+        module->onReset();
+        CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::Decibels);
+        module->fromJson(roundtrip.get());
+        CHECK(module->intensity_scale == mode);
+        CHECK(module->color_floor() == Catch::Approx(-67.3f));
+        CHECK(module->color_ceiling() == Catch::Approx(12.4f));
+    }
+    for (const int id : {9, 10}) {
+        CHECK_FALSE(module->getParamQuantity(id)->randomizeEnabled);
+        CHECK_FALSE(module->getParamQuantity(id)->snapEnabled);
+    }
+}
+
+TEST_CASE("Spectre sanitizes external endpoints and Rack reset restores display defaults") {
+    RackContext context;
+    RegisteredModule registered(modelSpectrogram);
+    auto& module = *static_cast<Spectrogram*>(registered.module.get());
+    for (const float value : {-1000.f, 1000.f, std::numeric_limits<float>::infinity(),
+                             std::numeric_limits<float>::quiet_NaN()}) {
+        for (int id : {9, 10}) {
+            module.params[id].setValue(value);
+            auto quantity = module.getParamQuantity(id);
+            CHECK(Spectrogram::Intensity::finite(quantity->getValue()));
+            CHECK(quantity->getValue() >= quantity->minValue);
+            CHECK(quantity->getValue() <= quantity->maxValue);
+            CHECK(quantity->getDisplayValueString().find("nan") == std::string::npos);
+        }
+    }
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    APP->engine->resetModule(&module);
+    CHECK(module.color_floor() == -90.f);
+    CHECK(module.color_ceiling() == 0.f);
+    CHECK(module.intensity_scale == Spectrogram::Intensity::Scale::Decibels);
+}
+
+TEST_CASE("Vertical color range handles change independently with one undoable drag") {
+    RackContext context;
+    RegisteredModule registered(modelSpectrogram);
+    auto& module = *static_cast<Spectrogram*>(registered.module.get());
+    Json state(module.dataToJson(), json_decref);
+    json_object_set_new(state.get(), "is_running", json_false());
+    module.dataFromJson(state.get());
+    for (const int id : {9, 10}) {
+        SpectreIntensityHandle handle;
+        handle.module = &module;
+        handle.paramId = id;
+        handle.step();
+        CHECK(handle.visible);
+        CHECK_FALSE(module.getParamQuantity(id)->smoothEnabled);
+        const float before = module.getParamQuantity(id)->getValue();
+        const int other = id == 9 ? 10 : 9;
+        const float untouched = module.params[other].getValue();
+        Widget::DragStartEvent start;
+        start.button = GLFW_MOUSE_BUTTON_LEFT;
+        handle.onDragStart(start);
+        handle.drag_by(-5.f, 0);
+        handle.drag_by(-5.f, 0);
+        CHECK(module.params[id].getValue() == Catch::Approx(before + 144.f / 104.f * 10.f));
+        CHECK(module.params[other].getValue() == untouched);
+        Widget::DragEndEvent end;
+        end.button = GLFW_MOUSE_BUTTON_LEFT;
+        const auto count = APP->history->actions.size();
+        handle.onDragEnd(end);
+        CHECK(APP->history->actions.size() == count + 1);
+        const float after = module.params[id].getValue();
+        APP->history->undo();
+        CHECK(module.params[id].getValue() == before);
+        APP->history->redo();
+        CHECK(module.params[id].getValue() == after);
+        handle.onDragStart(start);
+        handle.drag_by(-5.f, RACK_MOD_CTRL);
+        CHECK(module.params[id].getValue() == Catch::Approx(after + 144.f / 104.f * 0.5f));
+        handle.onDragEnd(end);
+        // Typed values and Rack's native parameter reset use the same quantity.
+        module.getParamQuantity(id)->setDisplayValueString(id == 9 ? "-72.5" : "12.5");
+        CHECK(module.params[id].getValue() == (id == 9 ? -72.5f : 12.5f));
+        handle.resetAction();
+        CHECK(module.params[id].getValue() == (id == 9 ? -90.f : 0.f));
+        APP->history->undo();
+        CHECK(module.params[id].getValue() == (id == 9 ? -72.5f : 12.5f));
+        APP->history->redo();
+        CHECK(module.params[id].getValue() == (id == 9 ? -90.f : 0.f));
+    }
+    Json after(module.dataToJson(), json_decref);
+    CHECK(json_is_false(json_object_get(after.get(), "is_running")));
+}
+
+TEST_CASE("Legacy color bar visibly requires explicit undoable activation") {
+    RackContext context;
+    RegisteredModule registered(modelSpectrogram);
+    auto& module = *static_cast<Spectrogram*>(registered.module.get());
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    SpectreIntensityHandle handle;
+    handle.module = &module;
+    handle.paramId = Spectrogram::PARAM_COLOR_FLOOR;
+    handle.step();
+    CHECK_FALSE(handle.visible);
+    handle.drag_by(-20.f, 0);
+    CHECK(module.color_floor() == -90.f);
+    SpectreIntensityLegend control(&module);
+    CHECK(control.legacy());
+    control.enable_decibels();
+    CHECK_FALSE(control.legacy());
+    handle.step();
+    CHECK(handle.visible);
+    const auto count = APP->history->actions.size();
+    control.enable_decibels();
+    CHECK(APP->history->actions.size() == count);
+    APP->history->undo();
+    CHECK(control.legacy());
+    APP->history->redo();
+    CHECK_FALSE(control.legacy());
+    SpectreIntensityHandle preview;
+    preview.paramId = Spectrogram::PARAM_COLOR_FLOOR;
+    preview.step();
+    CHECK(preview.visible);
+    preview.drag_by(-20.f, 0);
+    CHECK(APP->history->actions.size() == count);
 }

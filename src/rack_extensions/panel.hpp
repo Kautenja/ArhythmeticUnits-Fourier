@@ -39,6 +39,10 @@ struct PanelLayout {
     static rack::math::Vec gain(int channel = 0) {
         return rack::math::Vec(13.f, 66.f + 75.f * channel);
     }
+    /// @brief Spectre-only vertical color range and its integrated legend.
+    static rack::math::Rect intensity_control() {
+        return rack::math::Rect(rack::math::Vec(6.f, 105.f), rack::math::Vec(34.f, 200.f));
+    }
     /// @brief Shared center of the Run button and its light.
     static rack::math::Vec run() { return rack::math::Vec(23.f, 346.f); }
     /// @brief Top-left display corner, inset from the panel and input strip.

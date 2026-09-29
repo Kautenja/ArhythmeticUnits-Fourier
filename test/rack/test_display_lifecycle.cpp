@@ -198,6 +198,7 @@ void advance_signal(Spectrogram& module, int samples) {
 TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting") {
     RackContext context;
     Spectrogram module;
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
     TestRenderer renderer;
     SpectralImageDisplay display(&module);
     display.setSize(Vec(465, 350));
@@ -243,6 +244,7 @@ TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting")
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
 
     module.onReset();
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
     renderer.draw(display);
     CHECK(renderer.updated == 7);
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
@@ -313,6 +315,7 @@ TEST_CASE("Both axis caches invalidate their rendering inputs but ignore signal 
 TEST_CASE("Recreating a frozen Spectre widget retains the last published history") {
     RackContext context;
     Spectrogram module;
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
     advance_signal(module, 8192);
     TestRenderer renderer;
     std::vector<unsigned char> original;
@@ -494,6 +497,7 @@ TEST_CASE("Spectre sample-rate changes discard pending nonzero input and averagi
 TEST_CASE("Spectre display scale changes during a frame preserve spectral columns") {
     RackContext context;
     Spectrogram module, reference;
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
     for (auto* item : {&module, &reference}) configure_spectre(*item);
     TestRenderer renderer;
     SpectralImageDisplay display(&module);
@@ -580,4 +584,88 @@ TEST_CASE("Display cursor hover is confined to the plot rectangle") {
         check_plot_hover(spectre_display, 40.f, width, true);
         check_plot_hover(spectre_preview, 40.f, width, false);
     }
+}
+
+TEST_CASE("Spectre recolors frozen dB history without recapture or redundant uploads") {
+    RackContext context;
+    Spectrogram module;
+    advance_signal(module, 8192);
+    json_t* state = module.dataToJson();
+    json_object_set_new(state, "is_running", json_false());
+    module.dataFromJson(state);
+    json_decref(state);
+    TestRenderer renderer;
+    SpectralImageDisplay display(&module);
+    display.setSize(Vec(465, 350));
+    renderer.draw(display);
+    const auto history = published_history(module);
+    const auto hop = module.get_hop_index();
+    auto pixels = renderer.last_pixels;
+    SpectreIntensityLegend legend(&module);
+    SpectreIntensityLegend preview(nullptr);
+    CHECK(preview.labels() == legend.labels());
+    int updates = 0;
+    for (int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
+        SpectreIntensityHandle handle;
+        handle.module = &module;
+        handle.paramId = id;
+        const float target = id == Spectrogram::PARAM_COLOR_FLOOR ? -60.f : 12.f;
+        handle.drag_by((module.params[id].getValue() - target) * 104.f / 144.f, 0);
+        CHECK(module.params[id].getValue() == Catch::Approx(target));
+        renderer.draw(display);
+        CHECK(renderer.updated == ++updates);
+        CHECK(renderer.last_pixels != pixels);
+        pixels = renderer.last_pixels;
+        renderer.draw(display);
+        CHECK(renderer.updated == updates);
+        CHECK(published_history(module) == history);
+        CHECK(module.get_hop_index() == hop);
+    }
+    CHECK(legend.labels() == std::array<std::string, 3>{{"12.0", "-60.0", "dB"}});
+    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    renderer.draw(display);
+    CHECK(renderer.updated == ++updates);
+    CHECK(renderer.last_pixels == reference_pixels(module));
+    pixels = renderer.last_pixels;
+    module.params[Spectrogram::PARAM_COLOR_FLOOR].setValue(-120.f);
+    module.params[Spectrogram::PARAM_COLOR_CEILING].setValue(24.f);
+    renderer.draw(display);
+    CHECK(renderer.updated == updates);
+    CHECK(renderer.last_pixels == pixels);
+    CHECK(legend.labels() == std::array<std::string, 3>{{"1", "0", "LIN"}});
+    module.intensity_scale = Spectrogram::Intensity::Scale::Decibels;
+    renderer.draw(display);
+    CHECK(renderer.updated == ++updates);
+    module.set_low_frequency(100.f);
+    module.set_high_frequency(5000.f);
+    display.setSize(Vec(600, 400));
+    renderer.draw(display);
+    CHECK(renderer.updated == updates);
+    for (const auto scale : {FrequencyScale::Linear, FrequencyScale::Logarithmic}) {
+        module.set_frequency_scale(scale);
+        for (int palette = 0; palette < static_cast<int>(Fourier::ColorMap::Function::NumFunctions); ++palette) {
+            module.color_map = static_cast<Fourier::ColorMap::Function>(palette);
+            module.set_slope(palette - 3.f);
+            renderer.draw(display);
+            // Independent complete-image dB reference on both frequency scales.
+            for (int row : {0, 1, 32, 255, 512, 1023}) {
+                const double bin = scale == FrequencyScale::Linear ? row : double(row) * row / 1024.;
+                const int lower = std::floor(bin);
+                const double fraction = bin - lower;
+                const double magnitude = history[2][lower].real() * (1. - fraction) +
+                    history[2][lower + 1].real() * fraction;
+                const double frequency = bin * 48000. / 2048.;
+                const double db = magnitude == 0. ? -INFINITY : 20. * std::log10(magnitude / 1024.) +
+                    (frequency == 0. ? 0. : (palette - 3.) * std::log2(frequency / 1000.));
+                const float position = std::max(0., std::min(1., (db + 120.) / 144.));
+                const auto color = Fourier::ColorMap::color_map(module.color_map, position);
+                const int index = 4 * (512 * (1023 - row) + 2);
+                CHECK(std::abs(int(renderer.last_pixels[index]) - int(color.r * 255)) <= 1);
+                CHECK(std::abs(int(renderer.last_pixels[index+1]) - int(color.g * 255)) <= 1);
+                CHECK(std::abs(int(renderer.last_pixels[index+2]) - int(color.b * 255)) <= 1);
+            }
+        }
+    }
+    CHECK(published_history(module) == history);
+    CHECK(module.get_hop_index() == hop);
 }

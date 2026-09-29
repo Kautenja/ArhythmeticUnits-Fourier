@@ -36,6 +36,7 @@ int main(int argc, char** argv) {
     context.engine = new rack::engine::Engine;
     context.engine->setSampleRate(48000.f);
     context.event = new rack::widget::EventState;
+    context.history = new rack::history::State;
     rack::asset::systemDir = argv[1];
     rack::plugin::Plugin plugin;
     plugin.path = argv[2];
@@ -104,15 +105,70 @@ int main(int argc, char** argv) {
                     spectre->process(process);
                 }
             }
+            sw->step();
+            for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
+                auto handle = dynamic_cast<SpectreIntensityHandle*>(sw->getParam(id));
+                if (!handle || handle->box.pos.x < 6.f || handle->box.getBottomRight().x > 40.f ||
+                    handle->box.pos.y < 105.f || handle->box.getBottomRight().y > 305.f)
+                    throw std::runtime_error("Intensity handle bounds escaped the left strip");
+            }
+            const auto control = Fourier::PanelLayout::intensity_control();
+            if (control.pos.x < 6.f || control.pos.y < 105.f ||
+                control.getBottomRight().x > 40.f || control.getBottomRight().y > 305.f)
+                throw std::runtime_error("Color control bounds escaped the left strip");
+            if (!preview) {
+                // Route presses through the complete widget tree, then use the
+                // actual Rack drag callbacks and history rather than setting params.
+                for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
+                    auto handle = sw->getParam(id);
+                    const float before = spectre->params[id].getValue();
+                    rack::widget::EventContext target;
+                    Widget::ButtonEvent press;
+                    press.context = &target;
+                    press.pos = handle->box.getCenter();
+                    press.button = GLFW_MOUSE_BUTTON_LEFT;
+                    press.action = GLFW_PRESS;
+                    press.mods = 0;
+                    sw->onButton(press);
+                    if (target.target != handle)
+                        throw std::runtime_error("Color handle did not receive the panel press");
+                    Widget::DragStartEvent start;
+                    start.button = GLFW_MOUSE_BUTTON_LEFT;
+                    handle->onDragStart(start);
+                    Widget::DragMoveEvent move;
+                    move.button = GLFW_MOUSE_BUTTON_LEFT;
+                    move.mouseDelta = Vec(0.f, -5.f);
+                    handle->onDragMove(move);
+                    Widget::DragEndEvent end;
+                    end.button = GLFW_MOUSE_BUTTON_LEFT;
+                    handle->onDragEnd(end);
+                    if (spectre->params[id].getValue() <= before)
+                        throw std::runtime_error("Color handle drag did not change its parameter");
+                    context.history->undo();
+                    if (spectre->params[id].getValue() != before)
+                        throw std::runtime_error("Color handle undo did not restore its parameter");
+                }
+            }
             std::vector<unsigned char> dark_pixels;
             // Exercise hover events on the actual widget through Rack's event state.
-            for (int scenario = 0; scenario < 18; ++scenario) {
+            for (int scenario = 0; scenario < 30; ++scenario) {
                 rack::settings::preferDarkPanels = scenario == 1 || scenario == 3 || scenario >= 5;
-                const float zoom = scenario == 7 ? 0.5f : (scenario == 2 ? 0.75f : 1.f);
+                const float zoom = scenario >= 18 ? (scenario % 3 == 0 ? 1.f :
+                    (scenario % 3 == 1 ? 0.75f : 0.5f)) :
+                    (scenario == 7 ? 0.5f : (scenario == 2 ? 0.75f : 1.f));
+                if (scenario >= 18) {
+                    rack::settings::preferDarkPanels = (scenario / 3) % 2;
+                    if (spectre) {
+                        spectre->intensity_scale = scenario >= 24 ?
+                            Spectrogram::Intensity::Scale::LegacyLinear : Spectrogram::Intensity::Scale::Decibels;
+                        spectre->params[Spectrogram::PARAM_COLOR_FLOOR].setValue(-120.f);
+                        spectre->params[Spectrogram::PARAM_COLOR_CEILING].setValue(24.f);
+                    }
+                }
                 context.event->setHoveredWidget(scenario == 5 ? frequency_control : nullptr);
                 if (frequency_control->hovered != (scenario == 5 && !preview))
                     throw std::runtime_error("Text control hover state is incorrect");
-                if (scenario >= 8) {
+                if (scenario >= 8 && scenario < 18) {
                     const bool spectre_hover = scenario >= 13;
                     auto owner = spectre_hover ? static_cast<ModuleWidget*>(sw.get()) : fw.get();
                     auto display = spectre_hover ? static_cast<Widget*>(spectre_display) : fourier_display;
@@ -219,7 +275,7 @@ int main(int argc, char** argv) {
                 }
                 if (scenario == 6 && pixels != dark_pixels)
                     throw std::runtime_error("Hover highlighting did not clear on leave");
-                if (scenario >= 8) {
+                if (scenario >= 8 && scenario < 18) {
                     const bool inside = (scenario == 8 || scenario == 13) && !preview;
                     if ((pixels != dark_pixels) != inside)
                         throw std::runtime_error("Cursor overlay must appear only inside a live plot");
