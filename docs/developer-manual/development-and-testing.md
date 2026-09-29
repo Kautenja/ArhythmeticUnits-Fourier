@@ -235,9 +235,33 @@ make -C manual
 ```
 
 Outputs are `manual/build/Fourier.pdf` and `manual/build/Spectre.pdf`.
-The child Makefiles recreate their local build directories and mask some
-LaTeX command failures, so check fresh output and inspect rendered pages
-rather than treating the exit status alone as proof.
+The child Makefiles recreate their local build directories and stop on
+LaTeX or BibTeX errors. Shell escape is disabled. Inspect rendered pages
+when changing manual content or layout.
+
+The [user manuals workflow](../../.github/workflows/manuals.yml) builds both
+PDFs on relevant pull requests and pushes to `main`, and saves them as the
+`user-manuals` workflow artifact. Ubuntu uses `texlive-latex-extra`,
+`texlive-fonts-recommended`, `texlive-science`, and `poppler-utils`; CI checks
+that both PDFs are nonempty and readable by `pdfinfo`.
+
+Publishing a GitHub release triggers a build from its tag and uploads
+`Fourier.pdf` and `Spectre.pdf` as release assets. These names match the
+`manualUrl` links in `plugin.json`. A tag push alone does not publish a
+release or upload assets. Publish a regular release as the latest release
+for Rack's `/releases/latest/download/` links to resolve to these manuals;
+prerelease assets are also uploaded but do not become the latest release.
+
+To backfill an existing release, select **Actions > User manuals > Run
+workflow** and enter its exact tag in `tag`. The workflow must first be on
+the default branch. Sources and Makefiles come from that tag, so older tags
+retain their original build behavior. The release must already exist and
+allow asset changes. Reruns replace assets with the same names without
+changing release notes or other assets. Only the upload job has
+`contents: write`; builds use read-only repository permissions and require
+no additional secrets. GitHub's built-in token does not trigger a release
+workflow when another workflow creates the release with that token; use
+the manual trigger in that case.
 
 Keep generated binaries, object files, SCons caches, PDFs, and build folders
 out of source changes. Use explicit SCons targets above: bare `scons` also

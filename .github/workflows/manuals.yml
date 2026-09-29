@@ -1,0 +1,88 @@
+name: User manuals
+
+on:
+  pull_request:
+    paths:
+      - manual/**
+      - plugin.json
+      - .github/workflows/manuals.yml
+  push:
+    branches: [main]
+    paths:
+      - manual/**
+      - plugin.json
+      - .github/workflows/manuals.yml
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and upload manuals for
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: manuals-${{ inputs.tag || github.event.release.tag_name || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build PDF manuals
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out manual sources
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          persist-credentials: false
+
+      - name: Install LaTeX and PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            texlive-latex-extra texlive-fonts-recommended texlive-science poppler-utils
+
+      - name: Build and validate both manuals
+        run: |
+          make -C manual
+          for manual in Fourier Spectre; do
+            test -s "manual/build/$manual.pdf"
+            pdfinfo "manual/build/$manual.pdf"
+          done
+
+      - name: Save PDF manuals
+        uses: actions/upload-artifact@v7
+        with:
+          name: user-manuals
+          path: |
+            manual/build/Fourier.pdf
+            manual/build/Spectre.pdf
+          if-no-files-found: error
+
+  publish:
+    name: Attach manuals to release
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated manuals
+        uses: actions/download-artifact@v8
+        with:
+          name: user-manuals
+          path: manuals
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" \
+            manuals/Fourier.pdf manuals/Spectre.pdf --clobber
