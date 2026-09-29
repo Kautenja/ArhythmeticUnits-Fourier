@@ -86,7 +86,7 @@ TEST_CASE("Factory presets load complete state and share names across modules") 
             REQUIRE(json_is_array(params));
             const bool legacy = model_index == 1 &&
                 !json_object_get(json_object_get(preset.get(), "data"), "intensity_scale");
-            REQUIRE(json_array_size(params) == module->params.size() - (legacy ? 2 : 0));
+            REQUIRE(json_array_size(params) == module->params.size() - (model_index == 1 ? (legacy ? 4 : 2) : 0));
             std::set<int> ids;
             size_t index;
             json_t* param;
@@ -335,8 +335,9 @@ TEST_CASE("Spectre preserves numeric identities and defaults new state at full R
         Spectrogram::PARAM_WINDOW_FUNCTION, Spectrogram::PARAM_FREQUENCY_SCALE,
         Spectrogram::PARAM_TIME_SMOOTHING, Spectrogram::PARAM_FREQUENCY_SMOOTHING,
         Spectrogram::PARAM_LOW_FREQUENCY, Spectrogram::PARAM_HIGH_FREQUENCY,
-        Spectrogram::PARAM_SLOPE, Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING};
-    for (int i = 0; i < 11; ++i) CHECK(ids[i] == i);
+        Spectrogram::PARAM_SLOPE, Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING,
+        Spectrogram::PARAM_LINEAR_FLOOR, Spectrogram::PARAM_LINEAR_CEILING};
+    for (int i = 0; i < 13; ++i) CHECK(ids[i] == i);
     CHECK(Spectrogram::INPUT_SIGNAL == 0);
     CHECK(Spectrogram::LIGHT_RUN == 0);
     CHECK(Spectrogram::NUM_OUTPUTS == 0);
@@ -352,7 +353,7 @@ TEST_CASE("Spectre preserves numeric identities and defaults new state at full R
             json_loads(malformed, JSON_DECODE_ANY, nullptr));
         json_object_del(patch.get(), "params");
         module->fromJson(patch.get());
-        CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::LegacyLinear);
+        CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::Linear);
         CHECK(module->color_floor() == -90.f);
         CHECK(module->color_ceiling() == 0.f);
         // Also exercise malformed individual entries, not just absent arrays.
@@ -361,18 +362,18 @@ TEST_CASE("Spectre preserves numeric identities and defaults new state at full R
             json_array_get(json_object_get(patch.get(), "params"), id), "value",
             json_loads(malformed, JSON_DECODE_ANY, nullptr));
         module->fromJson(patch.get());
-        CHECK(module->color_floor() == (std::string(malformed) == "3" ? -1.f : -90.f));
+        CHECK(module->color_floor() == Catch::Approx(std::string(malformed) == "3" ? 2.9f : -90.f));
         CHECK(module->color_ceiling() == (std::string(malformed) == "3" ? 3.f : 0.f));
     }
     json_object_del(saved.get(), "data");
     json_object_del(saved.get(), "params");
     module->params[9].setValue(-1.f);
     module->fromJson(saved.get());
-    CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::LegacyLinear);
+    CHECK(module->intensity_scale == Spectrogram::Intensity::Scale::Linear);
     CHECK(module->color_floor() == -90.f);
 
     for (const auto mode : {Spectrogram::Intensity::Scale::Decibels,
-                           Spectrogram::Intensity::Scale::LegacyLinear}) {
+                           Spectrogram::Intensity::Scale::Linear}) {
         module->intensity_scale = mode;
         module->params[9].setValue(-67.3f);
         module->params[10].setValue(12.4f);
@@ -405,7 +406,7 @@ TEST_CASE("Spectre sanitizes external endpoints and Rack reset restores display 
             CHECK(quantity->getDisplayValueString().find("nan") == std::string::npos);
         }
     }
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     APP->engine->resetModule(&module);
     CHECK(module.color_floor() == -90.f);
     CHECK(module.color_ceiling() == 0.f);
@@ -434,7 +435,7 @@ TEST_CASE("Vertical color range handles change independently with one undoable d
         handle.onDragStart(start);
         handle.drag_by(-5.f, 0);
         handle.drag_by(-5.f, 0);
-        CHECK(module.params[id].getValue() == Catch::Approx(before + 144.f / 104.f * 10.f));
+        CHECK(module.params[id].getValue() == Catch::Approx(before + 144.f / 120.f * 10.f));
         CHECK(module.params[other].getValue() == untouched);
         Widget::DragEndEvent end;
         end.button = GLFW_MOUSE_BUTTON_LEFT;
@@ -448,7 +449,7 @@ TEST_CASE("Vertical color range handles change independently with one undoable d
         CHECK(module.params[id].getValue() == after);
         handle.onDragStart(start);
         handle.drag_by(-5.f, RACK_MOD_CTRL);
-        CHECK(module.params[id].getValue() == Catch::Approx(after + 144.f / 104.f * 0.5f));
+        CHECK(module.params[id].getValue() == Catch::Approx(after + 144.f / 120.f * 0.5f));
         handle.onDragEnd(end);
         // Typed values and Rack's native parameter reset use the same quantity.
         module.getParamQuantity(id)->setDisplayValueString(id == 9 ? "-72.5" : "12.5");
@@ -464,35 +465,105 @@ TEST_CASE("Vertical color range handles change independently with one undoable d
     CHECK(json_is_false(json_object_get(after.get(), "is_running")));
 }
 
-TEST_CASE("Legacy color bar visibly requires explicit undoable activation") {
+TEST_CASE("Panel palette and scale choices are undoable and preserve independent ranges") {
     RackContext context;
     RegisteredModule registered(modelSpectrogram);
     auto& module = *static_cast<Spectrogram*>(registered.module.get());
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    SpectreIntensityLegend control(&module);
+    module.getParamQuantity(10)->setDisplayValueString("-20");
+    CHECK(module.color_ceiling() == -20.f);
+    control.select_scale(1);
+    CHECK(control.linear());
     SpectreIntensityHandle handle;
     handle.module = &module;
-    handle.paramId = Spectrogram::PARAM_COLOR_FLOOR;
-    handle.step();
-    CHECK_FALSE(handle.visible);
-    handle.drag_by(-20.f, 0);
-    CHECK(module.color_floor() == -90.f);
-    SpectreIntensityLegend control(&module);
-    CHECK(control.legacy());
-    control.enable_decibels();
-    CHECK_FALSE(control.legacy());
+    handle.paramId = Spectrogram::PARAM_LINEAR_CEILING;
     handle.step();
     CHECK(handle.visible);
+    CHECK_FALSE(module.getParamQuantity(handle.paramId)->smoothEnabled);
+    handle.drag_by(30.f, 0);
+    CHECK(module.linear_ceiling() == Catch::Approx(0.5f));
+    module.getParamQuantity(11)->setDisplayValueString("10");
+    CHECK(module.linear_floor() == Catch::Approx(0.1f));
+    control.select_palette(static_cast<size_t>(Fourier::ColorMap::Function::Gray));
+    CHECK(module.color_map == Fourier::ColorMap::Function::Gray);
+    APP->history->undo();
+    CHECK(module.color_map == Fourier::ColorMap::Function::Magma);
+    APP->history->redo();
+    CHECK(module.color_map == Fourier::ColorMap::Function::Gray);
+    control.select_scale(0);
+    CHECK_FALSE(control.linear());
+    CHECK(module.color_ceiling() == -20.f);
+    CHECK(module.linear_floor() == Catch::Approx(0.1f));
+    CHECK(module.linear_ceiling() == Catch::Approx(0.5f));
+    handle.step();
+    CHECK_FALSE(handle.visible);
     const auto count = APP->history->actions.size();
-    control.enable_decibels();
+    control.select_scale(0);
     CHECK(APP->history->actions.size() == count);
     APP->history->undo();
-    CHECK(control.legacy());
+    CHECK(control.linear());
     APP->history->redo();
-    CHECK_FALSE(control.legacy());
-    SpectreIntensityHandle preview;
-    preview.paramId = Spectrogram::PARAM_COLOR_FLOOR;
-    preview.step();
-    CHECK(preview.visible);
-    preview.drag_by(-20.f, 0);
+    CHECK_FALSE(control.linear());
+    SpectreIntensityLegend preview(nullptr);
+    preview.select_scale(1);
+    preview.select_palette(0);
     CHECK(APP->history->actions.size() == count);
+}
+
+TEST_CASE("Both intensity ranges allow quiet ceilings and prevent crossed limits") {
+    RackContext context;
+    RegisteredModule registered(modelSpectrogram);
+    auto& module = *static_cast<Spectrogram*>(registered.module.get());
+    for (const bool linear : {false, true}) {
+        const int floor = linear ? 11 : 9, ceiling = floor + 1;
+        const float gap = linear ? 0.001f : 0.1f;
+        module.intensity_scale = linear ? Spectrogram::Intensity::Scale::Linear : Spectrogram::Intensity::Scale::Decibels;
+        SpectreIntensityHandle handle;
+        handle.module = &module;
+        handle.paramId = ceiling;
+        handle.drag_by(linear ? 30.f : 25.f, 0);
+        CHECK(module.params[ceiling].getValue() == Catch::Approx(linear ? 0.5f : -30.f).margin(0.00001));
+        module.getParamQuantity(floor)->setValue(100.f);
+        CHECK(module.params[floor].getValue() == Catch::Approx(module.params[ceiling].getValue() - gap));
+        module.getParamQuantity(ceiling)->setDisplayValueString("-1000");
+        CHECK(module.params[ceiling].getValue() > module.params[floor].getValue());
+        Json saved(module.toJson(), json_decref);
+        // Full load handles reversed arrays and repairs invalid ranges deterministically.
+        auto params = json_object_get(saved.get(), "params");
+        json_object_set_new(json_array_get(params, floor), "value", json_real(linear ? 1.5 : 20.));
+        json_object_set_new(json_array_get(params, ceiling), "value", json_real(linear ? 0.2 : -20.));
+        module.fromJson(saved.get());
+        CHECK(module.params[floor].getValue() == Catch::Approx((linear ? 0.2f : -20.f) - gap));
+        Json normal(module.toJson(), json_decref);
+        Json reversed(json_array(), json_decref);
+        for (int i = json_array_size(params) - 1; i >= 0; --i)
+            json_array_append(reversed.get(), json_array_get(params, i));
+        json_object_set(saved.get(), "params", reversed.get());
+        module.fromJson(saved.get());
+        Json restored(module.toJson(), json_decref);
+        CHECK(json_equal(normal.get(), restored.get()));
+    }
+}
+
+TEST_CASE("Old presets and module reset discard stale ranges in both modes") {
+    RackContext context;
+    RegisteredModule registered(modelSpectrogram);
+    auto& module = *static_cast<Spectrogram*>(registered.module.get());
+    module.params[9].setValue(-115.f);
+    module.params[10].setValue(-110.f);
+    module.params[11].setValue(1.5f);
+    module.params[12].setValue(1.6f);
+    APP->engine->resetModule(&module);
+    CHECK(module.color_floor() == -90.f);
+    CHECK(module.color_ceiling() == 0.f);
+    CHECK(module.linear_floor() == 0.f);
+    CHECK(module.linear_ceiling() == 1.f);
+    module.params[11].setValue(0.4f);
+    module.params[12].setValue(0.5f);
+    Json preset(json_load_file("presets/Spectrogram/Harmonics.vcvm", 0, nullptr), json_decref);
+    REQUIRE(preset);
+    module.fromJson(preset.get());
+    CHECK(module.intensity_scale == Spectrogram::Intensity::Scale::Linear);
+    CHECK(module.linear_floor() == 0.f);
+    CHECK(module.linear_ceiling() == 1.f);
 }

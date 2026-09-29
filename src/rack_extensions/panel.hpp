@@ -39,17 +39,24 @@ struct PanelLayout {
     static rack::math::Vec gain(int channel = 0) {
         return rack::math::Vec(13.f, 66.f + 75.f * channel);
     }
+    /// @brief Spectre's wider strip gives the jack and gain control finger clearance.
+    static rack::math::Vec spectre_input() { return rack::math::Vec(26.f, 27.f); }
+    static rack::math::Vec spectre_gain() { return rack::math::Vec(37.5f, 80.f); }
     /// @brief Spectre-only vertical color range and its integrated legend.
     static rack::math::Rect intensity_control() {
-        return rack::math::Rect(rack::math::Vec(6.f, 105.f), rack::math::Vec(34.f, 200.f));
+        return rack::math::Rect(rack::math::Vec(6.f, 106.f), rack::math::Vec(63.f, 206.f));
     }
     /// @brief Shared center of the Run button and its light.
-    static rack::math::Vec run() { return rack::math::Vec(23.f, 346.f); }
+    static rack::math::Vec run(PanelKind kind = PanelKind::FOURIER) {
+        return rack::math::Vec(kind == PanelKind::SPECTRE ? 37.5f : 23.f, 346.f);
+    }
     /// @brief Top-left display corner, inset from the panel and input strip.
-    static rack::math::Vec display_position() { return rack::math::Vec(45.f, 15.f); }
+    static rack::math::Vec display_position(PanelKind kind = PanelKind::FOURIER) {
+        return rack::math::Vec(kind == PanelKind::SPECTRE ? 75.f : 45.f, 15.f);
+    }
     /// @brief Display footprint inside the fixed module size.
     static rack::math::Vec display_size(PanelKind kind) {
-        return size(kind).minus(rack::math::Vec(60.f, 30.f));
+        return size(kind).minus(rack::math::Vec(kind == PanelKind::SPECTRE ? 90.f : 60.f, 30.f));
     }
 };
 
@@ -80,11 +87,11 @@ struct Panel : rack::widget::Widget {
             };
             const int count = kind == PanelKind::FOURIER ? 4 : 1;
             for (int channel = 0; channel < count; ++channel) {
-                const auto input = PanelLayout::input(channel);
+                const auto input = kind == PanelKind::SPECTRE ? PanelLayout::spectre_input() : PanelLayout::input(channel);
                 nvgBeginPath(vg);
                 // Retain the original second-channel artwork's one-pixel offset.
                 const float offset = channel == 1 ? 1.f : 0.f;
-                nvgRect(vg, input.x + 7.f, input.y + 10.f + offset, 8.f, 37.f);
+                nvgRect(vg, input.x + 7.f, input.y + 10.f + offset, 8.f, kind == PanelKind::SPECTRE ? 43.f : 37.f);
                 nvgFillColor(vg, kind == PanelKind::FOURIER ? channels[channel] :
                     (dark ? nvgRGB(230, 230, 230) : ink));
                 nvgFill(vg);
@@ -127,7 +134,7 @@ struct Panel : rack::widget::Widget {
             nvgRestore(vg);
 
             nvgSave(vg);
-            const auto run = PanelLayout::run();
+            const auto run = PanelLayout::run(kind);
             nvgTranslate(vg, run.x - 9.895f, run.y - 28.54f);
             nvgFillColor(vg, ink);
             PanelArtwork::run(vg);

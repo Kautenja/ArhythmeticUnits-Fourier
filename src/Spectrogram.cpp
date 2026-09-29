@@ -57,6 +57,8 @@ struct Spectrogram : Module {
         PARAM_SLOPE,
         PARAM_COLOR_FLOOR,
         PARAM_COLOR_CEILING,
+        PARAM_LINEAR_FLOOR,
+        PARAM_LINEAR_CEILING,
         NUM_PARAMS
     };
 
@@ -128,34 +130,49 @@ struct Spectrogram : Module {
     /// UI render preference; engine processing never reads intensity controls.
     Intensity::Scale intensity_scale = Intensity::Scale::Decibels;
 
-    /// @brief Standard Rack quantity with fixed decimal precision and mode help.
+    /// @brief Range quantities share the same controls in dB and amplitude modes.
     struct IntensityQuantity : ParamQuantity {
+        bool linear() const { return paramId >= PARAM_LINEAR_FLOOR; }
+        bool ceiling() const { return paramId == PARAM_COLOR_CEILING || paramId == PARAM_LINEAR_CEILING; }
+        float sibling() {
+            return Intensity::endpoint(module->params[paramId + (ceiling() ? -1 : 1)].getValue(),
+                !ceiling(), linear());
+        }
+        float getMinValue() override {
+            return ceiling() ? std::max(minValue, sibling() + (linear() ? 0.001f : 0.1f)) : minValue;
+        }
+        float getMaxValue() override {
+            return ceiling() ? maxValue : std::min(maxValue, sibling() - (linear() ? 0.001f : 0.1f));
+        }
         float getValue() override {
-            return Intensity::endpoint(ParamQuantity::getValue(), paramId == PARAM_COLOR_CEILING);
+            const float value = Intensity::endpoint(ParamQuantity::getValue(), ceiling(), linear());
+            return ceiling() ? value : Intensity::ordered_floor(value, sibling(), linear());
         }
         void fromJson(json_t* rootJ) override {
             const auto value = json_object_get(rootJ, "value");
-            const bool ceiling = paramId == PARAM_COLOR_CEILING;
-            // JSON numbers are finite doubles; clamp before narrowing so a
-            // large finite saved value cannot overflow to float infinity.
-            const double raw = json_is_number(value) ? json_number_value(value) :
-                (ceiling ? 0.0 : -90.0);
-            setImmediateValue(static_cast<float>(std::max(double(minValue),
+            // Full deserialization repairs pairs only after both entries load,
+            // so JSON array order does not change the retained range.
+            const double raw = json_is_number(value) ? json_number_value(value) : defaultValue;
+            module->params[paramId].setValue(static_cast<float>(std::max(double(minValue),
                 std::min(double(maxValue), raw))));
         }
         std::string getDisplayValueString() override {
-            return Intensity::format(Intensity::endpoint(getValue(),
-                paramId == PARAM_COLOR_CEILING));
+            return Intensity::format(getValue() * (linear() ? 100.f : 1.f));
         }
         std::string getDescription() override {
-            return "Drag this color-bar handle vertically. Values beyond this endpoint saturate. "
-                "Recolors retained history, including while frozen.";
+            return "Drag vertically to set the color range. Limits cannot cross. "
+                "Recolors retained history, including while frozen. "
+                "Raise the floor to hide weak background detail.";
         }
     };
 
-    /// @brief Sanitized UI endpoints; do not change the serialized parameter here.
-    float color_floor() { return Intensity::endpoint(params[PARAM_COLOR_FLOOR].getValue(), false); }
+    /// @brief Sanitized endpoints leave engine-owned analysis data untouched.
+    float color_floor() { return Intensity::ordered_floor(params[PARAM_COLOR_FLOOR].getValue(),
+        params[PARAM_COLOR_CEILING].getValue()); }
     float color_ceiling() { return Intensity::endpoint(params[PARAM_COLOR_CEILING].getValue(), true); }
+    float linear_floor() { return Intensity::ordered_floor(params[PARAM_LINEAR_FLOOR].getValue(),
+        params[PARAM_LINEAR_CEILING].getValue(), true); }
+    float linear_ceiling() { return Intensity::endpoint(params[PARAM_LINEAR_CEILING].getValue(), true, true); }
 
     /// @brief Initialize a new spectrogram.
     Spectrogram() : sample_rate(APP->engine->getSampleRate()) {
@@ -210,8 +227,10 @@ struct Spectrogram : Module {
             "The spectrum's slope around 1kHz. Useful for visually\n"
             "compensating the natural roll-off of high frequency energy\n"
             "in musical signals. Typical values are 4.5 and 3.0.";
-        configParam<IntensityQuantity>(PARAM_COLOR_FLOOR, -120.f, -1.f, -90.f, "Floor", " dB");
-        configParam<IntensityQuantity>(PARAM_COLOR_CEILING, 0.f, 24.f, 0.f, "Ceiling", " dB");
+        configParam<IntensityQuantity>(PARAM_COLOR_FLOOR, -120.f, 23.9f, -90.f, "Floor", " dB");
+        configParam<IntensityQuantity>(PARAM_COLOR_CEILING, -119.9f, 24.f, 0.f, "Ceiling", " dB");
+        configParam<IntensityQuantity>(PARAM_LINEAR_FLOOR, 0.f, 1.999f, 0.f, "Linear floor", "%", 0.f, 100.f);
+        configParam<IntensityQuantity>(PARAM_LINEAR_CEILING, 0.001f, 2.f, 1.f, "Linear ceiling", "%", 0.f, 100.f);
         // Disable randomization for all parameters.
         for (size_t i = 0; i < NUM_PARAMS; i++)
             getParamQuantity(i)->randomizeEnabled = false;
@@ -227,6 +246,12 @@ struct Spectrogram : Module {
         is_ac_coupled = true;
         color_map = Fourier::ColorMap::Function::Magma;
         intensity_scale = Intensity::Scale::Decibels;
+        // Rack resets quantities sequentially. Restore both pairs together so
+        // a previous quiet ceiling cannot constrain the floor's reset value.
+        params[PARAM_COLOR_FLOOR].setValue(-90.f);
+        params[PARAM_COLOR_CEILING].setValue(0.f);
+        params[PARAM_LINEAR_FLOOR].setValue(0.f);
+        params[PARAM_LINEAR_CEILING].setValue(1.f);
         // Reset is a host lifecycle operation; publish cleared history columns.
         analysis.reset();
         for (size_t i = 0; i < N_STFT; ++i) {
@@ -280,7 +305,9 @@ struct Spectrogram : Module {
     void fromJson(json_t* rootJ) override {
         params[PARAM_COLOR_FLOOR].setValue(-90.f);
         params[PARAM_COLOR_CEILING].setValue(0.f);
-        intensity_scale = Intensity::Scale::LegacyLinear;
+        params[PARAM_LINEAR_FLOOR].setValue(0.f);
+        params[PARAM_LINEAR_CEILING].setValue(1.f);
+        intensity_scale = Intensity::Scale::Linear;
         Module::fromJson(rootJ);
         // Rack's paramsFromJson bypasses ParamQuantity::fromJson. Reapply the
         // endpoint entries through our validator to default malformed values.
@@ -290,9 +317,11 @@ struct Spectrogram : Module {
             auto id_json = json_object_get(param, "id");
             if (!id_json) id_json = json_object_get(param, "paramId");
             const json_int_t id = id_json ? json_integer_value(id_json) : index;
-            if (id == PARAM_COLOR_FLOOR || id == PARAM_COLOR_CEILING)
+            if (id >= PARAM_COLOR_FLOOR && id <= PARAM_LINEAR_CEILING)
                 getParamQuantity(id)->fromJson(param);
         }
+        params[PARAM_COLOR_FLOOR].setValue(color_floor());
+        params[PARAM_LINEAR_FLOOR].setValue(linear_floor());
     }
 
     /// @brief Load the module's state from a JSON object.
@@ -301,7 +330,7 @@ struct Spectrogram : Module {
         const auto scale = json_object_get(rootJ, "intensity_scale");
         intensity_scale = json_is_string(scale) &&
             std::string(json_string_value(scale)) == "decibels" ?
-            Intensity::Scale::Decibels : Intensity::Scale::LegacyLinear;
+            Intensity::Scale::Decibels : Intensity::Scale::Linear;
         json_t* opt = nullptr;
         if ((opt = json_object_get(rootJ, "is_running")))
             is_running = json_boolean_value(opt);
@@ -749,7 +778,8 @@ struct SpectralImageDisplay : TransparentWidget {
         const std::array<float, 7> settings{{slope, nyquist_rate,
             static_cast<float>(module->get_frequency_scale()),
             static_cast<float>(module->color_map), static_cast<float>(module->intensity_scale),
-            decibels ? module->color_floor() : 0.f, decibels ? module->color_ceiling() : 0.f}};
+            decibels ? module->color_floor() : module->linear_floor(),
+            decibels ? module->color_ceiling() : module->linear_ceiling()}};
         if (settings != image_settings) {
             image_dirty = true;
             dirty_columns.fill(true);
@@ -776,7 +806,7 @@ struct SpectralImageDisplay : TransparentWidget {
                     } else {
                         auto coeff = row_gain[y] * Fourier::interpolate_coefficients(
                             display_coefficients[x], row_position[y]);
-                        position = abs(coeff) / height;
+                        position = Spectrogram::Intensity::position(abs(coeff) / height, settings[5], settings[6], true);
                     }
                     auto color = Fourier::ColorMap::color_map(module->color_map, position);
                     const int index = 4 * (width * (height - 1 - y) + x);
@@ -1014,19 +1044,24 @@ struct SpectreIntensityHandle : ParamWidget {
 
     bool enabled() {
         auto spectre = dynamic_cast<Spectrogram*>(module);
-        return spectre && spectre->intensity_scale == Spectrogram::Intensity::Scale::Decibels;
+        return spectre && linear() == (spectre->intensity_scale == Spectrogram::Intensity::Scale::Linear);
     }
-    bool ceiling() const { return paramId == Spectrogram::PARAM_COLOR_CEILING; }
+    bool linear() const { return paramId >= Spectrogram::PARAM_LINEAR_FLOOR; }
+    bool ceiling() const { return paramId == Spectrogram::PARAM_COLOR_CEILING ||
+        paramId == Spectrogram::PARAM_LINEAR_CEILING; }
 
-    /// @brief Map both endpoints to the same fixed -120..+24 dB vertical axis.
-    static float position(float db) { return 46.f + (24.f - db) * 104.f / 144.f; }
+    /// @brief Map endpoints to the mode's fixed dB or normalized-amplitude axis.
+    static float position(float value, bool linear = false) {
+        return 60.f + (linear ? (2.f - value) / 2.f : (24.f - value) / 144.f) * 120.f;
+    }
 
     void step() override {
         const auto quantity = getParamQuantity();
-        const float value = quantity ? quantity->getValue() : (ceiling() ? 0.f : -90.f);
+        const float value = quantity ? quantity->getValue() :
+            (linear() ? (ceiling() ? 1.f : 0.f) : (ceiling() ? 0.f : -90.f));
         const auto origin = Fourier::PanelLayout::intensity_control().pos;
-        box = Rect(origin.plus(Vec(ceiling() ? 21.f : 0.f, position(value) - 6.f)), Vec(13.f, 12.f));
-        visible = !module || enabled();
+        box = Rect(origin.plus(Vec(ceiling() ? 39.f : 2.f, position(value, linear()) - 10.f)), Vec(22.f, 20.f));
+        visible = module ? enabled() : !linear();
         ParamWidget::step();
     }
 
@@ -1042,7 +1077,7 @@ struct SpectreIntensityHandle : ParamWidget {
         const float speed = mods == (RACK_MOD_CTRL | GLFW_MOD_SHIFT) ? 0.01f :
             (mods == RACK_MOD_CTRL ? 0.1f : (mods == GLFW_MOD_SHIFT ? 4.f : 1.f));
         auto quantity = getParamQuantity();
-        quantity->setValue(quantity->getValue() - pixels * 144.f / 104.f * speed);
+        quantity->setValue(quantity->getValue() - pixels * (linear() ? 2.f : 144.f) / 120.f * speed);
     }
 
     void onDragMove(const DragMoveEvent& e) override {
@@ -1065,113 +1100,105 @@ struct SpectreIntensityHandle : ParamWidget {
 
     void draw(const DrawArgs& args) override {
         nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, ceiling() ? 0.f : 13.f, 6.f);
-        nvgLineTo(args.vg, ceiling() ? 12.f : 1.f, 1.f);
-        nvgLineTo(args.vg, ceiling() ? 12.f : 1.f, 11.f);
+        nvgMoveTo(args.vg, ceiling() ? 0.f : 22.f, 10.f);
+        nvgLineTo(args.vg, ceiling() ? 16.f : 6.f, 4.f);
+        nvgLineTo(args.vg, ceiling() ? 16.f : 6.f, 16.f);
         nvgClosePath(args.vg);
-        nvgFillColor(args.vg, settings::preferDarkPanels ? nvgRGB(245, 245, 245) : nvgRGB(25, 25, 25));
+        nvgFillColor(args.vg, nvgRGB(235, 235, 235));
         nvgFill(args.vg);
-        nvgStrokeColor(args.vg, settings::preferDarkPanels ? nvgRGB(25, 25, 25) : nvgRGB(245, 245, 245));
+        nvgStrokeColor(args.vg, nvgRGB(35, 35, 35));
         nvgStrokeWidth(args.vg, 0.7f);
         nvgStroke(args.vg);
     }
 };
 
-/// @brief A single vertical color-range control with an explicit legacy-mode action.
-/// Vector strips show the actual selected dB range on a fixed -120..+24 dB axis.
+/// @brief Color screen with direct palette and scale menus, shared by both modes.
 struct SpectreIntensityLegend : OpaqueWidget {
     Spectrogram* module;
-    ui::Tooltip* tooltip = nullptr;
+    bool hovered = false;
 
     explicit SpectreIntensityLegend(Spectrogram* module) : module(module) {}
-    ~SpectreIntensityLegend() { destroy_tooltip(); }
-
-    bool legacy() const {
-        return module && module->intensity_scale == Spectrogram::Intensity::Scale::LegacyLinear;
+    bool linear() const {
+        return module && module->intensity_scale == Spectrogram::Intensity::Scale::Linear;
     }
-    void destroy_tooltip() {
-        if (!tooltip) return;
-        tooltip->parent->removeChild(tooltip);
-        delete tooltip;
-        tooltip = nullptr;
+    /// @brief Keep menu actions serialized and undoable through the Rack engine.
+    void select_scale(size_t value) {
+        if (!module) return;
+        Fourier::set_module_setting(module, "change intensity scale", "intensity_scale",
+            json_string(value == 0 ? "decibels" : "legacy_linear"));
     }
-    void onEnter(const EnterEvent& e) override {
-        OpaqueWidget::onEnter(e);
-        if (!module || !settings::tooltips) return;
-        tooltip = new ui::Tooltip;
-        tooltip->text = legacy() ?
-            "Legacy linear colors. Click Enable dB below to activate the range control." :
-            "Drag the lower left handle to reveal quiet detail. Drag the upper right\n"
-            "handle to distinguish bright peaks. Right-click a handle to type a value;\n"
-            "double-click it to reset. Color includes Slope weighting. Values outside\n"
-            "the selected range saturate; Raw and Color readouts remain unclamped.";
-        APP->scene->addChild(tooltip);
+    void select_palette(size_t value) {
+        if (!module) return;
+        Fourier::set_module_setting(module, "change color map", "color_map", json_integer(value));
     }
-    void onLeave(const LeaveEvent& e) override {
-        destroy_tooltip();
-        OpaqueWidget::onLeave(e);
-    }
-    /// @brief Opt old patches into dB mapping only through an explicit undoable action.
-    void enable_decibels() {
-        if (!legacy()) return;
-        Fourier::set_module_setting(module, "enable decibel color range", "intensity_scale",
-            json_string("decibels"));
-        destroy_tooltip();
-    }
+    void onEnter(const EnterEvent& e) override { hovered = module != nullptr; OpaqueWidget::onEnter(e); }
+    void onLeave(const LeaveEvent& e) override { hovered = false; OpaqueWidget::onLeave(e); }
     void onButton(const ButtonEvent& e) override {
-        if (legacy() && e.button == GLFW_MOUSE_BUTTON_LEFT && e.action == GLFW_PRESS && e.pos.y >= 185.f) {
-            enable_decibels();
+        if (module && e.button == GLFW_MOUSE_BUTTON_LEFT && e.action == GLFW_PRESS && e.pos.y < 42.f) {
+            auto menu = createMenu();
+            // Put each list directly under its readout rather than nesting a submenu.
+            const bool palette = e.pos.y < 22.f;
+            menu->box.pos = getAbsoluteOffset(Vec(0.f, palette ? 22.f : 42.f));
+            const auto names = palette ? Fourier::ColorMap::names() : std::vector<std::string>{"Decibels", "Linear"};
+            for (size_t i = 0; i < names.size(); ++i) {
+                menu->addChild(createCheckMenuItem(names[i], "", [=]() {
+                    return i == (palette ? static_cast<size_t>(module->color_map) :
+                        static_cast<size_t>(module->intensity_scale));
+                }, [=]() { if (palette) select_palette(i); else select_scale(i); }));
+            }
             e.consume(this);
             return;
         }
         OpaqueWidget::onButton(e);
     }
-
-    /// @brief Same endpoint labels in the browser, rendering, and lifecycle tests.
+    /// @brief Endpoints in the active mode's native units.
     std::array<std::string, 3> labels() {
-        if (legacy()) return {{"1", "0", "LIN"}};
+        if (linear()) return {{Spectrogram::Intensity::format(module->linear_ceiling() * 100.f),
+            Spectrogram::Intensity::format(module->linear_floor() * 100.f), "%"}};
         return {{Spectrogram::Intensity::format(module ? module->color_ceiling() : 0.f),
             Spectrogram::Intensity::format(module ? module->color_floor() : -90.f), "dB"}};
     }
-
     void draw(const DrawArgs& args) override {
+        auto vg = args.vg;
+        nvgBeginPath(vg);
+        nvgRoundedRect(vg, 0.f, 0.f, box.size.x, box.size.y, 5.f);
+        nvgFillColor(vg, nvgRGB(0, 0, 0));
+        nvgFill(vg);
         const auto palette = module ? module->color_map : Fourier::ColorMap::Function::Magma;
-        const float floor = module ? module->color_floor() : -90.f;
-        const float ceiling = module ? module->color_ceiling() : 0.f;
+        const float floor = module ? (linear() ? module->linear_floor() : module->color_floor()) : -90.f;
+        const float ceiling = module ? (linear() ? module->linear_ceiling() : module->color_ceiling()) : 0.f;
         // Adjacent strips must meet without antialiased seams at fractional zoom.
-        nvgSave(args.vg);
-        nvgShapeAntiAlias(args.vg, 0);
-        for (int row = 0; row < 104; ++row) {
-            const float db = 24.f - row * 144.f / 103.f;
-            const float position = legacy() ? 1.f - row / 103.f :
-                Spectrogram::Intensity::position(db, floor, ceiling);
+        nvgSave(vg);
+        nvgShapeAntiAlias(vg, 0);
+        for (int row = 0; row < 120; ++row) {
+            const float value = linear() ? 2.f * (1.f - row / 119.f) : 24.f - row * 144.f / 119.f;
+            const float position = Spectrogram::Intensity::position(value, floor, ceiling, linear());
             const auto color = Fourier::ColorMap::color_map(palette, position);
-            nvgBeginPath(args.vg);
-            nvgRect(args.vg, 8.f, 46.f + row, 18.f, 1.f);
-            nvgFillColor(args.vg, nvgRGBf(color.r, color.g, color.b));
-            nvgFill(args.vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, 24.f, 60.f + row, 15.f, 1.f);
+            nvgFillColor(vg, nvgRGBf(color.r, color.g, color.b));
+            nvgFill(vg);
         }
-        nvgRestore(args.vg);
+        nvgRestore(vg);
         const auto font = APP->window->uiFont;
         if (!font) return;
         const auto text = labels();
-        nvgFontFaceId(args.vg, font->handle);
-        nvgFontSize(args.vg, 8.f);
-        nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        const auto ink = settings::preferDarkPanels ? nvgRGB(230, 230, 230) : nvgRGB(20, 20, 20);
-        nvgFillColor(args.vg, ink);
-        nvgText(args.vg, 17.f, 9.f, "COLOR", nullptr);
-        nvgText(args.vg, 17.f, 32.f, text[0].c_str(), nullptr);
-        nvgText(args.vg, 17.f, 164.f, text[1].c_str(), nullptr);
-        nvgText(args.vg, 17.f, 178.f, text[2].c_str(), nullptr);
-        if (legacy()) {
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, 0.f, 186.f, 34.f, 13.f, 2.f);
-            nvgFillColor(args.vg, settings::preferDarkPanels ? nvgRGB(65, 65, 65) : nvgRGB(195, 195, 195));
-            nvgFill(args.vg);
-            nvgFillColor(args.vg, ink);
-            nvgFontSize(args.vg, 6.5f);
-            nvgText(args.vg, 17.f, 192.f, "Enable dB", nullptr);
+        nvgFontFaceId(vg, font->handle);
+        nvgFontSize(vg, 9.f);
+        nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        nvgFillColor(vg, nvgRGB(230, 230, 230));
+        nvgText(vg, 31.5f, 50.f, (text[0] + text[2]).c_str(), nullptr);
+        nvgText(vg, 31.5f, 194.f, (text[1] + text[2]).c_str(), nullptr);
+        nvgFontSize(vg, 9.f);
+        nvgFillColor(vg, hovered ? nvgRGB(100, 255, 120) : nvgRGB(0, 215, 26));
+        nvgText(vg, 28.f, 12.f, Fourier::ColorMap::names()[static_cast<size_t>(palette)].c_str(), nullptr);
+        nvgText(vg, 28.f, 33.f, linear() ? "Linear" : "Decibels", nullptr);
+        for (float y : {12.f, 33.f}) {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, 54.f, y - 1.f);
+            nvgLineTo(vg, 59.f, y - 1.f);
+            nvgLineTo(vg, 56.5f, y + 2.f);
+            nvgFill(vg);
         }
     }
 };
@@ -1182,52 +1209,53 @@ struct SpectrogramWidget : ModuleWidget {
         setPanel(new Fourier::Panel(Fourier::PanelKind::SPECTRE));
         // Spectrogram display
         SpectralImageDisplay* display = new SpectralImageDisplay(module);
-        display->setPosition(Fourier::PanelLayout::display_position());
+        display->setPosition(Fourier::PanelLayout::display_position(Fourier::PanelKind::SPECTRE));
         display->setSize(Fourier::PanelLayout::display_size(Fourier::PanelKind::SPECTRE));
         addChild(display);
         // Inputs
-        addInput(createInput<ThemedPJ301MPort>(Fourier::PanelLayout::input(), module, Spectrogram::INPUT_SIGNAL));
-        addParam(createParam<Trimpot>(Fourier::PanelLayout::gain(), module, Spectrogram::PARAM_INPUT_GAIN));
+        addInput(createInput<ThemedPJ301MPort>(Fourier::PanelLayout::spectre_input(), module, Spectrogram::INPUT_SIGNAL));
+        addParam(createParamCentered<RoundSmallBlackKnob>(Fourier::PanelLayout::spectre_gain(), module, Spectrogram::PARAM_INPUT_GAIN));
         auto legend = new SpectreIntensityLegend(module);
         legend->box = Fourier::PanelLayout::intensity_control();
         addChild(legend);
-        for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
+        for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING,
+                             Spectrogram::PARAM_LINEAR_FLOOR, Spectrogram::PARAM_LINEAR_CEILING}) {
             auto handle = createParam<SpectreIntensityHandle>(Vec(), module, id);
             addParam(handle);
         }
         // Buttons.
-        addParam(createParamCentered<PB61303>(Fourier::PanelLayout::run(), module, Spectrogram::PARAM_RUN));
-        addChild(createLightCentered<PB61303Light<WhiteLight>>(Fourier::PanelLayout::run(), module, Spectrogram::LIGHT_RUN));
+        addParam(createParamCentered<PB61303>(Fourier::PanelLayout::run(Fourier::PanelKind::SPECTRE), module, Spectrogram::PARAM_RUN));
+        addChild(createLightCentered<PB61303Light<WhiteLight>>(Fourier::PanelLayout::run(Fourier::PanelKind::SPECTRE), module, Spectrogram::LIGHT_RUN));
         // Screen controls.
         // Window function control with custom angles to match discrete range.
-        auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
+        auto window_function_param = createParam<TextKnob>(Vec(80 + 0 * 61, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);
         window_function_param->label.text = "WINDOW";
         window_function_param->maxAngle = 2.f * M_PI;
         addParam(window_function_param);
         // Frequency scale control with custom angles to match discrete range.
-        auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
+        auto frequency_scale_param = createParam<TextKnob>(Vec(80 + 1 * 61, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
         frequency_scale_param->label.text = "FREQ SCALE";
         frequency_scale_param->label.font_size = 8.5f;
         addParam(frequency_scale_param);
         // Time smoothing control.
-        auto time_smoothing_param = createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING);
+        auto time_smoothing_param = createParam<TextKnob>(Vec(80 + 2 * 61, 330), module, Spectrogram::PARAM_TIME_SMOOTHING);
         time_smoothing_param->label.text = "AVERAGE";
         addParam(time_smoothing_param);
         // Frequency smoothing control with custom angles to match discrete range.
-        auto frequency_smoothing_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
+        auto frequency_smoothing_param = createParam<TextKnob>(Vec(80 + 3 * 61, 330), module, Spectrogram::PARAM_FREQUENCY_SMOOTHING);
         frequency_smoothing_param->label.text = "SMOOTH";
         frequency_smoothing_param->maxAngle = 2.f * M_PI;
         addParam(frequency_smoothing_param);
         // Low and High frequency (frequency range) controls.
-        auto low_freq_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, Spectrogram::PARAM_LOW_FREQUENCY);
+        auto low_freq_param = createParam<TextKnob>(Vec(80 + 4 * 61, 330), module, Spectrogram::PARAM_LOW_FREQUENCY);
         low_freq_param->label.text = "LO FREQ";
         addParam(low_freq_param);
-        auto high_freq_param = createParam<TextKnob>(Vec(50 + 5 * 66, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY);
+        auto high_freq_param = createParam<TextKnob>(Vec(80 + 5 * 61, 330), module, Spectrogram::PARAM_HIGH_FREQUENCY);
         high_freq_param->label.text = "HI FREQ";
         addParam(high_freq_param);
         // Slope (dB/octave @1000Hz) controls.
-        auto slope_param = createParam<TextKnob>(Vec(50 + 6 * 66, 330), module, Spectrogram::PARAM_SLOPE);
+        auto slope_param = createParam<TextKnob>(Vec(80 + 6 * 61, 330), module, Spectrogram::PARAM_SLOPE);
         slope_param->label.text = "SLOPE";
         addParam(slope_param);
         // Screws
@@ -1249,13 +1277,7 @@ struct SpectrogramWidget : ModuleWidget {
                 Fourier::set_module_setting(module, "change ac-coupled",
                     "is_ac_coupled", json_boolean(value));
             }));
-        menu->addChild(createIndexSubmenuItem("Color Map", Fourier::ColorMap::names(),
-            [=]() { return static_cast<size_t>(module->color_map); },
-            [=](size_t value) {
-                Fourier::set_module_setting(module, "change color map",
-                    "color_map", json_integer(static_cast<json_int_t>(value)));
-            }));
-        menu->addChild(createIndexSubmenuItem("Intensity scale", {"Decibels", "Legacy linear"},
+        menu->addChild(createIndexSubmenuItem("Intensity scale", {"Decibels", "Linear"},
             [=]() { return static_cast<size_t>(module->intensity_scale); },
             [=](size_t value) {
                 Fourier::set_module_setting(module, "change intensity scale", "intensity_scale",

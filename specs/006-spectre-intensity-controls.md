@@ -9,148 +9,95 @@ Status: IMPLEMENTED - live interaction validation pending
 
 Created: September 29, 2026
 
-## Goal And Current Behavior
+## Goal
 
-The [Spectre display](../src/Spectrogram.cpp) currently maps slope-weighted
-linear magnitudes to a color map using `N_FFT / 2` as its divisor. Values
-above the color range saturate. Input Gain changes newly acquired spectra;
-it cannot adjust recorded history while frozen. The UI already retains raw
-columns and recolors them when display settings change.
-
-Provide a dB intensity mode with independent endpoints and recoloring of
-existing history. Preserve the old appearance for existing patches through
-an explicit legacy mode. This spec is independent of
+Give Spectre a usable vertical color-range surface with first-class Linear
+and Decibels modes, direct palette/scale selection, and immediate recoloring
+of retained history. Preserve saved patch identities and old linear pixels
+at default endpoints. This spec is independent of
 [Fourier trace inspection](005-fourier-trace-inspection.md).
 
 ## Behavior Examples
 
--   A new Spectre starts with Floor = -90 dB and Ceiling = 0 dB. A -45 dB
-    weighted spectral value maps to the midpoint of the selected color map.
--   With Run off, changing Floor from -90 to -60 dB immediately recolors
-    retained history; no new input or FFT frame is needed.
--   Raising Ceiling to +12 dB reveals distinctions between positive-dB
-    regions that previously shared the top color. It does not change input
-    gain or the underlying spectral values.
--   Opening an older patch selects `Legacy linear` and reproduces its
-    existing colors. Clicking `Enable dB` below the bar enables its range handles.
+-   New instances use Decibels at -90..0 dB. A -45 dB value uses the palette
+    midpoint; a -60 dB component uses one third of the range.
+-   The ceiling can move to -20 dB to inspect quiet peaks. Endpoints stop
+    before crossing; editing one limit never moves the other.
+-   Linear uses amplitude endpoints of 0..100 percent by default. A -60 dB
+    component uses 0.1 percent of that palette, explaining why it looks
+    cleaner than the default Decibels view without filtering any data.
+-   Switch mode or palette from the color screen. Each mode remembers its
+    own endpoints; frozen history recolors immediately.
+-   Old patches select Linear at 0..100 percent, reproducing their original
+    colors. Both handles work immediately; there is no activation button.
 
 ## Functional Requirements
 
-### FR-1: Panel Placement And Parameter Behavior
+### FR-1: Panel And Interaction
 
-- [x] Use one vertical color bar with two draggable limits, a lower-left
-    Floor handle and an upper-right Ceiling handle. Show their values below
-    and above the bar. Integrate the palette legend into the control.
-- [x] Use the existing [shared panel geometry](../src/rack_extensions/panel.hpp).
-    Fit the entire control inside `x = 6..40`, `y = 105..305`, preserving
-    the input/gain and Run regions. Both handles share a fixed -120..+24 dB
-    axis and occupy opposite sides to remain reachable when close together.
-- [x] Preserve the 35 HP, 525-by-380-pixel module size, display rectangle,
-    input and gain positions, existing bottom controls, and Run center
-    `(23, 346)`. Keep its label, screws, and branding unobstructed. Do not
-    change Fourier's panel when adding Spectre-specific geometry.
-- [x] Append `PARAM_COLOR_FLOOR` and `PARAM_COLOR_CEILING` after all existing
-    parameter IDs. Floor ranges from -120 to -1 dB, default -90 dB;
-    Ceiling ranges from 0 to +24 dB, default 0 dB. These deliberately
-    disjoint ranges guarantee at least 1 dB of span without moving the
-    other handle or introducing coupled undo actions.
-- [x] Use continuous 1-decimal-place display, vertical handle dragging,
-    fine adjustment, Rack typed entry/reset menus, and one undo action per
-    drag. Display-only parameters update immediately without audio smoothing.
-    Disable parameter randomization, consistent with existing controls.
-    Sanitize non-finite values to defaults and clamp finite out-of-range
-    values before display calculations, including externally set values.
-- [x] In legacy mode, hide the inactive handles, show a `LIN` legend, and
-    provide an explicit `Enable dB` action directly below the bar. Activating
-    it switches modes through synchronized undo. Loading old patches and
-    presets still preserves their original appearance and saved endpoints.
+- [x] Use a rounded black color screen at `(6, 106)`, size `63 x 206`,
+    within a widened left control strip. Preserve the 35 HP module size.
+    Move Spectre's plot to `(75, 15)` with size `435 x 350` and evenly
+    space its seven bottom controls. Fourier's geometry stays unchanged.
+- [x] Center input, a larger gain knob, color screen, and Run at x=37.5.
+    Input and gain centers are about 41 pixels (13.9 mm) apart. Provide
+    22-by-20-pixel handle hit targets on opposite sides of a 120-pixel bar.
+    This improves physical-style clearance; it is not a hardware prototype.
+- [x] Put palette and intensity-scale readouts with dropdown arrows at the
+    top of the screen. Left-click opens each list directly. Remove the
+    redundant context-menu palette list; retain the intensity-scale menu.
+- [x] Support vertical dragging, fine adjustment, typed values, reset, and
+    one undo action per drag. Disable smoothing and randomization. Clamp
+    edits at the other limit without changing the sibling parameter.
 
-### FR-2: Intensity Mapping And Reference
+### FR-2: Ranges And Mapping
 
-- [x] Add undoable context-menu `Intensity scale` choices `Decibels` and
-    `Legacy linear`. New instances and module reset use Decibels mode.
-    Keep `Color Map` as the independent existing palette choice.
-- [x] In Decibels mode, for an interpolated magnitude `m`, use
-    `a = abs(m) / (N_FFT / 2)` and `d = 20 * log10(a) + slope_db`.
-    Map color position as `clamp((d - floor) / (ceiling - floor), 0, 1)`.
-    Interpolate linear magnitudes before converting to dB. Feed this
-    normalized position into every existing color map without changing
-    palette tables.
-- [x] Compute `slope_db = slope * log2(f / 1000)` at the physical frequency
-    of the sampled fractional bin for the new mode, on either frequency
-    scale. At DC, use zero slope weighting. This intentionally removes the
-    old image-row-based weighting error only in Decibels mode. Preserve
-    the old weighting and pixel calculations in Legacy linear mode.
-- [x] Zero magnitude maps to the lowest color without a logarithm-domain
-    error. Positive infinity saturates at the highest color; NaN/invalid
-    data maps to the lowest color and reads `--`. Do not send non-finite
-    color coordinates into palette indexing. Check behavior under the
-    plugin's actual floating-point compiler flags.
-- [x] Keep the normalization reference explicit: the analyzer divides
-    input voltage by 5 V, applies input gain and window coherent-gain
-    correction, and publishes unnormalized magnitudes. An isolated,
-    bin-centered 5 V peak sinusoid at unity gain, with AC coupling off,
-    smoothing off and zero slope, measures approximately 0 dB. This is
-    a spectral amplitude reference, not dBFS or broadband RMS. Preserve
-    existing DC/Nyquist conventions; do not silently apply endpoint factors.
-- [x] In Decibels mode, align the hover readout with this exact divisor.
-    Replace the current approximate `20 * log10(m) - 60` with the exact
-    conversion for that mode (about a -0.206 dB correction at N=2048).
-    Preserve the existing unweighted-bin meaning and identify it as `Raw`;
-    additionally show `Color` for the weighted, interpolated value used by
-    the hovered pixel. Silence reads `-inf dB`. Document the difference.
-    Legacy mode retains its historical readout and mapping.
+- [x] Preserve IDs 0..10, including dB Floor/Ceiling at 9/10. Both use the
+    shared -120..+24 dB axis with at least 0.1 dB separation. Defaults stay
+    -90/0 dB. A ceiling below zero and a positive floor are supported.
+- [x] Append Linear Floor/Ceiling as IDs 11/12: amplitude 0..2, displayed
+    as 0..200 percent, with a minimum span of 0.001 (0.1 percentage point).
+    Defaults are 0/1. Keep the two modes' ranges independently remembered.
+- [x] Decibels uses interpolated linear magnitude, normalized by N/2,
+    converted with 20 log10, plus physical-frequency slope weighting.
+    DC remains unweighted. Palette position is the normalized position
+    between floor and ceiling, clamped to 0..1.
+- [x] Linear retains the original magnitude interpolation and image-row
+    slope weighting for pixel compatibility, then normalizes amplitude
+    between its endpoints. Its 0..1 range exactly matches old pixels.
+    Document the historical slope difference on logarithmic frequency axes.
+- [x] Keep invalid palette coordinates safe: zero and NaN use the bottom
+    color; infinity uses the top. Validate with plugin optimization flags.
+- [x] Preserve the existing Raw/Color dB inspection reference and the
+    historical Linear readout. No new signal energy, hidden gating,
+    smoothing, or engine processing is introduced by display controls.
 
-### FR-3: Legend And Display Lifecycle
+### FR-3: Persistence And Lifecycle
 
-- [x] Draw the selected palette inside the vertical range control, with
-    endpoint values above and below it. Show floor, ceiling, and `dB`
-    in Decibels mode. Label the legend `LIN` with normalized endpoints
-    `0` and `1` in legacy mode; never present a false linear-dB legend.
-- [x] Communicate that values at/below Floor or at/above Ceiling saturate
-    to endpoint colors. Identify slope weighting in the legend tooltip;
-    numeric inspector values must not be clamped to the legend endpoints.
-- [x] Changes to either endpoint or intensity mode invalidate all cached
-    spectral pixels and the legend, including while frozen. Palette and
-    slope changes retain their corresponding invalidation. Changes must
-    not mutate retained magnitudes, restart capture, or advance the scan.
-- [x] Reuse existing history and texture ownership. Unchanged draws must
-    not upload an image. Cropping/resizing must still reuse spectral pixels;
-    view mapping alone must not recompute the intensity data. Context loss,
-    failed texture creation, widget recreation, and reset must remain safe.
-- [x] Render readable labels and values in both themes at 100 percent zoom,
-    with no overlap/clipping at 75 and 50 percent zoom. A null-module browser
-    preview shows the new defaults and a valid legend without dereferencing
-    engine state or creating history actions.
-
-### FR-4: Compatibility And Ownership
-
-- [x] Serialize intensity mode as custom JSON `intensity_scale`, accepting
-    strings `decibels` and `legacy_linear`. Missing or invalid values on
-    load select Legacy linear, including loading an old preset into an
-    existing new-mode module. New parameters serialize through Rack.
-- [x] Missing endpoint parameters on load receive -90 and 0 dB defaults,
-    even when loading into a previously edited module. Define and test this
-    at the full Rack deserialization seam, not only `dataFromJson()`.
-    Complete new state round-trips both endpoints and the selected mode.
-- [x] Keep existing plugin/module slugs, enum values and parameter/port/light
-    identities, input normalization, gain default, smoothing, FFT length,
-    hop cadence, and Run/freeze semantics. No new input or output is added.
-- [x] Route menu changes through the existing synchronized undo helper.
-    Keep color conversion, legend generation, and all recoloring on the UI
-    thread. The audio path must not read the new display parameters, allocate
-    storage for them, or perform any new per-sample work.
-- [x] Existing factory preset files without new fields retain their current
-    appearance. Do not bulk-migrate them. Add one explicitly labeled dB
-    inspection preset demonstrating the new controls, with exact new fields.
-    Update preset enumeration/round-trip tests accordingly.
+- [x] Preserve saved JSON `decibels` and `legacy_linear` strings. The latter
+    is a compatibility wire value; the UI now calls the mode Linear.
+    Missing/invalid mode loads Linear. New instances/reset use Decibels.
+- [x] Full loads reset missing endpoints to each mode's defaults. Validate
+    finite bounds before narrowing, then repair crossed saved pairs by
+    lowering the floor to one minimum span below the ceiling. Load order
+    must not affect the result. Non-finite external values use defaults.
+- [x] Use Rack's synchronized undo helper for both panel dropdowns and
+    context-menu scale selection. Patches preserve mode, palette, and
+    both ranges without changing module slugs, port/light IDs or DSP.
+- [x] Only active endpoints affect image cache invalidation. Changed
+    endpoints, scale, palette, or slope recolor retained history, including
+    while frozen, without recapture or moving the scan line. Unchanged
+    draws and crop/resize operations reuse pixels. Preserve texture and
+    mailbox ownership, context-loss recovery, and null-module previews.
+- [x] Keep the five original presets unchanged and the DecibelInspection
+    preset supported. Missing appended Linear parameters use defaults.
+    Align the manual, panel artwork, and spec with the revised interface.
 
 ## Non-Goals
 
-Automatic gain/range, time-axis controls, new color palettes, spectral export,
-new ports, display resizing, FFT changes, a true logarithmic frequency-axis
-redesign, and changes to Fourier are outside this spec. This does not remove
-existing lifecycle costs or establish hard real-time safety.
+Automatic range/gain, noise filtering, new palettes/ports, time-axis controls,
+FFT changes, a true logarithmic frequency-axis redesign, and changes to
+Fourier are outside this spec. No hard real-time or performance claim is made.
 
 ## Acceptance And Validation
 
@@ -333,3 +280,46 @@ A full interactive Rack session remains pending. The native event tests
 and automated running/frozen checks verify the implementation seams but
 are not recorded as manual pointer gestures in the Rack application.
 The spec remains active until the remaining live acceptance checks pass.
+
+### Supported Scales And Panel Revision
+
+Committed the preceding implementation as `37715a7` before this revision.
+The user requested ceilings below zero, first-class Linear/Decibels modes,
+more physical control spacing, a black color screen, and direct palette and
+scale selection. The requirements above supersede the earlier geometry,
+disjoint ranges, hidden Linear handles, and Enable dB button descriptions.
+
+Kept the dB defaults rather than silently filtering weak data. A deterministic
+5 V tone plus a -60 dB secondary tone confirms that the same stored spectrum
+maps its weak component to 0.001 in Linear and one third in Decibels at
+-90..0 dB; raising the floor to -50 dB hides it. The manual explains this
+visibility change and how to obtain a quieter background.
+
+Validation on macOS ARM64 with the local Rack 2.6.0 source-tree library:
+
+-   `make -j4 all test-serialization test-display-lifecycle test-module-amplitudes`
+    passed. After the final reset and drag regressions, `make test-serialization`
+    passed 5,890 assertions / 12 cases; display lifecycle passed 89,929
+    assertions / 13 cases; amplitude passed 5,495,792 assertions / 7 cases.
+    Checks include negative ceiling gestures, typed/clamped endpoints,
+    minimum spans, reversed/malformed JSON, reset, old presets, mode/palette
+    undo, independent ranges, active/inactive cache invalidation, and the
+    known weak-tone comparison. Existing numerical tolerances are unchanged.
+-   `make -j4 all` passed the C++11 Rack plugin build. Existing SDK
+    deprecation warnings remain. No other platform build was performed.
+-   `make inspect-panels` passed 60 native OpenGL scenarios. It routes
+    presses through actual module widgets, drags both modes' handles,
+    opens both dropdowns, selects real menu items, and verifies undo.
+    Inspected both themes, modes, extremes, 100/75/50 percent zoom and
+    browser previews. The review sheets are
+    `.build/test/rack/color-screen-review.png` and `color-screen-zooms.png`.
+-   `make -C docs/manual-spectre` built the 12-page PDF. Poppler-rendered
+    pages were inspected, including the new panel illustration and controls.
+-   `git diff --check` and relative spec link checks passed.
+-   `make install` installed the updated package for Rack's next restart.
+
+This follow-up remains uncommitted; the requested pre-revision checkpoint
+is `37715a7`. Unrelated analyzer/benchmark and saved-patch work is preserved.
+No push or release was performed. A full manual Rack interaction session
+remains pending; native automated event/render checks are not claimed as
+hands-on use. Keep the spec active until that acceptance check is verified.

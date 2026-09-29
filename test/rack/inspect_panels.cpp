@@ -40,6 +40,11 @@ int main(int argc, char** argv) {
     rack::asset::systemDir = argv[1];
     rack::plugin::Plugin plugin;
     plugin.path = argv[2];
+    plugin.slug = "ArhythmeticUnits-Fourier";
+    plugin.version = "2.1.2";
+    plugin.addModel(modelSpectrogram);
+    plugin.addModel(modelSpectrumAnalyzer);
+    rack::plugin::plugins.push_back(&plugin);
     plugin_instance = &plugin;
     if (!glfwInit()) return 2;
     context.window = new rack::window::Window;
@@ -50,8 +55,8 @@ int main(int argc, char** argv) {
     int result = 0;
     try {
         for (bool preview : {false, true}) {
-            auto fourier = preview ? nullptr : new SpectrumAnalyzer;
-            auto spectre = preview ? nullptr : new Spectrogram;
+            auto fourier = preview ? nullptr : static_cast<SpectrumAnalyzer*>(modelSpectrumAnalyzer->createModule());
+            auto spectre = preview ? nullptr : static_cast<Spectrogram*>(modelSpectrogram->createModule());
             if (fourier) {
                 fourier->id = 1;
                 context.engine->addModule(fourier);
@@ -108,18 +113,22 @@ int main(int argc, char** argv) {
             sw->step();
             for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
                 auto handle = dynamic_cast<SpectreIntensityHandle*>(sw->getParam(id));
-                if (!handle || handle->box.pos.x < 6.f || handle->box.getBottomRight().x > 40.f ||
-                    handle->box.pos.y < 105.f || handle->box.getBottomRight().y > 305.f)
+                if (!handle || handle->box.pos.x < 6.f || handle->box.getBottomRight().x > 69.f ||
+                    handle->box.pos.y < 106.f || handle->box.getBottomRight().y > 312.f)
                     throw std::runtime_error("Intensity handle bounds escaped the left strip");
             }
             const auto control = Fourier::PanelLayout::intensity_control();
-            if (control.pos.x < 6.f || control.pos.y < 105.f ||
-                control.getBottomRight().x > 40.f || control.getBottomRight().y > 305.f)
+            if (control.pos.x < 6.f || control.pos.y < 106.f ||
+                control.getBottomRight().x > 69.f || control.getBottomRight().y > 312.f)
                 throw std::runtime_error("Color control bounds escaped the left strip");
             if (!preview) {
                 // Route presses through the complete widget tree, then use the
                 // actual Rack drag callbacks and history rather than setting params.
-                for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
+                for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING,
+                                     Spectrogram::PARAM_LINEAR_FLOOR, Spectrogram::PARAM_LINEAR_CEILING}) {
+                    spectre->intensity_scale = id >= Spectrogram::PARAM_LINEAR_FLOOR ?
+                        Spectrogram::Intensity::Scale::Linear : Spectrogram::Intensity::Scale::Decibels;
+                    sw->step();
                     auto handle = sw->getParam(id);
                     const float before = spectre->params[id].getValue();
                     rack::widget::EventContext target;
@@ -149,6 +158,43 @@ int main(int argc, char** argv) {
                         throw std::runtime_error("Color handle undo did not restore its parameter");
                 }
             }
+            if (spectre) {
+                // Open both actual dropdowns through the panel, choose an item,
+                // and verify the action and undo before destroying the overlay.
+                for (const bool palette : {true, false}) {
+                    rack::widget::EventContext target;
+                    Widget::ButtonEvent press;
+                    press.context = &target;
+                    press.pos = control.pos.plus(Vec(25.f, palette ? 12.f : 33.f));
+                    press.button = GLFW_MOUSE_BUTTON_LEFT;
+                    press.action = GLFW_PRESS;
+                    press.mods = 0;
+                    sw->onButton(press);
+                    if (!dynamic_cast<SpectreIntensityLegend*>(target.target))
+                        throw std::runtime_error("Color dropdown did not receive the panel press");
+                    auto overlay = dynamic_cast<rack::ui::MenuOverlay*>(context.scene->children.back());
+                    if (!overlay || overlay->children.empty())
+                        throw std::runtime_error("Color dropdown did not create an overlay");
+                    auto menu = dynamic_cast<rack::ui::Menu*>(overlay->children.front());
+                    if (!menu || menu->children.size() != (palette ? 7u : 2u))
+                        throw std::runtime_error("Color dropdown choices are incomplete");
+                    auto item = dynamic_cast<rack::ui::MenuItem*>(menu->children.front());
+                    if (!item || item->text != (palette ? "Viridis" : "Decibels"))
+                        throw std::runtime_error("Unexpected dropdown order");
+                    Widget::ActionEvent action;
+                    item->onAction(action);
+                    if ((palette && spectre->color_map != Fourier::ColorMap::Function::Viridis) ||
+                        (!palette && spectre->intensity_scale != Spectrogram::Intensity::Scale::Decibels))
+                        throw std::runtime_error("Dropdown action failed");
+                    context.history->undo();
+                    if ((palette && spectre->color_map != Fourier::ColorMap::Function::Magma) ||
+                        (!palette && spectre->intensity_scale != Spectrogram::Intensity::Scale::Linear))
+                        throw std::runtime_error("Dropdown undo failed");
+                    context.scene->removeChild(overlay);
+                    delete overlay;
+                }
+                spectre->intensity_scale = Spectrogram::Intensity::Scale::Decibels;
+            }
             std::vector<unsigned char> dark_pixels;
             // Exercise hover events on the actual widget through Rack's event state.
             for (int scenario = 0; scenario < 30; ++scenario) {
@@ -160,7 +206,7 @@ int main(int argc, char** argv) {
                     rack::settings::preferDarkPanels = (scenario / 3) % 2;
                     if (spectre) {
                         spectre->intensity_scale = scenario >= 24 ?
-                            Spectrogram::Intensity::Scale::LegacyLinear : Spectrogram::Intensity::Scale::Decibels;
+                            Spectrogram::Intensity::Scale::Linear : Spectrogram::Intensity::Scale::Decibels;
                         spectre->params[Spectrogram::PARAM_COLOR_FLOOR].setValue(-120.f);
                         spectre->params[Spectrogram::PARAM_COLOR_CEILING].setValue(24.f);
                     }

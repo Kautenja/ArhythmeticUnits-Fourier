@@ -330,8 +330,8 @@ TEST_CASE("Spectre intensity mapping uses exact amplitude reference and safe pal
         CHECK(Intensity::endpoint(invalid, true) == 0.f);
     }
     CHECK(Intensity::endpoint(-200.f, false) == -120.f);
-    CHECK(Intensity::endpoint(20.f, false) == -1.f);
-    CHECK(Intensity::endpoint(-10.f, true) == 0.f);
+    CHECK(Intensity::endpoint(20.f, false) == 20.f);
+    CHECK(Intensity::endpoint(-10.f, true) == -10.f);
     CHECK(Intensity::endpoint(40.f, true) == 24.f);
     Fourier::DFTCoefficients column(1025, 1024.f);
     for (const float rate : {44100.f, 48000.f, 96000.f}) {
@@ -396,4 +396,40 @@ TEST_CASE("Spectre five-volt tones read zero dB with unchanged DC and Nyquist co
             }
         }
     }
+}
+
+TEST_CASE("Decibel colors reveal a weak tone without introducing spectral energy") {
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    context.engine->setSampleRate(48000.f);
+    Spectrogram module;
+    module.is_ac_coupled = false;
+    module.set_slope(0.f);
+    module.set_window_function(Fourier::Window::Function::Hann);
+    module.params[0].setValue(1.f);
+    module.inputs[0].channels = 1;
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = 48000.f;
+    args.sampleTime = 1.f / args.sampleRate;
+    for (int sample = 0; sample < 4096; ++sample) {
+        const double phase = 2. * std::acos(-1.) * (sample % 2048) / 2048.;
+        module.inputs[0].setVoltage(5. * (std::cos(43. * phase) + 0.001 * std::cos(301. * phase)));
+        module.process(args);
+    }
+    const auto* column = module.consume_display_column(module.get_hop_index() - 1);
+    REQUIRE(column);
+    const auto history = column->values;
+    using Intensity = Spectrogram::Intensity;
+    const float amplitude = history[301] / 1024.f;
+    CHECK(amplitude == Catch::Approx(0.001).margin(2e-7));
+    const float db = Intensity::decibels(history[301], 1024.f);
+    CHECK(db == Catch::Approx(-60.f).margin(0.002));
+    CHECK(Intensity::position(amplitude, 0.f, 1.f, true) == Catch::Approx(0.001).margin(2e-7));
+    CHECK(Intensity::position(db, -90.f, 0.f) == Catch::Approx(1.f / 3.f).margin(0.0001));
+    CHECK(Intensity::position(db, -50.f, 0.f) == 0.f);
+    // The same retained values are used for all modes; silence remains dark.
+    CHECK(column->values == history);
+    CHECK(Intensity::position(-INFINITY, -90.f, 0.f) == 0.f);
+    CHECK(Intensity::position(0.f, 0.f, 1.f, true) == 0.f);
 }

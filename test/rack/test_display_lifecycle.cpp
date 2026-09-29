@@ -198,7 +198,7 @@ void advance_signal(Spectrogram& module, int samples) {
 TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting") {
     RackContext context;
     Spectrogram module;
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     TestRenderer renderer;
     SpectralImageDisplay display(&module);
     display.setSize(Vec(465, 350));
@@ -244,7 +244,7 @@ TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting")
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
 
     module.onReset();
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     renderer.draw(display);
     CHECK(renderer.updated == 7);
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
@@ -315,7 +315,7 @@ TEST_CASE("Both axis caches invalidate their rendering inputs but ignore signal 
 TEST_CASE("Recreating a frozen Spectre widget retains the last published history") {
     RackContext context;
     Spectrogram module;
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     advance_signal(module, 8192);
     TestRenderer renderer;
     std::vector<unsigned char> original;
@@ -497,7 +497,7 @@ TEST_CASE("Spectre sample-rate changes discard pending nonzero input and averagi
 TEST_CASE("Spectre display scale changes during a frame preserve spectral columns") {
     RackContext context;
     Spectrogram module, reference;
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     for (auto* item : {&module, &reference}) configure_spectre(*item);
     TestRenderer renderer;
     SpectralImageDisplay display(&module);
@@ -610,7 +610,7 @@ TEST_CASE("Spectre recolors frozen dB history without recapture or redundant upl
         handle.module = &module;
         handle.paramId = id;
         const float target = id == Spectrogram::PARAM_COLOR_FLOOR ? -60.f : 12.f;
-        handle.drag_by((module.params[id].getValue() - target) * 104.f / 144.f, 0);
+        handle.drag_by((module.params[id].getValue() - target) * 120.f / 144.f, 0);
         CHECK(module.params[id].getValue() == Catch::Approx(target));
         renderer.draw(display);
         CHECK(renderer.updated == ++updates);
@@ -622,7 +622,7 @@ TEST_CASE("Spectre recolors frozen dB history without recapture or redundant upl
         CHECK(module.get_hop_index() == hop);
     }
     CHECK(legend.labels() == std::array<std::string, 3>{{"12.0", "-60.0", "dB"}});
-    module.intensity_scale = Spectrogram::Intensity::Scale::LegacyLinear;
+    module.intensity_scale = Spectrogram::Intensity::Scale::Linear;
     renderer.draw(display);
     CHECK(renderer.updated == ++updates);
     CHECK(renderer.last_pixels == reference_pixels(module));
@@ -632,7 +632,16 @@ TEST_CASE("Spectre recolors frozen dB history without recapture or redundant upl
     renderer.draw(display);
     CHECK(renderer.updated == updates);
     CHECK(renderer.last_pixels == pixels);
-    CHECK(legend.labels() == std::array<std::string, 3>{{"1", "0", "LIN"}});
+    CHECK(legend.labels() == std::array<std::string, 3>{{"100.0", "0.0", "%"}});
+    // Linear uses the same handles, with a distinct remembered amplitude range.
+    module.getParamQuantity(Spectrogram::PARAM_LINEAR_CEILING)->setValue(0.1f);
+    renderer.draw(display);
+    CHECK(renderer.updated == ++updates);
+    CHECK(renderer.last_pixels != pixels);
+    CHECK(published_history(module) == history);
+    CHECK(module.get_hop_index() == hop);
+    renderer.draw(display);
+    CHECK(renderer.updated == updates);
     module.intensity_scale = Spectrogram::Intensity::Scale::Decibels;
     renderer.draw(display);
     CHECK(renderer.updated == ++updates);

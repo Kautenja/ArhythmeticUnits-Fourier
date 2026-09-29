@@ -103,36 +103,55 @@ spectra; they do not rescale the stored history.
 
 \subsection{Vertical Color Range}
 
-The single vertical \textbf{Color} bar below Input Gain controls the display
-range. Drag its \textbf{lower-left handle} to change Floor and reveal quiet
-detail. Drag its \textbf{upper-right handle} to change Ceiling and distinguish
-bright peaks. The gradient changes immediately, showing the selected palette
-between the two limits. Outside the handles, colors saturate to the endpoint
-colors. The numbers above and below the bar give Ceiling and Floor in dB.
+The black color screen below Input Gain combines palette selection, intensity
+scale, and the displayed range. Click the palette name (initially
+\textbf{Magma}) to choose Viridis, Cividis, Magma, Plasma, Inferno, Bone, or
+Gray. Click \textbf{Decibels} or \textbf{Linear} below it to switch the
+intensity scale. Both readouts open dropdown menus directly on the panel.
 
-Floor ranges from $-120$ to $-1\,\mathrm{dB}$, defaulting to
-$-90\,\mathrm{dB}$. Ceiling ranges from $0$ to $+24\,\mathrm{dB}$,
-defaulting to $0\,\mathrm{dB}$. Both handles use the same fixed vertical
-$-120$ to $+24\,\mathrm{dB}$ axis. The disjoint limits prevent the handles
-from crossing. They occupy opposite sides so both remain reachable at a
-narrow range. Each drag creates one Undo/Redo action. Hold Cmd on macOS or
-Ctrl on other platforms for fine adjustment. Right-click a handle to type
-an exact value; double-click it to reset that endpoint.
+Drag the \textbf{lower-left handle} to change Floor and reveal or suppress
+quiet detail. Drag the \textbf{upper-right handle} to change Ceiling and
+distinguish bright peaks. Values outside the selected range saturate to the
+endpoint colors. The numbers above and below the bar give Ceiling and Floor.
+Each mode remembers its own range when switching scales.
 
-Changing either limit recolors existing history immediately, including with
-Run off, without moving the scan line or changing stored magnitudes. At
-$-90$ to $0\,\mathrm{dB}$, a weighted value of $-45\,\mathrm{dB}$ maps to
-the palette midpoint. Raising Ceiling to $+12\,\mathrm{dB}$ separates
-bright positive-dB regions without recapturing audio. Slope weighting is
-included in the displayed color range.
+In Decibels mode, the shared vertical axis spans $-120$ to
+$+24\,\mathrm{dB}$, defaulting to $-90$ and $0\,\mathrm{dB}$ endpoints.
+The ceiling can go below $0\,\mathrm{dB}$ to inspect quieter signals.
+The endpoints must remain at least $0.1\,\mathrm{dB}$ apart: dragging or
+typing a value stops at the other handle without moving it.
 
-Old patches and the original factory presets load in Legacy linear mode.
-Their bar reads \textbf{LIN}, with normalized endpoints 0 and 1 and no drag
-handles. Click \textbf{Enable dB} directly below the bar to activate the
-adjustable range. This explicit, undoable action recolors the retained
-history; simply loading an old patch preserves its original colors.
-The context menu can switch back to Legacy linear at any time.
+In Linear mode, the shared axis spans 0--200\% of normalized spectral
+amplitude, with default endpoints of 0 and 100\%. The minimum span is
+0.1 percentage point. With unity input gain and zero Slope, a bin-centered
+$5\,\mathrm{V}$ peak sinusoid corresponds to 100\%. This mode preserves
+the previous linear appearance at its default range and remains fully
+adjustable. Old patches load in Linear mode with these default endpoints;
+there is no special activation step.
 
+Each drag creates one Undo/Redo action. Hold Cmd on macOS or Ctrl on other
+platforms for fine adjustment. Right-click a handle to type an exact value;
+double-click it to reset that endpoint, stopping at the other limit if
+necessary. Handles occupy opposite sides of the bar so that both remain
+reachable when the range is narrow.
+
+Changing a limit, scale, or palette recolors existing history immediately,
+including with Run off. It does not move the scan line or change stored
+magnitudes. At $-90$ to $0\,\mathrm{dB}$, a weighted value of
+$-45\,\mathrm{dB}$ maps to the palette midpoint. Lowering Ceiling to
+$-20\,\mathrm{dB}$ makes quiet peaks brighter; raising it to
+$+12\,\mathrm{dB}$ separates bright positive-dB regions.
+
+\paragraph{Why Decibels shows more background} Logarithmic mapping makes
+weak content more visible. A $-60\,\mathrm{dB}$ component uses 0.1\% of the
+palette in the default Linear range, but one third of the palette in the
+default Decibels range. This can reveal noise and window leakage already
+present in the spectrum; the color conversion does not add signal energy.
+Raise Floor (for example, toward $-60$ or $-50\,\mathrm{dB}$) for a quieter
+background, or select Linear. Zero Slope makes unweighted comparisons easier.
+No hidden noise gate or smoothing is applied by the color controls.
+
+\clearpage
 \subsection{Run}
 
 When \textbf{Run} is lit, Spectre buffers and analyzes incoming samples. When
@@ -229,7 +248,7 @@ In Decibels mode, weighting is $s\log_2(f/1000)$ dB, where $s$ is Slope
 and $f$ is the physical frequency of the sampled fractional bin. This holds
 on both frequency scales; DC has zero weighting.
 
-In Legacy linear mode, weighting is referenced to $1\,\mathrm{kHz}$ on the Linear scale. In
+In Linear mode, weighting is referenced to $1\,\mathrm{kHz}$ on the Linear scale. In
 Logarithmic mode it is applied using the image-row position before the
 frequency mapping, so it is not an exact dB-per-octave correction at the
 labeled frequencies. Use zero slope for unweighted comparisons.
@@ -262,10 +281,11 @@ amplitude reference, not dBFS or broadband RMS. The unchanged DC and Nyquist
 conventions give about $+6.02\,\mathrm{dB}$ for a $5\,\mathrm{V}$ constant
 or alternating signal, respectively; no endpoint factors are added.
 
-Legacy linear mode preserves the old slope-weighted magnitude divided by
-1024 and its original image-row weighting. Its normalized palette range is
-0--1, independent of Floor and Ceil. Select Decibels to inspect retained
-history with adjustable contrast.
+Linear mode preserves the old slope-weighted magnitude divided by
+1024 and its original image-row weighting. It maps amplitude $a$ to
+$(a-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1,
+using its own amplitude endpoints (displayed as percentages). The default
+0--100\% range reproduces the previous static linear mapping.
 
 The crosshair and readouts appear only inside the plot rectangle. Moving
 onto the surrounding labels or control strip hides them.
@@ -279,7 +299,7 @@ bins or with nonzero Slope. Silence reads $-\infty\,\mathrm{dB}$ and invalid
 data reads \texttt{--}. Positive infinity uses the top color; invalid data
 uses the bottom color. The legend never clamps these readouts.
 
-Legacy linear retains its historical unweighted-bin readout,
+Linear retains its historical unweighted-bin readout,
 $20\log_{10}(|m|)-60$. The exact Decibels reference is approximately
 $0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
 Spectre measures recorded spectral data. There is no time readout; use the
@@ -296,16 +316,14 @@ Right-click the module to find these options under \textbf{Render Settings}:
   Slope to zero to avoid frequency weighting near DC. This setting does not
   reprocess history.
   \item \textbf{Intensity scale}: Decibels (new instances and reset) or
-  Legacy linear. Old patches and presets with no valid intensity mode load
-  in Legacy linear to preserve their colors. Missing endpoint values load
-  as $-90$ and $0\,\mathrm{dB}$, even when loading into an edited module.
-  Select Decibels explicitly to enable the range handles.
-  \item \textbf{Color Map}: Viridis, Cividis, Magma, Plasma, Inferno, Bone,
-  or Gray. Magma is the default. Selecting another map recolors the existing
-  history, including while frozen.
+  Linear, also selectable directly on the color screen. Old patches and
+  presets with no valid intensity mode load in Linear to preserve their
+  colors. Missing endpoint values load as $-90$/$0\,\mathrm{dB}$ and
+  0/100\%, even when loading into an edited module.
 \end{itemize}
 
-These menu changes support Rack's Undo and Redo commands. Patches and module
+Palette selection is on the color screen rather than in the context menu.
+Panel dropdowns and these menu changes support Rack's Undo and Redo commands. Patches and module
 presets save the panel settings, Run state, AC-coupling choice, color map,
 and intensity mode.
 They do not save the recorded spectrogram. A patch saved while frozen reopens
@@ -313,7 +331,7 @@ with no recorded history; enable Run to acquire a new image.
 
 Rack's module initialization resets the controls to their defaults, enables
 Run and AC coupling, selects Magma and Decibels, restores Floor/Ceil to
-$-90$/$0\,\mathrm{dB}$, and clears the history. Changing Rack's
+$-90$/$0\,\mathrm{dB}$ and Linear to 0/100\%, and clears the history. Changing Rack's
 sample rate changes the available frequency range, bin spacing, and sweep
 duration. Existing history is not cleared automatically and is displayed
 using the new frequency mapping; allow a full sweep to replace it before
@@ -326,7 +344,7 @@ Load these examples from Rack's module preset menu. All start running, with
 $0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
 limited by the current sample rate. Unlike Fourier's presets, these cannot
 change FFT length or hop size; both remain fixed in Spectre. The five
-original presets retain Legacy linear mode and their original appearance.
+original presets retain Linear mode and their original appearance.
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
   \item[DecibelInspection] Decibels mode with Floor $-90\,\mathrm{dB}$ and
@@ -368,8 +386,8 @@ original presets retain Legacy linear mode and their original appearance.
   broadband RMS measurement.
   \item[Large regions reach the same end color] In Decibels mode, raise
   the upper handle to distinguish strong values in retained history. Adjust
-  the lower handle for quiet detail. If the bar reads LIN and has no handles,
-  click Enable dB below it.
+  the lower handle for quiet detail. Choose Linear for less visible weak background
+  detail, or raise Floor in Decibels mode.
   Color saturation does not mean the stored magnitude was clipped.
   \item[Old and new bands disagree after a sample-rate change] Allow a full
   sweep to replace history acquired at the old sample rate before comparing

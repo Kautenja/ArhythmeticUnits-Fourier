@@ -30,7 +30,7 @@ namespace Fourier {
 
 /// @brief UI-only mapping of unnormalized spectral magnitudes to palette positions.
 struct SpectrogramIntensity {
-    enum class Scale { Decibels, LegacyLinear };
+    enum class Scale { Decibels, Linear };
 
     /// @brief IEEE-754 classification survives unsafe floating-point optimization flags.
     static uint32_t magnitude_bits(float value) {
@@ -42,11 +42,20 @@ struct SpectrogramIntensity {
     static bool finite(float value) { return magnitude_bits(value) < 0x7f800000U; }
     static bool invalid(float value) { return magnitude_bits(value) > 0x7f800000U; }
 
-    /// @brief Default non-finite controls, then clamp without changing other knobs.
-    static float endpoint(float value, bool ceiling) {
-        if (!finite(value)) return ceiling ? 0.f : -90.f;
-        return ceiling ? std::max(0.f, std::min(24.f, value)) :
-            std::max(-120.f, std::min(-1.f, value));
+    /// @brief Bound endpoints individually; ordered pairs are validated separately.
+    static float endpoint(float value, bool ceiling, bool linear = false) {
+        if (!finite(value)) return linear ? (ceiling ? 1.f : 0.f) : (ceiling ? 0.f : -90.f);
+        const float low = linear ? 0.f : -120.f;
+        const float high = linear ? 2.f : 24.f;
+        const float gap = linear ? 0.001f : 0.1f;
+        return std::max(low + (ceiling ? gap : 0.f),
+            std::min(high - (ceiling ? 0.f : gap), value));
+    }
+
+    /// @brief Clamp the floor below the ceiling for malformed external pairs.
+    static float ordered_floor(float floor, float ceiling, bool linear = false) {
+        return std::min(endpoint(floor, false, linear),
+            endpoint(ceiling, true, linear) - (linear ? 0.001f : 0.1f));
     }
 
     /// @brief Spectral amplitude reference N/2; no DC/Nyquist endpoint doubling.
@@ -89,10 +98,10 @@ struct SpectrogramIntensity {
     }
 
     /// @brief Always return a finite coordinate safe for every palette table.
-    static float position(float db, float floor, float ceiling) {
+    static float position(float db, float floor, float ceiling, bool linear = false) {
         if (invalid(db)) return 0.f;
-        floor = endpoint(floor, false);
-        ceiling = endpoint(ceiling, true);
+        floor = ordered_floor(floor, ceiling, linear);
+        ceiling = endpoint(ceiling, true, linear);
         if (db <= floor) return 0.f;
         if (db >= ceiling) return 1.f;
         return (db - floor) / (ceiling - floor);
