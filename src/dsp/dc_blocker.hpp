@@ -46,7 +46,7 @@ namespace Fourier {
 /// the pole to \f$z = 1\f$. As \f$p \to 1\f$, the transition width approaches
 /// \f$0\f$. The transfer function of the one-pole filter can be written as:
 ///
-/// \f$H_{\text{integrator}}(z) = \frac{1}{1 - z^{-1}}\f$
+/// \f$H_{\text{integrator}}(z) = \frac{1}{1 - p z^{-1}}\f$
 ///
 /// which has a time domain representation of:
 ///
@@ -60,7 +60,7 @@ namespace Fourier {
 ///
 /// \f$H(z) = H_{\text{differentiator}}(z)H_{\text{integrator}}(z)\f$
 ///
-/// In the time domain, this becomes:
+/// Before the Nyquist gain correction applied by process(), this becomes:
 ///
 /// \f$y[n] - p y[n - 1] = x[n] - x[n - 1]\f$
 ///
@@ -68,8 +68,8 @@ template<typename T>
 struct DCBlocker {
  private:
     /// the coefficient for the feedback line that controls the transition
-    /// width. The default of 0.999 produces a transition width of 10Hz for
-    /// signals sampled at rates of 44100Hz.
+    /// width. The default of 0.999 corresponds to approximately 22.05 Hz
+    /// at 44100 Hz under getTransitionWidth()'s convention.
     T p;
     /// the delayed input signal for the digital differentiator
     T last_input;
@@ -91,7 +91,7 @@ struct DCBlocker {
         p = T(1.0) - (T(2.0) * width / sample_rate);
     }
 
-    /// @brief Set the transition width in \f$Hz\f$.
+    /// @brief Return the transition width in \f$Hz\f$.
     ///
     /// @param sample_rate the sample rate of the external processing loop
     /// @returns the transition width measured in \f$Hz\f$
@@ -103,6 +103,7 @@ struct DCBlocker {
     /// @brief Process a sample using the filter.
     ///
     /// @param input the input sample to filter
+    /// @returns internal output storage, updated by process() or reset()
     /// @details
     /// the output sample is calculated as:
     ///

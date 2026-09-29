@@ -173,7 +173,7 @@ inline Color gray(float value) {
     return get_colormap_value(colormap, value);
 }
 
-/// @brief Window function types.
+/// @brief Color map function types.
 enum class Function {
     Viridis = 0,
     Cividis,

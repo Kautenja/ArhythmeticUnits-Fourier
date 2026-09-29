@@ -100,7 +100,7 @@ class TwiddleFactors {
     /// stored factors}) \f$.
     inline size_t size() const { return factors.size() << 1; }
 
-    /// @brief Accesse a pre-computed twiddle factor by index.
+    /// @brief Access a pre-computed twiddle factor by index.
     /// @param i The index of the desired twiddle factor (0-based index).
     /// @return A constant reference to the \f$ i \f$th twiddle factor.
     /// @details
@@ -254,9 +254,8 @@ class OnTheFlyFFT {
     inline size_t get_total_steps() const { return total_steps; }
 
     /// @brief Buffer input samples and prepare the FFT for computation.
-    /// @param samples The input sample buffer of \f$N\f$ complex samples.
-    /// @param window The window function samples to apply to the signal. May
-    /// be an empty vector to indicate no window (i.e., a rectangular window.)
+    /// @param x The input sample buffer of \f$N\f$ complex samples.
+    /// @param w At least N window samples, or an empty vector for no window.
     inline void buffer(const std::complex<T>* x, const std::vector<T>& w = {}) {
         // Copy the samples into the coefficients buffer.
         std::copy(x, x + coefficients.size(), coefficients.begin());
@@ -421,8 +420,7 @@ class OnTheFlyRFFT {
 
     /// @brief Buffer input samples and prepare the RFFT for computation.
     /// @param x A pointer to the real input sample buffer of length N.
-    /// @param w A vector representing the window function to be applied
-    /// to the input samples.
+    /// @param w At least N window samples to apply to the input.
     inline void buffer(const T* x, const std::vector<float>& w) {
         // Interleave real samples into the prepared complex scratch buffer.
         for (size_t k = 0; k < packed.size(); ++k)

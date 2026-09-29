@@ -38,7 +38,7 @@ namespace Window {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @details
 /// The rectangular window is calculated as:
 ///
@@ -61,7 +61,7 @@ inline T boxcar(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -84,7 +84,7 @@ inline T bartlett(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -112,7 +112,7 @@ inline T parzen(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -136,7 +136,7 @@ inline T welch(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -161,7 +161,7 @@ inline T cosine(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -184,7 +184,7 @@ inline T bohman(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -214,7 +214,7 @@ inline T lanczos(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -231,7 +231,7 @@ inline T hann(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -270,7 +270,7 @@ inline T hamming(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -291,7 +291,7 @@ inline T blackman(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -312,15 +312,15 @@ inline T blackmanharris(const T& n, const T& N, const bool& is_symmetric = true)
         - T(0.01168) * cos(T(6) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
-/// @brief Calculate the value of a Blackman-BlackmanNuttall window.
+/// @brief Calculate the value of a Blackman-Nuttall window.
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
-/// The Blackman-BlackmanNuttall window is calculated as:
+/// The Blackman-Nuttall window is calculated as:
 ///
 /// \f$
 /// w[n] = 0.3635819
@@ -341,7 +341,7 @@ inline T blackmannuttall(const T& n, const T& N, const bool& is_symmetric = true
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -366,7 +366,7 @@ inline T kaiserbessel(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @details
@@ -442,9 +442,9 @@ static const std::vector<std::string>& names() {
 /// @brief Calculate the value of a standard window.
 ///
 /// @tparam T the type of data to calculate the window value
-/// @param function the windowing function to use
+/// @param window_ the windowing function to use
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 ///
@@ -473,10 +473,10 @@ inline T window(Function window_, const T& n, const T& N, const bool& is_symmetr
 /// @brief Return the coherent gain for the given windowing function.
 ///
 /// @param window the window function to get the coherent gain of
-/// @returns the coherent for the given window in decibels
+/// @returns the tabulated coherent gain as a linear amplitude ratio
 /// @details
-/// The coherent gain should be applied to windowed DFTs to account for pass
-/// band attenuation of the filter. i.e., H[s] / (getCoherentGain(...) * N)
+/// Divide windowed DFT coefficients by this gain to compensate for window
+/// attenuation. Transform-length normalization is a separate step.
 /// Reference:
 /// https://dsp.stackexchange.com/questions/27277/why-does-the-hamming-window-attenuate-the-fft
 /// https://www.recordingblogs.com/wiki/coherent-gain
@@ -636,16 +636,15 @@ struct CachedWindow {
     /// @param is_symmetric Whether the window function is symmetric.
     /// @param is_gained Whether the window function should be gained or not.
     /// @details
-    /// If the window function is already of the specified type, this
-    /// function returns without re-calculating the parameters.
+    /// Returns without recomputing when function, length, symmetry, and gain
+    /// settings all match. Changing the length may allocate storage.
     inline void set_window(
         const Function& function,
         const size_t& N,
         const bool& is_symmetric = true,
         const bool& is_gained = false
     ) {
-        // If the function and length have not changed, then there is no need
-        // to re-calculate the values. Silently fall back to a NoOp.
+        // Reuse the samples only when all cached settings match.
         if (
             function == this->function &&
             N == samples.size() &&
@@ -686,7 +685,7 @@ struct CachedWindow {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @param alpha the shape parameter that controls the sharpness of the window.
@@ -707,7 +706,7 @@ inline T exponential(const T& n, const T& N, const bool& is_symmetric = true, co
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @param alpha the shape parameter that controls the sharpness of the window.
@@ -732,7 +731,7 @@ inline T hannpoisson(const T& n, const T& N, const bool& is_symmetric = true, co
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @param std the standard deviation of the Gaussian distribution.
@@ -753,7 +752,7 @@ inline T gaussian(const T& n, const T& N, const bool& is_symmetric = true, const
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param is_symmetric True to return the symmetric form for filter design,
 /// False to return the periodic form for spectral analysis.
 /// @param alpha the shape parameter that controls the sharpness of the window.
@@ -828,7 +827,7 @@ inline T beta(const T& a) {
 ///
 /// @tparam T the type of data to calculate the window value
 /// @param n the coefficient index of the filter
-/// @param N the order of the filter (number of coefficients - 1)
+/// @param N the window length (number of coefficients)
 /// @param B the beta parameter for the Kaiser window, i.e., \f$\beta\f$
 /// @details
 /// The parameter B can be calculated from the stop-band ripple using the

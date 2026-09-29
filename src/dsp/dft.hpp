@@ -30,14 +30,17 @@ namespace Fourier {
 /// @brief Compute the Discrete Fourier Transform (DFT).
 ///
 /// @param input Input sequence to compute the DFT of, \f$x[n]\f$
-/// @param output Output sequence the store DFT coefficients in, \f$X[k]\f$
+/// @param output Output sequence to store DFT coefficients in, \f$X[k]\f$
 /// @param N Length of the input sequence / output DFT coefficients, \f$N\f$
 /// @param window Windowing function to use when calculating coefficients.
 /// @details
 /// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
-/// as:
+/// as (for the default Boxcar window):
 ///
 /// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] e^{-j \frac{2 \pi k n}{N}}\f$
+///
+/// Other windows use periodic coefficients and divide by their coherent gain.
+/// No normalization by N is applied. Input and output each require N elements.
 ///
 template<typename T>
 void dft(
@@ -64,9 +67,11 @@ void dft(
 /// @returns The DFT coefficients, \f$X[k]\f$
 /// @details
 /// The Discrete Fourier Transform (DFT) for coefficient \f$k\f$ is calculated
-/// as:
+/// as (for the default Boxcar window):
 ///
 /// \f$X[k] = \sum_{n = 0}^{N - 1} x[n] e^{-j \frac{2 \pi k n}{N}}\f$
+///
+/// Windowing and normalization match the pointer overload; output is allocated.
 ///
 template<typename T>
 std::vector<std::complex<T>> dft(
@@ -80,7 +85,7 @@ std::vector<std::complex<T>> dft(
 
 /// @brief Compute the Inverse Discrete Fourier Transform (IDFT).
 ///
-/// @param input Input energies to compute the IDFT of, \f$X[k]\f$
+/// @param input Complex DFT coefficients to compute the IDFT of, \f$X[k]\f$
 /// @param output Output sequence to store time-domain samples in, \f$x[n]\f$
 /// @param N Length of the input DFT coefficients / output sequence, \f$N\f$
 /// @details
@@ -89,14 +94,14 @@ std::vector<std::complex<T>> dft(
 ///
 /// \f$x[n] = \frac{1}{N} \sum_{k = 0}^{N - 1} X[k] e^{j \frac{2 \pi k n}{N}}\f$
 ///
-/// An assumption is made here that the target sequence in the time domain was
-/// real, i.e., the real component is returned and the phase is discarded.
+/// The output is assumed real: only the real component of each reconstructed
+/// sample is returned. The complex input phase participates in reconstruction.
 ///
 template<typename T>
 void idft(const std::complex<T>* const input, T* const output, size_t N) {
-    for (size_t k = 0; k < N; k++) {  // Iterate over coefficients.
+    for (size_t k = 0; k < N; k++) {  // Iterate over output samples.
         std::complex<T> accum = {0, 0};
-        for (size_t n = 0; n < N; n++) {  // Iterate over samples.
+        for (size_t n = 0; n < N; n++) {  // Iterate over input coefficients.
             auto phase = T(2) * pi<T>() * k * n / static_cast<T>(N);
             accum += input[n] * exp(j<T>() * phase);
         }
@@ -106,16 +111,16 @@ void idft(const std::complex<T>* const input, T* const output, size_t N) {
 
 /// @brief Compute the Inverse Discrete Fourier Transform (IDFT).
 ///
-/// @param input Input energies to compute the IDFT of, \f$X[k]\f$
-/// @returns output Sequence of time-domain samples, \f$x[n]\f$
+/// @param input Complex DFT coefficients to compute the IDFT of, \f$X[k]\f$
+/// @returns Sequence of time-domain samples, \f$x[n]\f$
 /// @details
 /// The Inverse Discrete Fourier Transform (IDFT) for sample \f$n\f$ is
 /// calculated as:
 ///
 /// \f$x[n] = \frac{1}{N} \sum_{k = 0}^{N - 1} X[k] e^{j \frac{2 \pi k n}{N}}\f$
 ///
-/// An assumption is made here that the target sequence in the time domain was
-/// real, i.e., the real component is returned and the phase is discarded.
+/// The output is assumed real: only the real component of each reconstructed
+/// sample is returned. The complex input phase participates in reconstruction.
 ///
 template<typename T>
 std::vector<T> idft(const std::vector<std::complex<T>>& input) {

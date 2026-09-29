@@ -26,7 +26,7 @@ namespace Fourier {
 /// @brief A trigger that detects integer divisions in other triggers.
 struct TriggerDivider {
  private:
-    /// the current sample of the divider
+    /// the current tick within the division cycle
     uint32_t clock = 0;
 
     /// the integer division of the divider
@@ -35,7 +35,8 @@ struct TriggerDivider {
  public:
     /// @brief Set the clock division to a new value.
     ///
-    /// @param division_ the integer division of the source clock
+    /// @param division_ the source-clock division, clamped to at least 1
+    /// @details The current clock is preserved until process() wraps it.
     ///
     void setDivision(uint32_t division_) {
         division = std::max(division_, static_cast<uint32_t>(1));
@@ -43,20 +44,20 @@ struct TriggerDivider {
 
     /// @brief Return the integer division.
     ///
-    /// @returns the number of sample divisions between triggers
+    /// @returns the number of source-clock ticks between triggers
     ///
     inline uint32_t getDivision() const { return division; }
 
     /// @brief Return the value of the internal clock.
     ///
-    /// @returns the current value of the internal clock
-    /// \f$\in [0, \f$`getDivision()`\f$)\f$
+    /// @returns the current tick, normally less than getDivision(); reducing
+    /// the division can leave it outside that range until the next process().
     ///
     uint32_t getClock() const { return clock; }
 
     /// @brief Return the phase of the clock divider.
     ///
-    /// @returns the phase of the integer division cycle \f$\in [0.0, 1.0]\f$
+    /// @returns getClock() / getDivision(); may exceed 1 after reducing division
     ///
     float getPhase() const {
         return static_cast<float>(clock) / static_cast<float>(division);
@@ -73,7 +74,7 @@ struct TriggerDivider {
 
     /// @brief Reset the internal clock to 0.
     /// @details
-    /// The `division` parameter will not be effected.
+    /// The `division` parameter will not be affected.
     void reset() { clock = 0; }
 
     /// @brief Process a tick from the source clock.

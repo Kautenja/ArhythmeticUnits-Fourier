@@ -30,8 +30,8 @@ struct ThresholdTrigger {
 
  public:
     /// @brief Return the state of the boolean trigger. The state will go true
-    /// after processing an input signal of \f$1.0\f$, and will stay high until
-    /// the signal reaches \f$0.0\f$.
+    /// after processing an input signal at or above \f$1.0\f$, and stays high
+    /// until the signal falls to or below \f$0.0\f$.
     ///
     inline const bool& isHigh() const { return state; }
 
@@ -41,10 +41,9 @@ struct ThresholdTrigger {
     /// @brief Process a step of the signal.
     ///
     /// @param signal a sample of an arbitrary signal
-    /// @returns true if the trigger goes above \f$1.0\f$ and false if it goes
-    /// below \f$0.0\f$. The trigger goes high once per cycle and must return
-    /// to \f$0.0\f$ before firing again, .i.e, `isHigh` will go true at
-    /// \f$1.0\f$ and stay high until the signal reaches \f$0.0\f$.
+    /// @returns true only on a low-to-high transition at or above \f$1.0\f$.
+    /// The signal must fall to or below \f$0.0\f$ before firing again.
+    /// Use isHigh() to read the sustained gate state.
     ///
     inline bool process(const T& signal) {
         if (state)  // HIGH to LOW

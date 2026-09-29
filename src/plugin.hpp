@@ -33,8 +33,9 @@ extern Plugin* plugin_instance;
 // Shared module display and analysis settings.
 #include "./structs.hpp"
 
-/// The "Fourier" Spectrogram analyzer module.
+/// The "Spectre" spectrogram module.
 extern Model *modelSpectrogram;
+/// The "Fourier" spectrum analyzer module.
 extern Model *modelSpectrumAnalyzer;
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_

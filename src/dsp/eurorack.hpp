@@ -30,7 +30,7 @@ namespace Eurorack {
 /// @param voltage the DC voltage to normalize to \f$[-1, 1]\f$
 /// @returns the input DC voltage scaled to the range \f$[-1, 1]\f$
 /// @details
-/// If the DC voltage exceed the saturation range of Eurorack
+/// If the DC voltage exceeds the saturation range of Eurorack
 /// (\f$[-10, 10]V\f$), the function _will not_ clip the voltage.
 ///
 template<typename T>
@@ -41,18 +41,18 @@ inline T fromDC(const T& voltage) { return voltage / T(10); }
 /// @param value the value in the normalized range \f$[-1, 1]\f$
 /// @returns the output DC voltage scaled to the range \f$[-10, 10]\f$
 /// @details
-/// If the DC voltage exceed the saturation range of Eurorack
+/// If the DC voltage exceeds the saturation range of Eurorack
 /// (\f$[-10, 10]V\f$), the function _will not_ clip the voltage.
 ///
 template<typename T>
 inline T toDC(const T& value) { return value * T(10); }
 
-/// @brief Return a AC voltage normalized into the range \f$[-1, 1]\f$.
+/// @brief Return an AC voltage normalized into the range \f$[-1, 1]\f$.
 ///
 /// @param voltage the AC voltage to normalize to \f$[-1, 1]\f$
 /// @returns the input AC voltage scaled to the range \f$[-1, 1]\f$
 /// @details
-/// If the AC voltage exceed the saturation range of Eurorack (\f$[-5, 5]V\f$),
+/// If the AC voltage exceeds the saturation range of Eurorack (\f$[-5, 5]V\f$),
 /// the function _will not_ clip the voltage.
 ///
 template<typename T>
@@ -61,9 +61,9 @@ inline T fromAC(const T& voltage) { return voltage / T(5); }
 /// @brief Return an AC voltage from the normalized range of \f$[-1, 1]\f$.
 ///
 /// @param value the value in the normalized range \f$[-1, 1]\f$
-/// @returns the output AC voltage scaled to the range \f$[-10, 10]\f$
+/// @returns the output AC voltage scaled to the range \f$[-5, 5]\f$ volts
 /// @details
-/// If the AC voltage exceed the saturation range of Eurorack
+/// If the AC voltage exceeds the saturation range of Eurorack
 /// (\f$[-5, 5]V\f$), the function _will not_ clip the voltage.
 ///
 template<typename T>

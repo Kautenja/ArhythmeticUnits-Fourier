@@ -26,7 +26,7 @@ namespace Fourier {
 
 /// @brief Clip the given value within the given limits.
 ///
-/// @tparam the type of values to clamp
+/// @tparam T the type of values to clamp
 /// @param x the value to clamp
 /// @param lower the lower bound to clamp the value to
 /// @param upper the upper bound to clamp the value to
@@ -39,9 +39,10 @@ inline T clip(const T& x, const T& lower, const T& upper) {
 
 /// @brief Return the sign of the given value.
 ///
-/// @tparam the type of the value to return the sign of
+/// @tparam T the type of the value to return the sign of
 /// @param x the floating point number to get the sign of
-/// @returns \f$1\f$ if the number is positive, \f$-1\f$ otherwise
+/// @returns \f$-1\f$ if the sign bit is set, \f$1\f$ otherwise
+/// (including signed zero: -0 returns -1 and +0 returns +1)
 ///
 template<typename T>
 inline T sgn(const T& x) {
@@ -84,10 +85,8 @@ inline T cubed(const T& x) {
 /// @param b The right-hand operand.
 /// @returns The complex product of `a` and `b`.
 /// @details
-/// This implementation is a work-around for using SIMD primitives. SIMD
-/// doesn't implement some of the operators needed by std::complex<T>
-/// implementation of multiplication. Something about checking for equality
-/// with 0?
+/// Uses component-wise arithmetic so SIMD types do not need the scalar
+/// comparisons used by standard-library complex multiplication.
 template<typename T>
 inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::complex<T>& b) {
     T realPart = a.real() * b.real() - a.imag() * b.imag();
@@ -99,9 +98,10 @@ inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::com
 ///
 /// @tparam T the type of number to convert to decibels
 /// @param x the value to convert to decibel scale
-/// @returns the decibel value \f$20 \log{10}(|x|)\f$
+/// @returns the decibel value \f$20 \log_{10}(|x|)\f$
 /// @details
-/// It is assumed that signals exist in the unit domain \f$\in [-1, 1]\f$
+/// Unit magnitude is 0 dB. Values are not clipped; zero maps to negative
+/// infinity for IEEE-754 floating-point types.
 ///
 template<typename T>
 inline T amplitude2decibels(const T& x) {
@@ -114,7 +114,7 @@ inline T amplitude2decibels(const T& x) {
 /// @param x the decibel value to convert to linear scale
 /// @returns the amplitude value \f$10^{\frac{x}{20}}\f$
 /// @details
-/// It is assumed that signals exist in the unit domain \f$\in [-1, 1]\f$.
+/// Returns a nonnegative amplitude ratio; 0 dB corresponds to unit amplitude.
 ///
 template<typename T>
 inline T decibels2amplitude(const T& x) {

@@ -212,7 +212,7 @@ struct SpectrumAnalyzer : Module {
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
         Module::onReset();
-        // Reset momentary button trigger states.
+        // Resume analysis and publish an empty display snapshot.
         is_running = true;
         display_spectrum.writable().count = 0;
         display_spectrum.publish();
@@ -230,7 +230,7 @@ struct SpectrumAnalyzer : Module {
         sample_rate = APP->engine->getSampleRate();
         analysis.reserve_hop(static_cast<size_t>(std::ceil(sample_rate * 0.3f)));
         analysis.reset();
-        // Set the light divider relative to the sample rate and reset it.
+        // Update lights every 512 engine samples and reset the divider.
         light_divider.setDivision(512);
         light_divider.reset();
         // Update the low frequency bound and preserve settings.
@@ -409,15 +409,14 @@ struct SpectrumAnalyzer : Module {
     // Low Frequency Bound
 
     /// @brief Return the lowest frequency to render on the display.
-    /// @returns The lowest frequency to render in Hz. If the frequency falls
-    /// below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The lower display bound in Hz, capped at the Nyquist frequency.
     inline float get_low_frequency() {
         return fmin(params[PARAM_LOW_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the lowest frequency to render on the display.
     /// @param value The lowest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_low_frequency(const float& value) {
         params[PARAM_LOW_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -425,15 +424,14 @@ struct SpectrumAnalyzer : Module {
     // High Frequency Bound
 
     /// @brief Return the highest frequency to render on the display.
-    /// @returns The highest frequency to render in Hz. If the frequency
-    /// falls below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The upper display bound in Hz, capped at the Nyquist frequency.
     inline float get_high_frequency() {
         return fmin(params[PARAM_HIGH_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the highest frequency to render on the display.
     /// @param value The highest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_high_frequency(const float& value) {
         params[PARAM_HIGH_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -467,7 +465,8 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Process input signals.
     /// @details
-    /// Applies gain to each input signal and buffers it for DFT computation.
+    /// Normalizes each input, applies optional AC coupling and gain, and
+    /// returns one sample per lane for DFT computation.
     inline simd::float_4 process_input_signal() {
         if (!is_running) return simd::float_4(0.f);
         // Buffer signals and gains.
@@ -482,7 +481,7 @@ struct SpectrumAnalyzer : Module {
         }
         simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
         simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
-        // Insert the normalized and processed input signal into the delay.
+        // Return the gain-adjusted sample for the analyzer to buffer.
         return gains_simd * signals_simd;
     }
 
@@ -1122,7 +1121,7 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
             asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Light.svg"),
             asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Dark.svg")
         ));
-        // Input signals, gains, output signals, and meters.
+        // Input signal ports and gain controls.
         for (std::size_t i = 0; i < SpectrumAnalyzer::NUM_CHANNELS; i++) {
             addInput(createInput<ThemedPJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
             addParam(createParam<Trimpot>(Vec(13, 66 + 75 * i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));

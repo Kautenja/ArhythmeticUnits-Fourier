@@ -1,4 +1,4 @@
-// Basic mathematical functions.
+// Musical note names and frequency-to-pitch conversion.
 //
 // Copyright 2025 Arhythmetic Units
 //
@@ -45,8 +45,8 @@ enum class Note {
 };
 
 /// @brief Convert a note to its string representation.
-/// @param note The note to concert to a string.
-/// @returns The string representation of the string note.
+/// @param note The note to convert to a string.
+/// @returns The note name, using sharps for accidentals.
 inline const char* to_string(const Note& note) {
     switch (note) {
     case Note::C:      return "C";

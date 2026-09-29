@@ -104,10 +104,10 @@ struct Spectrogram : Module {
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
 
-    /// a clock divider for updating the lights every 512 frames
+    /// A clock divider for updating the lights every 512 engine samples.
     Fourier::TriggerDivider light_divider;
 
-    /// a Schmitt Trigger for handling presses on the clock button
+    /// A Schmitt trigger for handling presses on the run button.
     Fourier::ThresholdTrigger<float> run_trigger;
 
     /// Whether the analyzer is running or not.
@@ -182,7 +182,7 @@ struct Spectrogram : Module {
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
         Module::onReset();
-        // Resent instance state of the module and menu preferences.
+        // Reset instance state of the module and menu preferences.
         is_running = true;
         hop_index = 0;
         is_ac_coupled = true;
@@ -202,7 +202,7 @@ struct Spectrogram : Module {
         Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
         analysis.reset();
-        // Set the light divider relative to the sample rate and reset it.
+        // Update lights every 512 engine samples and reset the divider.
         light_divider.setDivision(512);
         light_divider.reset();
         // Update the low frequency bound and preserve settings.
@@ -261,7 +261,7 @@ struct Spectrogram : Module {
     inline const float& get_sample_rate() const { return sample_rate; }
 
     /// @brief Return the current hop index of the STFT.
-    /// @brief The current hop index in [0, STFT - 1]
+    /// @returns The current hop index in [0, N_STFT - 1].
     inline const uint32_t& get_hop_index() const { return hop_index; }
 
     /// @brief UI-only: acquire a newly published history column, if available.
@@ -353,15 +353,14 @@ struct Spectrogram : Module {
     // Low Frequency Bound
 
     /// @brief Return the lowest frequency to render on the display.
-    /// @returns The lowest frequency to render in Hz. If the frequency falls
-    /// below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The lower display bound in Hz, capped at the Nyquist frequency.
     inline float get_low_frequency() {
         return fmin(params[PARAM_LOW_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the lowest frequency to render on the display.
     /// @param value The lowest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_low_frequency(const float& value) {
         params[PARAM_LOW_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -369,15 +368,14 @@ struct Spectrogram : Module {
     // High Frequency Bound
 
     /// @brief Return the highest frequency to render on the display.
-    /// @returns The highest frequency to render in Hz. If the frequency
-    /// falls below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The upper display bound in Hz, capped at the Nyquist frequency.
     inline float get_high_frequency() {
         return fmin(params[PARAM_HIGH_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the highest frequency to render on the display.
     /// @param value The highest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_high_frequency(const float& value) {
         params[PARAM_HIGH_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -402,7 +400,7 @@ struct Spectrogram : Module {
 
     /// @brief Process input signal.
     inline float process_input_signal() {
-        // Get the input signal and convert to normalized bipolar [-1, 1].
+        // Sum input voices and normalize by 5 V, without clipping.
         auto signal = Fourier::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
         const auto gain = params[PARAM_INPUT_GAIN].getValue();
@@ -413,7 +411,7 @@ struct Spectrogram : Module {
         dc_blocker.process(signal);
         // If AC coupling is enabled, replace signal with DC blocker output.
         if (is_ac_coupled) signal = static_cast<float>(dc_blocker.getValue());
-        // Insert the normalized and processed input signal into the delay.
+        // Return the gain-adjusted sample for the analyzer to buffer.
         return gain * signal;
     }
 
@@ -444,7 +442,7 @@ struct Spectrogram : Module {
         // Handle presses to the run button.
         if (run_trigger.process(params[PARAM_RUN].getValue()))
             is_running = !is_running;
-        // Process the input signal and compute SFT coefficients as needed.
+        // Process the input signal and advance STFT analysis while running.
         if (is_running) {
             process_coefficients(process_input_signal());
         }
@@ -499,7 +497,7 @@ struct SpectralImageDisplay : TransparentWidget {
         Vec position = {0, 0};
     } mouse_state;
 
-    /// UI-owned coefficient history, never read while the engine writes it.
+    /// UI-owned coefficient history, copied from complete mailbox snapshots.
     Fourier::STFTCoefficients display_coefficients;
     uint64_t display_revision = 0;
     size_t display_hop = 0;
@@ -510,7 +508,7 @@ struct SpectralImageDisplay : TransparentWidget {
     /// Pixel key: slope, Nyquist frequency, frequency scale, and color map.
     std::array<float, 4> image_settings{};
 
-    /// @brief Consume complete columns; skipped GUI frames do not lose history.
+    /// @brief Consume the latest snapshot of each retained history column.
     void sync_history(bool include_current = false) {
         for (size_t i = 0; i < display_coefficients.size(); ++i) {
             if (const auto column = module->consume_display_column(i, include_current)) {
