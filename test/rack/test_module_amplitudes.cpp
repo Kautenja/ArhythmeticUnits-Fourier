@@ -42,6 +42,34 @@ const std::array<Cable, 6> cables{{
     {{1.f}, 1.f, 0.f}
 }};
 
+/// Periodic cosine-series windows: w[n] = sum a[j]*cos(2*pi*j*n/N).
+/// Their coherent gain is a[0]. Keep these analytical fixtures independent
+/// of production window samples, coherent_gain(), and FFT helpers.
+struct Window {
+    Fourier::Window::Function function;
+    std::array<double, 4> coefficients;
+};
+
+const std::array<Window, 4> windows{{
+    {Fourier::Window::Function::Boxcar, {{1.0, 0.0, 0.0, 0.0}}},
+    {Fourier::Window::Function::Hann, {{0.5, -0.5, 0.0, 0.0}}},
+    {Fourier::Window::Function::Hamming, {{0.54, -0.46, 0.0, 0.0}}},
+    {Fourier::Window::Function::BlackmanHarris,
+        {{0.35875, -0.48829, 0.14128, -0.01168}}}
+}};
+
+/// Normalized periodic window DFT magnitude divided by N. Nonzero offsets
+/// have weight |a[j]|/(2*a[0]); the DC weight is exactly one. Circular
+/// distance also covers lobes wrapping around DC and Nyquist.
+double window_weight(size_t bin, size_t center, size_t length,
+        const Window& window) {
+    const size_t distance = bin > center ? bin-center : center-bin;
+    const size_t offset = std::min(distance, length-distance);
+    if (offset == 0) return 1.0;
+    if (offset >= window.coefficients.size()) return 0.0;
+    return std::abs(window.coefficients[offset]) / (2.0*window.coefficients[0]);
+}
+
 /// Steady-state |H(exp(jw))| for the modules' 10 Hz DC blockers.
 /// p = 1 - 20/fs; H(z) = (1+p)/2 * (1-z^-1)/(1-p*z^-1).
 /// Use double precision and no production filter/normalization helpers.
@@ -52,25 +80,39 @@ double ac_response(size_t bin, size_t length, double sample_rate) {
         std::sqrt((1.0-p)*(1.0-p) + 4.0*p*sine*sine);
 }
 
+/// Keep each tone's lobes separate from DC, Nyquist and its negative-frequency
+/// image, so magnitudes need no phase-interference term. Odd bins give the
+/// added tones a full N-sample period instead of a short repeating waveform.
+/// Preserve Boxcar's low-frequency coverage near the DC-blocker transition.
+size_t tone_bin(size_t lane, const Window& window) {
+    return window.function == Fourier::Window::Function::Boxcar ? lane+1 : 9+2*lane;
+}
+
 /// Sum of DC, one bin-centered cosine, and an alternating Nyquist signal,
 /// in volts. Distinct components on each port expose SIMD lane mixups.
-double voltage(size_t sample, size_t length, size_t lane) {
+double voltage(size_t sample, size_t length, size_t lane, const Window& window) {
     return 0.25 * (lane+1) + (1.0 + 0.25*lane) *
-        std::cos(2.0 * std::acos(-1.0) * (lane+1) * sample / length) +
+        std::cos(2.0 * std::acos(-1.0) * tone_bin(lane, window) * sample / length) +
         (0.5 + 0.125*lane) * (sample % 2 ? -1.0 : 1.0);
 }
 
-/// Boxcar DFT magnitudes: N*A for DC/Nyquist, N*A/2 for an interior
-/// cosine. All input voltages (including DC) are divided by 5 V before
-/// the port gain. No one-sided doubling is applied to the published FFT.
+/// DFT magnitudes: convolve DC/Nyquist (N*A) and both cosine images (N*A/2)
+/// with the independent window weights. AC response applies at each source
+/// frequency, before windowing spreads it into neighboring bins. All input
+/// voltages are divided by 5 V before gain; there is no one-sided doubling.
 double expected_magnitude(size_t bin, size_t length, size_t lane,
-        const Cable& cable, bool ac_coupled, double sample_rate) {
-    double amplitude = 0.0;
-    if (bin == 0) amplitude = 0.25 * (lane+1);
-    if (bin == lane+1) amplitude = (1.0 + 0.25*lane) / 2.0;
-    if (bin == length/2) amplitude = 0.5 + 0.125*lane;
-    return length * amplitude * std::abs(cable.sum) * cable.gain / 5.0 *
-        (ac_coupled ? ac_response(bin, length, sample_rate) : 1.0);
+        const Cable& cable, bool ac_coupled, double sample_rate,
+        const Window& window) {
+    const size_t tone = tone_bin(lane, window);
+    const double tone_response = ac_coupled ? ac_response(tone, length, sample_rate) : 1.0;
+    const double amplitude =
+        (ac_coupled ? 0.0 : 0.25*(lane+1)) * window_weight(bin, 0, length, window) +
+        (1.0+0.25*lane) / 2.0 * tone_response *
+            (window_weight(bin, tone, length, window) +
+             window_weight(bin, length-tone, length, window)) +
+        (0.5+0.125*lane) * window_weight(bin, length/2, length, window);
+    // The DC blocker has unity gain at Nyquist.
+    return length * amplitude * std::abs(cable.sum) * cable.gain / 5.0;
 }
 
 /// Absolute error in FFT units, relative to the input's peak bound. The
@@ -87,7 +129,8 @@ double magnitude_error(size_t length, size_t lane, const Cable& cable) {
 
 /// Check Fourier's published linear display ordinates, including its
 /// historical K=N/2+1 and +12 dB display normalization, independently.
-void check_spectrum(SpectrumAnalyzer& module, size_t length, size_t rotation) {
+void check_spectrum(SpectrumAnalyzer& module, size_t length, size_t rotation,
+        const Window& window) {
     const auto& spectrum = module.consume_display_spectrum();
     REQUIRE(spectrum.count == length/2+1);
     const double display_scale = (length/2+1) * std::pow(10.0, 12.0/20.0);
@@ -96,7 +139,7 @@ void check_spectrum(SpectrumAnalyzer& module, size_t length, size_t rotation) {
         for (size_t bin = 0; bin < spectrum.count; ++bin) {
             CAPTURE(lane, bin);
             const double expected = expected_magnitude(bin, length, lane,
-                cable, module.is_ac_coupled, module.get_sample_rate()) / display_scale;
+                cable, module.is_ac_coupled, module.get_sample_rate(), window) / display_scale;
             // Bound float FFT/filter error per input sample, then convert
             // that absolute bound to display units. Relative tolerance covers
             // the rounded filter pole, most visible near its transition band.
@@ -107,7 +150,8 @@ void check_spectrum(SpectrumAnalyzer& module, size_t length, size_t rotation) {
 }
 
 /// Spectre publishes raw magnitudes, before UI color/slope transformations.
-void check_spectrum(Spectrogram& module, size_t length, size_t rotation) {
+void check_spectrum(Spectrogram& module, size_t length, size_t rotation,
+        const Window& window) {
     const size_t index = (module.get_hop_index() + Spectrogram::N_STFT - 1) %
         Spectrogram::N_STFT;
     const auto* column = module.consume_display_column(index);
@@ -117,7 +161,7 @@ void check_spectrum(Spectrogram& module, size_t length, size_t rotation) {
     for (size_t bin = 0; bin < column->values.size(); ++bin) {
         CAPTURE(bin);
         const double expected = expected_magnitude(bin, length, 0,
-            cables[rotation], module.is_ac_coupled, module.get_sample_rate());
+            cables[rotation], module.is_ac_coupled, module.get_sample_rate(), window);
         CHECK(column->values[bin] == Approx(expected)
             .epsilon(2e-4).margin(magnitude_error(length, 0, cables[rotation])));
     }
@@ -126,8 +170,9 @@ void check_spectrum(Spectrogram& module, size_t length, size_t rotation) {
 /// Drive real Rack ports and process(), then inspect only published output.
 /// Every cable/gain combination visits every Fourier lane and Spectre's port.
 template<typename Module>
-void check_amplitudes(Module& module, size_t length) {
-    module.set_window_function(Fourier::Window::Function::Boxcar);
+void check_amplitudes(Module& module, size_t length, const Window& window) {
+    CAPTURE(static_cast<int>(window.function));
+    module.set_window_function(window.function);
     module.set_time_smoothing(0.f);
     module.set_frequency_smoothing(FrequencySmoothing::None);
     rack::engine::Module::ProcessArgs args = {};
@@ -138,7 +183,7 @@ void check_amplitudes(Module& module, size_t length) {
     for (size_t lane = 0; lane < signals.size(); ++lane) {
         signals[lane].resize(length);
         for (size_t sample = 0; sample < length; ++sample)
-            signals[lane][sample] = voltage(sample, length, lane);
+            signals[lane][sample] = voltage(sample, length, lane, window);
     }
     for (size_t rotation = 0; rotation < cables.size(); ++rotation) {
         for (size_t lane = 0; lane < signals.size(); ++lane) {
@@ -171,7 +216,7 @@ void check_amplitudes(Module& module, size_t length) {
                 }
                 module.process(args);
             }
-            check_spectrum(module, length, rotation);
+            check_spectrum(module, length, rotation, window);
         }
     }
 }
@@ -191,7 +236,7 @@ TEST_CASE("Fourier publishes analytical absolute amplitudes through Rack ports")
             module.set_slope(0.f);
             module.set_frequency_scale(FrequencyScale::Linear);
             module.set_magnitude_scale(MagnitudeScale::Linear);
-            check_amplitudes(module, length);
+            for (const auto& window : windows) check_amplitudes(module, length, window);
         }
     }
 }
@@ -203,6 +248,7 @@ TEST_CASE("Spectre publishes analytical absolute amplitudes through Rack ports")
     for (const float rate : {44100.f, 96000.f}) {
         context.engine->setSampleRate(rate);
         Spectrogram module;
-        check_amplitudes(module, Spectrogram::N_FFT);
+        for (const auto& window : windows)
+            check_amplitudes(module, Spectrogram::N_FFT, window);
     }
 }

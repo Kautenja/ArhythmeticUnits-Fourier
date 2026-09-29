@@ -280,7 +280,7 @@ void require_same_curve(const SpectrumAnalyzer::DisplaySpectrum& actual,
 }  // namespace
 
 TEST_CASE("Fourier latches mid-frame controls at the next frame boundary") {
-    const auto control = GENERATE("length", "hop", "time smoothing",
+    const auto control = GENERATE("length", "hop", "window", "time smoothing",
         "frequency smoothing", "frequency scale", "magnitude scale", "bounds and slope");
     // Just after frame start, transform work, and partially emitted output.
     const size_t phase = GENERATE(1u, 256u, 511u);
@@ -300,6 +300,8 @@ TEST_CASE("Fourier latches mid-frame controls at the next frame boundary") {
         const std::string name(control);
         if (name == "length") module.set_window_length(2048);
         else if (name == "hop") module.set_hop_length(768);
+        else if (name == "window")
+            module.set_window_function(Fourier::Window::Function::Hann);
         else if (name == "time smoothing") module.set_time_smoothing(0.7f);
         else if (name == "frequency smoothing")
             module.set_frequency_smoothing(FrequencySmoothing::_1_1);

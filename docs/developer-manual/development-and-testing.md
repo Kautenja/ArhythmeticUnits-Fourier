@@ -211,8 +211,11 @@ make test-module-amplitudes
 ```
 
 These checks drive Rack input ports through `process()` and compare published
-Fourier curve ordinates and Spectre column magnitudes with closed-form Boxcar
-DFT expectations. They cover bin-centered tones, DC, Nyquist, per-port gains,
+Fourier curve ordinates and Spectre column magnitudes with closed-form DFT
+expectations for Boxcar, Hann, Hamming, and Blackman-Harris windows. Explicit
+cosine-series coefficients supply independent coherent gains and neighboring
+bin weights; separated signal components avoid overlapping window lobes.
+They cover bin-centered tones, DC, Nyquist, per-port gains,
 mono and polyphonic sums, cancellation, muted gains, disconnected inputs with
 stale voltage storage, and AC-coupling transitions. AC expectations include the
 10 Hz DC blocker's steady-state frequency response after settling. Fourier
