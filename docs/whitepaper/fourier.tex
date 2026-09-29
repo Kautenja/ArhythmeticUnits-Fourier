@@ -131,23 +131,46 @@ window before processing it. The successor retains that window in a larger
 ring while packing it incrementally.
 
 Hurchalla describes a time-distributed FFT for low-latency convolution that
-balances computation across input blocks while remaining within one
-thread~\cite{hurchalla2010}. Battenberg and Avi\v{z}ienis examine cooperative
-and preemptive implementations of partitioned convolution and explicitly
-consider host compatibility and programming effort as well as
-performance~\cite{battenberg2011}. Their findings caution against equating
-single-threaded cooperation with superior throughput. Liu, Yan, and Zou
+balances processor and memory load across incoming input blocks while remaining
+within one thread~\cite{hurchalla2010}. Its stated objective is low-latency
+convolution with large partitions. Here the output is a spectrum of an already
+selected window, and latency is measured from that window's newest sample to
+publication. These application-specific latency objectives should not be
+equated. This comparison uses Hurchalla's published abstract; the detailed
+convolution schedule discussed next is documented by Battenberg and
+Avi\v{z}ienis.
+
+Battenberg and Avi\v{z}ienis compare cooperative and preemptive implementations
+of partitioned convolution~\cite{battenberg2011}. Their Section~4 uses
+decimation-in-frequency decomposition to distribute forward transforms,
+spectral multiplication, and inverse transforms across callbacks. Thus,
+scheduling operations beyond the FFT itself also has direct precedent.
+Their preemptive implementation outperforms the alternatives in their evaluated
+scenarios, while the cooperative implementation fits the host-plugin execution
+model they describe. They also report greater implementation effort for the
+cooperative approach. Those findings motivate comparison with worker-based
+processing; they do not establish a performance ranking for this analyzer.
+The present study instead specifies a windowed spectral-analysis sequence,
+an exact-hop quota, retained-input capacity, cancellation, and output ownership.
+
+Liu, Yan, and Zou
 further study time-distributed FFT/IFFT algorithms for online control on
 general-purpose processors~\cite{liu2017}. The existence of these approaches
-rules out a broad novelty claim for distributing transform work in time.
+rules out a broad novelty claim for distributing transform work or a processing
+chain in time.
 
 A separate family of methods reuses work between overlapping windows.
 The sliding DFT updates spectral bins recursively as samples enter and leave a
-window~\cite{jacobsen2003,jacobsen2015}. Tree-based sliding-window transforms
+window~\cite{jacobsen2003}. Lyons and Howard present efficient, guaranteed-stable
+sliding DFT networks, including a variant with a freely selectable analysis
+frequency~\cite{lyons2021}. Recursive analysis therefore includes designs that
+explicitly address stability; recursion alone is not grounds to reject it.
+Tree-based sliding-window transforms
 reuse intermediate calculations~\cite{richardson2019}. The plugin's resumable FFT
 has neither form of inter-frame reuse: each new frame begins a fresh transform.
-This distinction matters for both complexity and numerical behavior. Merely
-pausing an FFT does not introduce an indefinitely evolving spectral recurrence.
+Selecting among these methods requires matching the required bin count, update
+cadence, window, and numerical behavior. Our experiments do not measure that
+tradeoff against sliding methods.
 
 Finally, optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
@@ -562,6 +585,12 @@ paired ratios, the runner resamples the nine pairs 10,000 times with a fixed
 seed and reports percentile bootstrap intervals. These intervals describe
 within-session repeat variability; they do not account for different hardware,
 operating systems, compilers, or background loads.
+They also do not quantify sensitivity to executable or memory layout.
+Mytkowicz et al. show that layout changes induced by link order or environment
+size can bias performance comparisons~\cite{mytkowicz2009}. Alternating the
+two modes' execution order is not equivalent to randomizing those experimental
+conditions, so a narrow within-session interval does not establish robustness
+to them.
 
 The timer is \code{std::chrono::steady\_clock}. An empty start/end pair has median
 0 ns and p99 42 ns in the recorded calibration. Tiny per-call observations are
@@ -897,7 +926,11 @@ batch transform already fits comfortably, the extra state and cadence policy
 may provide little practical benefit. For a small set of frequently updated
 bins, a sliding formulation can be a more appropriate starting point. For
 large analysis tasks, a worker may offer a better throughput/latency tradeoff
-when the host permits it.
+when the host permits it, consistent with the alternatives examined by
+Battenberg and Avi\v{z}ienis~\cite{battenberg2011}. A comparison should include
+an optimized batch FFT on the engine thread and, where supported, a worker
+implementation, with equivalent input windows, output processing, and requested
+cadence. It should report actual publication delay as well as engine cost.
 
 Sample-call costs should also not be confused with device-buffer deadlines.
 If the host renders $D$ samples in one device callback, its relevant demand is
@@ -906,7 +939,22 @@ costs. In the original path, a device callback containing preparation and
 reconstruction can still experience a substantial burst. A future host study
 of either design should vary $D$, frame
 phase, analyzer count, and background patch load rather than extrapolating
-from one scalar-call maximum.
+from one scalar-call maximum. It should include concurrent display consumption
+and record callback-duration distributions and deadline misses over a stated
+observation period. These are proposed measurements, not results of the
+campaigns reported here.
+
+For that future evaluation, Kalibera and Jones provide a method for allocating
+repetitions across builds, executions, and iterations according to the sources
+of variation, and for reporting effect-size confidence
+intervals~\cite{kalibera2013}. A pilot study should identify which levels matter
+on each platform before selecting repetition counts. Their methodology has
+not been applied retrospectively to our archived campaigns. Sensitivity to
+layout and execution environment should also be investigated, following the
+measurement-bias concerns of Mytkowicz et al.~\cite{mytkowicz2009}; identical
+rebuilds alone need not sample different layouts. Average-cost intervals and
+observed callback maxima answer different questions, and neither provides a
+hard worst-case execution-time bound.
 
 The one-hop implementation makes those formerly concentrated passes resumable
 and defines cancellation and ownership explicitly. Its unweighted quota still
@@ -1171,10 +1219,11 @@ E. Jacobsen and R. Lyons, ``The sliding DFT,'' \emph{IEEE Signal Processing
 Magazine}, vol. 20, no. 2, pp. 74--80, 2003.
 \href{https://doi.org/10.1109/MSP.2003.1184347}{doi:10.1109/MSP.2003.1184347}.
 
-\bibitem{jacobsen2015}
-E. Jacobsen, ``Understanding and implementing the sliding DFT,''
-\emph{DSPRelated}, 2015.
-\url{https://www.dsprelated.com/showarticle/776.php}.
+\bibitem{lyons2021}
+R. Lyons and C. Howard, ``Improvements to the sliding discrete Fourier
+transform algorithm,'' \emph{IEEE Signal Processing Magazine}, vol. 38,
+no. 4, pp. 119--127, 2021.
+\href{https://doi.org/10.1109/MSP.2021.3075416}{doi:10.1109/MSP.2021.3075416}.
 
 \bibitem{richardson2019}
 L. F. Richardson and W. F. Eddy, ``Algorithm 991: The 2D tree sliding window
@@ -1187,6 +1236,21 @@ Preprint: \url{https://arxiv.org/abs/1707.08213}.
 M. Frigo and S. G. Johnson, ``The design and implementation of FFTW3,''
 \emph{Proceedings of the IEEE}, vol. 93, no. 2, pp. 216--231, 2005.
 \href{https://doi.org/10.1109/JPROC.2004.840301}{doi:10.1109/JPROC.2004.840301}.
+
+\bibitem{mytkowicz2009}
+T. Mytkowicz, A. Diwan, M. Hauswirth, and P. F. Sweeney,
+``Producing wrong data without doing anything obviously wrong!,'' in
+\emph{Proceedings of the 14th International Conference on Architectural
+Support for Programming Languages and Operating Systems (ASPLOS '09)},
+pp. 265--276, 2009.
+\href{https://doi.org/10.1145/1508244.1508275}{doi:10.1145/1508244.1508275}.
+
+\bibitem{kalibera2013}
+T. Kalibera and R. Jones, ``Rigorous benchmarking in reasonable time,'' in
+\emph{Proceedings of the 2013 International Symposium on Memory Management
+(ISMM '13)}, pp. 63--74, 2013.
+\href{https://doi.org/10.1145/2464157.2464160}{doi:10.1145/2464157.2464160}.
+Corrected author manuscript: \url{https://kar.kent.ac.uk/33611/}.
 
 \bibitem{rack}
 VCV, ``Plugin API guide,'' \emph{VCV Rack Manual}. Accessed September 28, 2026.

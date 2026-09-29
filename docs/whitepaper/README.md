@@ -141,13 +141,25 @@ plugin artwork.
 
 ## Verification Of Manuscript Version 2
 
-The 19-page revision, including the consolidated implementation appendix,
+The initial 19-page revision, including the consolidated implementation appendix,
 compiled in the built-in LaTeX editor and with
 `make -C whitepaper`, with no unresolved references or box warnings. The
 artifact check passes for both campaigns, including the new prototype table
 and exact-cadence example. Historical driver extraction, compilation, and
 numerical verification also passed. Detailed documentation and production
 validation evidence remains in the removed specifications in Git history.
+
+The literature-review update retains manuscript version 2 and expands it to
+20 pages. It deepens the AES/DAFx scheduling comparison, replaces the 2015
+sliding-DFT exposition with Lyons and Howard (2021), and adds benchmarking
+references to distinguish existing evidence from a proposed future evaluation.
+The built-in LaTeX compiler and `make -C docs/whitepaper` both pass; the final
+LaTeX pass has no unresolved references or box warnings. All 20 rendered pages
+were visually inspected. `make -C docs/whitepaper check` passes with 17 cited
+references and unchanged campaign data, and `git diff --check` passes.
+No new timing campaign, DSP test run, Rack build, or manual Rack session was
+performed for this literature-only update. Source-access limitations are
+recorded in [sources.md](sources.md).
 
 ## Historical Verification Of Manuscript Version 1
 

@@ -1,7 +1,8 @@
 # Reference Verification
 
-The bibliography in [fourier.tex](fourier.tex) was checked on September 28,
-2026 against the primary sources below. This is a focused literature review
+The bibliography in [fourier.tex](fourier.tex) was checked and expanded on
+September 28, 2026 against the primary sources below.
+This is a focused literature review
 covering the implementation's mathematical basis, directly related scheduling
 work, overlap-reuse alternatives, and host integration. It is not an
 exhaustive bibliometric survey.
@@ -15,13 +16,15 @@ exhaustive bibliometric survey.
 | `lo1998` | [Publisher abstract](https://www.sciencedirect.com/science/article/abs/pii/S0165168498001522) | Split-radix computation during acquisition |
 | `lo1999` | [University repository](https://ir.lib.nycu.edu.tw/items/bc91194b-a045-493b-869c-d02a40c5ef94), [original paper](https://ir.lib.nycu.edu.tw/bitstream/11536/31665/1/000082760300005.pdf) | Online spectral analysis and time distribution |
 | `lomoving1999` | [Publisher abstract](https://www.sciencedirect.com/science/article/abs/pii/S0165168499000985) | Combined scheduling and overlap reuse |
-| `hurchalla2010` | [AES abstract and paper record](https://secure.aes.org/forum/pubs/conventions/?elib=15679) | Time-distributed FFT for convolution; paper 8257, 129th convention |
-| `battenberg2011` | [Author-hosted full paper](https://ericbattenberg.com/pdf/partconvDAFx2011.pdf), [author publication page](https://ericbattenberg.com/publication/partconv/) | Cooperative versus preemptive processing; sections 4 and 6 examined |
+| `hurchalla2010` | [AES abstract and paper record](https://secure.aes.org/forum/pubs/conventions/?elib=15679) | Processor/memory load distribution across input blocks in one thread for low-latency convolution; abstract only, paper 8257, 129th convention |
+| `battenberg2011` | [Author-hosted full paper](https://ericbattenberg.com/pdf/partconvDAFx2011.pdf), [author publication page](https://ericbattenberg.com/publication/partconv/) | Section 4 distributes forward transforms, spectral multiplication, and inverse transforms across callbacks; section 6 compares performance and implementation effort |
 | `liu2017` | [Rutgers author bibliography](https://zoulab.engr.rutgers.edu/journal_article), [university publication record](https://www.researchwithrutgers.org/en/publications/optimal-time-distributed-fast-fourier-transform-application-to-on/) | Time-distributed FFT/IFFT in online control; volume 41, pages 114-124 |
 | `jacobsen2003` | [Jacobsen's later exposition and references](https://www.dsprelated.com/showarticle/776.php) | Sliding DFT distinction; IEEE Signal Processing Magazine 20(2), 74-80 |
-| `jacobsen2015` | [Author's exposition](https://www.dsprelated.com/showarticle/776.php) | Recursive bin updates and relation to the FFT |
+| `lyons2021` | [University author record](https://digital.library.adelaide.edu.au/items/14d4a218-cff8-47ca-aeae-eb543ab04b4f/full), [accepted manuscript](https://digital.library.adelaide.edu.au/dspace/bitstream/2440/133370/3/hdl_133370.pdf) | Abstract and bibliographic metadata: guaranteed-stable sliding networks and frequency-flexible analysis; no reproduced equations or performance ranking |
 | `richardson2019` | [Author-deposited preprint and journal metadata](https://arxiv.org/abs/1707.08213) | Tree reuse across windows; published as Algorithm 991 in ACM TOMS 45(1), article 12 |
 | `frigo2005` | [Authors' full paper](https://fftw.org/fftw-paper-ieee.pdf), [author publication record](https://fftw.org/~athena/abstracts/abstract8.html) | Optimized FFT implementations as an unmeasured comparison class |
+| `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
+| `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
 | `rack` | [Official plugin API guide](https://vcvrack.com/manual/PluginGuide) | Engine and SIMD context; actual behavior also checked in repository code |
 
 Some publisher pages require browser verification or a subscription. For
@@ -29,6 +32,16 @@ Hurchalla and Liu et al., the comparison is deliberately limited to the
 scope established by their abstracts/records, supplemented by the open
 Battenberg paper for its own implementation. The report does not attribute
 uninspected algorithm details or performance results to inaccessible texts.
+The Lyons and Howard comparison uses the university record and indexed
+manuscript abstract; the repository's migrated PDF endpoint did not provide
+readable full text during this revision. Its guarantees are attributed to
+the proposed networks, not to all sliding DFT implementations.
+
+The revision replaces the 2015 sliding-DFT exposition with Lyons and Howard's
+peer-reviewed treatment, while retaining the original 2003 reference.
+The two benchmarking references motivate explicit limits and a future study;
+no new experiment was run or existing observation reinterpreted as evidence
+of cross-platform robustness.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.
