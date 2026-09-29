@@ -247,7 +247,8 @@ selected Rack tree's `plugin.mk`. Nested `.cpp` files are not automatically
 included by that wildcard.
 
 `SConstruct` builds standalone DSP tests and benchmarks and discovers
-`.cpp` files recursively under `src/dsp`, `test`, and `benchmark/dsp`.
+`.cpp` files recursively under `test` and `benchmark/dsp`. DSP headers
+are included directly by each suite; there is no standalone DSP library.
 Rack benchmark and test sources are excluded and built separately by Make.
 SCons does not build the Rack modules or exercise their SIMD instantiations
 and UI.
@@ -267,7 +268,7 @@ defaults to `g++`, which may resolve to Apple Clang on macOS. To choose
 Clang explicitly, use `scons CXX=clang++ test`; an environment `CXX` alone
 does not override this build's default.
 
-Run all suites:
+Run all suites (also the default for bare `scons`):
 
 ```shell
 scons test
@@ -932,8 +933,8 @@ not trigger a release workflow when another workflow creates the release with
 that token; use the manual trigger in that case.
 
 Keep generated binaries, object files, SCons caches, PDFs, and build folders
-out of source changes. Use explicit SCons targets above: bare `scons` also
-involves the standalone shared-library target and is not the test command.
+out of source changes. Bare `scons` builds and runs the standalone tests;
+benchmarks require the explicit targets above.
 
 ## Submit A Pull Request
 

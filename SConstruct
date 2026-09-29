@@ -1,10 +1,10 @@
-"""The compilation script for this project using SCons."""
+"""Build standalone tests and benchmarks for the header-only DSP code."""
 import os
 import fnmatch
 import re
 import shlex
 
-# Instrumented tests never reuse ordinary objects or production flags.
+# Instrumented tests never reuse ordinary objects or benchmark flags.
 INSTRUMENT = ARGUMENTS.get('INSTRUMENT', '')
 INSTRUMENT_FLAGS = {
     '': [],
@@ -25,13 +25,12 @@ TEST_BUILD = ('build/instrumented/' + INSTRUMENT + '/standalone'
 TEST_CXX = ARGUMENTS.get('CXX', 'clang++' if INSTRUMENT else 'g++')
 
 # create a separate build directory
-VariantDir('build_src', 'src/dsp', duplicate=0)
 VariantDir('build_benchmark', 'benchmark', duplicate=0)
 VariantDir(TEST_BUILD, 'test', duplicate=0)
 
-# the compiler and linker flags for the production C++ environment
-PROD_FLAGS = [
-    '-std=c++11',
+# the compiler and linker flags for the benchmark C++ environment
+BENCHMARK_FLAGS = [
+    '-std=c++14',
     '-pthread',
     '-O3',
     # '-march=native',
@@ -40,7 +39,7 @@ PROD_FLAGS = [
     '-Wall'
 ]
 
-# include for the production environment
+# shared DSP include path
 INCLUDES = [
     '#src',
 ]
@@ -73,18 +72,9 @@ BENCHMARK_ENV = Environment(
     ENV=os.environ,
     CXX=ARGUMENTS.get('CXX', 'g++'),
     CPPFLAGS=['-Wno-unused-value'],
-    CXXFLAGS=PROD_FLAGS + ['-std=c++14'],
-    LINKFLAGS=PROD_FLAGS + ['-std=c++14'],
+    CXXFLAGS=BENCHMARK_FLAGS,
+    LINKFLAGS=BENCHMARK_FLAGS,
     CPPPATH=INCLUDES + TEST_INCLUDES,
-)
-
-PRODUCTION_ENV = Environment(
-    ENV=os.environ,
-    CXX='g++',
-    CPPFLAGS=['-Wno-unused-value'],
-    CXXFLAGS=PROD_FLAGS,
-    LINKFLAGS=PROD_FLAGS,
-    CPPPATH=INCLUDES,
 )
 
 
@@ -114,14 +104,6 @@ def find_source_files(src_dir, build_dir):
     return sorted(files)
 
 
-# Locate all the C++ source files (TODO main CPP file for building library)
-SRC = find_source_files('src/dsp', 'build_src')
-# create separate object files for testing and production environments
-TEST_SRC = [TESTING_ENV.Object(f.replace('.cpp', '') + '-test-' + (INSTRUMENT or 'plain'), f) for f in SRC]
-PROD_SRC = [PRODUCTION_ENV.Object(f.replace('.cpp', '') + '-prod', f) for f in SRC]
-BENCHMARK_SRC = [BENCHMARK_ENV.Object(f.replace('.cpp', '') + '-bench', f) for f in SRC]
-
-
 # ----------------------------------------------------------------------------
 # MARK: Unit Tests
 # ----------------------------------------------------------------------------
@@ -135,7 +117,7 @@ UNIT_TEST_ALIASES = []
 DSP_TEST_ALIASES = []
 MAILBOX_TEST_ALIASES = []
 for file in TEST_FILES:
-    program = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_SRC + TEST_CATCH)
+    program = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_CATCH)
     relative = file[len(TEST_BUILD) + 1:]
     alias = TESTING_ENV.Alias('test/' + relative, [program], program[0].path)
     AlwaysBuild(alias)
@@ -145,7 +127,7 @@ for file in TEST_FILES:
     elif relative == 'threads/test_display_mailbox.cpp':
         MAILBOX_TEST_ALIASES.append(alias)
 
-Alias('test', UNIT_TEST_ALIASES)
+Default(Alias('test', UNIT_TEST_ALIASES))
 Alias('test-dsp', DSP_TEST_ALIASES)
 Alias('test-mailbox', MAILBOX_TEST_ALIASES)
 
@@ -161,7 +143,7 @@ BENCHMARK_PROGRAMS = []
 BENCHMARK_ARGS = ' '.join(shlex.quote(arg) for arg in
                           shlex.split(ARGUMENTS.get('BENCHMARK_ARGS', '')))
 for benchmark in find_source_files('benchmark/dsp', 'build_benchmark/dsp'):
-    program = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_SRC + BENCHMARK_CATCH)
+    program = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_CATCH)
     alias = BENCHMARK_ENV.Alias(benchmark.replace('build_', ''), [program],
                                program[0].path + ' ' + BENCHMARK_ARGS)
     AlwaysBuild(alias)
@@ -172,12 +154,3 @@ for benchmark in find_source_files('benchmark/dsp', 'build_benchmark/dsp'):
 
 Alias('benchmark-build', BENCHMARK_PROGRAMS)
 Alias('benchmark', BENCHMARK_ALIASES)
-
-
-# ----------------------------------------------------------------------------
-# MARK: DSP Library
-# ----------------------------------------------------------------------------
-
-# Create a shared library (it will add "lib" to the front automatically)
-lib = PRODUCTION_ENV.SharedLibrary('_KautenjaDSP.so', SRC)
-AlwaysBuild(lib)
