@@ -983,6 +983,42 @@ Outputs are `docs/manual-fourier/.build/manual.pdf` and
 build directory and stops on LaTeX errors. Shell escape is disabled. Inspect
 rendered pages when changing manual content or layout.
 
+#### Spectre Manual Figures
+
+Spectre uses one module screenshot on its cover: the checked-in
+[`PanelLayout.png`](docs/manual-spectre/img/PanelLayout.png). Generate it
+from the real Rack widgets, rather than maintaining a separate SVG/PDF
+imitation of the UI. Other figures are conceptual TikZ sources in the
+manual's `img/` directory; they compile with the PDF and explain control
+groups or display behavior without duplicating UI artwork or captured data.
+Fourier's existing figures have not yet migrated to this pattern.
+
+To refresh Spectre's screenshot, use the Rack build environment and graphical
+desktop required by `inspect-panels`, plus Python 3 with Pillow installed
+(`python3 -m pip install Pillow`). From the repository root, run:
+
+```shell
+make -C docs/manual-spectre screenshot
+make -C docs/manual-spectre
+```
+
+The refresh first runs the native panel inspection, then crops Spectre from
+the light-theme, unzoomed live scenario `panel-live-0.ppm`. The fixture uses
+48 kHz, 100,000 samples of a 5 V peak, 1 kHz sine, and the module's default
+analysis controls. It shows partially filled history. The export preserves
+native pixel density (525 by 380 logical pixels) without resizing or
+repainting. Antialiasing and fonts can vary with platform and density; this
+is a repeatable capture procedure, not a byte-identical cross-platform image.
+
+Inspect the PNG and rendered cover before accepting an update. Keep the
+capture geometry in [`export-spectre-screenshot.py`](scripts/export-spectre-screenshot.py)
+aligned with [`inspect_panels.cpp`](test/rack/inspect_panels.cpp) if its canvas
+or module placement changes. The refresh command is explicit: ordinary
+manual builds and PDF CI use the reviewed PNG and need no Rack installation,
+desktop session, or Pillow. Keep all other capture output in `.build/`.
+
+### Publication Builds
+
 Build the self-contained white paper with `latexmk` and its TeX packages:
 
 ```shell

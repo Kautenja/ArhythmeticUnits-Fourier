@@ -1,4 +1,4 @@
-.PHONY: default manual
+.PHONY: default manual screenshot
 
 # the default when running `make` in this directory
 default: manual
@@ -12,6 +12,13 @@ BUILD=.build
 CLEAN=*.aux *.nav *.log *.out *.snm *.toc *.bbl *.blg *.brf *.swp *.nlo *.spl
 # a command for running pdflatex with options applied
 PDFLATEX=pdflatex -halt-on-error -interaction=nonstopmode -file-line-error -no-shell-escape
+PYTHON ?= python3
+
+# Explicit refresh only: ordinary PDF builds use the reviewed, checked-in PNG.
+# Requires the Rack build environment, a graphical desktop, and Python/Pillow.
+screenshot:
+	$(MAKE) -C ../.. inspect-panels
+	$(PYTHON) ../../scripts/export-spectre-screenshot.py ../../.build/test/rack/panel-live-0.ppm img/PanelLayout.png
 
 # make the manual
 manual:

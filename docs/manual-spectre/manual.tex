@@ -80,12 +80,14 @@ increasing resolution. The factory presets provide examples of these choices.
 
 \begin{figure}[!htp]
 \centering
-\includegraphics[width=\textwidth]{img/PanelLayout.png}
-\caption{Spectre's input, vertical color-range control, Run button, and display controls.}
+\input{img/PanelLayout.tex}
+\caption{A schematic of Spectre's control groups. Positions and proportions
+are simplified; the cover shows the rendered module.}
 \end{figure}
 
-The illustration shows the current panel. Text controls brighten when hovered.
-The sections below give the current ranges and defaults.
+Use the left strip for input, color range, and Run; use the lower strip for
+analysis and display settings. Text controls brighten when hovered. The
+sections below give the current ranges and defaults.
 
 \subsection{Input}
 
@@ -268,6 +270,15 @@ does not scroll: the newest spectrum is immediately behind the scan line
 (to its left, except at the wrap), and older history lies ahead of it.
 A frozen history excludes any elapsed time while Run was off.
 
+\begin{figure}[!htp]
+\centering
+\input{img/History.tex}
+\caption{History after the first full sweep, partway through a later sweep.
+Each box stands for a spectrum column; only a few are drawn for clarity.
+Shading distinguishes sweeps, not signal level. Before the first full sweep,
+the area ahead of the scan line is empty.}
+\end{figure}
+
 In Decibels mode, color represents spectral amplitude after gain, windowing,
 smoothing, and Slope weighting. Linear magnitudes are interpolated before
 converting to dB. With magnitude $m$, the unweighted level is
@@ -289,6 +300,9 @@ $(a-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1,
 using its own amplitude endpoints (displayed as percentages). The default
 0--100\% range reproduces the previous static linear mapping.
 
+\clearpage
+\subsection*{Hover Readouts}
+
 The crosshair and readouts appear only inside the plot rectangle. Moving
 onto the surrounding labels or control strip hides them.
 
@@ -307,7 +321,6 @@ $0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
 Spectre measures recorded spectral data. There is no time readout; use the
 sweep duration in the overview as a guide.
 
-\clearpage
 \section{Context Menu And Saved Settings}
 
 Right-click the module to find these options under \textbf{Render Settings}:
