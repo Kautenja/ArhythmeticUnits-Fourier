@@ -87,11 +87,17 @@ controls change. From the repository root, use
 exporter; refresh only the manual relevant to the change.
 Keep panel references as detailed vector line drawings with recognizable
 controls at their real locations. Numbered callouts must match the manual's
-control sections. Use the shared primitives in `docs/figures/PanelDrawing.tex`
-and the module's `img/PanelLayout.tex`; omit live values and spectral data.
+control sections. Use the shared primitives in `docs/latex/figures/panel-drawing.tex`
+and the module's `figures/panel-layout.tex`; omit live values and spectral data.
 Keep analysis illustrations conceptual. Do not add more app screenshots.
-For reusable PDF/SVG art, run `make -C docs/figures` and follow the contributor
+For reusable PDF/SVG art, run `make -C docs/latex/figures` and follow the contributor
 guide's export checks. Edit the sources, not generated exports.
+Manual section sources live in `sections/`; module-specific TikZ lives in
+`figures/`, apart from the cover and branding assets in `img/`. Shared style,
+metadata, and build rules live in `docs/latex/`. Keep source names lower case
+and preserve reference labels when moving sections. Use the Make targets so
+contents and references converge and successful builds leave a clean PDF
+output. Review metadata, bookmarks, and links after publication-style edits.
 
 Review the generated PNG and rebuilt manual before including an update.
 The reviewed screenshot is a tracked source asset; intermediate captures and

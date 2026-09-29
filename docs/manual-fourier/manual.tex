@@ -1,234 +1,41 @@
-\documentclass[12pt,letterpaper]{article}
-\usepackage[moduleName={Fourier},version={2.1.2}]{ArhythmeticUnits}
-
-\input{PanelDrawing.tex}
+\documentclass[11pt,letterpaper]{article}
+\usepackage[moduleName={Fourier},version={2.1.2},accent={2368A0}]{arhythmetic-manual}
+\input{panel-drawing.tex}
 
 \begin{document}
-\titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
-\input{Guide.tex}
+\manualcover{Spectrum analyzer}
+\manualcontents
+
+\contentsgroup{Getting started}
 \clearpage
-
-% ----------------------------------------------------------------------------
-% MARK: Overview
-% ----------------------------------------------------------------------------
-
-\section{Overview}\label{sec:overview}
-
-\textbf{Fourier} is a four-input spectrum analyzer for VCV Rack 2. It shows
-how a signal's amplitude is distributed across frequencies. Each input has
-its own gain control and colored trace; the analysis and display controls
-are shared by all four inputs. Fourier has no audio outputs: patch a signal
-to it alongside your audio path to inspect the signal without changing it.
-
-The analyzer uses a short-time Fourier transform (STFT), with selectable
-window functions, FFT lengths, and intervals between analyses. Time and
-frequency smoothing help reveal broad trends, while frequency bounds and
-amplitude scales let you inspect a smaller part of the spectrum. A slope
-control tilts the displayed amplitudes around $1\,\mathrm{kHz}$.
-
-Fourier and Spectre belong to the Arhythmetic Units Fourier plugin.
-Use Fourier to compare the current spectra of up to four signals, and
-Spectre to follow one signal's spectrum over time. Both provide the same
-window choices and smoothing controls, but their display axes, input-gain
-defaults, and Run behavior differ as described below.
-
-The module takes its name from Jean-Baptiste Joseph Fourier
-(Fig.~\ref{fig:fourier-portrait}), whose work describes signals in terms of
-simpler trigonometric functions.
-
-\begin{figure}[!htp]
-\centering
-\includegraphics[width=0.38\textwidth]{img/FourierPortrait}
-\caption{Jean-Baptiste Joseph Fourier (March 1768 -- May 1830).}
-\label{fig:fourier-portrait}
-\end{figure}
-
+\input{sections/overview.tex}
 \clearpage
-\section{Quick Start}\label{sec:quick-start}
-
-\begin{itemize}
-  \item Connect an oscillator or other audio source to the red input. Keep
-  your existing connection to the mixer or audio output if you want to hear it.
-  \item Leave the input gain at $0\,\mathrm{dB}$ and ensure \textbf{Run} is lit.
-  A new module uses a Flattop window, Length 2048, and Hop
-  $30\,\mathrm{ms}$, with no time or frequency smoothing.
-  \item For an amplitude comparison, set \textbf{Slope} to
-  $0\,\mathrm{dB/oct}$. The default $+4.5\,\mathrm{dB/oct}$ visually boosts
-  frequencies above $1\,\mathrm{kHz}$ and reduces those below it.
-  \item Connect another signal to the green, blue, or yellow input to
-  compare spectra. Use equal input gains for a level comparison.
-  \item Hover over the plot to show a crosshair, frequency, musical note
-  and tuning offset, and amplitude at the cursor position. The readout
-  describes the cursor; it does not automatically find a spectral peak.
-  \item Press \textbf{Run} to stop capturing new samples. Press it again
-  to resume. The retained audio can still be reanalyzed while capture is stopped.
-\end{itemize}
-
-\paragraph{Reading levels}
-Fourier displays spectral magnitudes, not total signal RMS, loudness, or
-sound pressure level. Its nominal amplitude reference is a
-$5\,\mathrm{V}$ peak sine wave (approximately $0\,\mathrm{dB}$ or
-$100\,\%$ with unity gain, zero slope, and no smoothing). Window choice,
-frequency alignment with FFT bins, and smoothing affect the height and width
-of a peak. The display ceiling is about $+12\,\mathrm{dB}$; a trace reaching
-that ceiling does not mean Fourier has clipped your audio path.
-
-\paragraph{Choosing settings}
-Use a longer \textbf{Length} to separate nearby frequencies, especially in
-the bass. Use a shorter \textbf{Hop} and little or no \textbf{Average} to
-follow changes more closely. Increase \textbf{Average} for a steadier trace
-and \textbf{Smooth} for a broader view of tonal balance. The factory presets
-provide examples of these choices.
-
-% ----------------------------------------------------------------------------
-% MARK: Panel Layout
-% ----------------------------------------------------------------------------
-
+\input{sections/quick-start.tex}
 \clearpage
-\section{Panel Layout}\label{sec:panel}
-
-\begin{figure}[!htp]
-\centering
-\resizebox{\textwidth}{!}{\input{img/PanelLayout.tex}}
-\caption{Panel reference. Numbered callouts match the control sections
-below. The screen and value fields are schematic; the cover shows the module
-in operation.}
-\end{figure}
-
-Each input and gain pair controls one trace. The lower strip controls the
-analysis and display for all four inputs. The reference shows control
-locations without prescribing settings. Text controls brighten when hovered.
-
-\input{Controls.tex}
-
+\input{sections/panel.tex}
 \clearpage
-\section{Reading The Display}\label{sec:display}
+\input{sections/display.tex}
+\input{sections/settings.tex}
 
-Frequency runs from left to right and spectral amplitude from bottom to top.
-Each colored trace represents one input port's summed signal. Input gain,
-windowing, smoothing, and Slope affect the trace; use equal gains and zero
-slope for unweighted comparisons.
-
-The crosshair and readouts appear only inside the plot rectangle. Moving
-onto the surrounding labels or control strip hides them.
-
-Hover over the plot for a crosshair and readouts of frequency, musical note,
-tuning offset, and amplitude. The amplitude describes the cursor's vertical
-position on the selected Y Scale; place it on a trace to read that trace's
-level. It does not automatically find a peak. Spectre's hover readout instead
-measures a stored spectral bin at the selected time and frequency, before
-Slope weighting.
-
-\section{Context Menu And Saved Settings}\label{sec:settings}
-
-Right-click the module to find these options under \textbf{Render Settings}:
-\begin{itemize}
-  \item \textbf{Filled Display} shades the area beneath each trace. It is
-  off by default.
-  \item \textbf{Bezier Curve} draws curved connections between the plotted
-  points. It is on by default. Turning it off uses straight segments and can
-  make individual bins easier to inspect. It does not change FFT resolution.
-  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
-  using a DC-blocking filter. It is on by default and can also affect very
-  low frequencies. Turn it off when inspecting DC or slow signals, and set
-  Slope to zero to avoid frequency weighting near DC.
-\end{itemize}
-
-These three menu changes support Rack's Undo and Redo commands. Panel
-settings, menu options, and the running state are saved with patches and
-presets. The captured audio and spectrum are not saved. Loading a patch
-that was saved with Run off therefore does not restore a frozen trace;
-press Run to capture a new one.
-
-Rack's module initialization resets the controls to their defaults, enables
-Run, AC coupling, and Bezier curves, and disables Filled Display.
-
-\input{Tutorials.tex}
-
+\contentsgroup{Learn by doing}
 \clearpage
-\section{Factory Presets}\label{sec:presets}
-
-Load these examples from Rack's module preset menu. All start running,
-with $0\,\mathrm{dB}$ input gain and Filled Display off. Frequency bounds
-are limited by the current sample rate.
-
-\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
-  \item[Mastering] Broad tonal balance: Flattop, Length 4096, Hop
-  $30\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale, $0$--$20\,\mathrm{kHz}$,
-  Average $300\,\mathrm{ms}$, Smooth $1/12$ octave, Slope
-  $+4.5\,\mathrm{dB/oct}$. AC coupling and Bezier curves are on.
-  \item[Harmonics] Individual harmonics: Hann, Length 4096, Hop
-  $20\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$5\,\mathrm{kHz}$.
-  Average and Smooth are off; Slope is zero. AC coupling is on and Bezier
-  curves are off.
-  \item[BassDetail] Low-frequency detail: Hann, Length 16384, Hop
-  $30\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$500\,\mathrm{Hz}$,
-  Average $100\,\mathrm{ms}$. Smooth is off and Slope is zero. AC coupling
-  is on and Bezier curves are off.
-  \item[Transients] Shorter frames and frequent updates: Hann, Length 1024,
-  Hop $5\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale,
-  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
-  AC coupling is on and Bezier curves are off.
-  \item[PluginDevelopment] Wider amplitude range: Flattop, Length 8192,
-  Hop $30\,\mathrm{ms}$, Linear Freq Scale, Log 120dB Y Scale,
-  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
-  AC coupling and Bezier curves are off.
-\end{description}
-
-\input{ControlValues.tex}
-
+\input{sections/harmonics.tex}
 \clearpage
-\section{Troubleshooting}\label{sec:troubleshooting}
-
-\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
-  \item[No trace or a stale trace] Check the source signal, cable, input
-  gain, and Run light. Ensure LO Freq is below HI Freq. If you changed
-  Length or loaded a stopped patch, resume capture to fill the buffer.
-  \item[Peaks are too broad or move slowly] Reduce Smooth and Average.
-  Compare window functions. Increasing Length narrows the bin spacing but
-  also increases the time represented in each frame.
-  \item[Levels differ from another analyzer] Match input gain, window,
-  FFT length, smoothing, and amplitude reference. Set Slope to zero and
-  account for summed polyphonic voices. A spectral peak is not a broadband
-  RMS measurement.
-  \item[Display reaches the top] Reduce the relevant input gain or the
-  positive slope. The graph can exceed its visible range even though the
-  source remains unchanged.
-  \item[Analysis uses too much CPU] Try a longer Hop or shorter Length.
-  Fourier performs analysis on Rack's audio engine thread despite having no
-  audio outputs. Stopping Run stops capture but does not stop FFT processing.
-\end{description}
-
-\section{Analysis Timing And Further Reading}\label{sec:further-reading}
-
-Fourier prepares each spectrum over one Hop interval and displays it when
-complete. Longer Length settings include more past audio, Average slows the
-response further, and Rack's display refresh adds its own delay. A shorter
-Hop therefore gives more frequent analyses without making a long frame
-instantaneous.
-
-Window, smoothing, frequency bounds, scales, and Slope are applied to the
-next analysis frame. Changing Length clears captured audio; changing Rack's sample rate
-also discards unfinished analysis. Let new audio fill the frame before making
-comparisons after either change. Fourier continues analyzing retained audio
-when Run is off, as described in the Run section.
-
-Analysis runs on Rack's audio engine thread. Work is spread across sample
-calls to reduce processing bursts, but the module still contributes to the
-patch's CPU load. This does not guarantee that a heavily loaded patch will
-meet its audio deadlines.
-
-For the mathematical background, FFT algorithms, scheduling proofs, and
-performance experiments, see the accompanying
-\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper}{\textit{Resumable FFT Scheduling for Real-Time Spectral Analysis}}.
-Its implementation appendix gives the supporting algorithms; this manual
-focuses on operating the module.
-
-% ----------------------------------------------------------------------------
-% MARK: Copyright seal
-% ----------------------------------------------------------------------------
-
+\input{sections/filter.tex}
 \clearpage
-\finalPage
+\input{sections/resolution.tex}
+\clearpage
+\input{sections/measurements.tex}
 
+\contentsgroup{Reference}
+\clearpage
+\input{sections/presets.tex}
+\clearpage
+\input{sections/control-values.tex}
+\clearpage
+\input{sections/troubleshooting.tex}
+\clearpage
+\input{sections/further-reading.tex}
+
+\manualcolophon
 \end{document}

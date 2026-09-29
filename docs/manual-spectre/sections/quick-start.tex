@@ -1,0 +1,32 @@
+\section{Quick Start}\label{sec:quick-start}
+
+\begin{enumerate}
+  \item Connect an oscillator or another signal to the input. The illuminated
+  \textbf{Run} button indicates that Spectre is acquiring new spectra.
+  Keep your existing connection to the mixer or audio output if you want to
+hear it.
+  \item A new module uses $+6\,\mathrm{dB}$ input gain, a Flattop window,
+  and no time or frequency smoothing. For comparisons with Fourier, set
+  both modules to the same input gain; Fourier starts at $0\,\mathrm{dB}$.
+  \item A steady sine wave produces a horizontal band. Harmonics appear as
+  additional bands above it; short broadband sounds produce vertical marks.
+  \item Drag the two limits on the vertical \textbf{Color} bar to reveal quiet detail or
+  distinguish bright regions, including while frozen. Set \textbf{Slope} to zero when you
+  want to compare magnitudes without frequency-dependent display weighting.
+  The default is $+4.5\,\mathrm{dB/oct}$.
+  \item Press \textbf{Run} to freeze the history, then hover over the plot to
+  inspect a frequency and its magnitude. Press it again to resume.
+\end{enumerate}
+
+\paragraph{Reading levels} Spectre displays spectral magnitudes, not total
+signal RMS, loudness, or sound pressure level. Window choice, frequency
+alignment with FFT bins, and smoothing affect the height and width of a peak.
+The color map has a finite range; reaching its end color does not mean Spectre
+has clipped your audio path. The \textbf{Raw} hover readout measures stored magnitudes before Slope
+weighting; \textbf{Color} measures the weighted, interpolated image sample.
+
+\paragraph{Choosing settings} Use little or no \textbf{Average} to follow
+changes more closely. Increase \textbf{Average} for a steadier image and
+\textbf{Smooth} for a broader view of tonal balance. FFT length and hop size
+are fixed; cropping the frequency range enlarges existing detail without
+increasing resolution. The factory presets provide examples of these choices.

@@ -1,0 +1,30 @@
+\section{Context Menu And Saved Settings}\label{sec:settings}
+
+Right-click the module to find these options under \textbf{Render Settings}:
+\begin{itemize}
+  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
+  using a DC-blocking filter. It is on by default and can also affect very
+  low frequencies. Turn it off when inspecting DC or slow signals, and set
+  Slope to zero to avoid frequency weighting near DC. This setting does not
+  reprocess history.
+\end{itemize}
+
+Palette and intensity-scale selection are on the color screen rather than
+in the context menu. New instances and reset use Decibels; old patches and
+presets with no valid intensity mode load in Linear to preserve their
+colors. Missing endpoints load as $-90$/$0\,\mathrm{dB}$ and 0/100\%, even
+when loading into an edited module.
+
+Panel dropdowns and AC-coupling changes support Rack's Undo and Redo commands. Patches and module
+presets save the panel settings, Run state, AC-coupling choice, color map,
+and intensity mode.
+They do not save the recorded spectrogram. A patch saved while frozen reopens
+with no recorded history; enable Run to acquire a new image.
+
+Rack's module initialization resets the controls to their defaults, enables
+Run and AC coupling, selects Magma and Decibels, restores Floor/Ceil to
+$-90$/$0\,\mathrm{dB}$ and Linear to 0/100\%, and clears the history. Changing Rack's
+sample rate changes the available frequency range, bin spacing, and sweep
+duration. Existing history is not cleared automatically and is displayed
+using the new frequency mapping; allow a full sweep to replace it before
+comparing frequencies at the new sample rate.

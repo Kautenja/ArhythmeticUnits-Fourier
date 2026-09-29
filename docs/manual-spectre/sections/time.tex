@@ -1,0 +1,52 @@
+\section{Time And Measurement Limits}\label{sec:time}
+
+\paragraph{Read the sweep as a circular timeline}
+After the first full sweep, the oldest column is just ahead of the scan line
+and the newest is just behind it. To follow events from old to new, start at
+the scan line, read rightward to the edge, then continue from the left edge
+back to the scan line. Events on opposite sides of the scan line are almost
+one history length apart, despite being neighbors on screen.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+\textbf{Rack rate} & \textbf{Bin spacing} & \textbf{Column interval} & \textbf{Full sweep} \\
+\midrule
+$44.1\,\mathrm{kHz}$ & $21.53\,\mathrm{Hz}$ & $23.22\,\mathrm{ms}$ & $11.89\,\mathrm{s}$ \\
+$48\,\mathrm{kHz}$ & $23.44\,\mathrm{Hz}$ & $21.33\,\mathrm{ms}$ & $10.92\,\mathrm{s}$ \\
+$96\,\mathrm{kHz}$ & $46.88\,\mathrm{Hz}$ & $10.67\,\mathrm{ms}$ & $5.46\,\mathrm{s}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The analysis window lasts twice the column interval. At $48\,\mathrm{kHz}$,
+one quarter of the history width represents about $2.73\,\mathrm{s}$ of
+captured time. This is an estimate, not a cursor time measurement. Pauses are
+excluded, and resuming can finish a window that began before the pause; the
+first resumed columns need not represent uninterrupted real-world time.
+After a sample-rate change, wait a full sweep before using one time scale
+for the entire image.
+
+\paragraph{Know what a level means}
+For a steady isolated sine, unity gain, zero Slope, no smoothing, AC coupling
+off, and a bin-centered frequency, $5\,\mathrm{V}$ peak is approximately
+$0\,\mathrm{dB}$ in Decibels mode. Half that amplitude is about
+$-6.02\,\mathrm{dB}$; one tenth is $-20\,\mathrm{dB}$. At
+$48\,\mathrm{kHz}$, $750\,\mathrm{Hz}$ is exactly bin 32 of the fixed
+2048-sample FFT and provides a convenient reference tone. Inspect Raw near
+that bin; between bins, the Color readout can differ because it interpolates.
+
+\paragraph{Know what a level cannot tell you}
+The largest spectral bin is not total RMS, perceived loudness, or noise power
+per hertz. A finite window spreads a tone over neighboring bins. Quiet bands
+near a strong tone can be window leakage; changing window requires new
+capture to test that possibility. Spectre's fixed length cannot resolve every
+pair of nearby bass tones: cropping magnifies existing detail. Use Fourier's
+longer frames when frequency separation matters more than history.
+
+\paragraph{Keep sources separate when needed}
+A polyphonic input sums voices before analysis. Identical in-phase voices
+reinforce; opposite-polarity copies can cancel. The image contains no phase
+measurement. Split voices before Spectre to inspect one voice, or use separate
+Fourier inputs to compare several signals at once.

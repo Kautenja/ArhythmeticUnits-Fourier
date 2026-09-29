@@ -48,7 +48,7 @@ def main():
                 dots.append(f'\\fill[panelAccent] ({x},{min(0, db):.3f}) circle[radius=1.3pt];')
         lines.append('\\def\\Window' + name + 'Dots{' + '\n'.join(dots) + '}')
         print(f'{name}: halfway-bin peak {response(window, 0.5):.3f} dB')
-    (ROOT / 'docs/figures/WindowResponseData.tex').write_text('\n'.join(lines) + '\n')
+    (ROOT / 'docs/latex/figures/window-response-data.tex').write_text('\n'.join(lines) + '\n')
 
 
 if __name__ == '__main__':

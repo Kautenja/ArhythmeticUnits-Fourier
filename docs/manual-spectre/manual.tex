@@ -1,287 +1,44 @@
-\documentclass[12pt,letterpaper]{article}
-\usepackage[moduleName={Spectre},version={2.1.2}]{ArhythmeticUnits}
-
-\input{PanelDrawing.tex}
+\documentclass[11pt,letterpaper]{article}
+\usepackage[moduleName={Spectre},version={2.1.2},accent={73549E}]{arhythmetic-manual}
+\input{panel-drawing.tex}
 
 \begin{document}
-\titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
-\input{Guide.tex}
+\manualcover{Spectrogram visualizer}
+\manualcontents
+
+\contentsgroup{Getting started}
 \clearpage
-
-% ----------------------------------------------------------------------------
-% MARK: Overview
-% ----------------------------------------------------------------------------
-
-\section{Overview}\label{sec:overview}
-
-\textbf{Spectre} is a spectrogram visualizer for VCV Rack 2. It shows how a
-signal's frequency content changes over time: frequency runs from bottom to
-top, successive spectra occupy columns across the display, and color
-represents magnitude. Spectre has one signal input and no audio outputs.
-Patch it alongside your audio path to inspect a signal without changing what
-you hear.
-
-Fourier and Spectre belong to the Arhythmetic Units Fourier plugin. Use
-Fourier to compare the current spectra of up to four signals, and Spectre to
-follow one signal's spectrum over time. Both provide the same window choices
-and smoothing controls, but their display axes, input-gain defaults, and Run
-behavior differ as described below.
-
-Spectre uses a short-time Fourier transform (STFT) with a fixed FFT length of
-2048 samples, a hop size of 1024 samples (50\% overlap), and a history of 512
-spectra. FFT length, hop size, and history length are not adjustable. You can
-choose the window function, time and frequency smoothing, visible frequency
-range, display slope, intensity range, and color map.
-
-At sample rate $f_s$, frequency bins are spaced $f_s/2048$ Hz apart, each
-analysis window spans $2048/f_s$ seconds, and a complete display sweep takes
-$512 \times 1024/f_s$ seconds. At $48\,\mathrm{kHz}$, these are approximately
-$23.4\,\mathrm{Hz}$, $42.7\,\mathrm{ms}$, and $10.92\,\mathrm{s}$
-respectively. At $44.1\,\mathrm{kHz}$, a sweep takes about
-$11.89\,\mathrm{s}$. Increasing Rack's sample rate shortens the history
-duration and increases the spacing between bins.
-
+\input{sections/overview.tex}
 \clearpage
-\section{Quick Start}\label{sec:quick-start}
-
-\begin{itemize}
-  \item Connect an oscillator or another signal to the input. The illuminated
-  \textbf{Run} button indicates that Spectre is acquiring new spectra.
-  Keep your existing connection to the mixer or audio output if you want to
-hear it.
-  \item A new module uses $+6\,\mathrm{dB}$ input gain, a Flattop window,
-  and no time or frequency smoothing. For comparisons with Fourier, set
-  both modules to the same input gain; Fourier starts at $0\,\mathrm{dB}$.
-  \item A steady sine wave produces a horizontal band. Harmonics appear as
-  additional bands above it; short broadband sounds produce vertical marks.
-  \item Drag the two limits on the vertical \textbf{Color} bar to reveal quiet detail or
-  distinguish bright regions, including while frozen. Set \textbf{Slope} to zero when you
-  want to compare magnitudes without frequency-dependent display weighting.
-  The default is $+4.5\,\mathrm{dB/oct}$.
-  \item Press \textbf{Run} to freeze the history, then hover over the plot to
-  inspect a frequency and its magnitude. Press it again to resume.
-\end{itemize}
-
-\paragraph{Reading levels} Spectre displays spectral magnitudes, not total
-signal RMS, loudness, or sound pressure level. Window choice, frequency
-alignment with FFT bins, and smoothing affect the height and width of a peak.
-The color map has a finite range; reaching its end color does not mean Spectre
-has clipped your audio path. The \textbf{Raw} hover readout measures stored magnitudes before Slope
-weighting; \textbf{Color} measures the weighted, interpolated image sample.
-
-\paragraph{Choosing settings} Use little or no \textbf{Average} to follow
-changes more closely. Increase \textbf{Average} for a steadier image and
-\textbf{Smooth} for a broader view of tonal balance. FFT length and hop size
-are fixed; cropping the frequency range enlarges existing detail without
-increasing resolution. The factory presets provide examples of these choices.
-
-% ----------------------------------------------------------------------------
-% MARK: Panel Layout
-% ----------------------------------------------------------------------------
-
+\input{sections/quick-start.tex}
 \clearpage
-\section{Panel Layout}\label{sec:panel}
-
-\begin{figure}[!htp]
-\centering
-\resizebox{0.88\textwidth}{!}{\input{img/PanelLayout.tex}}
-\caption{Panel reference. Numbered callouts match the control sections
-below. The screen and value fields are schematic; the cover shows the module
-in operation.}
-\end{figure}
-
-The left strip controls input gain, color range, and acquisition. The lower
-strip controls analysis and display settings. Callout 2 includes the palette
-and scale menus plus both range handles. Text controls brighten when hovered.
-
-\input{Controls.tex}
-
+\input{sections/panel.tex}
 \clearpage
-\section{Reading The Display}\label{sec:display}
-
-The scan line advances from left to right and wraps back to the left edge.
-Each new column replaces the oldest spectrum at that position. The image
-does not scroll: the newest spectrum is immediately behind the scan line
-(to its left, except at the wrap), and older history lies ahead of it.
-A frozen history excludes any elapsed time while Run was off.
-
-\begin{figure}[!htp]
-\centering
-\input{img/History.tex}
-\caption{History after the first full sweep, partway through a later sweep.
-Each box stands for a spectrum column; only a few are drawn for clarity.
-Shading distinguishes sweeps, not signal level. Before the first full sweep,
-the area ahead of the scan line is empty.}
-\end{figure}
-
-In Decibels mode, color represents spectral amplitude after gain, windowing,
-smoothing, and Slope weighting. Linear magnitudes are interpolated before
-converting to dB. With magnitude $m$, the unweighted level is
-$20\log_{10}(|m|/1024)$; the weighted level adds Slope. The palette position
-is $(d-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1.
-Only colors saturate; numeric readouts remain unclamped.
-
-The analyzer divides input voltage by $5\,\mathrm{V}$, applies input gain,
-and compensates for window coherent gain. An isolated, bin-centered
-$5\,\mathrm{V}$ peak sinusoid at unity gain, with AC coupling off, smoothing
-off, and zero Slope reads approximately $0\,\mathrm{dB}$. This is a spectral
-amplitude reference, not dBFS or broadband RMS. The unchanged DC and Nyquist
-conventions give about $+6.02\,\mathrm{dB}$ for a $5\,\mathrm{V}$ constant
-or alternating signal, respectively; no endpoint factors are added.
-
-Linear mode preserves the old slope-weighted magnitude divided by
-1024 and its original image-row weighting. It maps amplitude $a$ to
-$(a-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1,
-using its own amplitude endpoints (displayed as percentages). The default
-0--100\% range reproduces the previous static linear mapping.
-
+\input{sections/display.tex}
 \clearpage
-\subsection*{Hover Readouts}
-
-The crosshair and readouts appear only inside the plot rectangle. Moving
-onto the surrounding labels or control strip hides them.
-
-Hover over the plot for a crosshair, frequency, musical note, tuning offset,
-and levels. In Decibels mode, \textbf{Raw} measures the stored bin below the
-cursor frequency, before Slope. \textbf{Color} measures the image row's
-interpolated magnitude with Slope at that row's physical frequency, before
-texture filtering on screen. Raw and Color can differ, particularly between
-bins or with nonzero Slope. Silence reads $-\infty\,\mathrm{dB}$ and invalid
-data reads \texttt{--}. Positive infinity uses the top color; invalid data
-uses the bottom color. The legend never clamps these readouts.
-
-Linear retains its historical unweighted-bin readout,
-$20\log_{10}(|m|)-60$. The exact Decibels reference is approximately
-$0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
-Spectre measures recorded spectral data. There is no time readout; use the
-sweep duration in the overview as a guide.
-
-\section{Context Menu And Saved Settings}\label{sec:settings}
-
-Right-click the module to find these options under \textbf{Render Settings}:
-\begin{itemize}
-  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
-  using a DC-blocking filter. It is on by default and can also affect very
-  low frequencies. Turn it off when inspecting DC or slow signals, and set
-  Slope to zero to avoid frequency weighting near DC. This setting does not
-  reprocess history.
-\end{itemize}
-
-Palette and intensity-scale selection are on the color screen rather than
-in the context menu. New instances and reset use Decibels; old patches and
-presets with no valid intensity mode load in Linear to preserve their
-colors. Missing endpoints load as $-90$/$0\,\mathrm{dB}$ and 0/100\%, even
-when loading into an edited module.
-
-Panel dropdowns and AC-coupling changes support Rack's Undo and Redo commands. Patches and module
-presets save the panel settings, Run state, AC-coupling choice, color map,
-and intensity mode.
-They do not save the recorded spectrogram. A patch saved while frozen reopens
-with no recorded history; enable Run to acquire a new image.
-
-Rack's module initialization resets the controls to their defaults, enables
-Run and AC coupling, selects Magma and Decibels, restores Floor/Ceil to
-$-90$/$0\,\mathrm{dB}$ and Linear to 0/100\%, and clears the history. Changing Rack's
-sample rate changes the available frequency range, bin spacing, and sweep
-duration. Existing history is not cleared automatically and is displayed
-using the new frequency mapping; allow a full sweep to replace it before
-comparing frequencies at the new sample rate.
-
-\input{Tutorials.tex}
-
+\input{sections/levels.tex}
 \clearpage
-\section{Factory Presets}\label{sec:presets}
+\input{sections/settings.tex}
 
-Load these examples from Rack's module preset menu. All start running, with
-$0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
-limited by the current sample rate. Unlike Fourier's presets, these cannot
-change FFT length or hop size; both remain fixed in Spectre. The five
-original presets retain Linear mode and their original appearance.
-
-\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
-  \item[DecibelInspection] Decibels mode with Floor $-90\,\mathrm{dB}$ and
-  Ceil $+12\,\mathrm{dB}$: Flattop, Linear Freq Scale, $0$--$20\,\mathrm{kHz}$,
-  no smoothing, zero Slope, and AC coupling off. Freeze, then adjust the
-  endpoints to inspect quiet detail and distinguish strong peaks.
-  \item[Mastering] Broad tonal balance: Flattop, Logarithmic Freq Scale,
-  $0$--$20\,\mathrm{kHz}$, Average $300\,\mathrm{ms}$, Smooth $1/12$ octave,
-  Slope $+4.5\,\mathrm{dB/oct}$. AC coupling is on.
-  \item[Harmonics] Individual harmonics: Hann, Linear Freq Scale,
-  $0$--$5\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
-  AC coupling is on.
-  \item[BassDetail] Low-frequency view: Hann, Linear Freq Scale,
-  $0$--$500\,\mathrm{Hz}$, Average $100\,\mathrm{ms}$. Smooth is off and
-  Slope is zero. AC coupling is on. Cropping the view does not provide the
-  finer bin spacing of Fourier's longer FFT in its BassDetail preset.
-  \item[Transients] Unsmoothed changes over time: Hann, Logarithmic Freq Scale,
-  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
-  AC coupling is on. Frame duration and update interval remain fixed.
-  \item[PluginDevelopment] Unweighted spectrum including DC: Flattop,
-  Linear Freq Scale, $0$--$20\,\mathrm{kHz}$. Average and Smooth are off;
-  Slope is zero. AC coupling is off.
-\end{description}
-
-\input{ControlValues.tex}
-
+\contentsgroup{Learn by doing}
 \clearpage
-\section{Troubleshooting}\label{sec:troubleshooting}
-
-\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
-  \item[No image or a stale image] Check the source signal, cable, input
-  gain, and Run light. Ensure LO Freq is below HI Freq. If you loaded a
-  frozen patch, resume capture to acquire new history.
-  \item[Bands are too broad or changes blur together] Reduce Smooth and
-  Average, and compare window functions. Spectre's FFT length is fixed;
-  use Fourier if you need a longer frame to separate nearby frequencies.
-  \item[Levels differ from another analyzer] Match input gain, window,
-  FFT length, smoothing, and amplitude reference. Set Slope to zero and
-  account for summed polyphonic voices. Spectre starts at $+6\,\mathrm{dB}$
-  input gain; Fourier starts at $0\,\mathrm{dB}$. A spectral peak is not a
-  broadband RMS measurement.
-  \item[Large regions reach the same end color] In Decibels mode, raise
-  the upper handle to distinguish strong values in retained history. Adjust
-  the lower handle for quiet detail. Choose Linear for less visible weak background
-  detail, or raise Floor in Decibels mode.
-  Color saturation does not mean the stored magnitude was clipped.
-  \item[Old and new bands disagree after a sample-rate change] Allow a full
-  sweep to replace history acquired at the old sample rate before comparing
-  frequencies. Check the frequency bounds as well.
-  \item[Analysis uses too much CPU] Spectre performs analysis on Rack's
-  audio engine thread despite having no audio outputs. Turn Run off when
-  inspecting a frozen image to pause buffering and FFT processing. Its FFT
-  length and hop size are fixed; Fourier provides adjustable settings when
-  you need to trade frequency detail or update rate for analysis workload.
-\end{description}
-
-\section{Analysis Timing And Further Reading}\label{sec:further-reading}
-
-Spectre prepares each new spectrum over its 1024-sample update interval,
-about $21.3\,\mathrm{ms}$ at $48\,\mathrm{kHz}$. Each spectrum already covers
-about $42.7\,\mathrm{ms}$ of audio at that rate. Average and Rack's display
-refresh add further visible delay.
-
-Analysis settings take effect at the start of the next frame and affect new
-columns. Turning Run off pauses any unfinished frame; resuming completes it
-before starting another. Changing Rack's sample rate discards unfinished
-analysis. Allow new history to replace older columns before comparing results
-across that change.
-
-Analysis runs on Rack's audio engine thread. Work is spread across sample
-calls to reduce processing bursts, but the module still contributes to the
-patch's CPU load. This does not guarantee that a heavily loaded patch will
-meet its audio deadlines.
-
-For the mathematical background, FFT algorithms, scheduling proofs, and
-performance experiments, see the accompanying
-\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper}{\textit{Resumable FFT Scheduling for Real-Time Spectral Analysis}}.
-Its implementation appendix gives the supporting algorithms; this manual
-focuses on operating the module.
-
-% ----------------------------------------------------------------------------
-% MARK: Copyright seal
-% ----------------------------------------------------------------------------
-
+\input{sections/shapes.tex}
 \clearpage
-\finalPage
+\input{sections/envelope.tex}
+\clearpage
+\input{sections/detail.tex}
+\clearpage
+\input{sections/time.tex}
 
+\contentsgroup{Reference}
+\clearpage
+\input{sections/presets.tex}
+\clearpage
+\input{sections/control-values.tex}
+\clearpage
+\input{sections/troubleshooting.tex}
+\clearpage
+\input{sections/further-reading.tex}
+
+\manualcolophon
 \end{document}

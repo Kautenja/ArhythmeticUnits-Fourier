@@ -1,0 +1,49 @@
+\section{Finding Quiet Detail}\label{sec:detail}
+
+Separate an acquisition change from a viewing change by recoloring the same
+frozen history. Use a sound with both strong and weak partials or a long decay.
+
+\paragraph{Starting point}
+Load \textbf{DecibelInspection} and capture a few seconds of the sound.
+Keep input gain at $0\,\mathrm{dB}$ and Slope at zero. Then press Run to freeze.
+
+\begin{enumerate}
+  \item Hover over a strong band and a quieter region. In Decibels mode,
+  Raw reports the stored bin below the cursor frequency; Color reports the
+  weighted, interpolated image sample. Neither readout is clamped to the
+  palette's endpoints.
+  \item Raise Floor from $-90$ to $-60\,\mathrm{dB}$ using its right-click
+  numeric entry. Weak detail now shares the bottom color. This changes
+  contrast; it does not remove noise or rewrite the stored spectra.
+  \item Lower Floor again and lower Ceil toward the quiet detail. More of
+  the palette is allocated to that range, while strong peaks can saturate at
+  the top color. Raise Ceil again to distinguish the strong values.
+  \item Try Cividis or Gray to compare color and lightness cues. Switch to
+  Linear and back to Decibels. Each scale restores its own range; the stored
+  history is the same throughout the experiment.
+\end{enumerate}
+
+\paragraph{A worked contrast example}
+With Floor $-90$ and Ceil $0\,\mathrm{dB}$, a $-60\,\mathrm{dB}$ sample
+sits one third of the way through the palette. With Floor $-70$ and Ceil
+$-50\,\mathrm{dB}$, that same sample sits halfway through it. Values above
+$-50\,\mathrm{dB}$ all reach the top color in the second view. Palette
+position is numeric; equal steps need not look equally bright in every map.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}p{.35\textwidth}X@{}}
+\toprule
+\textbf{Change while frozen} & \textbf{Effect} \\
+\midrule
+Palette, range, Slope & Recolors retained history. \\
+Freq Scale, LO/HI Freq & Remaps or crops the frequency view. \\
+Window, Average, Smooth & Takes effect on new analysis after resuming. \\
+Input gain, AC coupling & Affects samples captured after resuming. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+To compare analysis settings, resume and allow fresh history to replace the
+old columns. Save an external image to preserve a result: a saved Rack patch
+retains settings and Run state, but not the captured history.

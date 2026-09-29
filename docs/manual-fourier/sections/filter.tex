@@ -1,0 +1,46 @@
+\section{Comparing A Filter}\label{sec:filter}
+
+Use two inputs to see what a processor changes while keeping the source
+identical. A low-pass filter and a steady saw or noise source are enough.
+
+\begin{figure}[!htp]
+\centering
+\input{figures/filter-patch.tex}
+\caption{Tap the signal before and after the filter. Analyzer cables are
+branches of the listening path; Fourier is not an audio effect.}
+\end{figure}
+
+\paragraph{Starting point}
+Load \textbf{Mastering}, then set Slope to zero and Smooth to None. Use
+$0\,\mathrm{dB}$ gain on both connected inputs. Keep Length 4096 and
+Hop $30\,\mathrm{ms}$. Choose Average $300\,\mathrm{ms}$ for noise, or
+turn it off for a steady saw. Start with low filter resonance.
+
+\begin{enumerate}
+  \item Branch the source to the red input and the filter input. Patch
+  the filter output to green and to your listening path.
+  \item With the cutoff high, compare levels well below the cutoff. A
+  constant difference here can be the filter's passband gain; it is not
+  necessarily a change in spectral shape.
+  \item Lower the cutoff slowly. The green trace should fall below red at
+  higher frequencies. Raise resonance to look for a peak near the cutoff.
+  Wait for Average to settle after each change.
+  \item At a frequency with useful energy in both traces, place the cursor
+  on each trace and subtract their dB levels. If red is $-12\,\mathrm{dB}$
+  and green is $-24\,\mathrm{dB}$, the observed change is $-12\,\mathrm{dB}$:
+  about one quarter of the amplitude at that frequency.
+\end{enumerate}
+
+\paragraph{Read the comparison carefully}
+A saw samples the response only at its harmonics; noise fills more of the
+spectrum but fluctuates. The ratio becomes unreliable where the source is
+very weak. Fourier does not divide traces or measure phase automatically.
+This is a visual magnitude comparison, not a complete transfer-function
+measurement. Saturation, modulation, or other nonlinear behavior can create
+new harmonics, so the result then depends on the source and its level.
+
+\paragraph{Go further}
+Use blue for a second filter or processing stage. Keep analyzer gains equal
+and compare all taps simultaneously. Disable Filled Display if overlapping
+areas obscure the curves. A processor's latency can make changing sounds
+appear at different stages of their envelope; use a steady sound first.

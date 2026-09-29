@@ -35,9 +35,9 @@ def main():
                    + r'\usepackage[T1]{fontenc}' + '\n'
                    + r'\usepackage[scaled]{helvet}' + '\n'
                    + r'\usepackage{tikz}' + '\n' + switches
-                   + r'\input{docs/figures/PanelDrawing.tex}' + '\n'
+                   + r'\input{docs/latex/figures/panel-drawing.tex}' + '\n'
                    + r'\begin{document}' + '\n'
-                   + f'\\input{{docs/manual-{module}/img/PanelLayout.tex}}\n'
+                   + f'\\input{{docs/manual-{module}/figures/panel-layout.tex}}\n'
                    + r'\end{document}' + '\n')
             source = output / f'{stem}.tex'
             source.write_text(tex)

@@ -971,19 +971,53 @@ python3 docs/whitepaper/data/pipeline/check.py
 
 ### User Manuals And Build Products
 
-Each LaTeX manual has its own Makefile, stylesheet, and images. Both copy
-the shared panel-drawing primitives from `docs/figures/` during the build.
-They require `pdflatex` and their referenced packages:
+The manuals share [publication styling](docs/latex/arhythmetic-manual.sty)
+and [build rules](docs/latex/manual.mk). From the repository root, with
+`latexmk`, `pdflatex`, and the referenced TeX packages installed, run:
 
 ```shell
 make -C docs/manual-fourier
 make -C docs/manual-spectre
 ```
 
-Outputs are `docs/manual-fourier/.build/manual.pdf` and
-`docs/manual-spectre/.build/manual.pdf`. Each Makefile recreates its local
-build directory and stops on LaTeX errors. Shell escape is disabled. Inspect
-rendered pages when changing manual content or layout.
+Outputs remain `docs/manual-fourier/.build/manual.pdf` and
+`docs/manual-spectre/.build/manual.pdf`. Like the white paper, each build
+runs `latexmk` until references settle, then cleans auxiliary files. A
+successful fresh build leaves only `manual.pdf`; sources and artwork are
+read in place rather than copied into `.build`. A failed build retains its
+log and intermediate files for diagnosis. Shell escape is disabled.
+`BUILD` and `LATEXMK` can be overridden; `make -C docs/manual-fourier clean`
+also removes the PDF. Keep page-review images outside these output folders.
+
+The source layout is:
+
+```text
+docs/latex/
+  arhythmetic-manual.sty  shared typography, covers, contents, and PDF metadata
+  manual.mk              shared build and screenshot commands
+  figures/               shared TikZ drawings and panel export target
+docs/manual-{fourier,spectre}/
+  manual.tex             version, module identity, and section order
+  sections/              one lower-case TeX file per content section
+  figures/               module-specific lower-case TikZ sources
+  img/                   reviewed screenshot and original branding assets
+  .build/manual.pdf      generated publication
+```
+
+The table of contents is generated from section headings, with thematic
+separators defined in `manual.tex`. Keep `sec:` and `fig:` labels stable so
+links survive reordering. Numbered subsections belong to the panel controls;
+other subheadings should be unnumbered. The PDF outline includes sections
+and controls. Page labels distinguish the cover, Roman-numbered contents,
+Arabic-numbered body, and colophon.
+
+The shared style writes title, author, subject, keywords, language, publisher,
+and rights metadata to XMP, and preserves standard PDF Info fields for older
+viewers. Update the module/version options in `manual.tex`, rather than
+hard-coding metadata elsewhere. Font encoding and Unicode maps support text
+search and copying; these are not claims of PDF/A or PDF/UA certification.
+After style changes, inspect both manuals, metadata, bookmarks, links, and
+page labels as well as the rendered pages.
 
 <a id="spectre-manual-figures"></a>
 
@@ -1003,42 +1037,43 @@ Choose the source to update:
 | Figure | Fourier Source | Spectre Source | When To Update |
 | --- | --- | --- | --- |
 | Cover module screenshot | [`PanelLayout.png`](docs/manual-fourier/img/PanelLayout.png) | [`PanelLayout.png`](docs/manual-spectre/img/PanelLayout.png) | Visible panel artwork or controls change |
-| Annotated panel reference | [`PanelLayout.tex`](docs/manual-fourier/img/PanelLayout.tex) | [`PanelLayout.tex`](docs/manual-spectre/img/PanelLayout.tex) | Control positions, labels, or section numbering change |
-| Window responses | Shared [`WindowTradeoffs.tex`](docs/figures/WindowTradeoffs.tex) | Same shared source | The explanation of window behavior changes |
-| Time/frequency smoothing | Shared [`Smoothing.tex`](docs/figures/Smoothing.tex) | Same shared source | The explanation of smoothing changes |
-| Color-range detail | Not used | [`ColorRange.tex`](docs/manual-spectre/img/ColorRange.tex) | Color-control gestures or geometry change |
-| Frame duration and bin spacing | [`FrameLength.tex`](docs/manual-fourier/img/FrameLength.tex) | Not used | The explanation of FFT length changes |
-| History scanning | Not used | [`History.tex`](docs/manual-spectre/img/History.tex) | The explanation of history acquisition changes |
-| Ideal harmonic series | [`Harmonics.tex`](docs/manual-fourier/img/Harmonics.tex) | Not used | The harmonic comparison exercise changes |
-| Before/after routing | [`FilterPatch.tex`](docs/manual-fourier/img/FilterPatch.tex) | Not used | The filter comparison exercise changes |
-| Time-frequency signatures | Not used | [`SoundShapes.tex`](docs/manual-spectre/img/SoundShapes.tex) | The sound interpretation guide changes |
+| Annotated panel reference | [`panel-layout.tex`](docs/manual-fourier/figures/panel-layout.tex) | [`panel-layout.tex`](docs/manual-spectre/figures/panel-layout.tex) | Control positions, labels, or section numbering change |
+| Window responses | Shared [`window-tradeoffs.tex`](docs/latex/figures/window-tradeoffs.tex) | Same shared source | The explanation of window behavior changes |
+| Time/frequency smoothing | Shared [`smoothing.tex`](docs/latex/figures/smoothing.tex) | Same shared source | The explanation of smoothing changes |
+| Color-range detail | Not used | [`color-range.tex`](docs/manual-spectre/figures/color-range.tex) | Color-control gestures or geometry change |
+| Frame duration and bin spacing | [`frame-length.tex`](docs/manual-fourier/figures/frame-length.tex) | Not used | The explanation of FFT length changes |
+| History scanning | Not used | [`history.tex`](docs/manual-spectre/figures/history.tex) | The explanation of history acquisition changes |
+| Ideal harmonic series | [`harmonics.tex`](docs/manual-fourier/figures/harmonics.tex) | Not used | The harmonic comparison exercise changes |
+| Before/after routing | [`filter-patch.tex`](docs/manual-fourier/figures/filter-patch.tex) | Not used | The filter comparison exercise changes |
+| Time-frequency signatures | Not used | [`sound-shapes.tex`](docs/manual-spectre/figures/sound-shapes.tex) | The sound interpretation guide changes |
 
-Each manual's `Guide.tex` provides linked page references; `Controls.tex`
-teaches the panel controls, `ControlValues.tex` holds exact ranges and menu
-catalogs, and `Tutorials.tex` contains practical experiments. Lead control
-descriptions with what the musician sees and when to use the control. Define
+Each manual's `sections/controls.tex` teaches the panel controls, and
+`sections/control-values.tex` holds exact ranges and menu catalogs. Practical
+experiments each have their own section file. Lead control descriptions with
+what the musician sees and when to use the control. Define
 technical terms at first use. Prefer an explanatory plot or annotated detail
 to a diagram that merely repeats prose inside boxes. Keep the starting patch,
-explicit settings,
-steps, expected observations, and interpretation together. Explain what an
-experiment cannot establish as well as what it reveals. Check defaults and
+explicit settings, steps, expected observations, and interpretation together.
+Explain what an experiment cannot establish as well as what it reveals. Check defaults and
 preset values against the implementation, distinguish capture/analysis
 changes from display changes, and state the sample rate for numerical timing
 examples. Use schematic illustrations for relationships and identify ideal
 or qualitative examples in their captions. New teaching sections should use
 unnumbered subsections so they do not disrupt the panel's control numbering.
-Rebuild both passes to resolve the guide's page links after moving sections.
+Rebuild to let `latexmk` resolve contents, bookmarks, and page references.
 
 The window plots use calculated periodic-window responses, not Rack captures.
-Their normalized data in `docs/figures/WindowResponseData.tex` comes from
+Their normalized data in `docs/latex/figures/window-response-data.tex` comes from
 [`generate_window_figure.py`](scripts/generate_window_figure.py). To regenerate
 from the repository root, run `python3 scripts/generate_window_figure.py`
 (standard library only), then rebuild both manuals. Keep its coefficients
 aligned with `src/dsp/window.hpp`. Edit the layout in the shared
-`WindowTradeoffs.tex`, not the generated coordinates. Ordinary PDF builds use
+`window-tradeoffs.tex`, not the generated coordinates. Ordinary PDF builds use
 the checked-in data and still require no Python runtime. The color detail
-reuses `PanelColorControl` from `PanelDrawing.tex`; check both the detail and
-the full Spectre panel after changing that primitive.
+reuses `PanelColorControl` from `panel-drawing.tex`; check both the detail and
+the full Spectre panel after changing that primitive. The history figure
+uses the same panel source with a teaching overlay; verify its scan-line
+semantics and the ordinary panel reference after editing either.
 
 The PNG and similarly named `.tex` file serve different purposes. The manual
 includes both explicitly. Keep the old `Module.svg`, `Module.pdf`, and
@@ -1048,9 +1083,9 @@ the TikZ source and run the ordinary manual build; no screenshot refresh or
 Rack environment is needed.
 
 **Revise the panel drawings.** The shared
-[`PanelDrawing.tex`](docs/figures/PanelDrawing.tex) defines the ink colors,
+[`panel-drawing.tex`](docs/latex/figures/panel-drawing.tex) defines the ink colors,
 line weights, hardware primitives, callout badges, and legend typography.
-Each module's `PanelLayout.tex` provides the geometry and numbered key.
+Each module's `panel-layout.tex` provides the geometry and numbered key.
 Coordinates use Rack pixels with a downward y axis; check them against
 [`PanelLayout`](src/rack_extensions/panel.hpp) and the widget constructors in
 [`SpectrumAnalyzer.cpp`](src/SpectrumAnalyzer.cpp) and
@@ -1070,7 +1105,7 @@ an additional representation of measured data or a specific palette.
 Poppler's `pdftocairo` installed, run:
 
 ```shell
-make -C docs/figures
+make -C docs/latex/figures
 ```
 
 This runs [`export_panel_drawings.py`](scripts/export_panel_drawings.py) and
@@ -1084,7 +1119,7 @@ writes tightly cropped PDFs and SVGs to `.build/manual-figures/`:
 | `{fourier,spectre}-panel-mono.{pdf,svg}` | Grayscale panel illustration |
 
 The braces describe filenames, not an argument to the exporter. To export
-one module, use `make -C docs/figures MODULE=spectre`. `PYTHON`, `PDFLATEX`,
+one module, use `make -C docs/latex/figures MODULE=spectre`. `PYTHON`, `PDFLATEX`,
 and `PDFTOCAIRO` may be overridden with absolute executable paths. Build
 logs are retained beside the exports. The SVGs contain vector paths,
 including outlined text, so they need no external fonts or raster images;
@@ -1169,8 +1204,8 @@ repository root, after the manual build (use `manual-spectre` for Spectre):
 
 ```shell
 pdfinfo docs/manual-fourier/.build/manual.pdf
-mkdir -p docs/manual-fourier/.build/review
-pdftoppm -scale-to 1200 -png docs/manual-fourier/.build/manual.pdf docs/manual-fourier/.build/review/page
+mkdir -p .build/manual-review/fourier
+pdftoppm -scale-to 1200 -png docs/manual-fourier/.build/manual.pdf .build/manual-review/fourier/page
 git diff --check
 git status --short
 ```
@@ -1201,7 +1236,7 @@ This writes `docs/whitepaper/.build/paper.pdf` without running experiments.
 
 The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
 all three PDFs on relevant pull requests and pushes to `main`: changes to
-either manual directory, the shared `docs/figures/` directory,
+either manual directory, the shared `docs/latex/` directory,
 the white paper's source or Makefile, `plugin.json`,
 or the workflow itself. Version tags matching `v*` build PDFs regardless of
 path filters. Other branch pushes do not run the workflow. New PR or `main`

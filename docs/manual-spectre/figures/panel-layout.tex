@@ -11,6 +11,9 @@
   % Display with axes only: no trace, live palette, or numeric readout to drift.
   \draw[panel line,rounded corners=3pt,fill=white] (75,15) rectangle (510,365);
   \draw[panel fine] (115,35) rectangle (495,315);
+  \ifdefined\PanelHistory
+    \PanelHistoryScreen
+  \else
   \foreach \y in {85,135,...,285} \draw[panel fine] (115,\y)--(120,\y);
   \foreach \x in {165,215,...,465} \draw[panel fine] (\x,315)--(\x,310);
   \draw[draw=panelRule,line width=.45pt,-{Stealth[length=4pt]}] (139,284)--(220,284);
@@ -20,6 +23,7 @@
   \node[text=panelMuted,font=\sffamily\fontsize{16}{18}\selectfont]
     at (314,157) {Spectral history};
   \node[panel note] at (314,179) {Frequency / time / magnitude};
+  \fi
   \draw[panel fine] (85,323)--(500,323);
   \foreach \x/\label/\num in {110/WINDOW/4,171/FREQ SCALE/5,
     232/AVERAGE/6,293/SMOOTH/7,354/LO FREQ/8,415/HI FREQ/9,476/SLOPE/10} {

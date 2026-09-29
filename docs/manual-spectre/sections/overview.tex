@@ -1,0 +1,28 @@
+\section{Overview}\label{sec:overview}
+
+\textbf{Spectre} is a spectrogram visualizer for VCV Rack 2. It shows how a
+signal's frequency content changes over time: frequency runs from bottom to
+top, successive spectra occupy columns across the display, and color
+represents magnitude. Spectre has one signal input and no audio outputs.
+Patch it alongside your audio path to inspect a signal without changing what
+you hear.
+
+Fourier and Spectre belong to the Arhythmetic Units Fourier plugin. Use
+Fourier to compare the current spectra of up to four signals, and Spectre to
+follow one signal's spectrum over time. Both provide the same window choices
+and smoothing controls, but their display axes, input-gain defaults, and Run
+behavior differ as described below.
+
+Spectre uses a short-time Fourier transform (STFT) with a fixed FFT length of
+2048 samples, a hop size of 1024 samples (50\% overlap), and a history of 512
+spectra. FFT length, hop size, and history length are not adjustable. You can
+choose the window function, time and frequency smoothing, visible frequency
+range, display slope, intensity range, and color map.
+
+At sample rate $f_s$, frequency bins are spaced $f_s/2048$ Hz apart, each
+analysis window spans $2048/f_s$ seconds, and a complete display sweep takes
+$512 \times 1024/f_s$ seconds. At $48\,\mathrm{kHz}$, these are approximately
+$23.4\,\mathrm{Hz}$, $42.7\,\mathrm{ms}$, and $10.92\,\mathrm{s}$
+respectively. At $44.1\,\mathrm{kHz}$, a sweep takes about
+$11.89\,\mathrm{s}$. Increasing Rack's sample rate shortens the history
+duration and increases the spacing between bins.

@@ -1,0 +1,20 @@
+\section{Troubleshooting}\label{sec:troubleshooting}
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[No trace or a stale trace] Check the source signal, cable, input
+  gain, and Run light. Ensure LO Freq is below HI Freq. If you changed
+  Length or loaded a stopped patch, resume capture to fill the buffer.
+  \item[Peaks are too broad or move slowly] Reduce Smooth and Average.
+  Compare window functions. Increasing Length narrows the bin spacing but
+  also increases the time represented in each frame.
+  \item[Levels differ from another analyzer] Match input gain, window,
+  FFT length, smoothing, and amplitude reference. Set Slope to zero and
+  account for summed polyphonic voices. A spectral peak is not a broadband
+  RMS measurement.
+  \item[Display reaches the top] Reduce the relevant input gain or the
+  positive slope. The graph can exceed its visible range even though the
+  source remains unchanged.
+  \item[Analysis uses too much CPU] Try a longer Hop or shorter Length.
+  Fourier performs analysis on Rack's audio engine thread despite having no
+  audio outputs. Stopping Run stops capture but does not stop FFT processing.
+\end{description}

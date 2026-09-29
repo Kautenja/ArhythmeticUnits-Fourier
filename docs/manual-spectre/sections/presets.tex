@@ -1,0 +1,30 @@
+\section{Factory Presets}\label{sec:presets}
+
+Load these examples from Rack's module preset menu. All start running, with
+$0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
+limited by the current sample rate. Unlike Fourier's presets, these cannot
+change FFT length or hop size; both remain fixed in Spectre. The five
+original presets retain Linear mode and their original appearance.
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[DecibelInspection] Decibels mode with Floor $-90\,\mathrm{dB}$ and
+  Ceil $+12\,\mathrm{dB}$: Flattop, Linear Freq Scale, $0$--$20\,\mathrm{kHz}$,
+  no smoothing, zero Slope, and AC coupling off. Freeze, then adjust the
+  endpoints to inspect quiet detail and distinguish strong peaks.
+  \item[Mastering] Broad tonal balance: Flattop, Logarithmic Freq Scale,
+  $0$--$20\,\mathrm{kHz}$, Average $300\,\mathrm{ms}$, Smooth $1/12$ octave,
+  Slope $+4.5\,\mathrm{dB/oct}$. AC coupling is on.
+  \item[Harmonics] Individual harmonics: Hann, Linear Freq Scale,
+  $0$--$5\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on.
+  \item[BassDetail] Low-frequency view: Hann, Linear Freq Scale,
+  $0$--$500\,\mathrm{Hz}$, Average $100\,\mathrm{ms}$. Smooth is off and
+  Slope is zero. AC coupling is on. Cropping the view does not provide the
+  finer bin spacing of Fourier's longer FFT in its BassDetail preset.
+  \item[Transients] Unsmoothed changes over time: Hann, Logarithmic Freq Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on. Frame duration and update interval remain fixed.
+  \item[PluginDevelopment] Unweighted spectrum including DC: Flattop,
+  Linear Freq Scale, $0$--$20\,\mathrm{kHz}$. Average and Smooth are off;
+  Slope is zero. AC coupling is off.
+\end{description}

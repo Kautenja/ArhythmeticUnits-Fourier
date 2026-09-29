@@ -6,4 +6,4 @@ PDFTOCAIRO ?= pdftocairo
 MODULE ?= all
 
 all:
-	$(PYTHON) ../../scripts/export_panel_drawings.py --module $(MODULE) --pdflatex "$(PDFLATEX)" --pdftocairo "$(PDFTOCAIRO)"
+	$(PYTHON) ../../../scripts/export_panel_drawings.py --module $(MODULE) --pdflatex "$(PDFLATEX)" --pdftocairo "$(PDFTOCAIRO)"
