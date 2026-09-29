@@ -31,10 +31,9 @@ jobs:
       RACK_SDK_VERSION: '2.6.3'
       RACK_SDK_SHA256: 9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d
     steps:
-      - name: Check out source and Catch2
+      - name: Check out source
         uses: actions/checkout@v7.0.1
         with:
-          submodules: recursive
           persist-credentials: false
 
       - name: Install instrumentation tools
@@ -86,10 +85,9 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 15
     steps:
-      - name: Check out source and Catch2
+      - name: Check out source
         uses: actions/checkout@v7.0.1
         with:
-          submodules: recursive
           persist-credentials: false
 
       - name: Install SCons

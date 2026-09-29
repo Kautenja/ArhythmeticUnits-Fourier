@@ -75,15 +75,17 @@ From your projects directory, clone the repository. To submit a pull
 request, fork it on GitHub first and substitute your fork's clone URL:
 
 ```shell
-git clone --recurse-submodules https://github.com/Kautenja/ArhythmeticUnits-Fourier.git Fourier
+git clone https://github.com/Kautenja/ArhythmeticUnits-Fourier.git Fourier
 cd Fourier
-git submodule update --init --recursive
-test -f dep/Catch2/single_include/catch2/catch.hpp
+test -f dep/Catch2/catch.hpp
 ```
 
-Catch2 v2's header is tracked in this repository, although `.gitmodules`
-also records its path. Use the supplied header rather than installing or
-substituting Catch2 v3.
+Catch2 2.13.10's amalgamated single header is vendored in this repository;
+no submodule initialization or system Catch2 installation is needed. See
+[the dependency notes](dep/Catch2/README.md) for its source, license, and
+update procedure. This v2 release preserves the C++11 test baseline; Catch2
+v3 requires C++14 and its amalgamated distribution needs both a header and
+a source file.
 
 Run all remaining commands from this repository root unless noted otherwise.
 Create a branch for your contribution; replace the example name with one
@@ -321,9 +323,9 @@ reset. It is separate from `scons test` and runs in CI's Rack job.
 
 The [DSP tests workflow](.github/workflows/dsp-tests.yml) runs
 `scons test` on pull requests and pushes to `main`, including merges. Pushes
-to other branches do not trigger a separate run. It checks out dependencies
-recursively and verifies the Catch2 header is present. Its three DSP jobs use
-Ubuntu 24.04 with GCC, macOS 14 with Apple Clang, and Windows 2022 with
+to other branches do not trigger a separate run. It verifies the vendored
+Catch2 header is present. Its three DSP jobs use Ubuntu 24.04 with GCC,
+macOS 14 with Apple Clang, and Windows 2022 with
 MSYS2 UCRT64 GCC. Windows uses MSYS2's SCons and Python to preserve POSIX
 paths and GNU build tools. Each job runs the same `scons test` command.
 
@@ -335,13 +337,6 @@ It then runs all five headless Rack targets: `test-dc-blocker-simd`,
 `RACK_DIR` selects it for both the plugin and tests. System OpenGL, X11, and
 audio libraries satisfy the Rack library's runtime dependencies even though
 the tests do not open a window or audio device.
-
-On Linux, SCons disables Catch2 2.13.3's optional POSIX signal handler
-because it requires a constant `MINSIGSTKSZ`, which modern glibc no longer
-provides. The Rack test job passes the same define through `EXTRA_CXXFLAGS`,
-along with `-pthread` for the concurrent display tests. Assertions and process
-failures still fail the job; only Catch2's extra signal diagnostics are
-unavailable.
 
 New updates cancel older runs for the same pull request or branch, and
 DSP jobs have a 15-minute timeout and the Rack job has a 20-minute timeout to

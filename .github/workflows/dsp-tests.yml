@@ -31,10 +31,9 @@ jobs:
       run:
         shell: ${{ matrix.shell }}
     steps:
-      - name: Check out source and Catch2
+      - name: Check out source
         uses: actions/checkout@v7.0.1
         with:
-          submodules: recursive
           persist-credentials: false
 
       - name: Install Linux test tools
@@ -58,7 +57,7 @@ jobs:
 
       - name: Run DSP suites
         run: |
-          test -f dep/Catch2/single_include/catch2/catch.hpp
+          test -f dep/Catch2/catch.hpp
           g++ --version
           scons --version
           scons test
@@ -74,10 +73,9 @@ jobs:
       run:
         shell: bash
     steps:
-      - name: Check out source and Catch2
+      - name: Check out source
         uses: actions/checkout@v7.0.1
         with:
-          submodules: recursive
           persist-credentials: false
 
       - name: Install Rack build and runtime dependencies
@@ -98,7 +96,7 @@ jobs:
           RACK_DIR="$RUNNER_TEMP/Rack-SDK"
           test -f "$RACK_DIR/plugin.mk"
           test -f "$RACK_DIR/libRack.so"
-          test -f dep/Catch2/single_include/catch2/catch.hpp
+          test -f dep/Catch2/catch.hpp
           echo "RACK_DIR=$RACK_DIR" >> "$GITHUB_ENV"
 
       - name: Build Rack plugin
@@ -107,9 +105,8 @@ jobs:
           test -s plugin.so
 
       - name: Run all five headless Rack suites
-        # Match SCons' Catch2 2.13.3 workaround for modern glibc.
         run: |
-          make -j2 EXTRA_CXXFLAGS='-DCATCH_CONFIG_NO_POSIX_SIGNALS -pthread' \
+          make -j2 \
             test-dc-blocker-simd \
             test-serialization \
             test-display-lifecycle \

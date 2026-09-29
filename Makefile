@@ -12,10 +12,7 @@ include $(RACK_DIR)/plugin.mk
 # Headless suites share build flags; instrumentation stays out of the plugin.
 RACK_TEST_INSTRUMENT ?=
 RACK_TEST_BUILD := build/test/rack
-RACK_TEST_FLAGS := $(CXXFLAGS) -pthread -Idep/Catch2/single_include/catch2
-ifdef ARCH_LIN
-RACK_TEST_FLAGS += -DCATCH_CONFIG_NO_POSIX_SIGNALS
-endif
+RACK_TEST_FLAGS := $(CXXFLAGS) -pthread -Idep/Catch2
 ifneq ($(RACK_TEST_INSTRUMENT),)
 RACK_TEST_BUILD := build/instrumented/$(RACK_TEST_INSTRUMENT)/rack
 # Clang does not support GCC's -fno-gnu-unique. Preserve SDK ABI and
@@ -67,10 +64,7 @@ build/benchmark/rack/display.cpp.o: CXXFLAGS += $(DISPLAY_BENCHMARK_FLAGS)
 
 # Catch2 Rack benchmarks use SDK optimization and floating-point flags.
 BENCHMARK_ARGS ?=
-RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2/single_include/catch2
-ifdef ARCH_LIN
-RACK_BENCHMARK_FLAGS += -DCATCH_CONFIG_NO_POSIX_SIGNALS
-endif
+RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2
 RACK_BENCHMARK_NAMES := dsp coordinates graphics modules
 RACK_BENCHMARK_BINARIES := $(addprefix build/benchmark/rack/,$(RACK_BENCHMARK_NAMES))
 .PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules benchmark-rack-build

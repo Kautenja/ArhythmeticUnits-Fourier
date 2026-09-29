@@ -6,4 +6,4 @@
 -Isrc/
 -Isrc/dsp
 -Isrc/rack_extensions
--Idep/Catch2/single_include/catch2
+-Idep/Catch2

@@ -3,7 +3,6 @@ import os
 import fnmatch
 import re
 import shlex
-import sys
 
 # Instrumented tests never reuse ordinary objects or production flags.
 INSTRUMENT = ARGUMENTS.get('INSTRUMENT', '')
@@ -58,17 +57,11 @@ TEST_FLAGS = [
 
 # include for the testing and benchmarking environment
 TEST_INCLUDES = [
-    '#dep/Catch2/single_include/catch2',
+    '#dep/Catch2',
 ]
-
-# Catch2 2.13.3 requires a constant MINSIGSTKSZ for its optional signal
-# handler, but modern glibc computes it at runtime. Crashes still fail the
-# process without this handler; only Catch2's signal diagnostics are lost.
-CATCH_DEFINES = ['CATCH_CONFIG_NO_POSIX_SIGNALS'] if sys.platform.startswith('linux') else []
 
 TESTING_ENV = Environment(
     ENV=os.environ,
-    CPPDEFINES=CATCH_DEFINES,
     CXX=TEST_CXX,
     CPPFLAGS=['-Wno-unused-value', '-Wall', '-Wextra'],
     CXXFLAGS=TEST_FLAGS + INSTRUMENT_FLAGS[INSTRUMENT],
@@ -78,7 +71,6 @@ TESTING_ENV = Environment(
 
 BENCHMARK_ENV = Environment(
     ENV=os.environ,
-    CPPDEFINES=CATCH_DEFINES,
     CXX=ARGUMENTS.get('CXX', 'g++'),
     CPPFLAGS=['-Wno-unused-value'],
     CXXFLAGS=PROD_FLAGS,
