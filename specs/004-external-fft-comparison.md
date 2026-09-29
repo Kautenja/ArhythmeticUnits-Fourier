@@ -276,13 +276,13 @@ to every candidate without duplicating them in each checklist.
 
 #### Implementation And Integration
 
-- [ ] Build the benchmark-only hybrid using Rack/PFFFT as the initial external
+- [x] Build the benchmark-only hybrid using Rack/PFFFT as the initial external
     FFT, so implementation does not depend on a timing pilot. Parameterize the
     adapter seam if practical; any additional library variant is named explicitly.
-- [ ] Spread preparation and postprocessing across the hop while executing the
+- [x] Spread preparation and postprocessing across the hop while executing the
     FFT as one indivisible call. Define the schedule, verify stage dependencies
     and exact H-1 publication age, and charge retained input and scheduling.
-- [ ] Match surrounding operations to the batch and production controls where
+- [x] Match surrounding operations to the batch and production controls where
     possible; record arithmetic, layout, and storage differences. Legacy
     batch/incremental controls isolate scheduling within their arithmetic;
     legacy-versus-production comparisons do not isolate scheduling alone.
@@ -291,10 +291,10 @@ to every candidate without duplicating them in each checklist.
 
 #### Benchmark Implementation
 
-- [ ] Add matched full-batch, hybrid, and resumable analyzer workloads and
+- [x] Add matched full-batch, hybrid, and resumable analyzer workloads and
     checker contracts. The indivisible FFT call has no constant-cost butterfly
     interpretation or work-count timing guarantee.
-- [ ] Pass numerical, cadence, and smoke/artifact checks across the planned
+- [x] Pass numerical, cadence, and smoke/artifact checks across the planned
     workload range. Build the attribution report path now; measure it in FR-11.
 
 ### FR-7: KISS FFT (Optional)
@@ -639,6 +639,85 @@ Validation: local links/anchors, referenced paths and command definitions,
 FR numbering and paired checklists, and `git diff --check` passed. No DSP
 tests, Rack build/session, or measurement campaign was run for this
 documentation-only change.
+
+### FR-6 Hybrid Scheduled Analysis Completion
+
+September 29, 2026: added benchmark-only `pffft-hybrid-float` and
+`pffft-scheduled-batch-float`, parameterized over the native provider seam.
+Only the Rack/PFFFT float variants are registered. Both execute the same
+positive-bin arithmetic, cache updates, storage capacities and task dispatcher.
+The ordinary PFFFT batch, legacy batch/incremental and production resumable
+analyzers remain separately named controls. No plugin DSP or Rack module code
+changed.
+
+With K=N/2+1, W=N+1+2K dependency-ordered tasks comprise N input/window
+stores, one opaque native call, K magnitude/prefix sums and K band/EMA/output
+stores. The hybrid uses balanced quotient/remainder quotas and publishes at
+jH+H-1; the paired batch completes at jH. The FFT (including provider packing
+and positive-bin conversion) executes at offset `ceil((N+1)H/W)-1` in the
+hybrid. N+H retained slots preserve unread frame input without a boundary
+snapshot copy. Live window and band cache updates run inside their respective
+tasks. H=1, nondividing hops, and H>W are supported. Native work remains
+indivisible; these task counts are not butterfly counts or timing bounds.
+
+The pair has identical persistent DSP state; the dispatch-only backend label
+is discarded from its stored configuration so different name lengths do not
+bias the C++ storage comparison. Metadata records task partition, native-call
+count/offset, retained capacity and publication delay for each actual instance
+and resource probe. The checker validates these fields and independent
+all-output/cadence reports. C++ allocation evidence does not cover native
+allocator activity or stack scratch; existing PFFFT limitations still apply.
+
+A numerical preflight exposed float octave-boundary rounding changing with
+compiler loop transformations: N=16384, H=37, bin 7021 selected lower bin
+6254 in the bulk loop and 6255 in the per-bin task. External benchmark paths
+now evaluate interval arithmetic in binary64, retaining float octave factors;
+the independent oracle computes its intervals at the same precision and sums
+bands independently. Magnitudes, window values, prefix sums and EMA retain
+their existing precision. The original error tolerances were not relaxed.
+Production/legacy interval arithmetic remains unchanged. Their differences in
+FFT arithmetic, layouts, fusion, plan capacity and storage remain explicit
+confounds; this stage makes no causal production-scheduling-overhead claim
+and therefore does not add a same-production-pipeline batch ablation.
+
+[The benchmark guide](../benchmark/paper/README.md#hybrid-scheduling-attribution)
+defines the schedule and reproduction commands.
+[The attribution generator](../benchmark/paper/hybrid_report.py) checks the
+archived campaign before producing JSON and Markdown in a separate directory.
+It requires all six matched controls, preserves process-level cost/tail
+summaries, ages and resource records, and labels four comparison types.
+It records campaign-metadata and generator hashes. It neither estimates FFT
+cost by subtracting measurements nor treats callbacks as independent repeats.
+Short smoke runs establish the reporting path, not comparative conclusions.
+
+Validation on the current Apple Silicon host:
+
+-   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: all
+    27 tests passed. New checks cover every supported power of two, H=1/37/
+    257/65536, retained-input wraparound, native-call placement, live caches,
+    postprocessing dependencies, zero observed C++ execution allocations,
+    deliberately corrupted retention, missing controls and altered metadata.
+-   `make benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw`
+    and `DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify`: passed
+    with all providers enabled. Hybrid preflight checks exact paired output,
+    the ordinary batch control, and independent numerical references at
+    N=128/2048/16384, including long idle quotas and live smoothing.
+-   `python3 benchmark/paper/run.py .build/paper-fr6-hybrid-final --config benchmark/paper/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 benchmark/paper/check.py .build/paper-fr6-hybrid-final`: all
+    120 runs passed. The matrix spans 20 matched conditions, all six controls,
+    callback/throughput passes, startup, live settings, aligned/staggered banks,
+    load/cache pressure and callback/sample-rate variations. Paired adapters
+    have equal persistent C++ storage and zero observed execution allocations.
+-   `python3 benchmark/paper/hybrid_report.py .build/paper-fr6-hybrid-final .build/paper-fr6-attribution-final`:
+    generated and checked 20 groups and 80 explicitly qualified comparisons.
+-   `make check-build`: five tests passed. `make -j2` and
+    `make -C docs/whitepaper check` passed. Local documentation paths/links
+    and `git diff --check` passed. Existing Rack/host-library compiler warnings
+    remain; no interactive Rack session was run.
+
+FR-6 is complete. Spec 004 remains in progress: optional candidate decisions,
+matched SIMD/double comparisons, final evidence integration, and FR-11's
+pilot/confirmation measurements remain separate stages.
 
 ### FR-5 Apple Accelerate/vDSP Completion
 

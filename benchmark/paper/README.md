@@ -127,6 +127,73 @@ bytes with their recorded hashes and resolves contracts from the archived
 registry. System libraries are identified through loader output and OS metadata;
 their bytes are not archived.
 
+## Hybrid Scheduling Attribution
+
+FR-6 adds `pffft-hybrid-float` and `pffft-scheduled-batch-float`. Both use
+one shared positive-bin pipeline with identical arithmetic, exact-size PFFFT
+plans, caches, N+H retained input slots, and task dispatch. The scheduled batch
+runs all tasks at the frame endpoint; the hybrid distributes them across H
+samples and publishes exactly H-1 samples later. The ordinary
+`pffft-analysis-float` remains a practical batch control with bulk loops and
+only N retained input slots.
+
+For K=N/2+1, the shared sequence has W=N+1+2K tasks in dependency order:
+N input/window stores, one native real FFT call, K magnitude/prefix sums,
+and K smoothing/EMA/output stores. Sample s executes
+`floor((s+1)W/H)-floor(sW/H)` tasks. The FFT executes at offset
+`ceil((N+1)H/W)-1`; this call includes PFFFT packing, native work, and positive
+complex output conversion. Its task weight of one is only a scheduling choice,
+not a constant-cost operation or butterfly count. No timing bound follows.
+Small H can put several stages on one sample; H>W permits idle quotas.
+
+At each endpoint the adapter latches an index into its retained ring without
+copying the frame. Extra H slots protect unread samples while the next hop's
+inputs arrive. All input retention, quota calculation, preparation, magnitude
+and prefix arithmetic, band averaging, EMA, and output stores are timed.
+Live window and band cache rebuilds occur inside the corresponding tasks,
+not in an O(N) boundary call. Setup prepares initial caches outside timing.
+Publication occurs after the final store; partially written output is not
+published to a consumer. These are single-threaded research adapters, without
+a Rack display handoff.
+
+The external batch and hybrid paths evaluate octave interval arithmetic in
+double precision using their existing float octave factors. This avoids
+float rounding at integer bin boundaries selecting different bins when one
+loop is vectorized and another is scheduled a bin at a time. Magnitudes,
+window coefficients, input, prefix sums and EMA remain float. The independent
+oracle uses the same interval precision and independently sums each band.
+Production/legacy bounds retain their original arithmetic. Together with
+production's different FFT layout, fused stages, maximum-capacity plans and
+storage, this prevents a causal claim about production scheduling overhead.
+No same-production-pipeline batch ablation is supplied or claimed here.
+
+From the repository root with the usual Rack SDK (no optional library needed):
+
+```shell
+python3 benchmark/paper/run.py .build/paper-fr6-hybrid --config benchmark/paper/configs/hybrid-smoke.json --list
+python3 benchmark/paper/run.py .build/paper-fr6-hybrid --config benchmark/paper/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-fr6-hybrid
+python3 benchmark/paper/hybrid_report.py .build/paper-fr6-hybrid .build/paper-fr6-attribution
+```
+
+The smoke matrix has 20 matched conditions, each with six backends: the new
+pair, ordinary PFFFT batch, legacy batch/incremental, and production resumable
+analysis. It covers N=128/2048/16384, H=1/37/257/1024/65536, startup,
+steady/live smoothing, aligned/staggered banks, background load, cache pressure,
+and different callback sizes/sample rates. Numerical/schedule fixtures also
+cover all eight supported powers of two. This matrix checks implementation
+coverage; it is not the FR-11 pilot or confirmation campaign.
+
+The [attribution generator](hybrid_report.py) validates the archived campaign
+before producing JSON and Markdown outside its evidence directory. It requires
+all six controls for every matched workload and retains per-process costs,
+raw callback tail summaries, ages, resource/plan records, and explicit
+interpretations for four comparisons. Ratios use matched process repetitions;
+callbacks are not treated as independent experimental repeats. The report
+keeps the task dispatcher/storage comparison distinct from the practical
+external-versus-production comparison. It neither subtracts timings to infer
+FFT costs nor claims confidence intervals from these short smoke observations.
+
 ## External Library Workloads
 
 Rack/PFFFT is available through the existing benchmark's Rack dependency.

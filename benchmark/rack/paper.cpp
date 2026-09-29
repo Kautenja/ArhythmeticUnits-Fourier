@@ -9,6 +9,7 @@
 #include "../paper/protocol.hpp"
 #include "../paper/synthesis.hpp"
 #include "../paper/external.hpp"
+#include "../paper/hybrid.hpp"
 #include "../paper/providers/pffft.hpp"
 #ifdef PAPER_HAVE_VDSP
 #include "../paper/providers/vdsp.hpp"
@@ -480,6 +481,7 @@ int main(int argc, char** argv) {
             verify_synthesis<float>();
             verify_synthesis<double>();
             verify_external<float, PffftBackend>("pffft", "float");
+            verify_hybrid<PffftBackend>();
 #ifdef PAPER_HAVE_VDSP
             verify_external<float, VdspBackend<float>>("vdsp", "float");
             verify_external<double, VdspBackend<double>>("vdsp", "double");
@@ -489,7 +491,7 @@ int main(int argc, char** argv) {
             verify_external<double, FftwBackend<double>>("fftw", "double");
 #endif
             std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
-                << "inverse jobs and overlap-save identity/FIR verified in both precisions\n";
+                << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid verified\n";
             return 0;
         }
         if (argc == 2 && std::string(argv[1]) == "--inventory") {
@@ -527,9 +529,10 @@ int main(int argc, char** argv) {
         c.resources = resources;
         const auto& descriptor = backend_descriptor(c.backend);
         const std::string kind(descriptor.kind), precision(descriptor.precision);
-        require(!provider_info || kind == "external", "Provider metadata is only available for external adapters");
+        require(!provider_info || kind == "external" || kind == "scheduled-analysis", "Provider metadata is only available for external adapters");
         Paper::Context context(c.rate);
-        if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
+        if (kind == "scheduled-analysis") hybrid_dispatch<float, PffftBackend>(c, provider_info);
+        else if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
 #ifdef PAPER_HAVE_FFTW
         else if (std::string(descriptor.provider) == "fftw") {
             if (precision == "float") external_dispatch<float, FftwBackend<float>>(c, provider_info);

@@ -24,11 +24,13 @@ struct ExternalAnalysis {
         window(Fourier::Window::Function::Hann, c.n, false, true), ring(c.n), frame(c.n),
         magnitudes(c.n/2+1), prefix(c.n/2+2), output(c.n/2+1), coefficients(c.n/2+1),
         low(c.n/2+1), high(c.n/2+1), bands(c.smooth) { prepare_bands(); }
+    // Binary64 interval arithmetic avoids float floor boundaries changing when
+    // the compiler vectorizes this loop versus the hybrid's single-bin task.
     void prepare_bands() {
         const float half = std::pow(2.f, (1.f/3.f)/2.f), ratio = std::pow(2.f, 1.f/3.f);
-        const float width = config.rate/config.n, maximum = config.rate/2.f;
+        const double width = double(config.rate)/config.n, maximum = double(config.rate)/2;
         for (size_t k = 0; k < low.size(); ++k) {
-            float a = k*width/half, b = k*width*half;
+            double a = k*width/half, b = k*width*half;
             if (b > maximum) { b = maximum; a = b/ratio; }
             low[k] = size_t(std::floor(a/width));
             high[k] = std::min(config.n/2, size_t(std::floor(b/width)));
@@ -171,12 +173,12 @@ struct AnalysisReference {
             }
             const bool bands = live ? index%2 == 1 : config.smooth;
             const float alpha = config.smooth ? 0.8f : 0.f;
-            const float width = config.rate/config.n, maximum = config.rate/2.f;
+            const double width = double(config.rate)/config.n, maximum = double(config.rate)/2;
             for (size_t k = 0; k < expected.size(); ++k) {
                 long double value = magnitudes[k];
                 if (bands) {
-                    float low = k*width/std::pow(2.f, (1.f/3.f)/2.f);
-                    float high = k*width*std::pow(2.f, (1.f/3.f)/2.f);
+                    double low = k*width/std::pow(2.f, (1.f/3.f)/2.f);
+                    double high = k*width*std::pow(2.f, (1.f/3.f)/2.f);
                     if (high > maximum) { high = maximum; low = high/std::pow(2.f, 1.f/3.f); }
                     const size_t first = size_t(std::floor(low/width));
                     const size_t last = std::min(config.n/2, size_t(std::floor(high/width)));
@@ -206,10 +208,14 @@ struct ExternalAudit {
         SynthesisAudit{accuracy}.template chain<T>(adapter, input, sample);
     }
     void operator()(const ExternalAnalysis<T, Backend>& adapter, const std::vector<float>& input, size_t sample) {
+        analysis(adapter, input, sample);
+    }
+    template<typename Adapter>
+    void analysis(const Adapter& adapter, const std::vector<float>& input, size_t sample) {
         if (!adapter.published()) return;
         auto& reference = references[&adapter];
         if (!reference) reference.reset(new AnalysisReference<T>(adapter.config));
-        reference->advance(input, sample);
+        reference->advance(input, sample-adapter.delay());
         require(adapter.output.size() == reference->expected.size(), "Missing external analysis output");
         ++accuracy.publications;
         for (size_t k = 0; k < adapter.output.size(); ++k) {

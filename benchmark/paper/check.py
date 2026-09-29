@@ -141,6 +141,21 @@ def validate_provider_info(info, descriptor):
             raise ValueError("Missing vDSP platform/setup evidence")
 
 
+def validate_hybrid_info(info, config):
+    """Task counts describe dependency order, never native butterfly timing."""
+    n, hop = config["n"], config["hop"]
+    work = n+1+2*(n//2+1)
+    hybrid = config["backend"] == "pffft-hybrid-float"
+    expected = dict(mode="hybrid" if hybrid else "batch", task_units=work,
+                    prepare_units=n, native_calls_per_frame=1, magnitude_units=n//2+1,
+                    output_units=n//2+1, retained_input_samples=n+hop,
+                    fft_sample_offset=((n+1)*hop+work-1)//work-1 if hybrid else 0,
+                    publication_delay_samples=hop-1 if hybrid else 0,
+                    cost_model="unequal tasks; native FFT including conversion is indivisible")
+    if info.get("analysis_schedule") != expected:
+        raise ValueError("Hybrid schedule/storage evidence mismatch")
+
+
 def check(directory):
     metadata = json.loads((directory / "metadata.json").read_text())
     if metadata["schema"] == 1:
@@ -199,9 +214,11 @@ def check(directory):
             raise ValueError("Evidence contract mismatch")
         resource = json.loads((directory/metadata["resources"][str(index)]).read_text())
         validate_resources(resource)
-        if registry[config["backend"]]["kind"] == "external":
+        if registry[config["backend"]]["kind"] in ("external", "scheduled-analysis"):
             for label in ("timing", "allocation"):
                 validate_provider_info(resource[label]["provider_info"], registry[config["backend"]])
+                if registry[config["backend"]]["kind"] == "scheduled-analysis":
+                    validate_hybrid_info(resource[label]["provider_info"], config)
     identities = set()
     for run in metadata["runs"]:
         identity = (run["workload"], run["repeat"])
@@ -213,13 +230,15 @@ def check(directory):
         validate_rows(directory/run["raw"], config, registry)
         if summarize(directory/run["raw"], config) != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
-        external = registry[config["backend"]]["kind"] == "external"
+        external = registry[config["backend"]]["kind"] in ("external", "scheduled-analysis")
         if external:
             report = json.loads((directory/run["stderr"]).read_text())
             if len(report["provider_instances"]) != config["count"]:
                 raise ValueError("Missing measured provider instances")
             for instance in report["provider_instances"]:
                 validate_provider_info(instance, registry[config["backend"]])
+                if registry[config["backend"]]["kind"] == "scheduled-analysis":
+                    validate_hybrid_info(instance, config)
             if contract["boundary"] == "transform" and report["checked_bins"] != config["n"]:
                 raise ValueError("Missing external transform bins")
         if contract["boundary"] in ("inverse-job", "chain") or (external and contract["boundary"] == "analysis"):

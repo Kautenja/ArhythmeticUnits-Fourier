@@ -1016,6 +1016,40 @@
       "dependency": "vdsp",
       "available": false,
       "build_feature": "vdsp"
+    },
+    {
+      "id": "pffft-scheduled-batch-float",
+      "provider": "pffft",
+      "kind": "scheduled-analysis",
+      "boundary": "analysis",
+      "precision": "float",
+      "schedule": "immediate",
+      "operation": "analysis",
+      "layout": "positive-magnitudes",
+      "normalization": "coherent-gain-corrected-unnormalized-forward",
+      "step_model": "opaque",
+      "live": true,
+      "smoothing": true,
+      "plan": "rack-pffft-ordered-exact-size-single-thread",
+      "dependency": "linked Rack/PFFFT; source and binary identities retained",
+      "available": true
+    },
+    {
+      "id": "pffft-hybrid-float",
+      "provider": "pffft",
+      "kind": "scheduled-analysis",
+      "boundary": "analysis",
+      "precision": "float",
+      "schedule": "balanced",
+      "operation": "analysis",
+      "layout": "positive-magnitudes",
+      "normalization": "coherent-gain-corrected-unnormalized-forward",
+      "step_model": "opaque",
+      "live": true,
+      "smoothing": true,
+      "plan": "rack-pffft-ordered-exact-size-single-thread",
+      "dependency": "linked Rack/PFFFT; source and binary identities retained",
+      "available": true
     }
   ]
 }
