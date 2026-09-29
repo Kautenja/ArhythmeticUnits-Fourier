@@ -22,6 +22,12 @@ frequency smoothing help reveal broad trends, while frequency bounds and
 amplitude scales let you inspect a smaller part of the spectrum. A slope
 control tilts the displayed amplitudes around $1\,\mathrm{kHz}$.
 
+Fourier and Spectre belong to the Arhythmetic Units Fourier plugin.
+Use Fourier to compare the current spectra of up to four signals, and
+Spectre to follow one signal's spectrum over time. Both provide the same
+window choices and smoothing controls, but their display axes, input-gain
+defaults, and Run behavior differ as described below.
+
 The module takes its name from Jean-Baptiste Joseph Fourier
 (Fig.~\ref{fig:fourier-portrait}), whose work describes signals in terms of
 simpler trigonometric functions.
@@ -79,7 +85,8 @@ provide examples of these choices.
 
 \begin{figure}[!htp]
 \centering
-\includegraphics[width=\textwidth]{img/PanelLayout}
+\includegraphics[width=0.90\textwidth]{img/PanelLayout}
+\caption{Fourier's inputs, Run button, and analysis and display controls.}
 \end{figure}
 
 The numbered illustration identifies control positions. Its displayed values
@@ -216,6 +223,7 @@ fractional-octave band. Its default is \textbf{None}. Available widths are
 $1/48$, $1/24$, $1/12$, $1/9$, $1/6$, $1/5$, $1/4$, $1/3$, $1/2$, $2/3$,
 $3/4$, 1, 1.5, 2, and 2.5 octaves. Wider settings hide more fine detail and
 can lower narrow peaks. Use None when inspecting individual harmonics.
+Smoothing does not improve the FFT's frequency resolution.
 
 \subsection{Low Frequency}
 
@@ -244,6 +252,20 @@ This is a visual weighting of spectral magnitudes. Set it to zero to inspect
 relative amplitudes without that weighting.
 
 \clearpage
+\section{Reading The Display}
+
+Frequency runs from left to right and spectral amplitude from bottom to top.
+Each colored trace represents one input port's summed signal. Input gain,
+windowing, smoothing, and Slope affect the trace; use equal gains and zero
+slope for unweighted comparisons.
+
+Hover over the plot for a crosshair and readouts of frequency, musical note,
+tuning offset, and amplitude. The amplitude describes the cursor's vertical
+position on the selected Y Scale; place it on a trace to read that trace's
+level. It does not automatically find a peak. Spectre's hover readout instead
+measures a stored spectral bin at the selected time and frequency, before
+Slope weighting.
+
 \section{Context Menu And Saved Settings}
 
 Right-click the module to find these options under \textbf{Render Settings}:
@@ -265,6 +287,10 @@ presets. The captured audio and spectrum are not saved. Loading a patch
 that was saved with Run off therefore does not restore a frozen trace;
 press Run to capture a new one.
 
+Rack's module initialization resets the controls to their defaults, enables
+Run, AC coupling, and Bezier curves, and disables Filled Display.
+
+\clearpage
 \section{Factory Presets}
 
 Load these examples from Rack's module preset menu. All start running,
@@ -340,7 +366,7 @@ symmetric about the Nyquist frequency $\frac{f_s}{2}$.
 
 \subsection{Windowing Functions}
 
-When analyzing finite--length signals, the abrupt discontinuities at the
+When analyzing finite-length signals, the abrupt discontinuities at the
 boundaries can cause \textit{spectral leakage} -- an effect where energy from
 one frequency bin spills into adjacent bins~\citep{smith1997scientist}. To
 mitigate this issue, a window function $w[n]$ is applied to the signal,
@@ -489,13 +515,13 @@ Determine $r \gets \log_2 N$\;
 In musical applications, the input signal is typically purely real-valued.
 Because the Fourier transform of a real signal exhibits Hermitian
 symmetry -- where negative frequency components mirror the positive ones --
-the Real--Valued Fourier Transform (RFFT) can compute only the non-redundant
+the Real-Valued Fourier Transform (RFFT) can compute only the non-redundant
 half of the spectrum~\citep{sorensen1987real}. This results in a significant
 reduction in both computational complexity and memory usage compared to a
 full complex FFT. The RFFT is implemented by packing a real-valued signal of
 length $N$ into a complex sequence of length $\frac{N}{2}$ where the real
-components are derived from the even--indexed samples and the imaginary
-components from the odd--indexed samples. A length $\frac{N}{2}$ FFT is then
+components are derived from the even-indexed samples and the imaginary
+components from the odd-indexed samples. A length $\frac{N}{2}$ FFT is then
 computed over the packed signal and reconstructed into DFT coefficients of
 the $N$-point DFT.
 
@@ -513,10 +539,11 @@ y[k] = x[2k] + j\,x[2k+1], \quad k = 0, 1, \dots, M-1.
 \paragraph{2. FFT Computation}
 Compute the $M$-point FFT of the packed sequence:
 \begin{equation}
-Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots, M-1.
+Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1,
+\dots, M-1.
 \label{eq:fft-computation}
 \end{equation}
-(The iterative Cooley–Tukey algorithm, as described previously, may be used
+(The iterative Cooley-Tukey algorithm, as described previously, may be used
 here.)
 
 \paragraph{3. Finalization (Reconstruction)}
@@ -561,17 +588,19 @@ Compute the $\frac{N}{2}$-point FFT of $y[k]$ to obtain $Y[k]$ \;
 Define $W_N^k = e^{-j\frac{2\pi k}{N}}$ \;
 Set
 \[
-X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\} - \Im\{Y[0]\};
+X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\}
+- \Im\{Y[0]\};
 \]
 \For{$k \gets 1$ \KwTo $\frac{N}{2}-1$}{
   Compute
   \[
-  X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
+  X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big(
+Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
   \]
   Set $X[N-k] = X[k]^*$;
 }
 \Return $X[k]$ for $k = 0,1,\dots,N-1$\;
-\caption{Real--Valued FFT via Packing, Complex FFT, and Finalization}
+\caption{Real-Valued FFT via Packing, Complex FFT, and Finalization}
 \label{alg:rfft}
 \end{algorithm}
 

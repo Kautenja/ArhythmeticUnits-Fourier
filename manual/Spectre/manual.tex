@@ -17,32 +17,59 @@ represents magnitude. Spectre has one signal input and no audio outputs.
 Patch it alongside your audio path to inspect a signal without changing what
 you hear.
 
-Spectre uses a Short-Time Fourier Transform (STFT) with a fixed FFT length
-of 2048 samples, a hop size of 1024 samples (50\% overlap), and a history of
-512 spectra. FFT length, hop size, and history length are not adjustable.
-You can choose the window function, time and frequency smoothing, visible
-frequency range, display slope, and color map.
+Fourier and Spectre belong to the Arhythmetic Units Fourier plugin. Use
+Fourier to compare the current spectra of up to four signals, and Spectre to
+follow one signal's spectrum over time. Both provide the same window choices
+and smoothing controls, but their display axes, input-gain defaults, and Run
+behavior differ as described below.
+
+Spectre uses a short-time Fourier transform (STFT) with a fixed FFT length of
+2048 samples, a hop size of 1024 samples (50\% overlap), and a history of 512
+spectra. FFT length, hop size, and history length are not adjustable. You can
+choose the window function, time and frequency smoothing, visible frequency
+range, display slope, and color map.
 
 At sample rate $f_s$, frequency bins are spaced $f_s/2048$ Hz apart, each
 analysis window spans $2048/f_s$ seconds, and a complete display sweep takes
-$512 \times 1024/f_s$ seconds. At 48\,kHz, these are approximately 23.44\,Hz,
-42.67\,ms, and 10.92\,s respectively. At 44.1\,kHz, a sweep takes about
-11.89\,s. Increasing Rack's sample rate shortens the history duration and
-increases the spacing between bins.
+$512 \times 1024/f_s$ seconds. At $48\,\mathrm{kHz}$, these are approximately
+$23.4\,\mathrm{Hz}$, $42.7\,\mathrm{ms}$, and $10.92\,\mathrm{s}$
+respectively. At $44.1\,\mathrm{kHz}$, a sweep takes about
+$11.89\,\mathrm{s}$. Increasing Rack's sample rate shortens the history
+duration and increases the spacing between bins.
 
-\subsection*{Quick Start}
+\clearpage
+\section{Quick Start}
 
 \begin{itemize}
   \item Connect an oscillator or another signal to the input. The illuminated
   \textbf{Run} button indicates that Spectre is acquiring new spectra.
+  Keep your existing connection to the mixer or audio output if you want to
+hear it.
+  \item A new module uses $+6\,\mathrm{dB}$ input gain, a Flattop window,
+  and no time or frequency smoothing. For comparisons with Fourier, set
+  both modules to the same input gain; Fourier starts at $0\,\mathrm{dB}$.
   \item A steady sine wave produces a horizontal band. Harmonics appear as
   additional bands above it; short broadband sounds produce vertical marks.
   \item Adjust the input gain if the image is too faint or too much of it
   reaches the color map's brightest end. Set \textbf{Slope} to zero when you
   want to compare magnitudes without frequency-dependent display weighting.
+  The default is $+4.5\,\mathrm{dB/oct}$.
   \item Press \textbf{Run} to freeze the history, then hover over the plot to
   inspect a frequency and its magnitude. Press it again to resume.
 \end{itemize}
+
+\paragraph{Reading levels} Spectre displays spectral magnitudes, not total
+signal RMS, loudness, or sound pressure level. Window choice, frequency
+alignment with FFT bins, and smoothing affect the height and width of a peak.
+The color map has a finite range; reaching its end color does not mean Spectre
+has clipped your audio path. The hover readout measures stored magnitudes
+before Slope weighting.
+
+\paragraph{Choosing settings} Use little or no \textbf{Average} to follow
+changes more closely. Increase \textbf{Average} for a steadier image and
+\textbf{Smooth} for a broader view of tonal balance. FFT length and hop size
+are fixed; cropping the frequency range enlarges existing detail without
+increasing resolution. The factory presets provide examples of these choices.
 
 % ----------------------------------------------------------------------------
 % MARK: Panel Layout
@@ -57,111 +84,125 @@ increases the spacing between bins.
 \caption{Spectre's input, Run button, and display controls.}
 \end{figure}
 
+The numbered illustration identifies control positions. The sections below
+give the current ranges and defaults.
+
 \subsection{Input}
 
-The single \textbf{Input} accepts monophonic or polyphonic cables. All voices
-in a polyphonic cable are summed into one analysis signal, so they do not
-appear as separate channels. Voices may reinforce or cancel one another.
-The input is normalized so that $\pm5$\,V corresponds to $\pm1$ before gain.
+The single \textbf{Input} accepts monophonic or polyphonic cables. \textbf{All
+voices on the port are summed into one analyzed signal}; voices are not drawn
+separately. Summed voices can increase the level or cancel one another,
+depending on their phase. The input is normalized so that $\pm5\,\mathrm{V}$
+corresponds to $\pm1$ before gain.
 
-\textbf{Input Gain} ranges from silence ($-\infty$\,dB) to $+12$\,dB and
-starts at $+6$\,dB. It changes the signal being analyzed, not the gain of your
-audio path. Lower it if strong signals or summed voices saturate the color
-map. Gain changes affect newly acquired spectra; they do not rescale the
-stored history.
+\textbf{Input Gain} ranges from silence ($-\infty\,\mathrm{dB}$) to
+$+12\,\mathrm{dB}$ and starts at $+6\,\mathrm{dB}$. It changes the signal
+being analyzed, not the gain of your audio path. Lower it if strong signals or
+summed voices saturate the color map. Gain changes affect newly acquired
+spectra; they do not rescale the stored history.
 
 \subsection{Run}
 
-When \textbf{Run} is illuminated, Spectre buffers and analyzes incoming
-samples. When it is dark, buffering and FFT processing pause and the current
-history remains available for inspection. Resuming continues from the
-paused position; audio received during the pause is not captured.
+When \textbf{Run} is lit, Spectre buffers and analyzes incoming samples. When
+it is dark, buffering and FFT processing pause and the current history remains
+available for inspection. Resuming continues from the paused position; audio
+received during the pause is not captured. Run is initially enabled.
 
-While frozen, you can change \textbf{Y Scale}, \textbf{LO FREQ},
-\textbf{HI FREQ}, \textbf{Slope}, and the \textbf{Color Map} to view the same
-history differently. Input gain, window, \textbf{Average}, \textbf{Smooth},
-and AC-coupling changes affect subsequent analysis after you resume, not
-spectra already in the history.
+While frozen, you can change \textbf{Y Scale}, \textbf{LO Freq}, \textbf{HI
+Freq}, \textbf{Slope}, and the \textbf{Color Map} to view the same history
+differently. Input gain, window, \textbf{Average}, \textbf{Smooth}, and
+AC-coupling changes affect subsequent analysis after you resume, not spectra
+already in the history.
 
 \subsection{Window Function}
 
-\textbf{Window} chooses the taper applied to each analysis frame. Tapering
-reduces spectral leakage, at the cost of widening peaks. A wider peak can
-make nearby frequencies harder to distinguish. Spectre compensates for each
-window's coherent gain when preparing the FFT.
+The \textbf{Window} control selects the function applied to each audio frame
+before the FFT. Windowing changes the balance between peak width and
+\textit{spectral leakage}, the spreading of a tone into nearby bins when its
+frequency does not fit the analysis frame exactly.
 
 The 15 choices are Boxcar, Bartlett, BartlettHann, Parzen, Welch, Cosine,
 Bohman, Lanczos, Hann, Hamming, Blackman, BlackmanHarris, BlackmanNuttall,
-KaiserBessel, and Flattop. \textbf{Flattop} is the default.
+KaiserBessel, and Flattop. \textbf{Flattop} is the default. These are fixed
+window shapes; the control selects a shape without additional shape
+parameters.
 
-Boxcar preserves narrow peaks but has pronounced leakage for tones between
-FFT bins. Hann and Hamming provide a compromise between peak width and
-leakage. Flattop reduces the variation in measured peak amplitude as a tone
-moves between bins, with broader peaks. Changing the window affects new
-spectra; it does not recalculate the history.
+Boxcar leaves the samples untapered and has a narrow main peak but strong
+leakage for tones between bins. Hamming reduces leakage at the cost of a wider
+peak. Flattop has a broader peak and is useful for comparing tone amplitudes
+as the tone moves between bins. Spectre compensates for the window's coherent
+gain, but different windows still produce different peak shapes and noise
+levels.
+
+Changing the window affects new spectra; it does not recalculate the history.
 
 \subsection{Y Scale}
 
-\textbf{Y Scale} selects \textbf{Linear} or \textbf{Logarithmic} (the default).
-Linear gives equal vertical space to equal frequency intervals. The setting
-named Logarithmic expands low frequencies and compresses high frequencies.
-In this version, its mapping uses the square root of frequency, so equal
-octaves do not occupy equal distances. Use the axis labels and hover readout
-to identify frequencies.
+\textbf{Y Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the
+default). Linear places equal frequency intervals at equal distances. The mode
+named Logarithmic expands the low-frequency portion of the view. In this
+version, it uses a square-root mapping of frequency, so equal octaves are not
+equally spaced. Read the axis labels or cursor frequency rather than treating
+it as a mathematically logarithmic axis. Frequency is on Spectre's vertical
+axis; Fourier uses \textbf{X Scale} for frequency and \textbf{Y Scale} for
+amplitude.
 
 \subsection{Average}
 
-\textbf{Average} smooths each bin's magnitude over successive spectra. Its
-range is 0--2500\,ms, with a default of 0\,ms (off). Higher values make
-changes more gradual and can blur transients across time. This is an
-exponential moving average, not an average over a fixed block of audio. The
-displayed duration controls the smoothing strength; it is not an added
-recording duration or the length of the visible history.
+\textbf{Average} controls exponential smoothing of spectral magnitudes over
+time, from $0$ to $2500\,\mathrm{ms}$; the default is
+\textbf{$0\,\mathrm{ms}$} (off). Higher values produce a steadier display that
+reacts more slowly. This is a recursive filter, not an arithmetic average over
+a fixed recording of the selected duration.
+
+In Spectre, smoothing can blur transients across time; its duration is not the
+length of the visible history.
 
 \clearpage
 \subsection{Smooth}
 
-\textbf{Smooth} averages magnitudes across neighboring frequency bins using
-an octave-based bandwidth. The default is \textbf{None}. Available bandwidths
-are $1/48$, $1/24$, $1/12$, $1/9$, $1/6$, $1/5$, $1/4$, $1/3$, $1/2$,
-$2/3$, $3/4$, 1, 1.5, 2, and 2.5 octaves. Wider settings merge more fine
-spectral detail, especially at high frequencies. Use None to inspect closely
-spaced peaks. Smoothing does not improve the FFT's frequency resolution.
+\textbf{Smooth} combines neighboring spectral magnitudes over a
+fractional-octave band. Its default is \textbf{None}. Available widths are
+$1/48$, $1/24$, $1/12$, $1/9$, $1/6$, $1/5$, $1/4$, $1/3$, $1/2$, $2/3$,
+$3/4$, 1, 1.5, 2, and 2.5 octaves. Wider settings hide more fine detail and
+can lower narrow peaks. Use None when inspecting individual harmonics.
+Smoothing does not improve the FFT's frequency resolution.
 
 \subsection{Low Frequency}
 
-\textbf{LO FREQ} sets the bottom of the displayed frequency range, in Hz.
-It defaults to 0\,Hz and can be set up to half the sample rate (the Nyquist
-frequency). This control crops the view; it does not filter the input or
-remove frequencies from the stored analysis.
+\textbf{LO Freq} sets the bottom of the displayed frequency range, in Hz. It
+defaults to $0\,\mathrm{Hz}$ and can be set up to half the sample rate (the
+Nyquist frequency). This control crops the view; it does not filter the input
+or remove frequencies from the stored analysis.
 
 \subsection{High Frequency}
 
-\textbf{HI FREQ} sets the top of the displayed frequency range, in Hz. It
-defaults to the Nyquist frequency, which is also its maximum. At 48\,kHz,
-this is 24\,kHz. Keep LO FREQ strictly below HI FREQ for a usable display.
-Zooming into a smaller frequency range enlarges the existing bins without
-adding frequency detail.
+\textbf{HI Freq} sets the top of the displayed frequency range, in Hz. It
+defaults to the Nyquist frequency, which is also its maximum. At
+$48\,\mathrm{kHz}$, this is $24\,\mathrm{kHz}$. Keep LO Freq strictly below HI
+Freq for a usable display. Zooming into a smaller frequency range enlarges the
+existing bins without adding frequency detail.
 
 \subsection{Slope}
 
 \textbf{Slope} applies frequency-dependent weighting when coloring the image.
-Its range is $-9$ to $+9$\,dB/oct, with a default of $+4.5$\,dB/oct. Positive
-values emphasize the upper part of the display, negative values emphasize
-the lower part, and zero disables this weighting. It can be changed while
-frozen and does not alter the stored magnitudes or the hover dB readout.
+Its range is $-9$ to $+9\,\mathrm{dB/oct}$, with a default of
+$+4.5\,\mathrm{dB/oct}$. Positive values emphasize the upper part of the
+display, negative values emphasize the lower part, and zero disables this
+weighting. It can be changed while frozen and does not alter the stored
+magnitudes or the hover dB readout.
 
-The weighting is referenced to 1\,kHz on the Linear scale. In Logarithmic
-mode it is applied using the image-row position before the frequency
-mapping, so it is not an exact dB-per-octave correction at the labeled
-frequencies. Use zero slope for unweighted comparisons.
+The weighting is referenced to $1\,\mathrm{kHz}$ on the Linear scale. In
+Logarithmic mode it is applied using the image-row position before the
+frequency mapping, so it is not an exact dB-per-octave correction at the
+labeled frequencies. Use zero slope for unweighted comparisons.
 
 % ----------------------------------------------------------------------------
 % MARK: Display And Settings
 % ----------------------------------------------------------------------------
 
 \clearpage
-\section{Reading the Display}
+\section{Reading The Display}
 
 The scan line advances from left to right and wraps back to the left edge.
 Each new column replaces the oldest spectrum at that position. The image
@@ -177,27 +218,28 @@ acquire new history to distinguish those levels.
 
 Hover over the plot for a crosshair and readouts of frequency, musical note,
 tuning offset, and magnitude in dB. The magnitude comes from the stored
-spectrum at that time and frequency, before Slope weighting. It is not a
-measurement of the combined level of all frequencies, an RMS meter, or a
-calibrated sound-pressure level. The display has no time readout; use the
-sweep duration described in the overview as a guide.
+spectrum at that time and frequency, before Slope weighting. Unlike Fourier's
+amplitude readout, which describes the cursor position, Spectre's readout
+measures a stored spectral bin. The display has no time readout; use the sweep
+duration described in the overview as a guide.
 
-\section{Context Menu and Saved Settings}
+\section{Context Menu And Saved Settings}
 
-Right-click the module panel to open the context menu. Under
-\textbf{Render Settings}, Spectre provides:
+Right-click the module to find these options under \textbf{Render Settings}:
 \begin{itemize}
-  \item \textbf{AC-coupled}: enabled by default. Removes DC from the signal
-  before analysis. Disable it when inspecting a DC offset or very slow
-  signals. This is an input-analysis setting and does not reprocess history.
+  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
+  using a DC-blocking filter. It is on by default and can also affect very
+  low frequencies. Turn it off when inspecting DC or slow signals, and set
+  Slope to zero to avoid frequency weighting near DC. This setting does not
+  reprocess history.
   \item \textbf{Color Map}: Viridis, Cividis, Magma, Plasma, Inferno, Bone,
   or Gray. Magma is the default. Selecting another map recolors the existing
   history, including while frozen.
 \end{itemize}
 
-These menu changes support Rack's undo and redo. Patches and module presets
-save the panel settings, Run state, AC-coupling choice, and color map. They
-do not save the recorded spectrogram. A patch saved while frozen reopens
+These menu changes support Rack's Undo and Redo commands. Patches and module
+presets save the panel settings, Run state, AC-coupling choice, and color map.
+They do not save the recorded spectrogram. A patch saved while frozen reopens
 with no recorded history; enable Run to acquire a new image.
 
 Rack's module initialization resets the controls to their defaults, enables
@@ -206,6 +248,62 @@ sample rate changes the available frequency range, bin spacing, and sweep
 duration. Existing history is not cleared automatically and is displayed
 using the new frequency mapping; allow a full sweep to replace it before
 comparing frequencies at the new sample rate.
+
+\clearpage
+\section{Factory Presets}
+
+Load these examples from Rack's module preset menu. All start running, with
+$0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
+limited by the current sample rate. Unlike Fourier's presets, these cannot
+change FFT length or hop size; both remain fixed in Spectre.
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[Mastering] Broad tonal balance: Flattop, Logarithmic Y Scale,
+  $0$--$20\,\mathrm{kHz}$, Average $300\,\mathrm{ms}$, Smooth $1/12$ octave,
+  Slope $+4.5\,\mathrm{dB/oct}$. AC coupling is on.
+  \item[Harmonics] Individual harmonics: Hann, Linear Y Scale,
+  $0$--$5\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on.
+  \item[BassDetail] Low-frequency view: Hann, Linear Y Scale,
+  $0$--$500\,\mathrm{Hz}$, Average $100\,\mathrm{ms}$. Smooth is off and
+  Slope is zero. AC coupling is on. Cropping the view does not provide the
+  finer bin spacing of Fourier's longer FFT in its BassDetail preset.
+  \item[Transients] Unsmoothed changes over time: Hann, Logarithmic Y Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on. Frame duration and update interval remain fixed.
+  \item[PluginDevelopment] Unweighted spectrum including DC: Flattop,
+  Linear Y Scale, $0$--$20\,\mathrm{kHz}$. Average and Smooth are off;
+  Slope is zero. AC coupling is off.
+\end{description}
+
+\clearpage
+\section{Troubleshooting}
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[No image or a stale image] Check the source signal, cable, input
+  gain, and Run light. Ensure LO Freq is below HI Freq. If you loaded a
+  frozen patch, resume capture to acquire new history.
+  \item[Bands are too broad or changes blur together] Reduce Smooth and
+  Average, and compare window functions. Spectre's FFT length is fixed;
+  use Fourier if you need a longer frame to separate nearby frequencies.
+  \item[Levels differ from another analyzer] Match input gain, window,
+  FFT length, smoothing, and amplitude reference. Set Slope to zero and
+  account for summed polyphonic voices. Spectre starts at $+6\,\mathrm{dB}$
+  input gain; Fourier starts at $0\,\mathrm{dB}$. A spectral peak is not a
+  broadband RMS measurement.
+  \item[Large regions reach the same end color] Reduce input gain and
+  acquire new history. Saturated colors cannot show how far a magnitude
+  exceeds the color map's range. Recoloring alone cannot recover that
+  distinction in the displayed image.
+  \item[Old and new bands disagree after a sample-rate change] Allow a full
+  sweep to replace history acquired at the old sample rate before comparing
+  frequencies. Check the frequency bounds as well.
+  \item[Analysis uses too much CPU] Spectre performs analysis on Rack's
+  audio engine thread despite having no audio outputs. Turn Run off when
+  inspecting a frozen image to pause buffering and FFT processing. Its FFT
+  length and hop size are fixed; Fourier provides adjustable settings when
+  you need to trade frequency detail or update rate for analysis workload.
+\end{description}
 
 % ----------------------------------------------------------------------------
 % MARK: Background
@@ -225,14 +323,13 @@ is defined as:
 X[k] = \sum_{n=0}^{N-1} x[n] \, e^{-j2\pi k \frac{n}{N}}
 \label{eqn:dft}
 \end{equation}
-for $k = 0, 1, \dots, N-1$. For real-valued input, the DFT has conjugate symmetry,
-$X[N-k] = X[k]^*$, so its magnitude spectrum is symmetric about the
-Nyquist frequency $\frac{f_s}{2}$. This symmetry follows from the input
-being real, not from periodicity alone.
+for $k = 0, 1, \dots, N-1$. For a real-valued input, the DFT has conjugate symmetry:
+$X[N-k] = X[k]^*$ for $k=1,\dots,N-1$. Its magnitude spectrum is therefore
+symmetric about the Nyquist frequency $\frac{f_s}{2}$.
 
 \subsection{Windowing Functions}
 
-When analyzing finite--length signals, the abrupt discontinuities at the
+When analyzing finite-length signals, the abrupt discontinuities at the
 boundaries can cause \textit{spectral leakage} -- an effect where energy from
 one frequency bin spills into adjacent bins~\citep{smith1997scientist}. To
 mitigate this issue, a window function $w[n]$ is applied to the signal,
@@ -269,11 +366,11 @@ by stage.
     $m \gets 2^s$\;
     Compute the primitive $m$th root of unity: $W_m \gets e^{-j\frac{2\pi}{m}}$\;
     \For{$k \in \{0,\, m,\, 2m,\, \ldots,\, N-m\}$}{
-        \For{$j \gets 0$ \KwTo $\frac{m}{2}-1$}{
-            $t \gets W_m^j \cdot x\left[k+j+\frac{m}{2}\right]$\;
-            $u \gets x[k+j]$\;
-            $x[k+j] \gets u + t$\;
-            $x\left[k+j+\frac{m}{2}\right] \gets u - t$\;
+        \For{$q \gets 0$ \KwTo $\frac{m}{2}-1$}{
+            $t \gets W_m^q \cdot x\left[k+q+\frac{m}{2}\right]$\;
+            $u \gets x[k+q]$\;
+            $x[k+q] \gets u + t$\;
+            $x\left[k+q+\frac{m}{2}\right] \gets u - t$\;
         }
     }
 }
@@ -287,10 +384,11 @@ by stage.
 The butterfly computations in the FFT algorithm repeatedly use twiddle
 factors:
 $$
-W_m^j = e^{-j\frac{2\pi j}{m}},
+W_m^q = e^{-j\frac{2\pi q}{m}},
 $$
-where $m = 2^s$ for a given stage $s$ and $j = 0, 1, \ldots, \frac{m}{2}-1$.
-Since these factors depend only on $m$ and $j$, they can be precomputed and
+where $j$ is the imaginary unit, $m = 2^s$ for stage $s$, and
+$q = 0, 1, \ldots, \frac{m}{2}-1$.
+Since these factors depend only on $m$ and $q$, they can be precomputed and
 stored in a lookup table. This memoization~\citep{cormen2009introduction} not
 only avoids redundant calculations during the FFT but also contributes to
 faster and more efficient processing, especially in real-time applications or
@@ -302,10 +400,10 @@ implementations, this means:
 \begin{itemize}
   \item \textbf{Precomputation:} For each stage $s$ with block size
   $m$, compute the $\frac{m}{2}$ twiddle factors
-  $\{W_m^j\}_{j=0}^{\frac{m}{2}-1}$ before beginning the main FFT
+  $\{W_m^q\}_{q=0}^{\frac{m}{2}-1}$ before beginning the main FFT
   processing loop.
   \item \textbf{Reuse:} During the FFT computation, instead of recalculating
-  $W_m^j$ for each butterfly operation, the algorithm simply looks up the
+  $W_m^q$ for each butterfly operation, the algorithm simply looks up the
   precomputed value. This saves significant computation time, especially for
   large FFT sizes or when processing multiple FFTs of the same length.
   \item \textbf{Efficiency:} By reducing the number of complex exponential
@@ -348,7 +446,7 @@ For example, if $N = 8$ (i.e., $r = 3$), then for $i = 3$
 $$
 \tilde{i} = (1 \times 2^2) + (1 \times 2^1) + (0 \times 2^0) = 4 + 2 + 0 = 6,
 $$
-because reversing $011$ gives $110$.
+which is the decimal value of the reversed bits, $110$.
 
 This concept is expressed in pseudo-code by Listing~\ref{alg:bit-reversal}.
 The inner loop extracts each bit of the index $i$ (using bitwise
@@ -380,13 +478,13 @@ Determine $r \gets \log_2 N$\;
 In musical applications, the input signal is typically purely real-valued.
 Because the Fourier transform of a real signal exhibits Hermitian
 symmetry -- where negative frequency components mirror the positive ones --
-the Real--Valued Fourier Transform (RFFT) can compute only the non-redundant
+the Real-Valued Fourier Transform (RFFT) can compute only the non-redundant
 half of the spectrum~\citep{sorensen1987real}. This results in a significant
 reduction in both computational complexity and memory usage compared to a
 full complex FFT. The RFFT is implemented by packing a real-valued signal of
 length $N$ into a complex sequence of length $\frac{N}{2}$ where the real
-components are derived from the even--indexed samples and the imaginary
-components from the odd--indexed samples. A length $\frac{N}{2}$ FFT is then
+components are derived from the even-indexed samples and the imaginary
+components from the odd-indexed samples. A length $\frac{N}{2}$ FFT is then
 computed over the packed signal and reconstructed into DFT coefficients of
 the $N$-point DFT.
 
@@ -404,10 +502,11 @@ y[k] = x[2k] + j\,x[2k+1], \quad k = 0, 1, \dots, M-1.
 \paragraph{2. FFT Computation}
 Compute the $M$-point FFT of the packed sequence:
 \begin{equation}
-Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1, \dots, M-1.
+Y[k] = \sum_{n=0}^{M-1} y[n] \, e^{-j \frac{2\pi}{M} k n}, \quad k = 0, 1,
+\dots, M-1.
 \label{eq:fft-computation}
 \end{equation}
-(The iterative Cooley–Tukey algorithm, as described previously, may be used
+(The iterative Cooley-Tukey algorithm, as described previously, may be used
 here.)
 
 \paragraph{3. Finalization (Reconstruction)}
@@ -452,17 +551,19 @@ Compute the $\frac{N}{2}$-point FFT of $y[k]$ to obtain $Y[k]$ \;
 Define $W_N^k = e^{-j\frac{2\pi k}{N}}$ \;
 Set
 \[
-X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\} - \Im\{Y[0]\};
+X[0] = \Re\{Y[0]\} + \Im\{Y[0]\}, \quad X\left[\frac{N}{2}\right] = \Re\{Y[0]\}
+- \Im\{Y[0]\};
 \]
 \For{$k \gets 1$ \KwTo $\frac{N}{2}-1$}{
   Compute
   \[
-  X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big( Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
+  X[k] = \frac{1}{2}\Big[\, Y[k] + Y^*\Big[\frac{N}{2}-k\Big] - j\,W_N^k\Big(
+Y[k] - Y^*\Big[\frac{N}{2}-k\Big] \Big)\,\Big];
   \]
   Set $X[N-k] = X[k]^*$;
 }
 \Return $X[k]$ for $k = 0,1,\dots,N-1$\;
-\caption{Real--Valued FFT via Packing, Complex FFT, and Finalization}
+\caption{Real-Valued FFT via Packing, Complex FFT, and Finalization}
 \label{alg:rfft}
 \end{algorithm}
 
