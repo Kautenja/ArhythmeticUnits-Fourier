@@ -1,0 +1,26 @@
+% Qualitative comparison: no sample values, time constants, or app UI.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+  \foreach \x/\title/\axis in {0/Average/Time,7.5/Smooth/Frequency} {
+    \begin{scope}[shift={(\x,0)}]
+      \node[anchor=west,font=\small\bfseries,text=panelAccent] at (0,2.5) {\title};
+      \draw[->,panelMuted] (0,0)--(5.8,0) node[below left,font=\footnotesize] {\axis};
+      \draw[->,panelMuted] (0,0)--(0,2.1);
+      \node[rotate=90,font=\footnotesize,text=panelMuted] at (-.35,1) {Level};
+    \end{scope}
+  }
+  \draw[panelMuted,densely dashed,line width=.7pt] (.15,.2)--(1,.2)--(1,1.8)--(3.3,1.8)--(3.3,.2)--(5.5,.2);
+  \draw[panelAccent,line width=1.2pt] (.15,.2)--(1,.2)..controls (1.6,1.7) and (2,1.8)..(3.3,1.8)
+    ..controls (3.9,.3) and (4.4,.2)..(5.5,.2);
+  \draw[panelMuted,densely dashed,line width=.7pt] (7.65,.2)--(8.05,.2)--(8.3,1.5)--(8.55,.2)
+    --(9,.2)--(9.3,1.9)--(9.55,.3)--(9.85,1.5)--(10.1,.25)--(10.45,1.1)--(10.75,.2)--(13,.2);
+  \draw[panelAccent,line width=1.2pt] (7.65,.2)..controls (8,.2) and (8,.65)..(8.4,.65)
+    ..controls (8.7,.65) and (8.7,.45)..(9,.65)
+    ..controls (9.8,1.05) and (10.5,.7)..(10.9,.35)
+    ..controls (11.4,.2) and (12,.2)..(13,.2);
+  \node[align=center,font=\footnotesize] at (2.8,-.9) {Changes settle more gradually};
+  \node[align=center,font=\footnotesize] at (10.3,-.9) {Neighboring peaks blend together};
+  \draw[panelMuted,densely dashed] (3.2,-1.65)--(3.9,-1.65);
+  \node[anchor=west,font=\footnotesize] at (4,-1.65) {Before};
+  \draw[panelAccent,line width=1.2pt] (7,-1.65)--(7.7,-1.65);
+  \node[anchor=west,font=\footnotesize] at (7.8,-1.65) {After};
+\end{tikzpicture}

@@ -28,7 +28,7 @@ manual:
 	cp -r img ${BUILD}
 	cp *.tex ${BUILD}
 	cp ArhythmeticUnits.sty ${BUILD}
-	cp ../figures/PanelDrawing.tex ${BUILD}
+	cp ../figures/*.tex ${BUILD}
 	cd ${BUILD} && ${PDFLATEX} ${SOURCE}
 	cd ${BUILD} && ${PDFLATEX} ${SOURCE}
 	cd ${BUILD} && rm -f ${CLEAN}

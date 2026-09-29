@@ -1,0 +1,201 @@
+\begingroup
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\colorlet{panelAccent}{fourierAccent}
+\clearpage
+\subsection{Input}
+
+Patch a signal to an input to see its spectrum. The four inputs run from
+red at the top through green, blue, and yellow. Each has its own trace and
+gain knob, so you can compare up to four signals with the same analysis
+settings. Leave the gains at \textbf{0 dB} for a fair level comparison.
+
+Gain changes what Fourier analyzes; it does not change what you hear through
+your existing audio path. Turning it fully down silences that input's
+analysis. The maximum, +12 dB, is about four times the input amplitude.
+
+A polyphonic cable is combined into one signal at each jack. Voices are not
+shown separately: they can reinforce or cancel one another. Split voices
+into separate cables if you want to compare them individually.
+
+\subsection{Run}
+
+\textbf{Lit: capture new audio. Dark: inspect the audio already captured.}
+Press Run to stop following a changing sound, then experiment with the
+analysis settings. Press it again to resume. Run starts enabled.
+
+Stopping capture does not stop Fourier's analysis. The last unfinished
+analysis may complete, and Average can continue to settle. This makes Run
+useful for comparing windows on the same retained sound.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabularx}{\textwidth}{@{}p{.35\textwidth}X@{}}
+\toprule
+\textbf{While Run is off} & \textbf{What happens} \\
+\midrule
+Window, Average, Smooth & Reanalyze the retained audio. \\
+Scales, bounds, Slope & Change how the result is displayed. \\
+Gain, AC coupling & Resume capture to see their effect in the analysis. \\
+Length & Clears the retained audio; resume to fill it again. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Try it}
+Capture a steady oscillator, stop Run, and switch Window between Hann and
+Flattop. Watch the width of the peak change even though the captured sound
+has not changed. The next page explains why.
+
+\clearpage
+\subsection{Window Function}
+A pure tone does not always appear as one thin line. The analyzer works on
+short pieces of audio, and the edges of each piece can spread the tone into
+nearby frequencies. This spreading is called \textit{leakage}. A window
+softens the edges, trading a broader main peak for less energy around it.
+
+\textbf{Start with Flattop} when comparing the heights of steady tones.
+Try \textbf{Hann} when you want to distinguish nearby harmonics. Boxcar gives
+a narrow main peak, but its leakage can hide quieter tones beside a loud one.
+No window is best for every sound. The FFT measures at evenly spaced
+frequencies called \textit{bins}; the plots below show what it sees.
+
+\begin{figure}[!htp]
+\centering
+\input{WindowTradeoffs.tex}
+\caption{Calculated responses to one tone halfway between FFT bins.
+The dashed line marks the tone; dots mark measured bins. All three plots use
+the same 2048-sample length and level scale. The ripples are leakage, not
+additional tones.}
+\end{figure}
+
+\paragraph{Read the shape, not just the height}
+The small ripples around a large peak can come from the analysis itself;
+they are not necessarily extra notes or noise in the source. Compare windows
+before drawing that conclusion. The module compensates for the window's
+level reduction, but peak shape and the displayed noise level still change.
+
+\paragraph{Try it}
+With Average and Smooth off, move an oscillator's pitch slowly. Flattop
+usually gives a steadier peak height as the tone passes between bins;
+Hann gives a narrower peak. Fourier can also compare these windows while
+Run is off. The complete window menu is on page~\pageref{sec:control-values}.
+
+\clearpage
+\subsection{Length}
+
+\textbf{Length decides how much audio goes into one spectrum.} A longer
+piece helps separate nearby pitches, especially in the bass. A shorter piece
+follows a changing sound more closely. Start at the default \textbf{2048}
+samples, then increase Length when two nearby tones merge into one peak.
+
+\begin{figure}[!htp]
+\centering
+\input{img/FrameLength.tex}
+\caption{The tradeoff at a Rack sample rate of 48 kHz. A longer frame includes
+more time and gives more closely spaced frequency bins. Each row shows the
+same time and frequency spans. Window choice also affects whether two tones
+can be separated.}
+\end{figure}
+
+A \textit{bin} is one of the evenly spaced frequencies measured by the FFT.
+More bins can reveal finer detail; enlarging the view alone cannot. Longer
+frames also require more computation. Changing Length clears the captured
+audio, so leave Run on long enough to collect a new frame.
+
+\subsection{Hop}
+
+\textbf{Hop decides how often to start another spectrum.} Its default is
+\textbf{30 ms}. Lower values follow changes with more frequent analyses;
+higher values reduce the analysis workload. The available range is 5--300 ms.
+
+Length and Hop do different jobs. Imagine taking overlapping photographs:
+Length is the time covered by each exposure, and Hop is the time between
+exposures. Reducing Hop does not shorten the audio inside each frame.
+If Hop is longer than a frame, gaps appear between the analyzed pieces and
+a short event can be missed. Rack's display refresh also affects when you
+see an update; Hop is not a promise of screen latency.
+
+\clearpage
+\subsection{Freq Scale}
+
+Choose \textbf{Linear} to compare harmonic spacing: equal steps in hertz
+occupy equal widths. \textbf{Logarithmic} (the default) gives the bass more
+room. This version uses a square-root mapping, so octaves are not equally
+wide; read the labels or hover readout for exact frequencies.
+
+\subsection{Y Scale}
+
+Start with \textbf{Log 60dB} for everyday use. Choose \textbf{Log 120dB}
+to see quieter detail. Both extend up to +12 dB; their names identify the
+lower limit. \textbf{Linear} emphasizes large amplitudes, expressed as
+percentages. Changing scale changes the view, not the sound.
+
+\subsection{Average}
+
+Increase \textbf{Average} to calm a flickering trace and compare broad trends.
+Leave it at \textbf{0 ms} to follow attacks. Higher settings give previous
+results more influence; they do not select a fixed-length recording. The
+range extends to 2500 ms.
+
+\subsection{Smooth}
+
+Leave \textbf{Smooth} at \textbf{None} for individual harmonics. Try
+\textbf{1/12 octave} for a gentler outline of tonal balance. Wider settings
+merge neighboring peaks and can lower them; they do not add resolution.
+The octave-based width covers more hertz in the treble than in the bass.
+
+\begin{figure}[!htp]
+\centering
+\input{Smoothing.tex}
+\caption{Average softens changes across time; Smooth blends detail across
+frequency. These are qualitative sketches, not measured responses.}
+\end{figure}
+
+\clearpage
+\subsection{Low Frequency}
+
+\textbf{LO Freq} sets the left edge of the plot. Raise it to leave frequencies
+below your area of interest out of the view. It starts at \textbf{0 Hz}.
+This is a viewing control, not a high-pass filter on the sound.
+
+\subsection{High Frequency}
+
+\textbf{HI Freq} sets the right edge. Lower it to give the bass or a group of
+harmonics more room. Keep it above LO Freq. Both controls can reach half of
+Rack's sample rate, called the \textit{Nyquist frequency}; that is 24 kHz
+at a 48 kHz sample rate. HI Freq starts at this upper limit.
+
+\paragraph{Try it}
+Set LO Freq to 0 Hz and HI Freq to 500 Hz to inspect the bass. The existing
+peaks spread across a wider area, but no new frequency detail is added.
+If nearby tones still merge, increase Length. Check your bounds after
+changing Rack's sample rate, because the available range changes too.
+
+\subsection{Slope}
+
+\textbf{Slope tilts the view, like a display-only tone control.} Positive
+values lift high frequencies and reduce low frequencies around a 1 kHz
+pivot. Negative values reverse that tilt. Your audio is unaffected.
+
+The default is \textbf{+4.5 dB per octave}, which can help show high-frequency
+content. Set it to \textbf{0} when comparing unweighted levels. Its range is
+$-9$ to $+9$ dB per octave.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+\textbf{Example: +3 dB/oct} & \textbf{500 Hz} & \textbf{1 kHz} & \textbf{2 kHz} \\
+\midrule
+Change in displayed level & $-3$ dB & 0 dB & $+3$ dB \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+An octave doubles the frequency. The same tilt continues above and below
+the example: it is not an equalizer acting on the source. Input gain,
+windowing, and smoothing can also change the displayed levels; keep those
+settings fixed when judging what Slope does.
+
+\endgroup

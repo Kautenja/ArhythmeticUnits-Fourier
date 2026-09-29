@@ -1,0 +1,29 @@
+% One ideal tone, same axes and analysis length in every panel.
+\input{WindowResponseData.tex}
+\begin{tikzpicture}[font=\small]
+  \foreach \name/\x/\subtitle in {Boxcar/0/More leakage,Hann/5.1/Less leakage,Flattop/10.2/Broader peak} {
+    \begin{scope}[shift={(\x cm,0)},x=.33cm,y=.045cm]
+      \node[font=\small\bfseries,text=panelAccent] at (0,16) {\name};
+      \node[font=\footnotesize,text=panelMuted] at (0,9) {\subtitle};
+      \foreach \db in {0,-20,-40,-60} {
+        \draw[panelRule!60,line width=.3pt] (-6,\db)--(6,\db);
+        \node[anchor=east,font=\scriptsize,text=panelMuted] at (-6.1,\db) {\db};
+      }
+      \draw[panel fine] (-6,0)--(-6,-60)--(6,-60);
+      \draw[dashed,draw=panelMuted,line width=.55pt] (.5,2)--(.5,-60);
+      \begin{scope}
+        \clip (-6,0) rectangle (6,-60);
+        \draw[panelAccent,line width=.85pt] plot coordinates {\csname Window\name Curve\endcsname};
+      \end{scope}
+      \csname Window\name Dots\endcsname
+      \foreach \bin in {-4,0,4} {
+        \draw[panel fine] (\bin,-60)--(\bin,-62);
+        \node[below,font=\scriptsize] at (\bin,-62) {\bin};
+      }
+    \end{scope}
+  }
+  \node[font=\footnotesize,text=panelMuted] at (5.1,-3.45) {Frequency offset in bins (same spacing in all three plots)};
+  \node[anchor=west,font=\footnotesize] at (-2,1.45) {Level relative to the tone (dB)};
+  \draw[dashed,panelMuted] (7.4,1.45)--(7.9,1.45);
+  \node[anchor=west,font=\footnotesize] at (8,1.45) {Actual tone};
+\end{tikzpicture}

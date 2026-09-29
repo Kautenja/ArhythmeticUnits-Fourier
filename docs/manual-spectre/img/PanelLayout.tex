@@ -7,20 +7,7 @@
   \PanelJack{37.5}{38.5}
   \PanelKnob{37.5}{80}
   \PanelRun{37.5}{346}
-  % Integrated palette/range control, with both independently reachable handles.
-  \draw[panel line,rounded corners=3pt,fill=white] (12,106) rectangle (63,300);
-  \node[panel label,font=\sffamily\fontsize{7}{8}\selectfont] at (35,120) {PALETTE};
-  \node[panel label,font=\sffamily\fontsize{7}{8}\selectfont] at (35,138) {SCALE};
-  \foreach \y in {120,138} \draw[panel fine] (55,\y-2)--(57,\y)--(59,\y-2);
-  \foreach \i in {0,...,8} {
-    \pgfmathtruncatemacro{\tone}{12+9*\i}
-    \fill[panelAccent!\tone] (32,166+12*\i) rectangle +(11,12);
-  }
-  \draw[panel fine] (32,166) rectangle (43,274);
-  \draw[panel line,fill=white] (58,184)--(43,190)--(58,196)--cycle;
-  \draw[panel line,fill=white] (17,247)--(32,253)--(17,259)--cycle;
-  \node[panel note,font=\sffamily\fontsize{7}{8}\selectfont] at (37.5,156) {CEILING};
-  \node[panel note,font=\sffamily\fontsize{7}{8}\selectfont] at (37.5,287) {FLOOR};
+  \PanelColorControl
   % Display with axes only: no trace, live palette, or numeric readout to drift.
   \draw[panel line,rounded corners=3pt,fill=white] (75,15) rectangle (510,365);
   \draw[panel fine] (115,35) rectangle (495,315);

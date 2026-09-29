@@ -1004,15 +1004,22 @@ Choose the source to update:
 | --- | --- | --- | --- |
 | Cover module screenshot | [`PanelLayout.png`](docs/manual-fourier/img/PanelLayout.png) | [`PanelLayout.png`](docs/manual-spectre/img/PanelLayout.png) | Visible panel artwork or controls change |
 | Annotated panel reference | [`PanelLayout.tex`](docs/manual-fourier/img/PanelLayout.tex) | [`PanelLayout.tex`](docs/manual-spectre/img/PanelLayout.tex) | Control positions, labels, or section numbering change |
-| Window tradeoffs | [`WindowTradeoffs.tex`](docs/manual-fourier/img/WindowTradeoffs.tex) | Not used | The explanation of window behavior changes |
+| Window responses | Shared [`WindowTradeoffs.tex`](docs/figures/WindowTradeoffs.tex) | Same shared source | The explanation of window behavior changes |
+| Time/frequency smoothing | Shared [`Smoothing.tex`](docs/figures/Smoothing.tex) | Same shared source | The explanation of smoothing changes |
+| Color-range detail | Not used | [`ColorRange.tex`](docs/manual-spectre/img/ColorRange.tex) | Color-control gestures or geometry change |
 | Frame duration and bin spacing | [`FrameLength.tex`](docs/manual-fourier/img/FrameLength.tex) | Not used | The explanation of FFT length changes |
 | History scanning | Not used | [`History.tex`](docs/manual-spectre/img/History.tex) | The explanation of history acquisition changes |
 | Ideal harmonic series | [`Harmonics.tex`](docs/manual-fourier/img/Harmonics.tex) | Not used | The harmonic comparison exercise changes |
 | Before/after routing | [`FilterPatch.tex`](docs/manual-fourier/img/FilterPatch.tex) | Not used | The filter comparison exercise changes |
 | Time-frequency signatures | Not used | [`SoundShapes.tex`](docs/manual-spectre/img/SoundShapes.tex) | The sound interpretation guide changes |
 
-Each manual's `Guide.tex` provides linked page references; `Tutorials.tex`
-contains practical experiments. Keep the starting patch, explicit settings,
+Each manual's `Guide.tex` provides linked page references; `Controls.tex`
+teaches the panel controls, `ControlValues.tex` holds exact ranges and menu
+catalogs, and `Tutorials.tex` contains practical experiments. Lead control
+descriptions with what the musician sees and when to use the control. Define
+technical terms at first use. Prefer an explanatory plot or annotated detail
+to a diagram that merely repeats prose inside boxes. Keep the starting patch,
+explicit settings,
 steps, expected observations, and interpretation together. Explain what an
 experiment cannot establish as well as what it reveals. Check defaults and
 preset values against the implementation, distinguish capture/analysis
@@ -1021,6 +1028,17 @@ examples. Use schematic illustrations for relationships and identify ideal
 or qualitative examples in their captions. New teaching sections should use
 unnumbered subsections so they do not disrupt the panel's control numbering.
 Rebuild both passes to resolve the guide's page links after moving sections.
+
+The window plots use calculated periodic-window responses, not Rack captures.
+Their normalized data in `docs/figures/WindowResponseData.tex` comes from
+[`generate_window_figure.py`](scripts/generate_window_figure.py). To regenerate
+from the repository root, run `python3 scripts/generate_window_figure.py`
+(standard library only), then rebuild both manuals. Keep its coefficients
+aligned with `src/dsp/window.hpp`. Edit the layout in the shared
+`WindowTradeoffs.tex`, not the generated coordinates. Ordinary PDF builds use
+the checked-in data and still require no Python runtime. The color detail
+reuses `PanelColorControl` from `PanelDrawing.tex`; check both the detail and
+the full Spectre panel after changing that primitive.
 
 The PNG and similarly named `.tex` file serve different purposes. The manual
 includes both explicitly. Keep the old `Module.svg`, `Module.pdf`, and
