@@ -122,6 +122,17 @@ def validate_provider_info(info, descriptor):
         raise ValueError("Native provider precision mismatch")
     if descriptor["provider"] == "pffft" and (not info.get("plan_policy") or "native_plan_bytes" not in info):
         raise ValueError("Missing native setup/storage evidence")
+    if descriptor["provider"] == "fftw":
+        if (info.get("threads") != 1 or info.get("plan_policy") != "FFTW_MEASURE"
+                or info.get("imported_wisdom") is not False or not info.get("version")
+                or not info.get("exported_wisdom")):
+            raise ValueError("Invalid FFTW plan policy/provenance")
+        operation = descriptor["operation"]
+        plans = (["real_plan"] if operation in ("analysis", "rfft") else ["forward_plan"]
+                 if operation == "fft" else ["inverse_plan"] if operation in ("ifft", "inverse")
+                 else ["forward_plan", "inverse_plan"])
+        if any(not info.get(plan) for plan in plans):
+            raise ValueError("Missing measured FFTW plan")
 
 
 def check(directory):
@@ -134,6 +145,8 @@ def check(directory):
     artifacts = metadata["artifact_sha256"]
     required = {"source.tar.gz", "dependencies.tar.gz", "inventory.json", "build.log",
                 "verification.txt", "linked-libraries.txt", "paper.bin", "paper-audit.bin"}
+    if metadata.get("external_dependency_sha256"):
+        required.add("external-dependencies.tar.gz")
     required.update(metadata["resources"].values())
     required.update(run[key] for run in metadata["runs"] for key in ("raw", "stderr"))
     if not required <= artifacts.keys():
@@ -144,7 +157,14 @@ def check(directory):
     if (artifacts["paper.bin"] != metadata["binary_sha256"]
             or artifacts["paper-audit.bin"] != metadata["audit_binary_sha256"]):
         raise ValueError("Executable identity mismatch")
-    for archive_name, field in (("source.tar.gz", "source_sha256"), ("dependencies.tar.gz", "sdk_sha256")):
+    archives = [("source.tar.gz", "source_sha256"), ("dependencies.tar.gz", "sdk_sha256")]
+    if "fftw" in metadata.get("build_features", ()):
+        dependencies = metadata.get("external_dependency_sha256", {})
+        if not {"fftw/include/fftw3.h", "fftw/lib/libfftw3.a", "fftw/lib/libfftw3f.a"} <= dependencies.keys():
+            raise ValueError("Missing optional FFTW dependency evidence")
+    if metadata.get("external_dependency_sha256"):
+        archives.append(("external-dependencies.tar.gz", "external_dependency_sha256"))
+    for archive_name, field in archives:
         with tarfile.open(directory/archive_name) as archive:
             for filename, expected in metadata[field].items():
                 content = archive.extractfile(filename)
@@ -152,7 +172,7 @@ def check(directory):
                     raise ValueError(f"Archived source/dependency checksum mismatch: {filename}")
             if field == "source_sha256":
                 document = json.load(archive.extractfile("benchmark/paper/backends.json"))
-                registry = normalize_registry(document)
+                registry = normalize_registry(document, metadata.get("build_features", ()))
     if registry != json.loads((directory/"inventory.json").read_text()):
         raise ValueError("Compiled registry differs from archived source")
     keys = {str(i) for i in range(len(metadata["configs"]))}

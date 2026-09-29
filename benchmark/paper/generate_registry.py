@@ -4,13 +4,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
 from pathlib import Path
-import sys
+import argparse
 
 from contracts import load_registry
 
 
-def generate(destination):
-    registry = load_registry()
+def generate(destination, features=()):
+    registry = load_registry(features=features)
     fields = list(next(iter(registry.values())))
     def literal(value):
         return json.dumps(value)
@@ -31,4 +31,8 @@ def generate(destination):
 
 
 if __name__ == '__main__':
-    generate(sys.argv[1])
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("destination")
+    parser.add_argument("--features", default="")
+    args = parser.parse_args()
+    generate(args.destination, args.features.split() if args.features else ())

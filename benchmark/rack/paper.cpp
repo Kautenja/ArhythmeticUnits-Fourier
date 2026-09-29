@@ -10,6 +10,9 @@
 #include "../paper/synthesis.hpp"
 #include "../paper/external.hpp"
 #include "../paper/providers/pffft.hpp"
+#ifdef PAPER_HAVE_FFTW
+#include "../paper/providers/fftw.hpp"
+#endif
 
 Plugin* plugin_instance = nullptr;
 
@@ -474,6 +477,10 @@ int main(int argc, char** argv) {
             verify_synthesis<float>();
             verify_synthesis<double>();
             verify_external<float, PffftBackend>("pffft", "float");
+#ifdef PAPER_HAVE_FFTW
+            verify_external<float, FftwBackend<float>>("fftw", "float");
+            verify_external<double, FftwBackend<double>>("fftw", "double");
+#endif
             std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
                 << "inverse jobs and overlap-save identity/FIR verified in both precisions\n";
             return 0;
@@ -516,6 +523,12 @@ int main(int argc, char** argv) {
         require(!provider_info || kind == "external", "Provider metadata is only available for external adapters");
         Paper::Context context(c.rate);
         if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
+#ifdef PAPER_HAVE_FFTW
+        else if (std::string(descriptor.provider) == "fftw") {
+            if (precision == "float") external_dispatch<float, FftwBackend<float>>(c, provider_info);
+            else external_dispatch<double, FftwBackend<double>>(c, provider_info);
+        }
+#endif
         else if (kind == "inverse-job" || kind == "chain") {
             if (precision == "float") synthesis_stream<float>(c);
             else synthesis_stream<double>(c);

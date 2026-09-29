@@ -9,8 +9,8 @@ The [external comparison spec](../../specs/004-external-fft-comparison.md)
 records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
 implementation status,
 acceptance checks, and intended publication tables and figures. Those external
-adapters are benchmark-only. Rack/PFFFT is implemented; FFTW and vDSP remain
-optional integrations tracked in the spec.
+adapters are benchmark-only. Rack/PFFFT and optional FFTW are implemented; vDSP remains an optional
+integration tracked in the spec.
 
 ## Build And Run
 
@@ -140,6 +140,34 @@ Run its matched smoke configuration from the repository root:
 python3 benchmark/paper/run.py .build/paper-fr3-pffft --config benchmark/paper/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 benchmark/paper/check.py .build/paper-fr3-pffft
 ```
+
+FFTW is opt-in and requires both serial precision archives. The pinned local
+build helper uses fresh verified source and build directories on every run;
+existing source/object trees cannot silently contaminate its provenance:
+
+```shell
+python3 benchmark/paper/providers/build_fftw.py --jobs 2
+python3 benchmark/paper/run.py --inventory --fftw-prefix .build/deps/fftw
+python3 benchmark/paper/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config benchmark/paper/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-fr4-fftw
+```
+
+Its fourteen names are `fftw-{fft,rfft,ifft,analysis,inverse,ols-identity,ols-fir}-{float,double}`.
+Without `--fftw-prefix`, these capabilities are explicitly unavailable. Direct
+Make builds opt in with `PAPER_FFTW_PREFIX=.build/deps/fftw`. Feature/configuration
+stamps rebuild the registry and paper binaries when flags change; plugin and
+standalone DSP targets inherit none of these flags or libraries. See
+[FFTW provider details](providers/fftw.md) for the pinned source, planning,
+precision/SIMD choices, and standalone correctness commands.
+
+FFTW uses single-threaded `FFTW_MEASURE`, no imported wisdom, and restored
+inputs after planning. Reports retain the actual per-instance plan text and
+process-global wisdom after measurement; a separate inspection process cannot
+identify a measured plan. Some FFTW plans may allocate native execution
+scratch. Counts and internal scratch bytes remain unknown to the C++ audit,
+and this limitation is retained with each instance. Optional dependency
+archives retain static-library/header bytes and any supplied build/source
+provenance. Prefixes without that provenance are explicitly labeled.
 
 [`external.hpp`](external.hpp) provides the common immediate batch analyzer,
 periodic inverse jobs, and complete overlap-save identity/FIR paths. The

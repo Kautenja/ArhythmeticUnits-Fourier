@@ -14,8 +14,8 @@ Created: September 29, 2026
 This spec supersedes the detailed plan formerly in
 [`benchmark/paper/comparisons.md`](../benchmark/paper/comparisons.md).
 The [protocol README](../benchmark/paper/README.md) defines current measurement
-semantics. Rack/PFFFT adapters and a matched implementation smoke configuration are
-implemented. Remaining external adapters and final campaign configurations
+semantics. Rack/PFFFT and optional FFTW adapters have matched implementation smoke
+configurations. Remaining external adapters and final campaign configurations
 are tracked below. First-party inverse and complete-chain baselines are implemented;
 their smoke validation does not constitute external comparison evidence.
 
@@ -133,7 +133,7 @@ tasks, not necessarily an audio stream with N=H.
 | Priority | Candidate | Question It Answers | Readiness And Route |
 | --- | --- | --- | --- |
 | 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Implemented as benchmark-only adapters; wrapper/source/library identities retained. |
-| 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Adapters and dependency capture pending. |
+| 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Implemented with explicit optional build, per-instance plans, and dependency archives. |
 | 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS real and complex transforms with reusable setup and explicit packing/scaling; adapters pending. This is a platform baseline, not an open-source implementation. |
 | Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; optional FR-7; resolve inclusion before the final measurement phase. |
 | Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | The paper supplies algorithm descriptions; a matched CPU implementation, supported hops/windowing, and accuracy validation need feasibility review. Not a ready drop-in backend. |
@@ -240,19 +240,19 @@ to every candidate without duplicating them in each checklist.
 
 #### Implementation And Integration
 
-- [ ] Add optional single-threaded float real-to-complex and complex
+- [x] Add optional single-threaded float real-to-complex and complex
     forward/backward plans, then separate double support. Integrate analysis,
     periodic inverse jobs, and identity/FIR chains; verify packing and scaling.
-- [ ] Use `FFTW_MEASURE`, no imported wisdom, and fresh processes as the primary
+- [x] Use `FFTW_MEASURE`, no imported wisdom, and fresh processes as the primary
     plan policy. Restore inputs after planning and pass independent checks.
     An `ESTIMATE` sensitivity study is a separate configuration.
 
 #### Benchmark Implementation
 
-- [ ] Register matched workloads for each supported precision and boundary;
+- [x] Register matched workloads for each supported precision and boundary;
     capture plan creation/destruction, storage, build/SIMD options, linked
     library identity, and exported plan/wisdom information when available.
-- [ ] Add smoke/artifact coverage for plan policy, full output, normalization,
+- [x] Add smoke/artifact coverage for plan policy, full output, normalization,
     latency, and unsupported combinations. Document dependency/build commands.
 
 ### FR-5: Apple Accelerate/vDSP
@@ -639,6 +639,54 @@ Validation: local links/anchors, referenced paths and command definitions,
 FR numbering and paired checklists, and `git diff --check` passed. No DSP
 tests, Rack build/session, or measurement campaign was run for this
 documentation-only change.
+
+### FR-4 FFTW Completion
+
+September 29, 2026: implemented all seven external workload boundaries in float
+and double using optional serial FFTW 3.3.10 static libraries. The primary
+policy is `FFTW_MEASURE`, one thread, fresh processes, forgotten prior wisdom,
+and restored inputs after planning. Every actual timed/resource instance
+retains its own plan text; process-global wisdom is labeled separately.
+The registered baseline does not silently use the low-level `ESTIMATE` option.
+See [provider details](../benchmark/paper/providers/fftw.md).
+
+`--fftw-prefix` enables the runner and matching generated C++ inventory;
+`PAPER_FFTW_PREFIX` enables only paper-executable compilation/linking. Without
+it, FFTW workloads reject explicitly and ordinary builds need no FFTW files.
+The local build helper verifies the upstream archive and uses fresh source
+and build directories on every invocation. It checks the extracted source
+manifest after building and records library/header bytes, source archive,
+configure commands, compiler/SIMD policy, and config/log evidence. Campaigns
+archive that evidence and check dependency mutations. This ARM64 build uses
+NEON for float; FFTW 3.3.10's double implementation here is scalar. Native
+archives retain the host toolchain deployment target; this validation covers
+the current macOS host, not older OS compatibility.
+
+The wrapper preallocates its arrays, but inspected FFTW buffered execution
+paths can allocate native scratch depending on the selected plan. Native
+execution counts, internal scratch, and opaque plan storage remain explicitly
+unknown to the C++ allocation audit. This is not an allocation-free claim.
+
+Validation:
+
+-   `python3 benchmark/paper/providers/build_fftw.py --jobs 2`: fresh pinned
+    float/double builds passed, with source-tree integrity verified afterward.
+-   `python3 -m unittest discover -s benchmark/paper/providers -p 'test_fftw.py'`:
+    two tests passed, including 115,200 independent numerical bin checks and
+    deliberate stale-source/object isolation. Common protocol and optional
+    feature/dependency/plan-policy regression tests also passed.
+-   `make benchmark-paper-build PAPER_FFTW_PREFIX=.build/deps/fftw` and the
+    expanded executable `--verify`: passed. Rebuilding without that option
+    restored the disabled inventory and rejected a requested FFTW workload.
+-   `python3 benchmark/paper/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config benchmark/paper/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 benchmark/paper/check.py .build/paper-fr4-fftw`: all 112
+    native/control runs, actual plan records, resource pairs, and archived
+    dependency/source/build evidence passed.
+-   `make check-build` and `git diff --check`: passed. Plugin sources and
+    runtime dependencies are unchanged; no interactive Rack session was run.
+
+FR-4 is complete. These are implementation smoke checks; final comparative
+measurements remain deferred to FR-11.
 
 ### FR-3 Rack/PFFFT Completion
 

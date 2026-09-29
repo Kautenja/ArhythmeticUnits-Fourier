@@ -5,15 +5,18 @@ import json
 from pathlib import Path
 
 
-def load_registry(path=None):
+def load_registry(path=None, features=()):
     document = json.loads((Path(path) if path else Path(__file__).with_name("backends.json")).read_text())
-    return normalize_registry(document)
+    return normalize_registry(document, features)
 
 
-def normalize_registry(document):
+def normalize_registry(document, features=()):
     """Reject malformed descriptors before emitting code or resolving evidence."""
     if document["schema"] != 1:
         raise ValueError("Unsupported backend registry")
+    features = set(features)
+    if features - {"fftw"}:
+        raise ValueError("Unknown optional build feature")
     registry = {}
     for item in document["backends"]:
         descriptor = dict(document["defaults"], **item)
@@ -37,6 +40,10 @@ def normalize_registry(document):
                 raise ValueError("Unknown capability semantics: " + key)
         if descriptor["id"] in registry:
             raise ValueError("Duplicate backend identity")
+        feature = descriptor.get("build_feature", "")
+        if feature:
+            descriptor["available"] = feature in features
+            descriptor["reason"] = "" if descriptor["available"] else "Optional benchmark feature is disabled: " + feature
         registry[descriptor["id"]] = descriptor
     return registry
 

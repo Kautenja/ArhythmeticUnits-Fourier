@@ -18,7 +18,8 @@ import shutil
 import subprocess
 import tarfile
 
-from contracts import REGISTRY, SYNTHESIS_BACKENDS, resolve_contract, validate_config
+from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, validate_config
+from dependencies import fftw_inputs
 
 ROOT = Path(__file__).resolve().parents[2]
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
@@ -175,9 +176,19 @@ def main():
     parser.add_argument("--notes", default="", help="Power mode, affinity, host activity, session context")
     parser.add_argument("--list", action="store_true", help="Print resolved workloads without building/running")
     parser.add_argument("--inventory", action="store_true", help="List capabilities, including unavailable adapters")
+    parser.add_argument("--fftw-prefix", type=Path, help="Enable optional serial float/double FFTW static libraries")
     args = parser.parse_args()
+    features, external_inputs = [], {}
+    if args.fftw_prefix:
+        args.fftw_prefix = args.fftw_prefix.resolve()
+        try:
+            external_inputs.update(fftw_inputs(args.fftw_prefix))
+        except ValueError as error:
+            parser.error(str(error))
+        features.append("fftw")
+    registry = load_registry(features=features)
     if args.inventory:
-        print(json.dumps(REGISTRY, indent=2, sort_keys=True))
+        print(json.dumps(registry, indent=2, sort_keys=True))
         return
     if args.output is None:
         parser.error("An output directory is required")
@@ -192,7 +203,7 @@ def main():
         if config.keys() - set(BASE):
             parser.error("Unknown workload keys: " + str(config.keys() - set(BASE)))
         try:
-            validate_config(config)
+            validate_config(config, registry)
         except ValueError as error:
             parser.error(str(error))
         config["warm_hops"] = args.warm_hops
@@ -200,7 +211,7 @@ def main():
                                if config["pass_name"] in ("callback", "throughput") else
                                args.step_frames if config["pass_name"] == "steps" else args.frames)
         try:
-            validate_config(config, measurement=True)
+            validate_config(config, registry, measurement=True)
         except ValueError as error:
             parser.error(str(error))
     if len({json.dumps(c, sort_keys=True) for c in configs}) != len(configs):
@@ -216,6 +227,8 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     rack = args.rack_dir.resolve()
     build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
+    if args.fftw_prefix:
+        build.append("PAPER_FFTW_PREFIX="+str(args.fftw_prefix))
     metadata = dict(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
                     revision=capture(["git", "rev-parse", "HEAD"]),
                     git_status=capture(["git", "status", "--porcelain"]),
@@ -223,8 +236,9 @@ def main():
                     python=platform.python_version(), cpu_count=os.cpu_count(),
                     compiler=capture(shlex.split(args.cxx)+["--version"]), build_command=build,
                     rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
-                    protocol="v1", configs=configs, runs=[])
-    metadata["contracts"] = {str(i): resolve_contract(c) for i, c in enumerate(configs)}
+                    protocol="v1", configs=configs, runs=[], build_features=features,
+                    external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
+    metadata["contracts"] = {str(i): resolve_contract(c, registry) for i, c in enumerate(configs)}
     metadata["resources"] = {}
     if platform.system() == "Darwin":
         try:
@@ -242,7 +256,7 @@ def main():
     sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*") if p.is_file()} |
                  {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
                  {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
-    build_inputs = {p: digest(p) for p in sources+sdk}
+    build_inputs = {p: digest(p) for p in sources+sdk+list(external_inputs.values())}
     with (output/"build.log").open("w") as log:
         subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
     if any(digest(p) != expected for p, expected in build_inputs.items()):
@@ -260,6 +274,11 @@ def main():
     with tarfile.open(output/"dependencies.tar.gz", "w:gz", dereference=True) as archive:
         for path in sdk:
             archive.add(path, arcname=str(path.relative_to(rack)), recursive=False)
+    if external_inputs:
+        with tarfile.open(output/"external-dependencies.tar.gz", "w:gz", dereference=True) as archive:
+            for name, path in external_inputs.items():
+                archive.add(path, arcname=name, recursive=False)
+    metadata["optional_build_provenance"] = "retained" if "fftw/provenance.json" in external_inputs else "not supplied"
     metadata["dependency_scope"] = "Rack headers, build rules and libRack bytes; system libraries identified by loader output and OS version"
     loader = (["otool", "-L", str(BINARY)] if platform.system() == "Darwin" else
               ["objdump", "-p", str(BINARY)] if os.name == "nt" else ["ldd", str(BINARY)])
@@ -278,7 +297,7 @@ def main():
         subprocess.run([str(BINARY), "--verify"], cwd=ROOT, env=env,
                        stdout=verification, stderr=subprocess.STDOUT, check=True)
     compiled_registry = json.loads(subprocess.check_output([str(BINARY), "--inventory"], env=env, text=True))
-    if compiled_registry != REGISTRY:
+    if compiled_registry != registry:
         raise ValueError("Compiled backend registry differs from runner")
     save(output/"inventory.json", compiled_registry)
     for index, config in enumerate(configs):
@@ -312,7 +331,8 @@ def main():
     if (digest(BINARY) != metadata["binary_sha256"]
             or digest(audit_binary) != metadata["audit_binary_sha256"]
             or any(digest(p) != metadata["source_sha256"][str(p.relative_to(ROOT))] for p in sources)
-            or any(digest(p) != metadata["sdk_sha256"][str(p.relative_to(rack))] for p in sdk)):
+            or any(digest(p) != metadata["sdk_sha256"][str(p.relative_to(rack))] for p in sdk)
+            or any(digest(path) != metadata["external_dependency_sha256"][name] for name, path in external_inputs.items())):
         raise ValueError("Source, executable or dependencies changed during campaign")
     metadata["status"] = "complete"
     metadata["finished_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()

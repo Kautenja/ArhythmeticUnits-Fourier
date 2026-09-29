@@ -115,38 +115,54 @@ $(PANEL_INSPECT_BINARY): .build/test/rack/inspect_panels.cpp.o
 
 -include .build/test/rack/inspect_panels.cpp.d
 
+# Optional research providers affect only the two paper executables.
+PAPER_FFTW_PREFIX ?=
+PAPER_FLAGS :=
+PAPER_LIBS :=
+PAPER_FEATURES :=
+PAPER_NATIVE_INPUTS :=
+ifneq ($(strip $(PAPER_FFTW_PREFIX)),)
+PAPER_FLAGS += -DPAPER_HAVE_FFTW -I"$(PAPER_FFTW_PREFIX)/include"
+PAPER_LIBS += "$(PAPER_FFTW_PREFIX)/lib/libfftw3f.a" "$(PAPER_FFTW_PREFIX)/lib/libfftw3.a"
+PAPER_NATIVE_INPUTS += $(PAPER_FFTW_PREFIX)/lib/libfftw3f.a $(PAPER_FFTW_PREFIX)/lib/libfftw3.a
+PAPER_FEATURES += fftw
+endif
+
 # Raw paper observations, separate from Catch2's batched mean estimator.
 .PHONY: benchmark-paper-build
 benchmark-paper-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX) .build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX)
 benchmark-rack-build: benchmark-paper-build
 
-.build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper.cpp.o
-	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
+.build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper.cpp.o $(PAPER_NATIVE_INPUTS)
+	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
 -include .build/benchmark/rack/paper.cpp.d
 
-.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json benchmark/paper/generate_registry.py benchmark/paper/contracts.py
-	python3 benchmark/paper/generate_registry.py $@
+.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json benchmark/paper/generate_registry.py benchmark/paper/contracts.py .build/benchmark/paper-config
+	python3 benchmark/paper/generate_registry.py $@ --features="$(PAPER_FEATURES)"
 
 .build/benchmark/rack/paper.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -I.build/benchmark -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) -I.build/benchmark -c -o $@ $<
 
 .build/benchmark/rack/paper-audit.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk .build/rack-config
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
 
-.build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper-audit.cpp.o
-	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
+.build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper-audit.cpp.o $(PAPER_NATIVE_INPUTS)
+	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
 -include .build/benchmark/rack/paper-audit.cpp.d
+
+.build/benchmark/paper-config: PRIVATE_CONFIG := $(PAPER_FLAGS) $(PAPER_LIBS) $(PAPER_FEATURES)
+.build/benchmark/rack/paper.cpp.o .build/benchmark/rack/paper-audit.cpp.o: .build/benchmark/paper-config
 
 # Rebuild when the compiler, SDK path, or effective flags change. Stamps
 # never enter a link command; only the objects depend on them.
 .build/rack-config: PRIVATE_CONFIG := $(CXX) $(CXXFLAGS) $(LDFLAGS) $(DISPLAY_BENCHMARK_FLAGS) $(abspath $(RACK_DIR))
 $(RACK_TEST_BUILD)/config: PRIVATE_CONFIG := $(CXX) $(RACK_TEST_FLAGS) $(abspath $(RACK_DIR))
 .build/benchmark/rack/config: PRIVATE_CONFIG := $(CXX) $(RACK_BENCHMARK_FLAGS) $(abspath $(RACK_DIR))
-.build/rack-config $(RACK_TEST_BUILD)/config .build/benchmark/rack/config: FORCE
+.build/rack-config $(RACK_TEST_BUILD)/config .build/benchmark/rack/config .build/benchmark/paper-config: FORCE
 	@mkdir -p $(@D)
 	@printf '%s\n' $(call shell-quote,$(PRIVATE_CONFIG)) > $@.tmp
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
