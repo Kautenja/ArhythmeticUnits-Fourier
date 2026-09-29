@@ -7,13 +7,19 @@ import math
 from pathlib import Path
 import re
 import statistics
+import subprocess
+import sys
+import tarfile
 
 ROOT = Path(__file__).resolve().parents[2]
 PAPER = ROOT / 'whitepaper'
 tex = (PAPER / 'fourier.tex').read_text()
 meta = json.loads((PAPER / 'data/metadata.json').read_text())
-for path, expected in meta['source_sha256'].items():
-    assert hashlib.sha256((ROOT / path).read_bytes()).hexdigest() == expected, path
+with tarfile.open(PAPER / 'data/source.tar.gz') as archive:
+    for path, expected in meta['source_sha256'].items():
+        source = archive.extractfile(path)
+        assert source is not None, path
+        assert hashlib.sha256(source.read()).hexdigest() == expected, path
 for path, expected in meta['data_sha256'].items():
     assert hashlib.sha256((PAPER / 'data' / path).read_bytes()).hexdigest() == expected, path
 
@@ -91,3 +97,39 @@ assert 'Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis' in (R
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
 assert 'kauten2026fourier' in (ROOT / 'CITATION.bib').read_text()
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')
+
+# The prototype campaign is separate from the original FFT campaign and from
+# production timings. Check its archive and independently derive the new table.
+subprocess.run([sys.executable, str(PAPER / 'data/pipeline/check.py')], check=True)
+pipeline = list(csv.DictReader((PAPER / 'data/pipeline/timing.csv').open()))
+for mode, title in [('legacy', 'Legacy'), ('stage_burst', 'Stage bursts'),
+                    ('serial', 'Serial one hop'), ('pipeline', 'Four-hop overlap')]:
+    selected = [r for r in pipeline if int(r['n']) == 4096 and int(r['hop']) == 1024
+                and math.isclose(float(r['octave']), 1/3, abs_tol=1e-6) and r['mode'] == mode]
+    hops = [float(r['hop_ns']) / 1000 for r in selected if int(r['block']) == 0]
+    blocks = [r for r in selected if int(r['block']) == 64]
+    maxima = [float(r['max_ns']) / 1000 for r in blocks]
+    age = 4095 if mode in ('stage_burst', 'pipeline') else 1023
+    assert len(hops) == len(maxima) == 12
+    assert all(int(r['age_samples']) == age for r in blocks)
+    line = (f'{title} & {statistics.median(hops):.3f} & {statistics.median(maxima):.3f}'
+            f' & {min(maxima):.3f}--{max(maxima):.3f} & {age}')
+    assert line in tex, line
+
+# Verify the worked whole-pipeline example and the quotient/remainder algorithm.
+work, horizon = 8194, 1024
+base, remainder = divmod(work, horizon)
+error = done = 0
+counts = []
+for phase in range(horizon):
+    quota = base
+    error += remainder
+    if error >= horizon:
+        error -= horizon
+        quota += 1
+    counts.append(quota)
+    done += quota
+    assert done == (phase + 1) * work // horizon
+assert counts.count(8) == 1022 and counts.count(9) == 2
+assert 'W=8194' in tex
+print('Passed: prototype table, frame ages, and whole-pipeline schedule example.')

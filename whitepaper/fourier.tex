@@ -7,6 +7,7 @@
 \usepackage{microtype}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{booktabs,array}
+\usepackage{flafter}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{tikz}
@@ -38,32 +39,32 @@
 \lstset{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{ink}\bfseries,commentstyle=\color{black!55},stringstyle=\color{accent},backgroundcolor=\color{pale},frame=single,rulecolor=\color{black!15},breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,tabsize=4,captionpos=b,xleftmargin=0.5em,xrightmargin=0.5em}
 \title{\textbf{Fourier: Resumable FFT Scheduling\\for Real-Time Spectral Analysis}}
 \author{Christian Kauten\\\small Arhythmetic Units\\\small\href{mailto:arhythmetic.units@gmail.com}{arhythmetic.units@gmail.com}}
-\date{September 28, 2026\\\small Technical report, manuscript version 1}
+\date{September 28, 2026\\\small Technical report, manuscript version 2}
 
 \begin{document}
 \maketitle
 \begin{abstract}
 A Fourier transform that is inexpensive in aggregate can still impose an
-undesirable burst of work on a real-time audio engine. This report examines a
-resumable radix-2 implementation in Fourier, an open-source spectrum analyzer
-and spectrogram plugin for VCV Rack. The implementation retains its butterfly
-traversal state between engine calls and assigns a fixed number of butterflies
-to each call. We describe the complex and real transforms, prove the
-operation-count completion bound, and distinguish the requested computation
-horizon from the actual spacing of analysis frames. A finite-window latency
-model exposes the cost of deferring a completed frame's transform. Source
-analysis identifies preparation, reconstruction, smoothing, and display
-conversion as residual bursts outside the butterfly budget. Reproducible scalar
-experiments verify spectral agreement and illustrate the difference between
-aggregate work and observed peak call duration. Across four transform lengths
-on one Apple M1 Pro system, incremental execution substantially reduces the
-median of observed per-run peak call durations relative to the same transform
-run to completion, while retaining linear-time boundary work. These results
-support a narrow engineering conclusion: resumability offers useful control of
-work placement, but a butterfly budget alone is neither an exact frame clock
-nor a hard real-time guarantee. The contribution is an implementation study and
-reproducible scheduling analysis, situated within established work on
-time-distributed FFTs, rather than a new Fourier factorization.
+undesirable burst on a real-time audio engine. This report studies two
+successive schedulers in Fourier, an open-source spectrum analyzer and
+spectrogram plugin for VCV Rack. The original design distributes butterflies
+but retains linear preparation and reconstruction bursts and may restart frames
+before its requested horizon. The production successor orders packing,
+windowing, butterflies, positive-bin reconstruction, magnitude smoothing, and
+display preparation into a single resumable work sequence. An integer balanced
+quota completes that sequence in exactly one hop. We derive its work count,
+publication latency, retained-input capacity, and ownership requirements.
+Reproducible scalar experiments characterize the original transform and compare
+complete-pipeline prototypes. In one representative prototype workload, the
+median observed 64-sample block maximum falls from 24.625 to 4.875 microseconds
+without the extra latency of a four-hop overlapped schedule. These observations
+motivated the one-hop implementation; they are not timings of the integrated
+plugin. Regression tests separately exercise the production scalar/SIMD paths,
+exact cadence, cancellation, and allocation-free live configuration. The
+contribution is a scheduling and implementation study within established
+time-distributed FFT work, not a new factorization. Balanced work counts remove
+frame-sized boundary passes but do not imply equal call duration or hard
+real-time guarantees.
 \end{abstract}
 \noindent\textbf{Keywords:} fast Fourier transform; short-time Fourier transform;
 cooperative scheduling; real-time audio; spectral analysis; VCV Rack.
@@ -86,25 +87,24 @@ interface without introducing an additional thread.
 
 Fourier implements this latter design. Its Fourier module computes four
 independent spectra using SIMD lanes; its Spectre module maintains a scalar
-spectrogram history. Both use the same templated real FFT. The implementation
-is compact enough that its scheduling behavior can be derived directly from
-its state machine, including behaviors not captured by its nominal ``hop
-length'' parameter.
+spectrogram history. Their current shared analyzer schedules the complete
+engine-side analysis over one exact hop. The earlier resumable real FFT remains
+available as a reusable DSP component and as the baseline examined here.
 
-This report makes three contributions. First, it gives a precise account of
-the transform state, work count, frame cadence, and latency of the implemented
-scheduler. Second, it separates the bounded butterfly kernel from the larger
-analysis pipeline, identifying where the latter retains concentrated work.
-Third, it supplies deterministic numerical checks and paired timing
-measurements, with the source and raw observations needed to reproduce them.
-These are software-engineering contributions; we make no claim to a new FFT
-factorization, the invention of time distribution, or a general performance
-advantage over optimized transform libraries.
+This report makes three contributions: a derivation of the original scheduler's
+completion/cadence mismatch and residual bursts; a dependency-ordered one-hop
+design covering the complete analysis path and buffer lifetime; and executable
+correctness checks with controlled scalar measurements informing that design.
+We make no claim to a new FFT factorization, the invention of time distribution,
+or a general performance advantage over optimized transform libraries.
 
-The evaluated DSP source is identified by revision
-\code{b52e49c548ae}. The accompanying artifact records
-SHA-256 digests of the experiment and math headers. The report concerns that
-source snapshot, not every historical release bearing the same plugin version.
+The original DSP campaign used revision \code{b52e49c548ae}; its exact
+experiment and header sources are archived with recorded SHA-256 digests.
+Sections~\ref{sec:legacy-transform}--\ref{sec:legacy-results} describe that
+historical implementation and campaign. Section~\ref{sec:one-hop} describes the
+production successor at revision \code{9e43231}, followed by a separate
+pre-integration prototype campaign. Keeping these artifacts distinct prevents
+historical timings from being attributed to the current plugin.
 
 \section{Related Work and Positioning}
 \label{sec:related}
@@ -122,8 +122,9 @@ construct split-radix butterfly work as data become available during
 acquisition~\cite{lo1998,lo1999}. Their moving FFT additionally combines
 real-time scheduling with recursive reuse across shifted
 frames~\cite{lomoving1999}. These methods are closer to acquisition-aware
-computation than the present implementation, which first snapshots a full
-window and then defers its arithmetic.
+computation than the present implementation, which selects a complete
+window before processing it. The successor retains that window in a larger
+ring while packing it incrementally.
 
 Hurchalla describes a time-distributed FFT for low-latency convolution that
 balances computation across input blocks while remaining within one
@@ -168,7 +169,8 @@ Worker-thread FFT & Execution on another scheduled thread & Requires ownership, 
 \label{tab:position}
 \end{table}
 
-\section{Signal Model and Transform Structure}
+\section{Signal Model and Original Transform Structure}
+\label{sec:legacy-transform}
 \subsection{Frame convention and normalization}
 Let $x[n]$ be a real discrete-time signal sampled at $f_s$ Hz. A frame whose
 newest sample is $x[t_r]$ is
@@ -191,8 +193,9 @@ factor of two. This is amplitude calibration, not power-spectral-density
 normalization; the latter involves window energy. Fourier caches window
 samples and applies tabulated coherent-gain factors. Those factors should not
 be assumed to equal the exact finite-length sum for every window and length.
-The experiments below use explicit rectangular and periodic Hann samples and
-do not certify the plugin's display calibration.
+The original FFT campaign uses explicit rectangular and periodic Hann samples
+and does not certify display calibration. The pipeline campaign instead uses
+a coherent-gain-normalized periodic Hann window.
 
 \subsection{Resumable complex transform}
 For $N=2^p$, bit reversal places the input in the order required by an iterative
@@ -233,7 +236,7 @@ bitwise equality within a single executable rather than asserting it across
 different compilers or FFT libraries.
 \end{proof}
 
-\begin{lstlisting}[language=C++,caption={Simplified state transition corresponding to the production complex FFT. Tables and storage are prepared separately.},label={lst:step}]
+\begin{lstlisting}[language=C++,caption={Simplified state transition corresponding to the original complex FFT. Tables and storage are prepared separately.},label={lst:step}]
 void step() {
     if (span > N) return;
     const size_t half = span / 2;
@@ -271,7 +274,7 @@ The resumable inner transform performs
  B_r(N)=B_c(N/2)=\frac{N}{4}\log_2(N/2)
  \label{eq:countreal}
 \end{equation}
-butterflies. Fourier materializes all $N$ output bins, including conjugate
+butterflies. The original real-FFT class materializes all $N$ output bins, including conjugate
 copies, and reconstructs them in one $O(N)$ loop when the last inner butterfly
 finishes. Thus a real-FFT \code{step()} is not uniformly a single butterfly:
 the completing step also performs reconstruction. The operational distinction
@@ -285,7 +288,7 @@ real forward transform's bulk reconstruction. Neither production visualization
 module uses the inverse transform, and the timing campaign concerns only the
 real forward path.
 
-\section{Scheduling, Cadence, and Latency}
+\section{Original Scheduling, Cadence, and Latency}
 \label{sec:scheduling}
 Let $H\ge1$ be the requested computation horizon in sample calls and let $B>0$
 be the number of inner butterflies. The implementation chooses
@@ -295,7 +298,7 @@ be the number of inner butterflies. The implementation chooses
 \end{equation}
 and invokes the single-step method $q$ times per call. Once complete, further
 step invocations are no-ops. The following statements concern this integer
-model. The current forward classes compute the ceiling through single-precision
+model. These reusable forward classes compute the ceiling through single-precision
 floating-point division; the reported experiments verify the model over the
 tested range. Extremely large sizes or horizons require a separate analysis of
 rounding and integer overflow. Zero horizons and unsupported transform lengths
@@ -313,7 +316,7 @@ Since $qH\ge B$, this value cannot exceed $H$.
 
 This is a bound on operation counts, not execution time. In particular,
 completion \emph{within} $H$ calls does not imply completion \emph{at} call $H$.
-Both visualization modules test completion at the start of their processing
+In the original snapshot, both visualization modules test completion at the start of their processing
 routine, publish the previous result, buffer a new frame, and then advance the
 new transform. In steady state, with constant parameters and active processing,
 frame starts are therefore separated by $L$ samples rather than necessarily by
@@ -337,7 +340,7 @@ $N$ & $H=N/2$ & $B_r$ & $q$ & $L$ & $H/L$ \\
 \end{table}
 
 For $N=4096$ and $H=2048$, $q=6$ and $L=1878$. At 48 kHz the nominal
-interval is 42.67 ms, whereas the implemented steady-state interval is
+interval is 42.67 ms, whereas the original steady-state interval is
 39.125 ms. The rate difference is about 9.1\%. This is not a numerical FFT
 error; it is a difference between the parameter's nominal interpretation and
 the scheduler's completion-driven frame clock.
@@ -379,7 +382,7 @@ continues during calculation, but those newer samples belong to a later frame.
 \end{figure}
 
 \subsection{Consequences for temporal smoothing}
-The modules use an exponential magnitude smoother. Writing its intended time
+The original modules use an exponential magnitude smoother. Writing its intended time
 constant as $\tau$ and assuming a nominal interval $H/f_s$ gives
 \begin{equation}
  y_r=\alpha y_{r-1}+(1-\alpha)|X_r|,\qquad
@@ -393,8 +396,8 @@ $\exp[-tH/(L\tau)]$. The effective time constant is thus
  \tau_{\mathrm{eff}}=\tau L/H.
 \end{equation}
 For the 4096-point example, the decay time is approximately 8.3\% shorter than
-its nominal interpretation. An exact frame clock or elapsed-sample timestamps
-would remove this discrepancy. The analysis also motivates timestamping
+its nominal interpretation. The one-hop successor removes this completion-driven discrepancy; Fourier
+still truncates its hop control to integer samples (Section~\ref{sec:one-hop}). The analysis also motivates timestamping
 spectrogram columns by captured frames rather than assuming the configured
 horizon is their spacing.
 
@@ -412,11 +415,11 @@ $\ceil{B/H}$. For $B>0$, the last quota is positive, so the ordered work ends
 on call $H$. Among schedules for $B$ unit-cost operations in $H$ calls, no
 schedule can have a maximum quota smaller than $\ceil{B/H}$, by the pigeonhole
 principle. Equation~\eqref{eq:balanced} attains that lower bound. This elementary
-balanced schedule is a reference design, not a claimed new scheduling result
-or a change to the shipped implementation. Its unit-cost premise does not make
-unequal preparation and reconstruction operations interchangeable butterflies.
+balanced schedule is not a claimed new scheduling result. The successor applies
+it to a larger work sequence (Section~\ref{sec:one-hop}). Its unit-cost premise
+does not make unequal operations interchangeable in execution time.
 
-\section{Whole-Pipeline Cost and Ownership}
+\section{Original Whole-Pipeline Cost and Ownership}
 \label{sec:cost}
 The real FFT's public interface exposes a useful but partial work budget.
 A schematic call-cost model is
@@ -476,13 +479,12 @@ input lifetime as well as arithmetic scheduling.
 Similarly, a display-readiness flag is not by itself an engine-to-display
 synchronization protocol. Concurrent reads of arrays being modified require an
 ownership and publication design consistent with the C++ memory model. The
-current source's shared display buffers are not certified by the scalar tests.
-A future implementation could publish completed immutable snapshots through a
-bounded exchange of preallocated buffers, with an explicit policy for a slow
-consumer. An atomic pointer alone would still require safe buffer reclamation.
-No such handoff redesign is evaluated here.
+original source's shared display buffers are not certified by its scalar tests.
+A bounded exchange of preallocated buffers needs an explicit slow-consumer
+policy and safe reuse; an atomic pointer alone is insufficient. The successor's
+ownership exchange is described in Section~\ref{sec:one-hop}.
 
-\section{Experimental Method}
+\section{Original FFT Experimental Method}
 \label{sec:method}
 The artifact contains a standalone C++11 driver and a Python standard-library
 runner. The runner records source digests before compilation and rejects a run
@@ -538,7 +540,7 @@ Two modes share the same FFT implementation. The complete mode performs
 call. The incremental mode performs \code{buffer()} in that call and invokes
 \code{step(H)} on all $H$ calls, retaining any early-completed result until the
 next fixed frame boundary. This controlled cadence holds the number of frames
-constant; it deliberately differs from the modules' immediate-restart behavior
+constant; it deliberately differs from the original modules' immediate-restart behavior
 so that a faster update rate does not confound the scheduling comparison.
 
 Each mode receives 16 warmup transforms and two measured passes of 64 frames.
@@ -563,7 +565,8 @@ therefore quantized and instrumentation-sensitive. Clock overhead is not
 subtracted. The separate frame pass avoids multiplying those clock reads by
 $H$ when estimating aggregate work.
 
-\section{Results}
+\section{Original FFT Results}
+\label{sec:legacy-results}
 \subsection{Numerical agreement and completion}
 All 1320 incremental-versus-complete schedule cases passed, with bitwise-identical
 completed spectra within each tested type. The independent reference checked
@@ -658,12 +661,227 @@ reverse the result. The robust interpretation of this campaign is the change
 in work placement within this implementation, with broadly comparable total
 frame cost.
 
-The experiments use repeated fixed inputs, warm tables, and a scalar standalone
+This original campaign uses repeated fixed inputs, warm tables, and a scalar standalone
 process. They omit ring insertion, Rack parameter access, SIMD channels,
 frequency/time smoothing, display conversion, GUI consumption, and other
 modules. They therefore cannot establish whole-patch dropout rates or a maximum
-number of safe analyzer instances. No numerical value in this report is a
-measurement from a running Rack session.
+number of safe analyzer instances. Neither timing campaign measures a running Rack session.
+
+\section{Production Successor: Complete Analysis in One Hop}
+\label{sec:one-hop}
+The production \code{SpectrumAnalysis<T>} replaces the modules' original
+completion-driven loop with one ordered sequence per frame. It computes the
+same windowed transform and magnitude processing while omitting unused
+conjugate bins. Fourier instantiates four independent SIMD channels; Spectre
+uses scalar samples. No alternate research scheduler is part of this path.
+
+\subsection{Dependency order and work bound}
+Let $M=N/2$, $K=M+1$, and $B=(M/2)\log_2 M$. Table~\ref{tab:units} defines
+one schedulable unit in each stage. The ordered sequence has length
+\begin{equation}
+ W=M+B+2K=\frac{N}{4}\log_2(N/2)+\frac{3N}{2}+2.
+ \label{eq:wholework}
+\end{equation}
+All packing completes before any butterfly, all butterflies before any
+reconstruction, and the complete prefix sum before any range smoothing. A
+sample quota may cross stage boundaries. The dependency graph is unchanged
+when execution pauses; it therefore admits the same induction argument as
+the butterfly traversal. This is an argument about preserving operations for
+a chosen implementation, not bitwise identity to older code with different
+twiddle precision or compiler transformations.
+
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}rlp{0.64\linewidth}@{}}
+\toprule
+Count & Stage & Work performed by one unit \\
+\midrule
+$M$ & Pack & Read two retained samples; prepare/apply window weights; store one complex pair at its bit-reversed address. \\
+$B$ & Transform & Execute one complex butterfly and advance traversal indices. \\
+$K$ & Reconstruct & Recover one bin from DC through Nyquist, take its magnitude, and append one prefix sum. \\
+$K$ & Output & Prepare/use one smoothing interval, evaluate its mean and EMA, and write one bin to producer-owned output. \\
+\bottomrule
+\end{tabular}
+\caption{Production work units. Cache rebuilding is included in the associated units. Units have different arithmetic and memory costs.}
+\label{tab:units}
+\end{table}
+
+Apply Equation~\eqref{eq:balanced} with $W$ replacing $B$. Quotient and
+remainder $a=\floor{W/H}$ and $r=W\bmod H$ are computed at configuration.
+Starting the accumulator $e$ at zero, each sample executes $a$ units plus one
+when $e+r\ge H$, then retains $(e+r)\bmod H$:
+\begin{lstlisting}[language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
+// At a frame boundary: latch settings; compute a = W/H, r = W%H.
+// Each active sample call:
+capture_input();
+if (phase == 0) { latch_input_endpoint(); e = 0; begin_frame(); }
+size_t quota = a;
+e += r;
+if (e >= H) { e -= H; ++quota; }
+for (size_t i = 0; i < quota; ++i) execute_next_unit();
+if (++phase == H) { publish_owned_output(); phase = 0; }
+\end{lstlisting}
+
+\begin{proposition}[Exact completion and per-call work]
+For $W>0$ and integer $H\ge1$, the ordered analysis completes on the $H$th
+call, with at most $\ceil{W/H}$ units on any call. For $H=\rho N$ with fixed
+$\rho>0$, this maximum is $O(\log N)$.
+\end{proposition}
+\begin{proof}
+After $s$ calls the accumulator rule has issued
+$sa+\floor{sr/H}=\floor{sW/H}$ units. At $s=H$ this is $W$;
+at $s=H-1$ it is strictly smaller. Each difference is either $a$ or $a+1$.
+Substitution of Equation~\eqref{eq:wholework} gives the asymptotic bound.
+\end{proof}
+For $N=2048,H=1024$, $W=8194$ and the maximum quota is nine: 1022 calls
+execute eight units and two execute nine. The bound includes window/cache
+rebuilds, but excludes construction and host lifecycle callbacks. Constant
+input/control work and frame configuration remain, including an $O(\log N)$
+plan-index calculation. No $O(N)$ boundary pass remains in steady-state engine
+analysis. This count assumes fixed-width scalar/SIMD arithmetic and the bounded
+module output callbacks; the generic API cannot constrain an arbitrary callback.
+It does not assert equal duration across units or bound OS interruptions.
+
+\subsection{Retained samples, plans, and publication time}
+Let the frame endpoint be $t_r=rH$, counting continuously captured samples
+from zero. The first work executes on call $t_r$, and the last work and
+publication execute on call $t_r+H-1$. Consequently
+\begin{equation}
+ A_{\mathrm{newest}}=(H-1)/f_s,\qquad
+ A_{\mathrm{mid}}=((N-1)/2+H-1)/f_s.
+ \label{eq:wholeage}
+\end{equation}
+Successive publications are exactly $H$ samples apart. This convention differs
+from the original next-call publication in Equation~\eqref{eq:age}. Startup
+uses zero padding; a full first window is not awaited. With changing hops the
+endpoints satisfy $t_{r+1}=t_r+H_r$, and each frame uses its latched $H_r$.
+
+Incremental packing cannot read a ring that has already overwritten its
+selected samples. With prepared maxima $N_{\max},H_{\max}$, the production
+ring has capacity $C=N_{\max}+H_{\max}$. At selection, the oldest needed sample
+is $N-1$ samples behind the newest. At most $H-1$ new captures occur before
+completion. Its maximum lag is therefore $N+H-2<C$, so it cannot be
+overwritten before its packing unit. This conservative bound remains valid
+when capture pauses. The ring and all transform/output arrays are preallocated;
+no whole-frame capture copy is required.
+
+A maximum-size bit-reversal table serves shorter transforms by right shifts;
+a maximum-size scalar twiddle table serves them by strides. SIMD lanes share
+those scalar twiddles. Window weights and smoothing endpoints rebuild only in
+the scheduled units that use them. Length changes logically clear input and
+EMA history. Reset cancels partial work and marks partially rebuilt caches
+invalid. Increasing the supported hop during a sample-rate callback can grow
+the ring and allocate; this is outside the allocation-free sample path.
+
+\subsection{Smoothing and output ownership}
+For magnitudes $a_k=|X[k]|$, reconstruction builds $P_0=0$ and
+$P_{k+1}=P_k+a_k$. Inclusive smoothing bounds $[\ell_k,h_k]$ then give
+\begin{equation}
+ v_k=\frac{P_{h_k+1}-P_{\ell_k}}{h_k-\ell_k+1},\qquad
+ y_r[k]=\alpha y_{r-1}[k]+(1-\alpha)v_k.
+\end{equation}
+The octave interval is defined in Section~\ref{sec:cost}: endpoints are floored
+to bins; if its upper frequency exceeds Nyquist, it is set to Nyquist and the
+lower endpoint is set to that upper frequency divided by $2^\beta$. With
+frequency smoothing off, $v_k=a_k$. The full prefix stage must precede output
+because a low bin's interval may require higher bins. These are magnitude
+means, not power means or constant-Q analysis.
+
+For Average control $T>0$ seconds, the retained convention is
+$\alpha=\exp(-10\Delta t/T)$; $T=0$ disables averaging. Spectre uses
+$\Delta t=H/f_s$. Fourier uses its Hop control in seconds and truncates
+$\Delta t f_s$ to $H$, retaining a sub-sample quantization difference between
+the control and actual interval. The previous $L/H$ completion bias is removed.
+Window coherent-gain factors and module-specific display scaling are preserved;
+this scheduling change does not redefine amplitude units.
+
+Each output unit maps a four-channel bin into Fourier curve points, or writes
+one Spectre column magnitude. Only after all units finish does the engine
+publish the destination. A single-producer/single-consumer triple-slot mailbox
+uses acquire/release atomic exchange to transfer ownership of a completed
+slot and obtain a reusable slot. The consumer holds its slot until its next
+successful exchange; the producer never overwrites that slot. A slow consumer
+may miss intermediate snapshots. Fourier has one curve mailbox; Spectre has
+one mailbox per history column. Spectre's full image history and recoloring
+belong to the UI, outside the engine schedule.
+
+Freeze semantics remain distinct: Fourier stops capture but continues analysis
+of retained input, whereas Spectre pauses both acquisition and the schedule and
+resumes its partial hop. Continuous-input timestamp equations do not apply
+across such pauses. Host sample-rate changes cancel partial analysis; Spectre
+reset still clears and publishes its history columns. These lifecycle costs,
+UI work, other shared controls, and host scheduling prevent a broad claim of
+hard real-time safety.
+
+\section{Complete-Pipeline Prototype Evaluation}
+\label{sec:pipeline-evaluation}
+A second campaign informed the production choice. Its exact sources and raw
+summaries are archived separately in \path{whitepaper/data/pipeline/}. The
+prototypes compare: (i) the original arithmetic with controlled exact cadence
+(\code{legacy}); (ii) candidate arithmetic executed in boundary bursts across four stage slots
+(\code{stage\_burst}); (iii) a serial balanced sequence within one hop
+(\code{serial}); and (iv) four overlapped stages across four hops
+(\code{pipeline}). Modes (ii)--(iv) share positive-bin specialization and
+prepared smoothing bounds. The stage-burst and overlapped modes share storage and four-hop latency and
+therefore isolate placement most closely. Serial also changes stage storage
+and latency; its comparison with stage bursts is informative but cannot
+isolate dispatch cost alone.
+
+The host and compiler are the Apple M1 Pro and Apple Clang 21.0.0 described
+above. All modes use C++11 with \code{-O3 -DNDEBUG -Wall -Wextra -pedantic},
+scalar float, deterministic noise, normalized periodic Hann, $\alpha=0.8$,
+and 48 kHz. Sizes are $N\in\{1024,4096,16384\}$, hops $H=N/4,N/2$, and
+smoothing off or one-third octave. Twelve repetitions rotate the mode order;
+each pass has 20 warmup and 64 measured hops. Separate passes measure total
+hop time, individual samples, and synchronous 16-, 64-, and 256-sample blocks.
+These are simulated blocks, not device callbacks. Empty timer median/p99 is
+41/42 ns, with no subtraction. Historical phase timings separately confirm
+that packing, reconstruction, and postprocessing remain concentrated.
+
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Mode & Hop ($\mu$s) & Block max ($\mu$s) & Max range ($\mu$s) & Age (samples) \\
+\midrule
+Legacy & 56.009 & 24.625 & 24.291--36.292 & 1023 \\
+Stage bursts & 50.327 & 45.751 & 43.125--57.625 & 4095 \\
+Serial one hop & 51.392 & 4.875 & 4.792--9.167 & 1023 \\
+Four-hop overlap & 55.145 & 5.229 & 4.000--18.917 & 4095 \\
+\bottomrule
+\end{tabular}
+\caption{Selected prototype workload: $N=4096$, $H=1024$, one-third-octave smoothing, 64-sample blocks. Hop time and block maximum are medians of 12 run summaries from separate passes; range is the full range of those maxima. Age is measured from the frame's newest input.}
+\label{tab:pipeline}
+\end{table}
+
+Table~\ref{tab:pipeline} shows an approximately 80\% reduction in the median
+observed block maximum for serial versus legacy in this workload. Serial's
+51.392 microseconds per hop exceeds the stage-burst control's 50.327. The
+fully matched overlap comparison also costs more, at 55.145 microseconds:
+scheduling is not free. Across all 12 size/hop/smoothing settings, median paired
+serial/legacy total-time ratios span 0.920--1.212; overlap/legacy spans
+0.986--1.585. Peak reduction can coexist with greater total CPU cost. Four-hop
+overlap adds $3H$ samples of age: 64 ms here and 256 ms for $N=16384,H=4096$.
+It did not earn that extra latency and storage in this campaign.
+
+The measured prototypes are not the integrated production implementation.
+Their arithmetic, cache policy, and adapters informed the successor, which
+subsequently gained maximum-size plans, live cache rebuilding, SIMD support,
+and module-owned output. Do not use these timings as a production speedup.
+The campaign retains all per-repetition summaries, including preemption-sensitive
+maxima, but no individual call traces. It remains a single-host study without
+Rack graphics, actual audio callbacks, or an optimized-library baseline.
+
+Production correctness is checked separately: 1,934,764 standalone assertions
+in seven cases cover spectra, cadence, retained-input wraparound, all 15 window
+functions, cache invalidation, reset, and allocation-free live changes. A
+separate Rack-linked suite includes scalar/SIMD agreement and coordinate
+mapping (3,807,481 assertions in four cases); module lifecycle and serialization
+suites also pass. The standalone suite passes AddressSanitizer and
+UndefinedBehaviorSanitizer. A Rack plugin build and native display inspection
+with context recreation pass, but no full interactive Rack/DAW workload or
+integrated production timing campaign was performed. These checks support the
+implementation contract, not a device deadline guarantee.
 
 \section{Engineering Implications and Limits}
 A resumable FFT is most attractive when a caller can tolerate delayed analysis,
@@ -677,38 +895,34 @@ large analysis tasks, a worker may offer a better throughput/latency tradeoff
 when the host permits it.
 
 Sample-call costs should also not be confused with device-buffer deadlines.
-If the host renders $K$ samples in one device callback, its relevant demand is
-the sum of the associated module work over those $K$ samples, plus other engine
-costs. A device callback containing preparation and reconstruction can still
-experience a substantial burst. A future host study should vary $K$, frame
+If the host renders $D$ samples in one device callback, its relevant demand is
+the sum of the associated module work over those $D$ samples, plus other engine
+costs. In the original path, a device callback containing preparation and
+reconstruction can still experience a substantial burst. A future host study
+of either design should vary $D$, frame
 phase, analyzer count, and background patch load rather than extrapolating
 from one scalar-call maximum.
 
-A stronger implementation would make the analysis pipeline an explicit sequence
-of owned stages: capture/packing, permutation, butterflies, reconstruction,
-magnitude processing, and publication. Each stage would have a bounded chunk
-size, preallocated storage, and well-defined completion and cancellation
-semantics. Work units with very different costs would need separate budgets or
-calibrated weights. Even then, empirical cost calibration would not guarantee
-worst-case execution on a general-purpose operating system.
+The one-hop implementation makes those formerly concentrated passes resumable
+and defines cancellation and ownership explicitly. Its unweighted quota still
+permits systematic cost differences between stages. Calibrated weights might
+reduce those differences, but would add machine-dependent assumptions and
+would not prove worst-case execution time on a general-purpose OS.
 
-Exact cadence should be specified independently of scheduling: a frame-start
-counter can define analysis timestamps, while the work scheduler merely ensures
-completion before publication. If processing falls behind, the implementation
-must choose whether to skip a frame, retain an older spectrum, or signal an
-overrun; silently overwriting an unfinished frame changes the result. Reset,
-sample-rate changes, and FFT-length changes likewise require explicit
-cancellation/reinitialization behavior. These are proposed design requirements,
-not features demonstrated by this artifact.
+The scheduler always completes its work-count quota before advancing its
+logical hop. If a host call runs late, it does not silently overwrite an
+unfinished frame, but neither does it rescue the audio deadline. Actual host
+overruns require measurements beyond this logical schedule.
 
 The principal limitations of the evidence are its single host and compiler,
 small number of repeated runs, same-session resampling, absence of an optimized
 library baseline, and absence of an end-to-end Rack workload. The numerical
 campaign uses independent direct transforms only for small sizes; large-size
 checks establish schedule equivalence rather than independent correctness.
-The report also does not evaluate non-power-of-two lengths, forward-path invalid
-inputs, multithreaded access, inverse reconstruction applications, or
-calibration accuracy of every window/display setting.
+The timing studies do not evaluate non-power-of-two lengths, inverse
+reconstruction applications, concurrent UI consumption, or calibration accuracy
+of every window/display setting. Production regression tests add invalid-setting
+rejection and concurrent mailbox stress; they are separate from timing evidence.
 
 \section{Conclusion}
 Fourier illustrates how a conventional FFT can become a schedulable component
@@ -718,13 +932,14 @@ also exposes two easily overlooked distinctions: completing within a requested
 horizon is not the same as maintaining that frame interval, and budgeting
 butterflies is not the same as budgeting a complete analysis pipeline.
 
-The recorded experiments support the practical value of redistributing work
-within this scalar implementation, while the source analysis explains the
-remaining linear-time boundary costs. The useful contribution is a transparent
-account of these tradeoffs, backed by executable evidence and explicit limits.
-A fully bounded implementation would extend the same scheduling discipline to
-preparation, reconstruction, publication, and the lifetime of every shared
-buffer.
+The one-hop successor extends the same ordered-work argument to windowing,
+packing, reconstruction, smoothing, and display preparation. Its retained-input
+ring and preallocated publication slots make the data-lifetime requirements
+explicit. The prototype comparison favored this design over adding three hops
+of overlap latency. The integrated implementation has deterministic regression
+evidence, while its device-level performance remains an open measurement task.
+This distinction between scheduling bounds, numerical tests, and empirical
+execution time is central to interpreting the contribution.
 
 \appendix
 \section{Reproducibility and Source Map}
@@ -733,30 +948,35 @@ are in \code{whitepaper/}. The manuscript embeds its figures, listings, and
 bibliography so that one \code{.tex} file suffices for typesetting; compilation
 does not run experiments or fetch network resources.
 
-From the repository root, reproduce the numerical and timing campaign with:
+From the repository root, verify both archived campaigns and build the report:
 \begin{lstlisting}[language=bash]
-python3 whitepaper/experiments/run.py --cpu "YOUR CPU MODEL" \
-    --memory-gib 16
+make -C whitepaper check
+make -C whitepaper
 \end{lstlisting}
-Replace the illustrative hardware fields with the actual host values. New
-results go to \path{whitepaper/build/evaluation/}; the archived
-\path{whitepaper/data/} files remain unchanged. The runner honors \code{CXX}
-and records the actual compiler and command. The original command used
-\code{--cpu "Apple M1 Pro" --memory-gib 16}. Both passes must be interpreted
-using the methodology in Section~\ref{sec:method}, including the intentionally
-fixed cadence.
+The original campaign's exact inputs are in
+\path{whitepaper/data/source.tar.gz}; its README gives isolated extraction and
+reproduction commands. The archive restores the historical math-header paths
+and the exact driver hashes in the original metadata, without editing those
+metadata to match newer code. The current \path{whitepaper/experiments/run.py}
+can also run a new same-FFT comparison, but compiles the current reusable FFT
+headers. Its results belong to a new campaign.
 
-The primary implementation paths are \path{src/dsp/fft.hpp},
+The complete-pipeline prototype sources, including alternate schedules and
+original dependency headers, are preserved only in
+\path{whitepaper/data/pipeline/source.tar.gz}. Its README describes reproduction;
+\code{metadata.json} records compiler settings and source/data hashes;
+\code{timing.csv} retains 2880 per-repetition summaries; \code{baseline.csv}
+retains 27 phase observations. Individual timed calls were not retained.
+
+The production paths are \path{src/dsp/spectrum_analysis.hpp},
 \path{src/SpectrumAnalyzer.cpp}, and \path{src/Spectrogram.cpp}.
-\path{src/dsp/window.hpp} provides cached windows;
-\path{src/dsp/circular_buffer.hpp} provides the contiguous ring.
-The independent report driver is \path{whitepaper/experiments/evaluate.cpp}.
-\code{metadata.json} records the revision, header/driver hashes, compiler,
-hardware declaration, timestamps, and raw-data hashes. \code{timing.csv} stores
-all 144 mode/repetition observations; \code{verification.csv} stores all 22
-precision/length summaries. \code{summary.json} stores derived statistics and
-bootstrap intervals. The archived data are observations, not portable timing
-requirements.
+\path{src/rack_extensions/display_mailbox.hpp} defines snapshot ownership;
+\path{src/rack_extensions/spectrum_coordinates.hpp} maps Fourier's bins.
+The original \path{src/dsp/fft.hpp} remains a reusable component. Run the
+production checks using the commands in the developer manual and archived
+specification \path{specs/archive/003-one-hop-spectrum-analysis.md}.
+Neither archived dataset is a portable timing requirement or a measurement
+of the production successor.
 
 \section{Data and Software Availability}
 The source code is distributed under GPL-3.0-or-later; the repository's license

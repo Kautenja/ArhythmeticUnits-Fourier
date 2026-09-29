@@ -44,6 +44,10 @@ Frames end at input indices jH and publish at jH+H-1, starting with zero
 padding. This intentionally replaces the earlier restart-on-FFT-completion
 cadence. Settings latch at each frame start; mid-frame changes apply next hop.
 The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
+The [technical report](../../whitepaper/fourier.tex) derives the work bound,
+input lifetime, smoothing, and timestamp conventions in its production
+successor section. Both user manuals include the corresponding equations
+and quotient/remainder pseudocode.
 
 Maximum-size twiddle/permutation tables serve every supported FFT size.
 Window and smoothing-bound changes rebuild their cached entries inside

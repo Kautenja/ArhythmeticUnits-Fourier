@@ -1,9 +1,11 @@
 # Recorded Evaluation
 
 This directory contains the September 28, 2026 campaign used by manuscript
-version 1. Values were measured from the real production header, not a
-separate FFT implementation. See [metadata.json](metadata.json) for full
-source digests, compiler output, timestamps, and data hashes.
+version 1. Values were measured from the production header at that revision,
+not a separate FFT implementation. They remain historical evidence in manuscript
+version 2; they do not measure today's production analyzer. See
+[metadata.json](metadata.json) for full source digests, compiler output,
+timestamps, and data hashes.
 
 ## Provenance
 
@@ -63,7 +65,7 @@ Hann only, for one scalar float channel.
 
 Both timing modes produce one transform every requested H logical calls.
 An incremental result that finishes early is retained until the next frame.
-The real modules instead restart at completion; the difference is analyzed
+The original modules instead restarted at completion; the difference is analyzed
 in the manuscript and deliberately excluded from this controlled comparison.
 Construction and fixture setup are excluded, while the production RFFT's
 packing allocation and final reconstruction are included. Consuming output
@@ -73,3 +75,32 @@ The campaign did not reserve a CPU core or a real-time thread, control CPU
 frequency, isolate the machine, or run a Rack session. It measures neither
 whole-plugin deadlines nor optimized-library competitiveness. Do not use
 these observations to claim a universal speedup or real-time safety.
+
+## Reproduce The Historical Experiment
+
+[source.tar.gz](source.tar.gz) contains every file named by the original
+`source_sha256` metadata, byte-for-byte. The DSP headers were recovered from
+`b52e49c548ae`; the report drivers were recovered from `5d805908a884` (the
+report commit following the recorded DSP revision). The checker verifies
+all recovered files against the original hashes. Metadata and measurements
+have not been revised to match today's source layout or optimizations.
+
+From the repository root, using Python 3 and a C++11 compiler:
+
+```shell
+make -C whitepaper check
+fft_source=$(mktemp -d /tmp/fourier-fft-paper.XXXXXX)
+tar -xzf whitepaper/data/source.tar.gz -C "$fft_source"
+cd "$fft_source"
+g++ -std=c++11 -O3 -DNDEBUG -Wall -Wextra -pedantic -Isrc whitepaper/experiments/evaluate.cpp -o /tmp/fourier-fft-evaluate
+/tmp/fourier-fft-evaluate verify > /tmp/fourier-fft-verification.csv
+/tmp/fourier-fft-evaluate measure > /tmp/fourier-fft-timing.csv
+/tmp/fourier-fft-evaluate clock
+```
+
+These commands compile the original sources and run the independent checks,
+paired timing passes, and timer calibration. The archived `run.py` additionally
+produces metadata and statistical summaries; it expects a Git checkout with a
+valid `HEAD`. Use it in a temporary checkout of the historical report commit
+`5d805908a884`, with actual host declarations, when reproducing that full flow.
+Never extract over the working repository.

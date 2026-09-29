@@ -3,8 +3,9 @@
 **Fourier: Resumable FFT Scheduling for Real-Time Spectral Analysis** is a
 technical report by Christian Kauten (Arhythmetic Units). It examines the
 implementation, scheduling bounds, frame cadence, latency, and empirical
-cost of Fourier's resumable FFT. It presents the work as an implementation
-study within the established time-distributed FFT literature.
+cost of the original resumable FFT and its production successor, which
+distributes complete analysis over one exact hop. It presents the work as
+an implementation study within the established time-distributed FFT literature.
 
 ## Read And Build
 
@@ -48,11 +49,21 @@ Run the artifact consistency check from the repository root:
 make -C whitepaper check
 ```
 
-It verifies citation keys, local Markdown links, archived source/data hashes,
-reported numerical summaries, and the tables/plot coordinates against data.
+It verifies citation keys, local Markdown links, both campaigns' archived
+source/data hashes, reported numerical summaries, and tables/plot coordinates
+against data. Historical source hashes are checked inside the source archives,
+so later production changes cannot silently redefine the measured code.
 It does not establish LaTeX compilation or replace visual inspection.
 
 ## Reproduce The Experiments
+
+For the exact historical sources, use the isolated extraction commands in
+[the original campaign](data/README.md#reproduce-the-historical-experiment)
+and [the pipeline campaign](data/pipeline/README.md#reproduce-the-historical-experiment).
+Their metadata and observations are preserved unchanged.
+
+The following command runs a new comparison using the current reusable FFT
+headers; it does not time the modules' new `SpectrumAnalysis` implementation.
 
 A C++11 compiler available as `g++` and Python 3 are sufficient. The driver
 honors `CXX`. From the repository root, substitute your host information:
@@ -65,8 +76,10 @@ The hardware fields are declarations and must describe the actual machine.
 New results go to `whitepaper/build/evaluation/`; the archived campaign is
 not overwritten. Both modes use the same scalar real FFT. The timing
 experiment fixes cadence at the requested horizon to isolate work placement,
-whereas the production modules restart when computation completes. This is
-an intentional experimental control, discussed in the report.
+whereas the original modules restarted when computation completed. The
+production successor now maintains exact cadence and schedules packing,
+windowing, reconstruction, smoothing, and per-bin output as well. Historical
+prototype timings motivated this choice; they are not integrated plugin timings.
 
 The campaign does not measure Rack SIMD, module graphics, thread handoff,
 actual device callbacks, or an optimized external FFT library. Observed
@@ -75,7 +88,7 @@ when reusing a result.
 
 ## Publication And Discoverability
 
-The current document is manuscript version 1, dated September 28, 2026. It
+The current document is manuscript version 2, dated September 28, 2026. It
 has not been deposited on arXiv, assigned a DOI, or peer reviewed. Repository
 citation metadata uses this manuscript as the single citation for the paper
 and software. The [code on GitHub](https://github.com/Kautenja/ArhythmeticUnits-Fourier)
@@ -120,7 +133,16 @@ The report adds no production DSP behavior. The repository's
 and visual assets; this manuscript does not grant new permissions for the
 plugin artwork.
 
-## Verification Of Manuscript Version 1
+## Verification Of Manuscript Version 2
+
+The 17-page revision compiled in the built-in LaTeX editor and with
+`make -C whitepaper`, with no unresolved references or box warnings. The
+artifact check passes for both campaigns, including the new prototype table
+and exact-cadence example. Historical driver extraction, compilation, and
+numerical verification also passed. Detailed documentation and production
+validation evidence is retained in [spec 003](../specs/archive/003-one-hop-spectrum-analysis.md).
+
+## Historical Verification Of Manuscript Version 1
 
 On September 28, 2026, the final 13-page source compiled successfully in the
 built-in LaTeX editor and with `make -C whitepaper`. The local final log had

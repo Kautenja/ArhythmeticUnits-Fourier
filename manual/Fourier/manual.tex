@@ -571,7 +571,8 @@ Then, the reconstruction is performed as follows:
 \end{itemize}
 
 Listing~\ref{alg:rfft} provides high-level pseudo code describing the
-computation of the RFFT given a real-valued signal as input.
+computation of a full RFFT given a real-valued signal as input. The module's
+analysis path uses only the nonredundant bins, as described below.
 
 \begin{algorithm}[H]
 \SetAlgoLined
@@ -637,6 +638,117 @@ frame-boundary work but does not make all sample calls equally expensive.
 Larger transforms and shorter hops still increase engine workload. Increasing
 the host sample rate can allocate retained-input storage, and a reset or change of sample rate discards unfinished analysis. Capture time, the one-hop schedule,
 smoothing, and Rack's display refresh all contribute to visible latency.
+
+
+\subsubsection{Ordered Work and Exact Cadence}
+
+The FFT listings above describe complete transforms. The production analyzer
+pauses their work across sample calls and retains only the $K=N/2+1$ bins
+from DC through Nyquist; it does not materialize the conjugate half.
+Let $M=N/2$ and let $H\geq1$ be the hop in samples. One frame is an ordered
+sequence of four kinds of work:
+\begin{enumerate}
+  \item $M$ units, each reading two retained samples, applying their window
+  weights, and storing one complex pair at its bit-reversed index;
+  \item $B=(M/2)\log_2 M$ units, each executing one FFT butterfly;
+  \item $K$ units, each reconstructing one nonnegative-frequency bin,
+  taking its magnitude, and extending a prefix sum;
+  \item $K$ units, each smoothing one magnitude and writing its display output.
+\end{enumerate}
+The total is therefore
+\begin{equation}
+ W=M+\frac{M}{2}\log_2 M+2K.
+ \label{eq:analysis-work}
+\end{equation}
+At sample phase $s=0,\ldots,H-1$, execute the next
+\begin{equation}
+ q_s=\left\lfloor\frac{(s+1)W}{H}\right\rfloor
+     -\left\lfloor\frac{sW}{H}\right\rfloor
+ \label{eq:analysis-quota}
+\end{equation}
+units, crossing stage boundaries as necessary. These quotas sum to $W$,
+are at most $\lceil W/H\rceil$, and place the final unit on phase $H-1$.
+A quotient/remainder accumulator computes the same schedule:
+
+\begin{algorithm}[H]
+\SetAlgoLined
+\KwIn{Ordered frame work of length $W$; hop $H\geq1$}
+\KwOut{One completed frame after exactly $H$ sample calls}
+At frame start, latch settings and set $a\gets\lfloor W/H\rfloor$,
+$r\gets W\bmod H$, and $e\gets0$\;
+\For{$s\gets0$ \KwTo $H-1$}{
+  Accept the next sample into retained-input storage\;
+  On $s=0$, latch the frame's input endpoint\;
+  $q\gets a$; $e\gets e+r$\;
+  \If{$e\geq H$}{$q\gets q+1$; $e\gets e-H$\;}
+  Execute the next $q$ units in dependency order\;
+  \If{$s=H-1$}{Publish the completed display snapshot\;}
+}
+\caption{One-Hop Analysis Schedule (Each Iteration Is One Sample Call)}
+\label{alg:one-hop}
+\end{algorithm}
+
+For $N=2048$ and $H=1024$, $W=8194$: 1022 sample calls execute eight
+units and two execute nine. These are counts, not equal-duration operations.
+Window and smoothing-cache changes are handled inside their corresponding
+units. Allocation of maximum-size storage and twiddle/permutation tables
+occurs before sample processing.
+
+\subsubsection{Frame Timestamps and Input Lifetime}
+
+Equation~\ref{eqn:stft} labels frames by their oldest sample. For the running
+analyzer it is more convenient to label the newest sample $t_r$:
+\begin{equation}
+ X_r[k]=\sum_{n=0}^{N-1}x[t_r-N+1+n]\,\widetilde w[n]
+                e^{-j2\pi kn/N},\qquad t_r=rH.
+\end{equation}
+Here $\widetilde w[n]$ is the selected window divided by its tabulated
+coherent gain; those factors are retained for display compatibility and need
+not equal the exact finite-length mean of every window. Samples preceding
+startup are zero. The first units execute on call $t_r$, and publication
+occurs on call $t_r+H-1$. The newest-sample age is $(H-1)/f_s$; measured from
+the window's midpoint it is
+\begin{equation}
+ A_{\mathrm{mid}}=\frac{(N-1)/2+H-1}{f_s}.
+\end{equation}
+UI refresh and temporal averaging add visible delay. These timestamps assume
+continuous capture, a fixed hop, and no reset.
+
+Packing reads the selected frame gradually while new input arrives. A ring
+of $N_{\max}+H_{\max}$ samples preserves its oldest sample for the entire
+hop: at most $H-1$ newer samples arrive before completion. Reset logically
+clears retained input and averaging state and cancels partial work; changing
+length also starts with zero-padded history. No full-frame copy is needed.
+
+\subsubsection{Incremental Magnitude Smoothing}
+
+Let $a_k=|X_r[k]|$, $P_0=0$, and $P_{k+1}=P_k+a_k$. The reconstruction
+stage builds this prefix sum one bin at a time. For an octave width $\beta>0$,
+set $f_k=kf_s/N$ and initially choose
+$[f_\ell,f_h]=[f_k2^{-\beta/2},f_k2^{\beta/2}]$.
+If $f_h>f_s/2$, use $f_h=f_s/2$ and $f_\ell=f_h/2^\beta$.
+With $\Delta f=f_s/N$, the inclusive bin interval and its mean are
+\begin{align}
+ \ell_k&=\lfloor f_\ell/\Delta f\rfloor,&
+ h_k&=\min(N/2,\lfloor f_h/\Delta f\rfloor),\\
+ v_k&=\frac{P_{h_k+1}-P_{\ell_k}}{h_k-\ell_k+1}.
+\end{align}
+With smoothing disabled, $v_k=a_k$. This is magnitude averaging, not power
+averaging. Each output unit then updates
+\begin{equation}
+ y_r[k]=\alpha y_{r-1}[k]+(1-\alpha)v_k,
+ \qquad \alpha=\exp(-10\Delta t/T),
+\end{equation}
+where $T>0$ is the Average setting in seconds; $T=0$ selects $\alpha=0$.
+The factor ten preserves the existing control convention, so its nominal
+exponential time constant is $T/10$. Exact cadence removes the older
+completion-driven mismatch between the requested hop and the update interval.
+
+Fourier uses the Hop control in seconds for $\Delta t$ and truncates
+$\Delta t f_s$ to an integer hop $H$. Thus $H/f_s$ can differ from the
+control by less than one sample period. When capture is frozen, processing
+continues over the retained input; the live-input timestamp formula no
+longer describes those repeated analyses.
 
 % -------------------
 % MARK: References

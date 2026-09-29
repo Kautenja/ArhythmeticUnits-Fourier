@@ -91,7 +91,9 @@ production source. The original full campaign checker remains in the source
 archive.
 Individual per-call observations are not retained. See the owning
 [specification](../../../specs/archive/002-complete-analysis-pipeline.md) for the full
-test/sanitizer commands and the existing manuscript-check failure.
+test/sanitizer commands. The historical manuscript-check failure recorded
+there is resolved by verifying the original campaign's archived sources;
+its measured-source hashes were not changed.
 
 ## Reproduce The Historical Experiment
 

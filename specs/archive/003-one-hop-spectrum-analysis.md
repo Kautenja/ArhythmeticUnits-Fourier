@@ -130,6 +130,42 @@ warnings and the standalone unused `Window::names` warning remain.
 
 Native inspection is not a complete interactive Rack/DAW session or a device
 callback benchmark. No new whole-plugin performance numbers are claimed.
-The pre-existing manuscript-v1 `make -C whitepaper check` source-hash mismatch
-remains as recorded in [spec 002](002-complete-analysis-pipeline.md); historical
-metadata has not been rewritten to conceal source changes.
+The pre-existing manuscript-v1 source-hash mismatch was recorded in
+[spec 002](002-complete-analysis-pipeline.md). The documentation follow-up
+below resolves it against recovered historical sources without rewriting
+the measured-source metadata.
+
+### Documentation And Commit Follow-Up
+
+On 2026-09-28 local, the user requested a commit followed by a math/algorithm
+audit. Implementation commit: `9e43231`.
+
+-   Both manuals now derive W=M+B+2K, balanced per-sample quotas, exact
+    publication age, retained-input capacity, prefix-sum smoothing, and EMA
+    conventions. Quotient/remainder pseudocode distinguishes full-transform
+    reference listings from the scheduled positive-spectrum implementation.
+-   Manuscript version 2 distinguishes the original FFT campaign, the
+    complete-pipeline prototype campaign, and production revision `9e43231`.
+    It adds the work-bound proof, buffer ownership/cancellation semantics,
+    controlled prototype results, and production validation limits. Citation
+    metadata is aligned; no plugin version or publication status changed.
+-   Recovered the original experiment sources from local Git into
+    `whitepaper/data/source.tar.gz`. Every file matches its original recorded
+    SHA-256. The consistency checker now verifies historical archives rather
+    than comparing old measurements to edited production files. It also derives
+    the new prototype table from raw observations and checks its frame ages.
+-   `make -C whitepaper check` passes for both datasets, references, links,
+    original tables/plot, and the complete-pipeline schedule example.
+-   The paper compiled in the built-in LaTeX editor and with
+    `make -C whitepaper` (17 pages). `make -C manual` produced Fourier
+    (20 pages) and Spectre (19 pages). Final passes contain no unresolved
+    references/citations or box warnings. The paper and changed manual pages
+    were rendered and visually inspected.
+-   Extracted the original source archive into a fresh temporary directory,
+    compiled its driver, and ran `verify` and `clock` successfully. The
+    historical unused `Window::names` warning remains. No new performance
+    campaign was run and historical timings were not reassigned to production.
+-   No DSP changes were made during this documentation follow-up, so the
+    implementation validation above remains its evidence. Concurrent Makefile,
+    integration-test, and testing-guide edits belong to other ongoing work and
+    were excluded from the documentation commit.
