@@ -46,8 +46,9 @@ cadence. Settings latch at each frame start; mid-frame changes apply next hop.
 The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
 The [technical report](../../whitepaper/fourier.tex) derives the work bound,
 input lifetime, smoothing, and timestamp conventions in its production
-successor section. Both user manuals include the corresponding equations
-and quotient/remainder pseudocode.
+successor section; its appendix collects the supporting algorithms. The user
+manuals focus on controls, displays, operating behavior, and practical setting
+choices, and link to the report for mathematical details.
 
 Maximum-size twiddle/permutation tables serve every supported FFT size.
 Window and smoothing-bound changes rebuild their cached entries inside

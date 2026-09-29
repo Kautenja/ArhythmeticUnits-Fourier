@@ -171,9 +171,9 @@ To reference a manual itself, use its dedicated BibTeX `@manual` entry:
 
 These entries identify the author, manual title, version 2.1.2, release month,
 and version-specific PDF URL. Cite the version you consulted; update the
-metadata and URL if you use another release. The `references.bib` files in
-the manual directories contain the research cited by the manuals, rather
-than citations for the manuals themselves.
+metadata and URL if you use another release. Mathematical background and
+algorithm references are collected in the [technical report](whitepaper/README.md);
+the user manuals focus on operating the modules.
 
 ## Acknowledgments
 
@@ -181,8 +181,8 @@ Fourier builds on [VCV Rack][vcv-rack] for its modular synthesis host and
 plugin framework, and uses [Catch2][catch2] for standalone C++ DSP tests.
 
 The analysis algorithms draw on published DSP research discussed in the
-user manuals. If your work depends on these methods, please also cite the
-relevant research:
+[technical report](whitepaper/README.md). If your work depends on these
+methods, please also cite the relevant research:
 
 -   **Fast Fourier Transform:** James W. Cooley and John W. Tukey,
     "An algorithm for the machine calculation of complex Fourier series,"
@@ -195,12 +195,9 @@ relevant research:
     "A unified approach to short-time Fourier analysis and synthesis,"
     *Proceedings of the IEEE*, 65(11), 1558-1564, 1977.
 
-The [Fourier bibliography][fourier-bibliography] and
-[Spectre bibliography][spectre-bibliography] contain reusable BibTeX entries
-and further references on DSP, algorithms, and computer architecture.
+The report contains the shared bibliography and an implementation appendix
+covering transform preparation and lookup tables.
 
 [citation-cff]: CITATION.cff
 [vcv-rack]: https://github.com/VCVRack/Rack
 [catch2]: https://github.com/catchorg/Catch2
-[fourier-bibliography]: manual/Fourier/references.bib
-[spectre-bibliography]: manual/Spectre/references.bib

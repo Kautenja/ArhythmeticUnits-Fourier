@@ -18,14 +18,6 @@
 % for references and URLs
 \RequirePackage[pdfusetitle,hidelinks]{hyperref}
 \RequirePackage{url}
-% Natbib setup for author-year style
-\RequirePackage{natbib}
- \bibpunct[, ]{(}{)}{,}{a}{}{,}%
- \def\bibfont{\small}%
- \def\bibsep{\smallskipamount}%
- \def\bibhang{24pt}%
- \def\newblock{\ }%
- \def\BIBand{and}%
 % for graphics and figures
 \RequirePackage{graphicx, subfig, tikz}
 % force figures to stay in their sections
@@ -35,12 +27,6 @@
 \RequirePackage{multicol, multirow}
 \RequirePackage{adjustbox}
 \RequirePackage[flushleft]{threeparttable}
-% setup the algorithm package
-% ruled: show bars around title and bar at bottom
-% lined: show the line column on the left of the algorithm
-% linesnumbered: print line numbers for each line
-\RequirePackage[ruled,lined,linesnumbered]{algorithm2e}
-\DontPrintSemicolon % don't print the semicolon that \; usually prints
 % headers and footers
 \RequirePackage{fancyhdr}
 % change the enumeration left index to be smaller
@@ -91,15 +77,6 @@
 
 % setup captions for figures
 \captionsetup[figure]{%
-  labelfont={bf},
-  name={Figure},
-  labelsep=colon,
-  justification=raggedright,
-  singlelinecheck=false
-}
-
-% setup captions for algorithms
-\captionsetup[algorithm2e]{%
   labelfont={bf},
   name={Figure},
   labelsep=colon,

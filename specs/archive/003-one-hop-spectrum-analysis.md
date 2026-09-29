@@ -169,3 +169,20 @@ audit. Implementation commit: `9e43231`.
     implementation validation above remains its evidence. Concurrent Makefile,
     integration-test, and testing-guide edits belong to other ongoing work and
     were excluded from the documentation commit.
+
+### Manual And Paper Separation
+
+At the user's subsequent request, removed the repeated theoretical background
+and algorithms from both user manuals. Their operational sections retain
+practical numerical examples, timing behavior, and a link to the report.
+The paper's implementation appendix now collects bit reversal, table reuse,
+batch reference pseudocode, and explicit smoothing bounds; the main body
+retains the scheduling argument and evaluation. Removed unused manual
+bibliographies, algorithm styling, and BibTeX build steps, and updated links.
+
+`make -C manual` produces an 11-page Fourier manual and a 10-page Spectre
+manual. The paper compiles in the built-in editor and with
+`make -C whitepaper` (19 pages). Final LaTeX passes have no unresolved
+references or box warnings; changed pages were rendered and inspected.
+`make -C whitepaper check` verifies both historical datasets and all manuscript
+references, including listing labels. No production DSP changes were needed.

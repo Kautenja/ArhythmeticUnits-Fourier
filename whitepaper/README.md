@@ -28,7 +28,9 @@ escape or BibTeX pass is required.
 
 ## Contents
 
--   [fourier.tex](fourier.tex): Complete manuscript and bibliography.
+-   [fourier.tex](fourier.tex): Complete manuscript, implementation-reference
+    appendix, and shared bibliography. The appendix covers bit reversal,
+    maximum-size table reuse, batch transform pseudocode, and smoothing bounds.
 -   [sources.md](sources.md): Primary-source verification of references and
     the scope of the literature review.
 -   [experiments/evaluate.cpp](experiments/evaluate.cpp): Independent DFT
@@ -135,7 +137,8 @@ plugin artwork.
 
 ## Verification Of Manuscript Version 2
 
-The 17-page revision compiled in the built-in LaTeX editor and with
+The 19-page revision, including the consolidated implementation appendix,
+compiled in the built-in LaTeX editor and with
 `make -C whitepaper`, with no unresolved references or box warnings. The
 artifact check passes for both campaigns, including the new prototype table
 and exact-cadence example. Historical driver extraction, compilation, and

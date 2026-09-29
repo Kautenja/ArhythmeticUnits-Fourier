@@ -19,10 +19,7 @@ manual:
 	mkdir -p ${BUILD}
 	cp -r img ${BUILD}
 	cp *.tex ${BUILD}
-	cp *.bib ${BUILD}
 	cp ../ArhythmeticUnits.sty ${BUILD}
-	cd ${BUILD} && ${PDFLATEX} ${SOURCE}
-	cd ${BUILD} && bibtex ${SOURCE}
 	cd ${BUILD} && ${PDFLATEX} ${SOURCE}
 	cd ${BUILD} && ${PDFLATEX} ${SOURCE}
 	cd ${BUILD} && rm -f ${CLEAN}

@@ -295,7 +295,7 @@ python3 whitepaper/data/pipeline/check.py
 ## User Manuals And Build Products
 
 The existing multi-file LaTeX manuals use their own Makefiles and require
-`pdflatex`, BibTeX, and their referenced packages:
+`pdflatex` and their referenced packages:
 
 ```shell
 make -C manual
@@ -303,7 +303,7 @@ make -C manual
 
 Outputs are `manual/build/Fourier.pdf` and `manual/build/Spectre.pdf`.
 The child Makefiles recreate their local build directories and stop on
-LaTeX or BibTeX errors. Shell escape is disabled. Inspect rendered pages
+LaTeX errors. Shell escape is disabled. Inspect rendered pages
 when changing manual content or layout.
 
 The [user manuals workflow](../../.github/workflows/manuals.yml) builds both

@@ -28,6 +28,8 @@ assert len(keys) == len(set(keys))
 citations = {key for group in re.findall(r'\\cite\{([^}]+)\}', tex) for key in group.split(',')}
 assert citations == set(keys), (citations - set(keys), set(keys) - citations)
 labels = re.findall(r'\\label\{([^}]+)\}', tex)
+# Listings define their labels in the environment option list.
+labels += re.findall(r'\blabel=\{([^}]+)\}', tex)
 assert len(labels) == len(set(labels))
 for label in re.findall(r'\\(?:eqref|ref)\{([^}]+)\}', tex):
     assert label in labels, label
