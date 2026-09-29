@@ -21,6 +21,8 @@
 // SOFTWARE.
 //
 
+#include <cstddef>
+
 #include "dsp/math/window.hpp"
 #include "../../ieee754.hpp"
 #define CATCH_CONFIG_MAIN
@@ -902,161 +904,101 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 8") {
 }
 
 // ---------------------------------------------------------------------------
-// MARK: name
+// MARK: names
 // ---------------------------------------------------------------------------
 
-SCENARIO("window functions need to be converted to string representations at compile-time") {
-    WHEN("the name of Math::Window::Function::Boxcar is queried") {
-        THEN("\"Boxcar\" is returned") {
-            REQUIRE("Boxcar" == Math::Window::name<Math::Window::Function::Boxcar>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Bartlett is queried") {
-        THEN("\"Bartlett\" is returned") {
-            REQUIRE("Bartlett" == Math::Window::name<Math::Window::Function::Bartlett>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::BartlettHann is queried") {
-        THEN("\"Bartlett-Hann\" is returned") {
-            REQUIRE("Bartlett-Hann" == Math::Window::name<Math::Window::Function::BartlettHann>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Parzen is queried") {
-        THEN("\"Parzen\" is returned") {
-            REQUIRE("Parzen" == Math::Window::name<Math::Window::Function::Parzen>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Welch is queried") {
-        THEN("\"Welch\" is returned") {
-            REQUIRE("Welch" == Math::Window::name<Math::Window::Function::Welch>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Cosine is queried") {
-        THEN("\"Cosine\" is returned") {
-            REQUIRE("Cosine" == Math::Window::name<Math::Window::Function::Cosine>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Bohman is queried") {
-        THEN("\"Bohman\" is returned") {
-            REQUIRE("Bohman" == Math::Window::name<Math::Window::Function::Bohman>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Lanczos is queried") {
-        THEN("\"Lanczos\" is returned") {
-            REQUIRE("Lanczos" == Math::Window::name<Math::Window::Function::Lanczos>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Hann is queried") {
-        THEN("\"Hann\" is returned") {
-            REQUIRE("Hann" == Math::Window::name<Math::Window::Function::Hann>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Hamming is queried") {
-        THEN("\"Hamming\" is returned") {
-            REQUIRE("Hamming" == Math::Window::name<Math::Window::Function::Hamming>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Blackman is queried") {
-        THEN("\"Blackman\" is returned") {
-            REQUIRE("Blackman" == Math::Window::name<Math::Window::Function::Blackman>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::BlackmanHarris is queried") {
-        THEN("\"Blackman-Harris\" is returned") {
-            REQUIRE("Blackman-Harris" == Math::Window::name<Math::Window::Function::BlackmanHarris>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::BlackmanNuttall is queried") {
-        THEN("\"Blackman-Nuttall\" is returned") {
-            REQUIRE("Blackman-Nuttall" == Math::Window::name<Math::Window::Function::BlackmanNuttall>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::KaiserBessel is queried") {
-        THEN("\"Kaiser-Bessel\" is returned") {
-            REQUIRE("Kaiser-Bessel" == Math::Window::name<Math::Window::Function::KaiserBessel>());
-        }
-    }
-    WHEN("the name of Math::Window::Function::Flattop is queried") {
-        THEN("\"Flattop\" is returned") {
-            REQUIRE("Flattop" == Math::Window::name<Math::Window::Function::Flattop>());
-        }
-    }
-}
+SCENARIO("window function names are indexed by their enum values") {
+    const auto& names = Math::Window::names();
+    REQUIRE(names.size() == 15);
 
-SCENARIO("window functions need to be converted to string representations at run-time") {
     WHEN("the name of Math::Window::Function::Boxcar is queried") {
         THEN("\"Boxcar\" is returned") {
-            REQUIRE("Boxcar" == Math::Window::name(Math::Window::Function::Boxcar));
+            REQUIRE("Boxcar" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Boxcar)));
         }
     }
     WHEN("the name of Math::Window::Function::Bartlett is queried") {
         THEN("\"Bartlett\" is returned") {
-            REQUIRE("Bartlett" == Math::Window::name(Math::Window::Function::Bartlett));
+            REQUIRE("Bartlett" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Bartlett)));
         }
     }
     WHEN("the name of Math::Window::Function::BartlettHann is queried") {
-        THEN("\"Bartlett-Hann\" is returned") {
-            REQUIRE("Bartlett-Hann" == Math::Window::name(Math::Window::Function::BartlettHann));
+        THEN("\"BartlettHann\" is returned") {
+            REQUIRE("BartlettHann" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::BartlettHann)));
         }
     }
     WHEN("the name of Math::Window::Function::Parzen is queried") {
         THEN("\"Parzen\" is returned") {
-            REQUIRE("Parzen" == Math::Window::name(Math::Window::Function::Parzen));
+            REQUIRE("Parzen" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Parzen)));
         }
     }
     WHEN("the name of Math::Window::Function::Welch is queried") {
         THEN("\"Welch\" is returned") {
-            REQUIRE("Welch" == Math::Window::name(Math::Window::Function::Welch));
+            REQUIRE("Welch" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Welch)));
         }
     }
     WHEN("the name of Math::Window::Function::Cosine is queried") {
         THEN("\"Cosine\" is returned") {
-            REQUIRE("Cosine" == Math::Window::name(Math::Window::Function::Cosine));
+            REQUIRE("Cosine" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Cosine)));
         }
     }
     WHEN("the name of Math::Window::Function::Bohman is queried") {
         THEN("\"Bohman\" is returned") {
-            REQUIRE("Bohman" == Math::Window::name(Math::Window::Function::Bohman));
+            REQUIRE("Bohman" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Bohman)));
         }
     }
     WHEN("the name of Math::Window::Function::Lanczos is queried") {
         THEN("\"Lanczos\" is returned") {
-            REQUIRE("Lanczos" == Math::Window::name(Math::Window::Function::Lanczos));
+            REQUIRE("Lanczos" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Lanczos)));
         }
     }
     WHEN("the name of Math::Window::Function::Hann is queried") {
         THEN("\"Hann\" is returned") {
-            REQUIRE("Hann" == Math::Window::name(Math::Window::Function::Hann));
+            REQUIRE("Hann" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Hann)));
         }
     }
     WHEN("the name of Math::Window::Function::Hamming is queried") {
         THEN("\"Hamming\" is returned") {
-            REQUIRE("Hamming" == Math::Window::name(Math::Window::Function::Hamming));
+            REQUIRE("Hamming" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Hamming)));
         }
     }
     WHEN("the name of Math::Window::Function::Blackman is queried") {
         THEN("\"Blackman\" is returned") {
-            REQUIRE("Blackman" == Math::Window::name(Math::Window::Function::Blackman));
+            REQUIRE("Blackman" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Blackman)));
         }
     }
     WHEN("the name of Math::Window::Function::BlackmanHarris is queried") {
-        THEN("\"Blackman-Harris\" is returned") {
-            REQUIRE("Blackman-Harris" == Math::Window::name(Math::Window::Function::BlackmanHarris));
+        THEN("\"BlackmanHarris\" is returned") {
+            REQUIRE("BlackmanHarris" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::BlackmanHarris)));
         }
     }
     WHEN("the name of Math::Window::Function::BlackmanNuttall is queried") {
-        THEN("\"Blackman-Nuttall\" is returned") {
-            REQUIRE("Blackman-Nuttall" == Math::Window::name(Math::Window::Function::BlackmanNuttall));
+        THEN("\"BlackmanNuttall\" is returned") {
+            REQUIRE("BlackmanNuttall" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::BlackmanNuttall)));
         }
     }
     WHEN("the name of Math::Window::Function::KaiserBessel is queried") {
-        THEN("\"Kaiser-Bessel\" is returned") {
-            REQUIRE("Kaiser-Bessel" == Math::Window::name(Math::Window::Function::KaiserBessel));
+        THEN("\"KaiserBessel\" is returned") {
+            REQUIRE("KaiserBessel" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::KaiserBessel)));
         }
     }
     WHEN("the name of Math::Window::Function::Flattop is queried") {
         THEN("\"Flattop\" is returned") {
-            REQUIRE("Flattop" == Math::Window::name(Math::Window::Function::Flattop));
+            REQUIRE("Flattop" ==
+                names.at(static_cast<std::size_t>(Math::Window::Function::Flattop)));
         }
     }
 }
@@ -1064,84 +1006,6 @@ SCENARIO("window functions need to be converted to string representations at run
 // ---------------------------------------------------------------------------
 // MARK: coherent_gain
 // ---------------------------------------------------------------------------
-
-SCENARIO("window functions need to be mapped to coherent gains at compile-time") {
-    WHEN("the coherent gain of Math::Window::Function::Boxcar is queried") {
-        THEN("1.0 is returned") {
-            REQUIRE(1.0f == Math::Window::coherent_gain<Math::Window::Function::Boxcar>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Bartlett is queried") {
-        THEN("0.5 is returned") {
-            REQUIRE(0.5f == Math::Window::coherent_gain<Math::Window::Function::Bartlett>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::BartlettHann is queried") {
-        THEN("0.5 is returned") {
-            REQUIRE(0.5 == Math::Window::coherent_gain<Math::Window::Function::BartlettHann>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Parzen is queried") {
-        THEN("0.375 is returned") {
-            REQUIRE(0.375f == Math::Window::coherent_gain<Math::Window::Function::Parzen>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Welch is queried") {
-        THEN("0.667317 is returned") {
-            REQUIRE(0.667317f == Math::Window::coherent_gain<Math::Window::Function::Welch>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Cosine is queried") {
-        THEN("0.637240 is returned") {
-            REQUIRE(0.637240f == Math::Window::coherent_gain<Math::Window::Function::Cosine>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Bohman is queried") {
-        THEN("0.405285 is returned") {
-            REQUIRE(0.405285f == Math::Window::coherent_gain<Math::Window::Function::Bohman>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Lanczos is queried") {
-        THEN("0.58949 is returned") {
-            REQUIRE(0.58949f == Math::Window::coherent_gain<Math::Window::Function::Lanczos>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Hann is queried") {
-        THEN("0.5 is returned") {
-            REQUIRE(0.5f == Math::Window::coherent_gain<Math::Window::Function::Hann>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Hamming is queried") {
-        THEN("0.54 is returned") {
-            REQUIRE(0.54f == Math::Window::coherent_gain<Math::Window::Function::Hamming>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Blackman is queried") {
-        THEN("0.42 is returned") {
-            REQUIRE(0.42f == Math::Window::coherent_gain<Math::Window::Function::Blackman>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::BlackmanHarris is queried") {
-        THEN("0.35875 is returned") {
-            REQUIRE(0.35875f == Math::Window::coherent_gain<Math::Window::Function::BlackmanHarris>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::BlackmanNuttall is queried") {
-        THEN("0.363582 is returned") {
-            REQUIRE(0.363582f == Math::Window::coherent_gain<Math::Window::Function::BlackmanNuttall>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::KaiserBessel is queried") {
-        THEN("0.402 is returned") {
-            REQUIRE(0.402f == Math::Window::coherent_gain<Math::Window::Function::KaiserBessel>());
-        }
-    }
-    WHEN("the coherent gain of Math::Window::Function::Flattop is queried") {
-        THEN("0.215579 is returned") {
-            REQUIRE(0.215579f == Math::Window::coherent_gain<Math::Window::Function::Flattop>());
-        }
-    }
-}
 
 SCENARIO("window functions need to be mapped to coherent gains at run-time") {
     WHEN("the coherent gain of Math::Window::Function::Boxcar is queried") {
