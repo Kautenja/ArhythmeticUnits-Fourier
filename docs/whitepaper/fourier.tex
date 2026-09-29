@@ -165,6 +165,16 @@ general-purpose processors~\cite{liu2017}. The existence of these approaches
 rules out a broad novelty claim for distributing transform work or a processing
 chain in time.
 
+Pr\r{u}\v{s}a and Holighaus provide an application-level comparison in their
+real-time spectrogram visualizer using reassigned non-uniform filter
+banks~\cite{prusa2016}. Their Section~4.2 places incoming audio in a lock-free
+circular buffer and performs analysis on a separate thread polling at 60\,Hz.
+They distinguish overlap, computation, and repaint delay, and identify polling
+as a source of jitter. This is a concrete alternative execution model for
+spectral visualization. Its filter-bank representation differs from our
+fixed-window FFT; the relevant comparison here is the placement of analysis
+work and the path from captured samples to visible output.
+
 A separate family of methods reuses work between overlapping windows.
 The sliding DFT updates spectral bins recursively as samples enter and leave a
 window~\cite{jacobsen2003}. Lyons and Howard present efficient, guaranteed-stable
@@ -952,6 +962,13 @@ an optimized batch FFT on the engine thread and, where supported, a worker
 implementation, with equivalent input windows, output processing, and requested
 cadence. It should report actual publication delay as well as engine cost.
 
+For a visualizer, publication is only one stage of end-to-end latency.
+The delay decomposition of Pr\r{u}\v{s}a and Holighaus~\cite{prusa2016}
+motivates measuring display consumption and repaint timing separately from
+analysis completion. Our exact-hop publication cadence does not guarantee
+equally spaced screen updates or bound the age of the spectrum when displayed;
+the archived timing campaigns do not measure that path.
+
 A complementary experiment should compare hopping and windowed sliding
 methods~\cite{park2014,rafii2018} across transform lengths, hops, and requested
 bin counts. It should retain equivalent windowing, normalization, smoothing,
@@ -985,6 +1002,15 @@ measurement-bias concerns of Mytkowicz et al.~\cite{mytkowicz2009}; identical
 rebuilds alone need not sample different layouts. Average-cost intervals and
 observed callback maxima answer different questions, and neither provides a
 hard worst-case execution-time bound.
+
+Wilhelm et al. distinguish observed execution-time extrema from the true
+worst case and from a safe upper bound~\cite{wilhelm2008}. Their survey also
+explains why caches, pipelines, and branch prediction complicate timing
+analysis. In those terms, our quota proof bounds the number of scheduled work
+units per call, while the timing campaigns report observations from sampled
+executions. Neither supplies a hardware timing model covering all relevant
+execution states, so their combination does not establish a safe execution-time
+bound.
 
 The one-hop implementation makes those formerly concentrated passes resumable
 and defines cancellation and ownership explicitly. Its unweighted quota still
@@ -1256,6 +1282,13 @@ Application to online iterative learning control---experimental high-speed
 nanopositioning example,'' \emph{Mechatronics}, vol. 41, pp. 114--124, 2017.
 \href{https://doi.org/10.1016/j.mechatronics.2016.11.007}{doi:10.1016/j.mechatronics.2016.11.007}.
 
+\bibitem{prusa2016}
+Z. Pr\r{u}\v{s}a and N. Holighaus, ``Real-time audio visualization with
+reassigned non-uniform filter banks,'' in \emph{Proceedings of the 19th
+International Conference on Digital Audio Effects (DAFx-16)}, Brno,
+Czech Republic, pp. 3--8, September 2016.
+\url{https://www.dafx.de/paper-archive/2016/dafxpapers/01-DAFx-16_paper_20-PN.pdf}.
+
 \bibitem{jacobsen2003}
 E. Jacobsen and R. Lyons, ``The sliding DFT,'' \emph{IEEE Signal Processing
 Magazine}, vol. 20, no. 2, pp. 74--80, 2003.
@@ -1303,6 +1336,12 @@ T. Kalibera and R. Jones, ``Rigorous benchmarking in reasonable time,'' in
 (ISMM '13)}, pp. 63--74, 2013.
 \href{https://doi.org/10.1145/2464157.2464160}{doi:10.1145/2464157.2464160}.
 Corrected author manuscript: \url{https://kar.kent.ac.uk/33611/}.
+
+\bibitem{wilhelm2008}
+R. Wilhelm et al., ``The worst-case execution-time problem---overview of
+methods and survey of tools,'' \emph{ACM Transactions on Embedded Computing
+Systems}, vol. 7, no. 3, article 36, 53 pages, 2008.
+\href{https://doi.org/10.1145/1347375.1347389}{doi:10.1145/1347375.1347389}.
 
 \bibitem{rack}
 VCV, ``Plugin API guide,'' \emph{VCV Rack Manual}. Accessed September 28, 2026.

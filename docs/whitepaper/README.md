@@ -161,7 +161,7 @@ and exact-cadence example. Historical driver extraction, compilation, and
 numerical verification also passed. Detailed documentation and production
 validation evidence remains in the removed specifications in Git history.
 
-The literature-review updates retain manuscript version 2 at 20 pages.
+The first literature-review updates retained manuscript version 2 at 20 pages.
 They deepen the AES/DAFx scheduling comparison, replace the 2015
 sliding-DFT exposition with Lyons and Howard (2021), and add benchmarking
 references to distinguish existing evidence from a proposed future evaluation.
@@ -176,6 +176,15 @@ references and unchanged campaign data, and `git diff --check` passes.
 No new timing campaign, DSP test run, Rack build, or manual Rack session was
 performed for this literature-only update. Source-access limitations are
 recorded in [sources.md](sources.md).
+
+The September 29 additions integrate Prusa and Holighaus (2016) into related
+work and the display-latency discussion, and Wilhelm et al. (2008) into the
+discussion of execution-time bounds. The manuscript remains version 2 and is
+now 21 pages with 22 cited references. Both LaTeX builds and the artifact check
+pass; the final LaTeX pass has no unresolved references or box warnings.
+All 21 rendered pages were visually inspected, and `git diff --check` passes.
+These additions preserve the campaign data and introduce no new timing,
+DSP, Rack build, or manual Rack validation results.
 
 ## Historical Verification Of Manuscript Version 1
 

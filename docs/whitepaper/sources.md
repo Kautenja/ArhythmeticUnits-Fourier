@@ -1,7 +1,7 @@
 # Reference Verification
 
 The bibliography in [fourier.tex](fourier.tex) was checked and expanded on
-September 28, 2026 against the primary sources below.
+September 29, 2026 against the primary sources below.
 This is a focused literature review
 covering the implementation's mathematical basis, directly related scheduling
 work, overlap-reuse alternatives, and host integration. It is not an
@@ -20,6 +20,7 @@ exhaustive bibliometric survey.
 | `battenberg2011` | [Author-hosted full paper](https://ericbattenberg.com/pdf/partconvDAFx2011.pdf), [author publication page](https://ericbattenberg.com/publication/partconv/) | Section 4 distributes forward transforms, spectral multiplication, and inverse transforms across callbacks; section 6 compares performance and implementation effort |
 | `wefers2015` | [University record](https://publications.rwth-aachen.de/record/466561), [full dissertation](https://publications.rwth-aachen.de/record/466561/files/466561.pdf) | Section 6.8, especially printed pp. 182-183: manual preemption and short-transform subdivision; motivates a granularity comparison, not a performance ranking for this analyzer |
 | `liu2017` | [Rutgers author bibliography](https://zoulab.engr.rutgers.edu/journal_article), [university publication record](https://www.researchwithrutgers.org/en/publications/optimal-time-distributed-fast-fourier-transform-application-to-on/) | Time-distributed FFT/IFFT in online control; volume 41, pages 114-124 |
+| `prusa2016` | [DAFx proceedings paper](https://www.dafx.de/paper-archive/2016/dafxpapers/01-DAFx-16_paper_20-PN.pdf) | Section 4.2: worker-thread spectral visualization, lock-free input buffering, polling jitter, and computation/repaint delay |
 | `jacobsen2003` | [Jacobsen's later exposition and references](https://www.dsprelated.com/showarticle/776.php) | Sliding DFT distinction; IEEE Signal Processing Magazine 20(2), 74-80 |
 | `lyons2021` | [University author record](https://digital.library.adelaide.edu.au/items/14d4a218-cff8-47ca-aeae-eb543ab04b4f/full), [accepted manuscript](https://digital.library.adelaide.edu.au/dspace/bitstream/2440/133370/3/hdl_133370.pdf) | Abstract and bibliographic metadata: guaranteed-stable sliding networks and frequency-flexible analysis; no reproduced equations or performance ranking |
 | `richardson2019` | [Author-deposited preprint and journal metadata](https://arxiv.org/abs/1707.08213) | Tree reuse across windows; published as Algorithm 991 in ACM TOMS 45(1), article 12 |
@@ -28,6 +29,7 @@ exhaustive bibliometric survey.
 | `frigo2005` | [Authors' full paper](https://fftw.org/fftw-paper-ieee.pdf), [author publication record](https://fftw.org/~athena/abstracts/abstract8.html) | Optimized FFT implementations as an unmeasured comparison class |
 | `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
 | `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
+| `wilhelm2008` | [University-hosted published paper](https://www.es.mdh.se/pdf_publications/1258.pdf), [DOI](https://doi.org/10.1145/1347375.1347389) | Section 1 and Figure 1: observed extrema, actual worst-case execution time, and safe bounds; processor-state complications |
 | `rack` | [Official plugin API guide](https://vcvrack.com/manual/PluginGuide) | Engine and SIMD context; actual behavior also checked in repository code |
 
 Some publisher pages require browser verification or a subscription. For
@@ -53,6 +55,12 @@ the journal publication's 2014 date. Rafii's published article is November
 dissertation was defended in 2014 and published in 2015. The proposed
 overlap-reuse and work-granularity experiments are this report's future work;
 none of these sources supplies measurements of Fourier's implementation.
+
+The September 29 additions use Prusa and Holighaus for an application-level
+threading comparison and Wilhelm et al. for timing-bound terminology. The
+report distinguishes engine publication from screen updates, and work-count
+bounds from execution-time guarantees. Neither addition supplies new
+measurements or a performance ranking for Fourier.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.
