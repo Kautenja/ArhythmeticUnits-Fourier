@@ -71,15 +71,16 @@ RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2/single_include/catch2
 ifdef ARCH_LIN
 RACK_BENCHMARK_FLAGS += -DCATCH_CONFIG_NO_POSIX_SIGNALS
 endif
-RACK_BENCHMARK_NAMES := dsp coordinates graphics
+RACK_BENCHMARK_NAMES := dsp coordinates graphics modules
 RACK_BENCHMARK_BINARIES := $(addprefix build/benchmark/rack/,$(RACK_BENCHMARK_NAMES))
-.PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-rack-build
+.PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules benchmark-rack-build
 benchmark-rack-build: $(RACK_BENCHMARK_BINARIES)
 benchmark-dsp: build/benchmark/rack/dsp
 benchmark-coordinates: build/benchmark/rack/coordinates
 benchmark-graphics: build/benchmark/rack/graphics
+benchmark-modules: build/benchmark/rack/modules
 
-benchmark-dsp benchmark-coordinates benchmark-graphics:
+benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules:
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< $(BENCHMARK_ARGS)
 
 $(RACK_BENCHMARK_BINARIES): build/benchmark/rack/%: build/benchmark/rack/%.cpp.o

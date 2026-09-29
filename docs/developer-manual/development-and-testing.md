@@ -436,6 +436,59 @@ display consumer, rendering, audio device, or host scheduling in this workload.
 The headless output sanity assertions verify that processing publishes spectra;
 the existing numerical regression suites remain the correctness oracle.
 
+### Module Operating States And Lifecycle
+
+`benchmark/rack/modules.cpp` complements the fixed DSP workloads by creating
+both modules through their exported Rack model factories. From the repository
+root, with the usual Rack dependencies:
+
+```shell
+make build/benchmark/rack/modules
+make benchmark-modules
+make benchmark-modules BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
+make benchmark-modules BENCHMARK_ARGS="[lifecycle]"
+```
+
+The executable is also included in `make benchmark-rack-build`. It uses the
+same SDK flags and Catch2 statistics as the other Rack benchmarks. Workloads
+are named by module, settings, and units:
+
+| Workload | Timed Work Per Iteration |
+| --- | --- |
+| Operating states | 4096 samples with constructor-default controls at 44.1, 96, and 192 kHz; disconnected ports with stale voltages, connected silence, mono, sixteen voices, or frozen mono input |
+| Shipped presets | 4096 samples with every `.vcvm` preset in the module's preset directory, sixteen voices per port, at 48 kHz; names, FFT lengths, and hops appear in results |
+| Live controls | Alternating window, frequency/time smoothing, gain, and AC-coupling settings followed by 32768 samples at 48 kHz; Fourier also alternates N=128/16384 and H=240/1440 |
+| Factory lifecycle | One factory construction and destruction at 44.1 or 192 kHz, including parameter metadata, DSP/storage allocation, and initial reset |
+| Reset | One Rack reset event on an existing module at 44.1 or 192 kHz, including parameter defaults, the module callback, and Spectre's cleared-history publications |
+| Sample-rate event | One engine-dispatched event alternating 44.1/192 kHz on a registered module, including the engine lock and callback; maximum storage is prepared beforehand |
+| Saved state | One `toJson()` plus JSON destruction, or one `fromJson()` alternating preloaded presets, including all parameters and custom state |
+
+Processing includes deterministic port writes, the complete `process()` path,
+light updates, and spectrum publication. Every input port is exercised, with
+different signal phases per port and voice. The generator and initial warmup
+are outside timing. Frozen fixtures toggle the actual run button after warming
+an active signal: Fourier continues analysis of retained input, while Spectre
+stops analysis. Neither is treated as Rack's separate bypass mode.
+
+Live-control iterations include enough samples for both the control latch and
+the resulting analysis work. Construction and saved-state workloads explicitly
+include their allocation/deallocation costs; preset discovery, file reads,
+JSON parsing, and plugin registration are outside timing. Preset version
+metadata is normalized to the current manifest to exclude Rack's historical
+version diagnostic from measurements. JSON timing excludes text encoding,
+filesystem saves, and complete Rack patch loading.
+
+Lifecycle measurements use warmed process/allocator state. Repeated resets
+still execute the real callback and clear/publish Spectre history each time.
+The sample-rate workload does not measure first-time capacity growth; the
+192 kHz constructor workload includes allocation at that capacity. These
+benchmarks use an idle headless engine, with no audio device, rendering,
+concurrent display reader, or host scheduling. They do not establish whole-Rack
+CPU usage or maximum per-sample latency. Output/state assertions check that
+fixtures publish meaningful spectra, freeze correctly, reset display state,
+and round-trip complete module JSON; the Rack regression suites remain the
+numerical and compatibility oracle.
+
 ### Rack Coordinates And Graphics
 
 Build the Catch2 Rack benchmark executables, then run each target serially
@@ -490,8 +543,8 @@ every recolor iteration uploads, unchanged/cropped views do not upload, and
 reopening preserves the rendered pixels and releases each image. These are
 CPU measurements: they exclude GL framebuffer allocation/compositing, actual
 font glyph rendering, GPU rasterization, driver transfer latency, display
-synchronization, and concurrent producer/consumer contention. Rare menu and
-serialization actions are not separate performance targets. Use the existing
+synchronization, and concurrent producer/consumer contention. These graphics
+workloads do not time menu actions or serialization. Use the existing
 Rack regression tests and interactive checks for correctness, and record the
 same comparison metadata and uncertainty as for DSP benchmarks.
 
