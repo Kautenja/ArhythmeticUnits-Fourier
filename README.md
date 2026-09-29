@@ -15,7 +15,7 @@ and **Spectre**, a spectrogram visualizer.
 ## Fourier: Spectrum Analyzer
 
 <p align="center">
-  <img alt="Fourier" src="docs/manual/Fourier/img/Logo.png" width="280">
+  <img alt="Fourier" src="docs/manual-fourier/img/Logo.png" width="280">
 </p>
 
 Compare up to four signals in one view. Isolate the bass, inspect harmonic
@@ -23,7 +23,7 @@ spacing, or check how a filter reshapes your sound.
 
 <p align="center">
   <img alt="Fourier module with four color-coded inputs and overlaid spectra"
-       src="docs/manual/Fourier/img/Module.svg" width="720">
+       src="docs/manual-fourier/img/Module.svg" width="720">
 </p>
 
 -   **Choose your resolution.** FFT lengths from 128 to 16384 samples and
@@ -38,7 +38,7 @@ spacing, or check how a filter reshapes your sound.
 ## Spectre: Spectrogram Visualizer
 
 <p align="center">
-  <img alt="Spectre" src="docs/manual/Spectre/img/Logo.png" width="280">
+  <img alt="Spectre" src="docs/manual-spectre/img/Logo.png" width="280">
 </p>
 
 Follow a signal through time. See a filter sweep, an oscillator's changing
@@ -46,7 +46,7 @@ harmonics, or the brief burst of energy at the start of a note.
 
 <p align="center">
   <img alt="Spectre module displaying a colored history of a signal's spectrum"
-       src="docs/manual/Spectre/img/Module.svg" width="525">
+       src="docs/manual-spectre/img/Module.svg" width="525">
 </p>
 
 -   **Watch the history build.** A moving scan line writes new spectra
@@ -188,8 +188,8 @@ publication acceptance is implied.
 
 To reference a manual itself, use its dedicated BibTeX `@manual` entry:
 
--   [Fourier manual citation](docs/manual/Fourier/CITATION.bib)
--   [Spectre manual citation](docs/manual/Spectre/CITATION.bib)
+-   [Fourier manual citation](docs/manual-fourier/CITATION.bib)
+-   [Spectre manual citation](docs/manual-spectre/CITATION.bib)
 
 These entries identify the author, manual title, version 2.1.2, release month,
 and version-specific PDF URL. Cite the version you consulted; update the

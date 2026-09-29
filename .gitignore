@@ -10,7 +10,8 @@
 /plugin.so
 /docs/*
 !/docs/style-guides/
-!/docs/manual/
+!/docs/manual-fourier/
+!/docs/manual-spectre/
 !/docs/whitepaper/
 .DS_Store
 

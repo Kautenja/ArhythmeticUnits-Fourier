@@ -143,7 +143,7 @@ changing DSP, Rack modules, or displays.
     measures headless module processing and display preparation. See the
     testing section for workloads and interpretation.
 -   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
--   `docs/manual/Fourier/` and `docs/manual/Spectre/` contain LaTeX user manuals
+-   `docs/manual-fourier/` and `docs/manual-spectre/` contain LaTeX user manuals
     and illustrations. Contributor guidance lives in this file; style guides
     live in `docs/style-guides/`.
 -   `patches/` and `presets/` provide Rack examples and saved module settings.
@@ -864,23 +864,25 @@ python3 docs/whitepaper/data/pipeline/check.py
 
 ### User Manuals And Build Products
 
-The existing multi-file LaTeX manuals use their own Makefiles and require
-`pdflatex` and their referenced packages:
+Each LaTeX manual is a self-contained project with its own Makefile,
+stylesheet, and images. Both require `pdflatex` and their referenced packages:
 
 ```shell
-make -C docs/manual
+make -C docs/manual-fourier
+make -C docs/manual-spectre
 ```
 
-Outputs are `docs/manual/build/Fourier.pdf` and `docs/manual/build/Spectre.pdf`.
-The child Makefiles recreate their local build directories and stop on
-LaTeX errors. Shell escape is disabled. Inspect rendered pages
-when changing manual content or layout.
+Outputs are `docs/manual-fourier/build/manual.pdf` and
+`docs/manual-spectre/build/manual.pdf`. Each Makefile recreates its local
+build directory and stops on LaTeX errors. Shell escape is disabled. Inspect
+rendered pages when changing manual content or layout.
 
 The [user manuals workflow](.github/workflows/manuals.yml) builds both
-PDFs on relevant pull requests and pushes to `main`, and saves them as the
-`user-manuals` workflow artifact. Ubuntu uses `texlive-latex-extra`,
-`texlive-fonts-recommended`, `texlive-science`, and `poppler-utils`; CI checks
-that both PDFs are nonempty and readable by `pdfinfo`.
+PDFs on relevant pull requests and pushes to `main`, and saves them as
+`Fourier.pdf` and `Spectre.pdf` in the `user-manuals` workflow artifact.
+Ubuntu uses `texlive-latex-extra`, `texlive-fonts-recommended`,
+`texlive-science`, and `poppler-utils`; CI checks that both PDFs are nonempty
+and readable by `pdfinfo`.
 
 Publishing a GitHub release triggers a build from its tag and uploads
 `Fourier.pdf` and `Spectre.pdf` as release assets. These names match the
