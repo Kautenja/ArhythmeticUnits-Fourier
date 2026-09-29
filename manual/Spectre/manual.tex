@@ -588,15 +588,17 @@ where:
 
 \subsection{Pipelining the STFT Computation}
 
-Spectre distributes FFT butterfly operations across the sample intervals
-between successive spectra. This reduces the amount of butterfly work
-performed in a single audio-engine call. It does not make all analysis work
-uniform: preparing buffers, reconstructing the real FFT, and smoothing
-spectra still involve work at frame boundaries. Buffer preparation also
-allocates temporary storage in the current implementation. Spectre therefore
-still consumes audio-engine processing time despite having no audio outputs;
-incremental FFT computation is not a guarantee of allocation-free or
-constant-cost processing.
+Spectre distributes each frame's windowing, FFT butterflies, real-spectrum
+reconstruction, smoothing, and history-column preparation across exactly
+1024 engine samples. It publishes the completed column without copying a
+whole spectrum at the boundary. Analysis settings latch at the beginning of
+a frame, and cached window and smoothing data rebuild incrementally.
+
+Processing storage is prepared in advance. This reduces frame-boundary work
+but does not make every sample call equally expensive or guarantee hard
+real-time execution. Reset still clears the history, and a host sample-rate
+change discards unfinished analysis. When Run is off, analysis pauses; on
+resume it continues from the same point in its hop.
 
 % -------------------
 % MARK: References

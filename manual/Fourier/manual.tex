@@ -625,18 +625,18 @@ where:
 
 \subsection{Pipelining the STFT Computation}
 
-Fourier distributes FFT work across engine samples using the selected hop
-length, instead of computing the entire transform in one engine callback.
-The completed frame is then smoothed and prepared for display before the
-next frame enters the transform pipeline.
+Fourier distributes the complete analysis of each frame across exactly one
+selected hop: windowing and packing, FFT butterflies, real-spectrum
+reconstruction, smoothing, and display-coordinate preparation. Each completed
+frame is published as a coherent snapshot. Analysis and display settings latch
+at the start of a frame; changes made during a frame apply on the next hop.
 
-This scheduling reduces the concentration of FFT work in a single callback,
-but it does not make every callback equally expensive. Smoothing and display
-coordinate preparation still occur when a frame completes, and changing FFT
-length can resize buffers during processing. Smaller hops and larger FFTs
-therefore still affect the patch's engine workload. Capture time, transform
-scheduling, smoothing, and Rack's display refresh all contribute to the delay
-between a signal change and its visible result.
+Processing storage is prepared in advance, and changes to Length, Window, or
+Smooth rebuild their cached data incrementally. This reduces concentrated
+frame-boundary work but does not make all sample calls equally expensive.
+Larger transforms and shorter hops still increase engine workload. Increasing
+the host sample rate can allocate retained-input storage, and a reset or change of sample rate discards unfinished analysis. Capture time, the one-hop schedule,
+smoothing, and Rack's display refresh all contribute to visible latency.
 
 % -------------------
 % MARK: References

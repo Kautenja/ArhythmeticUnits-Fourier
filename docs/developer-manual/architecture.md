@@ -12,6 +12,8 @@ changing DSP, Rack modules, or displays.
 -   `src/Spectrogram.cpp` contains the Spectre module, spectral image display,
     and widget. It uses scalar processing and a history of spectra.
 -   `src/structs.hpp` contains shared display/analysis enums and conversions.
+-   `src/dsp/spectrum_analysis.hpp` owns the bounded one-hop analysis schedule
+    shared by the scalar and SIMD modules.
 -   `src/dsp/` contains mostly header-only math, filters, triggers, and music
     theory in a flat set of focused headers. Consumers include the headers
     they use directly.
@@ -30,20 +32,34 @@ changing DSP, Rack modules, or displays.
 ## Analysis Flow
 
 Rack calls each module's `process(const ProcessArgs&)` for engine samples.
-The modules normalize Eurorack input voltages, maintain DC-blocker state,
-apply gain, and buffer samples. Windowed samples feed the incremental real
-FFT. Once coefficients are ready, frequency and time smoothing prepare
-data for the spectrum plot or spectrogram history. FFT work is distributed
-through `step(...)` using the hop length.
+The modules normalize Eurorack voltages, maintain DC-blocker state, and apply
+gain. `SpectrumAnalysis<T>` retains input and distributes windowing/packing,
+butterflies, real-spectrum reconstruction, magnitude prefix sums,
+frequency/time smoothing, and the output callback over one exact hop.
 
-Fourier prepares raster coordinates for four lanes. Spectre keeps a ring of
-spectra and publishes each updated column through a preallocated
-single-producer/single-consumer triple buffer. The display maintains its own
-positive-frequency history and recolors only changed columns. Changes to
-slope, color map, frequency scale, or sample rate rebuild all pixels;
-frequency cropping and display resizing reuse the image. Unchanged draws do
-not upload an image. Rack widget callbacks draw using NanoVG. Both modules
-declare zero audio outputs; their observable results are analysis displays and persisted controls.
+For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=M+B+2K work units.
+Sample s executes `floor((s+1)W/H)-floor(sW/H)` units. A quotient/remainder
+accumulator implements that schedule without per-sample quota division.
+Frames end at input indices jH and publish at jH+H-1, starting with zero
+padding. This intentionally replaces the earlier restart-on-FFT-completion
+cadence. Settings latch at each frame start; mid-frame changes apply next hop.
+The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
+
+Maximum-size twiddle/permutation tables serve every supported FFT size.
+Window and smoothing-bound changes rebuild their cached entries inside
+scheduled units, without resizing processing storage. A length change clears
+input/averaging logically. Reset and sample-rate callbacks cancel partial
+frames and clear analysis history. Fourier's retained ring is prepared for
+the maximum panel hop at the current sample rate.
+
+Fourier maps each four-lane output bin through `SpectrumCoordinates` into a
+producer-owned curve snapshot. A constant-size atomic exchange publishes the
+complete snapshot; the display keeps the consumer slot until its next read.
+Spectre writes each output bin directly into the next column mailbox and
+publishes when the hop completes. Its coefficient history lives only in the
+UI, which recolors changed columns. Slope, color map, frequency scale, or
+sample rate rebuild all pixels; cropping/resizing reuse the image. Unchanged
+draws do not upload an image. Both modules have no audio outputs.
 
 Read the actual processing functions before changing run/freeze semantics:
 the two modules do not currently gate their processing identically. Also
@@ -60,8 +76,9 @@ Both displays cache backgrounds and grids with Rack framebuffers, invalidated
 by size, bounds, scale, sample rate, zoom, and graphics-context changes. Label
 strings and positions are cached with the artwork; glyphs render in the live
 context to avoid missing glyphs observed during framebuffer rebuilds.
-Hover overlays remain live. Fourier's waveform buffers retain their existing
-engine/UI sharing limitation; the static cache is not a synchronization fix.
+Hover overlays remain live. Curve and column buffers cross the engine/UI
+boundary only through single-producer/single-consumer ownership exchanges.
+Displays must not consume each other's mailbox slots concurrently.
 
 Keep analysis on the engine side and NanoVG calls on the display side.
 Document who owns mutable buffers, who reads them, and when a reader can
@@ -69,11 +86,13 @@ observe an update. Avoid new unsynchronized engine/UI sharing or locks that
 could block the engine. Do not assume existing shared vectors and readiness
 flags make concurrent access safe.
 
-The current implementation includes allocation during reconfiguration:
-for example, Fourier's `process_window()` resizes buffers from `process()`.
-This is an existing limitation, not a pattern to extend. Any change to
-buffer preparation must account for Rack callback threading and buffer
-lifetime before moving work between threads.
+Steady-state analysis and live FFT/window/smoothing changes do not allocate.
+Construction prepares maximum-size storage. Increasing the host sample rate
+can grow Fourier's retained-input ring in `onSampleRateChange`; that callback
+may allocate. Spectre's reset still clears and publishes all history columns.
+These lifecycle costs, UI work, OS scheduling, atomics, and unequal unit costs
+prevent a broad claim of constant-time or hard real-time behavior. Existing
+panel/menu state sharing is separate from the synchronized spectrum buffers.
 
 ## Compatibility
 

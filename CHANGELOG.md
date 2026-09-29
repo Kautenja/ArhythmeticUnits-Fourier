@@ -1,5 +1,17 @@
 # Change Log
 
+## Unreleased
+
+-   Distribute complete spectrum analysis and per-bin output work over one
+    exact hop in Fourier and Spectre, including windowing, reconstruction,
+    smoothing, curve preparation, and snapshot writing.
+-   Preallocate processing storage; FFT length, window, and smoothing changes
+    rebuild caches incrementally and latch at frame boundaries.
+-   Publish Fourier curves through synchronized snapshots and remove Spectre's
+    duplicate engine history. Reset/sample-rate changes discard partial frames.
+-   Preserve saved controls and magnitude conventions. Exact hop cadence may
+    refresh less often than the former early-completion schedule.
+
 ## 2.1.2 (2025-04-14)
 
 -   Wrote manual for Spectre

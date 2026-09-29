@@ -32,6 +32,19 @@ Plugin* plugin_instance = nullptr;
 using DisplayTest::TestRenderer;
 using DisplayTest::RackContext;
 
+/// Read a coherent published history for the independent image reference.
+/// Tests use the same UI thread and call this after draws (or before creating
+/// a display, which initially imports each mailbox's current snapshot).
+Fourier::STFTCoefficients published_history(Spectrogram& module) {
+    Fourier::STFTCoefficients history(Spectrogram::N_STFT,
+        Fourier::DFTCoefficients(Spectrogram::N_FFT));
+    for (size_t i = 0; i < history.size(); ++i) {
+        const auto* column = module.consume_display_column(i, true);
+        std::copy(column->values.begin(), column->values.end(), history[i].begin());
+    }
+    return history;
+}
+
 TEST_CASE("Spectre recreates its texture after NanoVG context destruction") {
     RackContext context;
     Spectrogram module;
@@ -50,7 +63,7 @@ TEST_CASE("Spectre recreates its texture after NanoVG context destruction") {
     json_object_set_new(state, "is_running", json_false());
     module.dataFromJson(state);
     json_decref(state);
-    const auto history = module.get_coefficients();
+    const auto history = published_history(module);
     bool has_signal = false;
     for (const auto& spectrum : history)
         for (const auto value : spectrum)
@@ -74,7 +87,7 @@ TEST_CASE("Spectre recreates its texture after NanoVG context destruction") {
         renderer.destroy_context(display);
         CHECK(renderer.deleted == 1);
         CHECK(renderer.invalid_accesses == 0);
-        CHECK(bool(module.get_coefficients() == history));
+        CHECK(bool(published_history(module) == history));
         json_t* saved = module.dataToJson();
         CHECK(json_is_false(json_object_get(saved, "is_running")));
         json_decref(saved);
@@ -145,7 +158,7 @@ namespace {
 
 /// Original full-image calculation, independent of cache state and dirty columns.
 std::vector<unsigned char> reference_pixels(Spectrogram& module) {
-    const auto& coefficients = module.get_coefficients();
+    const auto& coefficients = published_history(module);
     const int width = coefficients.size();
     const int height = coefficients[0].size() / 2;
     std::vector<unsigned char> result(width * height * 4);
@@ -356,4 +369,34 @@ TEST_CASE("Recreating a frozen Spectre widget retains the last published history
     renderer.draw(recreated);
     CHECK(bool(renderer.last_pixels == original));
     CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+}
+
+TEST_CASE("Spectre publishes on exact hops and resumes an unfinished frozen frame") {
+    RackContext context;
+    Spectrogram module;
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = module.get_sample_rate();
+    args.sampleTime = 1.f/args.sampleRate;
+    const size_t hop = module.get_hop_length();
+    for (size_t i = 0; i < hop-1; ++i) module.process(args);
+    CHECK(module.get_hop_index() == 0);
+    json_t* state = module.dataToJson();
+    json_object_set_new(state, "is_running", json_false());
+    module.dataFromJson(state);
+    for (size_t i = 0; i < 2*hop; ++i) module.process(args);
+    CHECK(module.get_hop_index() == 0);
+    json_object_set_new(state, "is_running", json_true());
+    module.dataFromJson(state);
+    json_decref(state);
+    module.process(args);
+    CHECK(module.get_hop_index() == 1);
+    for (size_t i = 0; i < hop; ++i) module.process(args);
+    CHECK(module.get_hop_index() == 2);
+    // A sample-rate callback cancels a partially computed old-rate frame.
+    module.process(args);
+    module.onSampleRateChange();
+    for (size_t i = 0; i < hop-1; ++i) module.process(args);
+    CHECK(module.get_hop_index() == 2);
+    module.process(args);
+    CHECK(module.get_hop_index() == 3);
 }

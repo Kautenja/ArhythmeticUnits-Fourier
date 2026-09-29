@@ -24,12 +24,11 @@
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
 #include "rack_extensions/display_mailbox.hpp"
-#include "dsp/circular_buffer.hpp"
 #include "dsp/color_map.hpp"
 #include "dsp/constants.hpp"
 #include "dsp/dc_blocker.hpp"
 #include "dsp/eurorack.hpp"
-#include "dsp/fft.hpp"
+#include "dsp/spectrum_analysis.hpp"
 #include "dsp/math.hpp"
 #include "dsp/threshold_trigger.hpp"
 #include "dsp/trigger_divider.hpp"
@@ -84,20 +83,8 @@ struct Spectrogram : Module {
     /// DC-blocking filters for AC-coupled mode.
     Fourier::DCBlocker<float> dc_blocker;
 
-    /// The delay line for tracking the input signal x[t]
-    Fourier::ContiguousCircularBuffer<float> delay;
-
-    /// The window function for windowing the FFT.
-    Fourier::Window::CachedWindow<float> window_function;
-
-    /// An on-the-fly FFT calculator for each input channel.
-    Fourier::OnTheFlyRFFT<float> fft;
-
-    /// A copy of the low-pass filtered coefficients.
-    Fourier::DFTCoefficients filtered_coefficients;
-
-    /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
-    Fourier::STFTCoefficients coefficients;
+    /// Engine-owned one-hop analyzer; all transform storage is prepared once.
+    Fourier::SpectrumAnalysis<float> analysis{N_FFT, N_FFT / 2};
 
     /// Preallocated mailboxes retain the newest value of every history column.
     /// Only process/reset publishes; only the module's display consumes.
@@ -109,10 +96,6 @@ struct Spectrogram : Module {
     /// @brief Publish one column without exposing mutable engine storage.
     void publish_column(size_t index) {
         auto& column = display_columns[index].writable();
-        // Smoothing stores real magnitudes. Only DC through Nyquist are drawn.
-        std::transform(coefficients[index].begin(),
-            coefficients[index].begin() + column.values.size(), column.values.begin(),
-            [](const std::complex<float>& value) { return value.real(); });
         column.revision = ++display_revision;
         display_columns[index].publish();
     }
@@ -137,13 +120,7 @@ struct Spectrogram : Module {
     Fourier::ColorMap::Function color_map = Fourier::ColorMap::Function::Magma;
 
     /// @brief Initialize a new spectrogram.
-    Spectrogram() :
-        sample_rate(APP->engine->getSampleRate()),
-        delay(N_FFT),
-        window_function(Fourier::Window::Function::Boxcar, N_FFT, false, true),
-        fft(N_FFT),
-        filtered_coefficients(N_FFT),
-        coefficients(N_STFT) {
+    Spectrogram() : sample_rate(APP->engine->getSampleRate()) {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup the input signal port and controls.
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
@@ -198,10 +175,6 @@ struct Spectrogram : Module {
         // Disable randomization for all parameters.
         for (size_t i = 0; i < NUM_PARAMS; i++)
             getParamQuantity(i)->randomizeEnabled = false;
-        // Setup the buffer of coefficients.
-        for (std::size_t i = 0; i < coefficients.size(); i++)
-            coefficients[i] = Fourier::DFTCoefficients(N_FFT);
-        // Resize the delay line for the number of FFT bins.
         onReset();
     }
 
@@ -213,13 +186,12 @@ struct Spectrogram : Module {
         hop_index = 0;
         is_ac_coupled = true;
         color_map = Fourier::ColorMap::Function::Magma;
-        // Clear delay lines and cached coefficients.
-        delay.clear();
-        for (std::size_t i = 0; i < coefficients.size(); i++) {
-            std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
+        // Reset is a host lifecycle operation; publish cleared history columns.
+        analysis.reset();
+        for (size_t i = 0; i < N_STFT; ++i) {
+            display_columns[i].writable().values.fill(0.f);
             publish_column(i);
         }
-        std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0.f);
         // Act as if the sample rate has changed to reset remaining state.
         onSampleRateChange();
     }
@@ -228,6 +200,7 @@ struct Spectrogram : Module {
     inline void onSampleRateChange() final {
         Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
+        analysis.reset();
         // Set the light divider relative to the sample rate and reset it.
         light_divider.setDivision(512);
         light_divider.reset();
@@ -296,13 +269,6 @@ struct Spectrogram : Module {
         return include_current ? &display_columns[index].current() : nullptr;
     }
 
-    /// @brief Return the STFT coefficients.
-    /// @returns The current STFT coefficients.
-    /// @details Engine/test access only; displays consume published columns instead.
-    inline const Fourier::STFTCoefficients& get_coefficients() const {
-        return coefficients;
-    }
-
     // Window Function
 
     /// @brief Return the window function.
@@ -324,23 +290,7 @@ struct Spectrogram : Module {
     /// @returns The number of samples to hop between computations of the DFT.
     inline size_t get_hop_length() {
         return N_FFT >> 1;  // N_FFT / 2
-        // return sample_rate * (2048 / 2) / 44100;
     }
-
-    // /// @brief Return the hop length of the windowed DFT in samples.
-    // /// @returns The number of samples to hop between computations of the DFT.
-    // inline size_t get_hop_length(const float& duration = 10.f) const {
-    //     return sample_rate * duration / N_STFT;
-    // }
-
-    // N STFT
-
-    // /// @brief Return the length of the STFT for a certain length of time.
-    // /// @returns The length of the STFT in frames for the input duration.
-    // inline size_t get_n_stft(const float& duration = 10.f) {
-    //     // return duration / (get_hop_length() / sample_rate);
-    //     return sample_rate * duration / get_hop_length();
-    // }
 
     // Frequency Scale
 
@@ -450,7 +400,7 @@ struct Spectrogram : Module {
     // -----------------------------------------------------------------------
 
     /// @brief Process input signal.
-    inline void process_input_signal() {
+    inline float process_input_signal() {
         // Get the input signal and convert to normalized bipolar [-1, 1].
         auto signal = Fourier::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
@@ -463,45 +413,39 @@ struct Spectrogram : Module {
         // If AC coupling is enabled, replace signal with DC blocker output.
         if (is_ac_coupled) signal = dc_blocker.getValue();
         // Insert the normalized and processed input signal into the delay.
-        delay.insert(gain * signal);
+        return gain * signal;
     }
 
-    /// @brief Process samples with the DFT.
-    inline void process_coefficients() {
-        if (fft.is_done_computing()) {
-            // Perform octave smoothing. For an N-length FFT, smooth over the
-            // first N/2 + 1 coefficients to omit reflected frequencies.
-            const auto frequency_smoothing = get_frequency_smoothing();
-            if (frequency_smoothing != FrequencySmoothing::None)
-                fft.smooth(sample_rate, to_float(frequency_smoothing));
-            // Pass the coefficients through a smoothing filter.
-            const float alpha = get_time_smoothing_alpha();
-            for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coefficients[n] = alpha * std::abs(filtered_coefficients[n]) + (1.f - alpha) * std::abs(fft.coefficients[n]);
-            // Update the coefficients and increment the hop index.
-            coefficients[hop_index] = filtered_coefficients;
+    /// @brief Write scheduled bins directly into the next history column.
+    inline void process_coefficients(float input) {
+        if (analysis.is_frame_start()) {
+            Fourier::SpectrumSettings settings;
+            settings.length = N_FFT;
+            settings.hop = get_hop_length();
+            settings.window = get_window_function();
+            settings.sample_rate = sample_rate;
+            const auto smoothing = get_frequency_smoothing();
+            settings.octave = smoothing == FrequencySmoothing::None ? 0.f : to_float(smoothing);
+            settings.alpha = get_time_smoothing_alpha();
+            analysis.configure(settings);
+        }
+        if (analysis.process(input, [this](size_t bin, float value) {
+            display_columns[hop_index].writable().values[bin] = value;
+        })) {
             publish_column(hop_index);
             hop_index = (hop_index + 1) % N_STFT;
-            // Add the delay line to the FFT pipeline.
-            fft.buffer(delay.contiguous(), window_function.get_samples());
         }
-        // Perform the number of FFT steps required at this hop-rate.
-        fft.step(get_hop_length());
     }
 
     /// @brief Process a sample.
     /// @param args the sample arguments (sample rate, sample time, etc.)
     void process(const ProcessArgs& args) final {
-        // Update the window function. We need asymmetric windows for FFT
-        // analysis and need coherent gain to be integrated into the window.
-        window_function.set_window(get_window_function(), N_FFT, false, true);
         // Handle presses to the run button.
         if (run_trigger.process(params[PARAM_RUN].getValue()))
             is_running = !is_running;
         // Process the input signal and compute SFT coefficients as needed.
         if (is_running) {
-            process_input_signal();
-            process_coefficients();
+            process_coefficients(process_input_signal());
         }
         // Update the panel lights.
         if (light_divider.process()) {

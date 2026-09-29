@@ -225,6 +225,29 @@ measure driver upload latency, GPU rendering, framebuffer speed, or whole-patch
 performance. See the [display caching measurements](../../specs/archive/001-display-caching.md)
 for the baseline comparison, flags, memory tradeoffs, and validation limits.
 
+### One-Hop Spectrum Analysis
+
+The production analyzer is tested independently of Rack and in both modules:
+
+```shell
+scons test/dsp/test_spectrum_analysis.cpp
+make test-spectrum-points test-display-lifecycle test-serialization
+```
+
+Standalone coverage includes reference spectra, exact cadence, output quotas,
+window/smoothing cache changes, reset, retained-input wraparound, and
+allocation-free live settings. Rack coverage adds scalar/SIMD comparison,
+curve ownership and publication, coordinate mapping, module allocation checks,
+and Spectre's exact cadence and freeze/resume behavior.
+
+The [historical pipeline campaign](../../whitepaper/data/pipeline/README.md)
+retains pre-integration timing evidence and reproduction sources in an archive.
+It is not a benchmark of the current plugin. Verify that artifact separately:
+
+```shell
+python3 whitepaper/data/pipeline/check.py
+```
+
 ## User Manuals And Build Products
 
 The existing multi-file LaTeX manuals use their own Makefiles and require

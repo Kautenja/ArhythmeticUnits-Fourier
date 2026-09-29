@@ -35,6 +35,9 @@ escape or BibTeX pass is required.
 -   [experiments/run.py](experiments/run.py): Reproduction driver, source
     hashes, metadata capture, and paired statistical summaries.
 -   [data/README.md](data/README.md): Recorded campaign and interpretation.
+-   [Complete-pipeline campaign](data/pipeline/README.md): Historical one-hop
+    and overlapped scheduling evidence, with reproduction sources archived
+    separately from the production implementation.
 -   [data/](data/): Archived raw observations and derived statistics.
 -   [../CITATION.cff](../CITATION.cff) and
     [../CITATION.bib](../CITATION.bib): The shared report citation for this work.

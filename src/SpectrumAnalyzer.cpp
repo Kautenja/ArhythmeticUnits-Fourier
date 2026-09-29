@@ -14,16 +14,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>  // std::fill
+#include <algorithm>  // std::max
+#include <array>
+#include <vector>
 #include <string>     // std::string
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
-#include "dsp/circular_buffer.hpp"
 #include "dsp/constants.hpp"
 #include "dsp/dc_blocker.hpp"
 #include "dsp/eurorack.hpp"
-#include "dsp/fft.hpp"
+#include "dsp/spectrum_analysis.hpp"
+#include "rack_extensions/display_mailbox.hpp"
+#include "rack_extensions/spectrum_coordinates.hpp"
 #include "dsp/math.hpp"
 #include "dsp/threshold_trigger.hpp"
 #include "dsp/trigger_divider.hpp"
@@ -36,7 +39,8 @@ struct SpectrumAnalyzer : Module {
     /// Architectural constants of the module.
     enum Architecture {
         /// The number of processing lanes on the module
-        NUM_CHANNELS = 4
+        NUM_CHANNELS = 4,
+        MAX_FFT = 16384
     };
 
     /// Controllable parameters on the module.
@@ -73,6 +77,16 @@ struct SpectrumAnalyzer : Module {
         NUM_LIGHTS
     };
 
+    /// Complete curve snapshot. All storage is sized once; count selects live bins.
+    struct DisplaySpectrum {
+        std::array<std::vector<Vec>, NUM_CHANNELS> points;
+        size_t count = 0;
+        DisplaySpectrum() {
+            for (auto& lane : points) lane.resize(MAX_FFT / 2 + 1);
+        }
+    };
+
+
  private:
     /// The sample rate of the module.
     float sample_rate = 0.f;
@@ -80,17 +94,12 @@ struct SpectrumAnalyzer : Module {
     /// DC-blocking filter for AC-coupled mode.
     Fourier::DCBlocker<simd::float_4> dc_blocker;
 
-    /// Delay line for tracking the input signal x[t].
-    Fourier::ContiguousCircularBuffer<simd::float_4> delay;
+    /// Engine-owned analysis and a frame's latched coordinate settings.
+    Fourier::SpectrumAnalysis<simd::float_4> analysis{MAX_FFT, MAX_FFT};
+    Fourier::SpectrumCoordinates coordinates;
 
-    /// Sampled function for windowing the FFT.
-    Fourier::Window::CachedWindow<float> window_function;
-
-    /// An on-the-fly FFT calculator for each input channel.
-    Fourier::OnTheFlyRFFT<simd::float_4> fft;
-
-    /// A copy of low-pass filtered DFT coefficients.
-    std::vector<std::complex<simd::float_4>> filtered_coeffs;
+    /// Producer writes scheduled bins; only the UI consumes complete frames.
+    Fourier::DisplayMailbox<DisplaySpectrum> display_spectrum;
 
     /// A clock divider for updating the lights at a lower sampling rate.
     Fourier::TriggerDivider light_divider;
@@ -101,12 +110,12 @@ struct SpectrumAnalyzer : Module {
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
 
-    /// A flag determining whether the coefficients can be rendered.
-    bool is_ready_to_render = false;
-
  public:
-    /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
+    /// @brief UI-only: acquire the latest complete spectrum or retain the last one.
+    const DisplaySpectrum& consume_display_spectrum() {
+        display_spectrum.consume();
+        return display_spectrum.current();
+    }
 
     /// Whether to fill the plots.
     bool is_fill_enabled = false;
@@ -204,7 +213,8 @@ struct SpectrumAnalyzer : Module {
         Module::onReset();
         // Reset momentary button trigger states.
         is_running = true;
-        is_ready_to_render = false;
+        display_spectrum.writable().count = 0;
+        display_spectrum.publish();
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
@@ -217,6 +227,8 @@ struct SpectrumAnalyzer : Module {
     inline void onSampleRateChange() final {
         Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
+        analysis.reserve_hop(static_cast<size_t>(std::ceil(sample_rate * 0.3f)));
+        analysis.reset();
         // Set the light divider relative to the sample rate and reset it.
         light_divider.setDivision(512);
         light_divider.reset();
@@ -271,9 +283,6 @@ struct SpectrumAnalyzer : Module {
     /// @returns The sample rate of the module.
     inline float get_sample_rate() const { return sample_rate; }
 
-    /// @brief Return a flag determining whether module outputs can be rendered.
-    inline bool get_is_ready_to_render() const { return is_ready_to_render; }
-
     // Window Function
 
     /// @brief Return the window function.
@@ -294,7 +303,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the length of the window.
     /// @returns The length of the window measured in samples.
     inline size_t get_window_length() {
-        return 1 << static_cast<size_t>(params[PARAM_WINDOW_LENGTH].getValue());
+        const float value = params[PARAM_WINDOW_LENGTH].getValue();
+        const int exponent = std::isfinite(value) ? static_cast<int>(clamp(value, 7.f, 14.f)) : 11;
+        return size_t(1) << exponent;
     }
 
     /// @brief Set the length of the window.
@@ -309,7 +320,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the hop length of the windowed DFT in samples.
     /// @returns The number of samples to hop between computations of the DFT.
     inline size_t get_hop_length() {
-        return params[PARAM_HOP_LENGTH].getValue() * sample_rate;
+        const float value = params[PARAM_HOP_LENGTH].getValue();
+        const float seconds = std::isfinite(value) ? clamp(value, 0.005f, 0.3f) : 0.03f;
+        return std::max(size_t(1), static_cast<size_t>(seconds * sample_rate));
     }
 
     /// @brief Set the hop length of the windowed DFT in samples.
@@ -440,32 +453,6 @@ struct SpectrumAnalyzer : Module {
     // MARK: Processing
     // -----------------------------------------------------------------------
 
-    /// @brief Process the window length and hop length parameters.
-    /// @details
-    /// Resizes the delay lines and DFT buffers to the length of the window.
-    /// Also sets the DFT divider to the length of the hop.
-    inline void process_window() {
-        // Determine the length of the delay lines and associated FFTs.
-        const size_t N = get_window_length();
-        if (delay.size() != N) {
-            delay.resize(N);
-            delay.clear();
-        }
-        window_function.set_window(get_window_function(), N, false, true);
-        if (fft.size() != N)
-            fft.resize(N);
-        if (filtered_coeffs.size() != N) {
-            filtered_coeffs.resize(N);
-            std::fill(filtered_coeffs.begin(), filtered_coeffs.end(), 0);
-        }
-        // Update the rasterized coefficients from the FFT length.
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (raster_coeffs[i].size() == N / 2.f + 1) continue;
-            raster_coeffs[i].resize(N / 2.f + 1);
-            std::fill(raster_coeffs[i].begin(), raster_coeffs[i].end(), Vec(0.f, 0.f));
-        }
-    }
-
     /// @brief Process presses to the "run" button.
     /// @details
     /// Processes the run parameter with a trigger and flips the `is_running`
@@ -478,8 +465,8 @@ struct SpectrumAnalyzer : Module {
     /// @brief Process input signals.
     /// @details
     /// Applies gain to each input signal and buffers it for DFT computation.
-    inline void process_input_signal() {
-        if (!is_running) return;  // Don't buffer input signals if not running.
+    inline simd::float_4 process_input_signal() {
+        if (!is_running) return simd::float_4(0.f);
         // Buffer signals and gains.
         float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
         float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
@@ -492,96 +479,38 @@ struct SpectrumAnalyzer : Module {
         // Process the input signals with the DC blocking filters.
         dc_blocker.process(signals_simd);
         // Insert the normalized and processed input signal into the delay.
-        delay.insert(gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd));
+        return gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd);
     }
 
-    /// @brief Prepare all four spectrum curves from the filtered magnitudes.
-    /// @details Frequency coordinates and slope gain are shared across lanes.
-    /// Coordinates preserve the existing normalization and may lie outside
-    /// [0, 1] when the selected frequency bounds exclude a bin.
-    void make_points() {
-        // The reference frequency for the slope compensation.
-        static constexpr float reference_frequency = 1000.f;
-        // The maximum amplitude for logarithmic mode.
-        static constexpr float max_magnitude = 12.f;
-        // Determine the Nyquist rate from the sample rate.
-        const float nyquist_rate = sample_rate / 2.f;
-        // Get parameters from the panel once before iterating over points.
-        const auto slope = get_slope();
-        const auto low_frequency = get_low_frequency();
-        const auto high_frequency = get_high_frequency();
-        const auto frequency_scale = get_frequency_scale();
-        const auto magnitude_scale = get_magnitude_scale();
-        // Determine the non-repeated coefficients.
-        const float N = filtered_coeffs.size() / 2.f + 1.f;
-        const float max_amplitude = Fourier::decibels2amplitude(max_magnitude);
-        for (size_t n = 0; n < static_cast<size_t>(N); n++) {
-            // Start with the normalized linear coefficient offset.
-            float x = n / N;
-            // Determine the y-scale from the frequency. The slope is provided
-            // in decibels/octave, so first determine the octave offset from
-            // the current frequency using, e.g., 1000Hz as the reference
-            // frequency for the curve. I.e., because octaves are logarithmic,
-            // we can simply compute \f$\log2(f_i / f_{reference})\f$ and
-            // multiply by the slope. Because we're dealing with y first in
-            // terms of amplitude, also convert the decibel scaling to an
-            // amplitude gain.
-            auto gain = log2f(x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
-            gain = Fourier::decibels2amplitude(slope * gain);
-            // Normalize X point based on the minimum and maximum frequencies.
-            x -= low_frequency / nyquist_rate;
-            x /= (high_frequency - low_frequency) / nyquist_rate;
-            // Map the point from linear to logarithmic (Hertz) frequency
-            // range. Handle negative points by taking the absolute value
-            // before the square root (to avoid NaN) and negating the positive
-            // result.
-            if (frequency_scale == FrequencyScale::Logarithmic)
-                x = x < 0 ? -sqrtf(fabs(x)) : sqrtf(x);
-            // Set the Y point to the linear coefficient percentage. Apply the
-            // gain that was previously calculated from the scaling function.
-            const auto magnitudes = abs(filtered_coeffs[n]);
-            for (size_t lane_index = 0; lane_index < NUM_CHANNELS; ++lane_index) {
-                Vec& point = raster_coeffs[lane_index][n];
-                point.x = x;
-                point.y = gain * magnitudes.s[lane_index] / (max_amplitude * N);
-                // Apply magnitude scaling to the Y point.
-                switch (magnitude_scale) {
-                case MagnitudeScale::Linear:
-                    break;
-                case MagnitudeScale::Logarithmic60dB:  // Exponential with -60dB bias
-                    point.y = Fourier::amplitude2decibels(point.y) / (60.f + max_magnitude) + 1.f;
-                    break;
-                case MagnitudeScale::Logarithmic120dB:  // Exponential with -120dB bias
-                    point.y = Fourier::amplitude2decibels(point.y) / (120.f + max_magnitude) + 1.f;
-                    break;
-                default: break;
-                }
-            }
+    /// @brief Latch controls and distribute all analysis/curve work over one hop.
+    inline void process_coefficients(const simd::float_4& input) {
+        if (analysis.is_frame_start()) {
+            Fourier::SpectrumSettings settings;
+            settings.length = get_window_length();
+            settings.hop = get_hop_length();
+            settings.window = get_window_function();
+            settings.sample_rate = sample_rate;
+            const auto smoothing = get_frequency_smoothing();
+            settings.octave = smoothing == FrequencySmoothing::None ? 0.f : to_float(smoothing);
+            settings.alpha = get_time_smoothing_alpha();
+            analysis.configure(settings);
+            coordinates.bins = analysis.size() / 2 + 1;
+            coordinates.sample_rate = sample_rate;
+            coordinates.low_frequency = get_low_frequency();
+            coordinates.high_frequency = get_high_frequency();
+            coordinates.slope = get_slope();
+            coordinates.frequency_scale = get_frequency_scale();
+            coordinates.magnitude_scale = get_magnitude_scale();
         }
-    }
-
-    /// @brief Process samples with the DFT.
-    inline void process_coefficients() {
-        // Determine the setting of the frequency smoothing mode.
-        const auto frequency_smoothing = get_frequency_smoothing();
-        if (fft.is_done_computing()) {
-            // Compute smoothing alpha only when there is a new spectrum.
-            const float alpha = get_time_smoothing_alpha();
-            // Perform octave smoothing. For an N-length FFT, smooth over the
-            // first N/2 + 1 coefficients to omit reflected frequencies.
-            if (frequency_smoothing != FrequencySmoothing::None)
-                fft.smooth(sample_rate, to_float(frequency_smoothing));
-            // Pass the coefficients through a smoothing filter.
-            for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coeffs[n] = alpha * abs(filtered_coeffs[n]) + (1.0 - alpha) * abs(fft.coefficients[n]);
-            make_points();
-            // Add the delay line to the FFT pipeline.
-            fft.buffer(delay.contiguous(), window_function.get_samples());
-            // Mark the module as render-able
-            is_ready_to_render = true;
+        const bool complete = analysis.process(input, [this](size_t bin, simd::float_4 value) {
+            const auto points = coordinates.map(bin, value);
+            for (size_t lane = 0; lane < NUM_CHANNELS; ++lane)
+                display_spectrum.writable().points[lane][bin] = points[lane];
+        }, is_running);
+        if (complete) {
+            display_spectrum.writable().count = coordinates.bins;
+            display_spectrum.publish();
         }
-        // Perform the number of FFT steps required at this hop-rate.
-        fft.step(get_hop_length());
     }
 
     /// @brief Set the lights on the panel.
@@ -595,10 +524,8 @@ struct SpectrumAnalyzer : Module {
     /// @brief Process a sample.
     /// @param args the sample arguments (sample rate, sample time, etc.)
     void process(const ProcessArgs& args) final {
-        process_window();
         process_run_button();
-        process_input_signal();
-        process_coefficients();
+        process_coefficients(process_input_signal());
         process_lights(args);
     }
 };
@@ -892,7 +819,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param fill_color The color of the fill.
     void draw_coefficients(
         const DrawArgs& args,
-        std::vector<Vec> coefficients,
+        const Vec* coefficients,
+        size_t count,
         const float& stroke_width,
         const NVGcolor& stroke_color={{{0.9f, 0.85f, 0.15f, 0.75f}}},
         const NVGcolor& fill_color={{{0.9f, 0.85f, 0.15f, 0.5f}}}
@@ -908,7 +836,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgMoveTo(args.vg, mask.pos.x - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
         // Find and render the first visible frequency bin.
         size_t n = 0;
-        for (; n < coefficients.size(); n++) {
+        for (; n < count; n++) {
             Vec point = coefficients[n];
             // Check if we've reached the visible frequency range.
             if (point.x < 0.f) continue;
@@ -925,11 +853,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         }
         // Render the visible frequency bins.
         if (module->is_bezier_enabled) {
-            for (; n < coefficients.size() - 2; n++) {
+            for (; n < count - 2; n++) {
                 // Determine whether this is the last point to render.
-                bool last_point = (coefficients[n+1].x >= 1.f) || (n == coefficients.size() - 3);
+                bool last_point = (coefficients[n+1].x >= 1.f) || (n == count - 3);
                 // Create a neighborhood of points to render.
-                Vec points[4] = {coefficients[n-1], coefficients[n-0], coefficients[n+1], coefficients[n+2]};
+                Vec points[4] = {coefficients[n == 0 ? 0 : n-1], coefficients[n-0], coefficients[n+1], coefficients[n+2]};
                 for (Vec& point : points) {
                     // Remap the coefficient point to the window of the mask.
                     point.x = rescale(point.x, 0.f, 1.f, mask.pos.x, mask.pos.x + mask.size.x);
@@ -948,10 +876,10 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 }
             }
         } else {
-            for (; n < coefficients.size(); n++) {
+            for (; n < count; n++) {
                 Vec point = coefficients[n];
                 // Determine whether this is the last point to render.
-                bool last_point = (point.x >= 1.f) || (n == coefficients.size() - 1);
+                bool last_point = (point.x >= 1.f) || (n == count - 1);
                 // Remap the coefficient point to the window of the mask.
                 point.x = rescale(point.x, 0.f, 1.f, mask.pos.x, mask.pos.x + mask.size.x);
                 point.y = rescale(point.y, 0.f, 1.f, mask.pos.y + mask.size.y, mask.pos.y);
@@ -1156,11 +1084,12 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             axes_cache->draw_cached(args);
             const auto font = APP->window->loadFont(asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf"));
             if (font) axes_cache->draw_labels(args, font->handle, axis_font_size, axis_font_color);
-            if (module != nullptr && module->get_is_ready_to_render()) {
-                draw_coefficients(args, module->raster_coeffs[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
+            const auto* spectrum = module ? &module->consume_display_spectrum() : nullptr;
+            if (spectrum && spectrum->count > 0) {
+                draw_coefficients(args, spectrum->points[0].data(), spectrum->count, 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[1].data(), spectrum->count, 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[2].data(), spectrum->count, 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[3].data(), spectrum->count, 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
