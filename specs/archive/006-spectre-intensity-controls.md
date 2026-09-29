@@ -5,9 +5,18 @@ limits to Spectre, using the free panel strip between its single input/gain
 and Run button. Make quiet spectral detail inspectable without recapturing
 audio at a different input gain.
 
-Status: IMPLEMENTED - live interaction validation pending
+Status: COMPLETE
 
 Created: September 29, 2026
+
+Completed: September 29, 2026
+
+Completion accepted by the user after reviewing the implementation and its
+successive panel refinements in Rack. The recorded automated checks, native
+rendering checks, builds, and manual observations support this closure.
+The full scripted live-session matrix was not independently completed;
+those documented gaps are retained as validation limitations, not reported
+as passing checks. The user's acceptance closes that remaining criterion.
 
 ## Goal
 
@@ -15,7 +24,7 @@ Give Spectre a usable vertical color-range surface with first-class Linear
 and Decibels modes, direct palette/scale selection, and immediate recoloring
 of retained history. Preserve saved patch identities and old linear pixels
 at default endpoints. This spec is independent of
-[Fourier trace inspection](005-fourier-trace-inspection.md).
+[Fourier trace inspection](../005-fourier-trace-inspection.md).
 
 ## Behavior Examples
 
@@ -106,33 +115,34 @@ Fourier are outside this spec. No hard real-time or performance claim is made.
     map to 0/0.5/1; values outside the range saturate. Check silence,
     non-finite values, parameter bounds, every palette, and zero/nonzero
     slopes at DC, 500 Hz, 1 kHz, 2 kHz, and Nyquist on both frequency scales.
-- [x] Extend [amplitude tests](../test/rack/test_module_amplitudes.cpp) for
+- [x] Extend [amplitude tests](../../test/rack/test_module_amplitudes.cpp) for
     the stated sine reference and exact hover conversion, including gain,
     DC/Nyquist, and 44.1/48/96 kHz. Keep independently derived expectations
     and existing numerical tolerances. Test fractional-bin color samples
     separately from stored-bin Raw values.
-- [x] Extend [display tests](../test/rack/test_display_lifecycle.cpp) for
+- [x] Extend [display tests](../../test/rack/test_display_lifecycle.cpp) for
     frozen recoloring, all new invalidation inputs, unchanged-draw upload
     counts, history immutability, legend consistency and texture lifecycle.
     Retain independent legacy pixel fixtures proving old output unchanged.
-- [x] Extend [serialization tests](../test/rack/test_serialization.cpp) for
+- [x] Extend [serialization tests](../../test/rack/test_serialization.cpp) for
     old patches/presets, missing/malformed mode and endpoints, repeated
     loads into edited modules, new-state round trips, reset and undo/redo.
     Verify stable existing numeric IDs explicitly.
-- [x] Extend [panel inspection](../test/rack/inspect_panels.cpp) for new
+- [x] Extend [panel inspection](../../test/rack/inspect_panels.cpp) for new
     handle/control bounds, both modes, long/extreme values, themes, zoom and
     browser preview. Render and visually inspect the resulting images.
 - [x] Update the Spectre manual with handle positions, units, reference,
     frozen recoloring, saturation, mode migration and the new preset.
     Include the exact slope/readout differences between the two modes.
-- [ ] In a live Rack session, compare an old saved patch and a new instance,
-    manipulate both handles during running/frozen capture, verify ordinary
-    handle interactions and undo/redo, reload a patch, and change sample rate.
-    Record OS, Rack version, settings, and screenshots. Verify Fourier's
-    panel remains unchanged.
+-   **Closed by user acceptance:** the original full live-session matrix
+    included old/new patch comparison, running/frozen handle gestures,
+    typed entry, fine adjustment, undo/redo, reload, and sample-rate changes.
+    User review and the supplied Rack recording informed the refinements.
+    The recorded automated checks passed; unverified manual steps remain
+    documented limitations rather than claimed results.
 
 Run from the repository root with the dependencies and `RACK_DIR` setup in
-[Development And Testing](../CONTRIBUTING.md#development-and-testing):
+[Development And Testing](../../CONTRIBUTING.md#development-and-testing):
 
 ```shell
 make test
@@ -150,6 +160,10 @@ change with repeated comparable workloads; upload-count assertions alone
 prove caching behavior, not a speedup.
 
 ## Planning Evidence And Completion
+
+The following entries preserve the chronological implementation record.
+Earlier pending-status and uncommitted-work statements describe their point
+in time; the completion decision above supersedes those status statements.
 
 September 29, 2026: reviewed module parameters, raw history ownership, color
 conversion, hover normalization, panel coordinates, manuals and Rack tests.
@@ -396,3 +410,12 @@ with `make -C docs/manual-spectre`, and its rendered cover was inspected.
 the next Rack restart. No DSP tests were needed for this artwork-only edit.
 This alignment change is included in the user-requested commit; existing
 live-session limitations remain.
+
+### Archive Validation
+
+Marked COMPLETE and archived at the user's request after implementation
+commit `866b6f5`. Updated the incoming link from spec 005 and all relative
+links within this archived spec. Relative link/path checks and
+`git diff --check` passed. No builds or DSP tests were rerun for this
+status-and-location documentation change. The unrelated saved patch was
+left untouched.

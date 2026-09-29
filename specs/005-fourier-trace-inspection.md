@@ -18,7 +18,7 @@ Replace the vertical-axis readout with four measured trace levels. Preserve
 the current analysis schedule, input routing, amplitude normalization,
 capture behavior, module footprint, and saved parameter identities.
 This spec is independent of
-[Spectre intensity controls](006-spectre-intensity-controls.md).
+[Spectre intensity controls](archive/006-spectre-intensity-controls.md).
 
 ## Behavior Examples
 
