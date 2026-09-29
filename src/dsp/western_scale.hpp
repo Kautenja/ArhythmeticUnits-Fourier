@@ -14,18 +14,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MUSIC_THEORY_WESTERN_SCALE_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MUSIC_THEORY_WESTERN_SCALE_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_WESTERN_SCALE_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_WESTERN_SCALE_HPP_
 
 #include <cmath>      // log2f, powf, roundf
 #include <complex>    // complex
 #include <algorithm>  // max, min
 #include <string>     // string
 #include <iomanip>    // setprecision
-#include <ostream>    // ostringstream
+#include <stdexcept>  // runtime_error
+#include <sstream>    // ostringstream
 
 /// @brief Music theoretical concepts.
-namespace MusicTheory {
+namespace Fourier {
 
 /// @brief Western scale exponentially spaced notes.
 enum class Note {
@@ -117,6 +118,6 @@ struct TunedNote {
     }
 };
 
-}  // namespace MusicTheory
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MUSIC_THEORY_WESTERN_SCALE_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_WESTERN_SCALE_HPP_

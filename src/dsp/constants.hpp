@@ -14,16 +14,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_CONSTANTS_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_CONSTANTS_HPP_
 
 #include <complex>  // std::complex
 #include <string>   // std::string
-#include <ostream>  // std::ostringstream
+#include <sstream>  // std::ostringstream
 #include <iomanip>  // std::fixed, std::setprecision
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief Return the value of \f$\pi\f$ with given type.
 ///
@@ -71,6 +71,6 @@ inline static std::string freq_to_string(const T& freq) {
     return stream.str();
 }
 
-}  // namespace Math
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CONSTANTS_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_CONSTANTS_HPP_

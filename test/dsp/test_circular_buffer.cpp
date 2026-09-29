@@ -1,4 +1,4 @@
-// Test cases for Math::CircularBuffer structure.
+// Test cases for Fourier::CircularBuffer structure.
 //
 // Copyright (c) 2020 Christian Kauten
 //
@@ -21,7 +21,7 @@
 // SOFTWARE.
 //
 
-#include "dsp/math/circular_buffer.hpp"
+#include "dsp/circular_buffer.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -29,30 +29,30 @@
 // MARK: CircularBuffer
 // ---------------------------------------------------------------------------
 
-TEST_CASE("initial values of Math::CircularBuffer<float> should be null") {
-    auto buffer = Math::CircularBuffer<float>();
+TEST_CASE("initial values of Fourier::CircularBuffer<float> should be null") {
+    auto buffer = Fourier::CircularBuffer<float>();
     REQUIRE(1 == buffer.size());
     REQUIRE(0.f == buffer.at(0));
     REQUIRE(0.f == buffer.at(-1));
     REQUIRE(0.f == buffer.at(1));
 }
 
-TEST_CASE("(Math::CircularBuffer<float>).resize should resize") {
-    auto buffer = Math::CircularBuffer<float>();
+TEST_CASE("(Fourier::CircularBuffer<float>).resize should resize") {
+    auto buffer = Fourier::CircularBuffer<float>();
     buffer.resize(100);
     REQUIRE(100 == buffer.size());
     for (unsigned i = 0; i < 100; i++) REQUIRE(0.f == buffer.at(i));
 }
 
-TEST_CASE("Math::CircularBuffer<float>(size) should initialize with size") {
-    auto buffer = Math::CircularBuffer<float>(100);
+TEST_CASE("Fourier::CircularBuffer<float>(size) should initialize with size") {
+    auto buffer = Fourier::CircularBuffer<float>(100);
     REQUIRE(100 == buffer.size());
     for (unsigned i = 0; i < 100; i++) REQUIRE(0.f == buffer.at(i));
 }
 
-SCENARIO("values are inserted into a Math::CircularBuffer<float>") {
+SCENARIO("values are inserted into a Fourier::CircularBuffer<float>") {
     GIVEN("an empty circular buffer with size of 10") {
-        auto buffer = Math::CircularBuffer<int>();
+        auto buffer = Fourier::CircularBuffer<int>();
         buffer.resize(10);
         WHEN("a value is added to the buffer") {
             buffer.insert(1);
@@ -95,30 +95,30 @@ SCENARIO("values are inserted into a Math::CircularBuffer<float>") {
 // MARK: ContiguousCircularBuffer
 // ---------------------------------------------------------------------------
 
-TEST_CASE("initial values of Math::ContiguousCircularBuffer<float> should be null") {
-    auto buffer = Math::ContiguousCircularBuffer<float>();
+TEST_CASE("initial values of Fourier::ContiguousCircularBuffer<float> should be null") {
+    auto buffer = Fourier::ContiguousCircularBuffer<float>();
     REQUIRE(1 == buffer.size());
     REQUIRE(0.f == buffer.at(0));
     REQUIRE(0.f == buffer.at(-1));
     REQUIRE(0.f == buffer.at(1));
 }
 
-TEST_CASE("(Math::ContiguousCircularBuffer<float>).resize should resize") {
-    auto buffer = Math::ContiguousCircularBuffer<float>();
+TEST_CASE("(Fourier::ContiguousCircularBuffer<float>).resize should resize") {
+    auto buffer = Fourier::ContiguousCircularBuffer<float>();
     buffer.resize(100);
     REQUIRE(100 == buffer.size());
     for (unsigned i = 0; i < 100; i++) REQUIRE(0.f == buffer.at(i));
 }
 
-TEST_CASE("Math::ContiguousCircularBuffer<float>(size) should initialize with size") {
-    auto buffer = Math::ContiguousCircularBuffer<float>(100);
+TEST_CASE("Fourier::ContiguousCircularBuffer<float>(size) should initialize with size") {
+    auto buffer = Fourier::ContiguousCircularBuffer<float>(100);
     REQUIRE(100 == buffer.size());
     for (unsigned i = 0; i < 100; i++) REQUIRE(0.f == buffer.at(i));
 }
 
-SCENARIO("values are inserted into a Math::ContiguousCircularBuffer<float>") {
+SCENARIO("values are inserted into a Fourier::ContiguousCircularBuffer<float>") {
     GIVEN("an empty circular buffer with size of 10") {
-        auto buffer = Math::ContiguousCircularBuffer<int>();
+        auto buffer = Fourier::ContiguousCircularBuffer<int>();
         buffer.resize(10);
         WHEN("a value is added to the buffer") {
             buffer.insert(1);

@@ -27,10 +27,10 @@
 #include <limits>
 #include <stdexcept>
 #include <vector>
-#include "dsp/math/dft.hpp"
-#include "dsp/math/fft.hpp"
-#include "../../ieee754.hpp"
-#include "../../functions.hpp"
+#include "dsp/dft.hpp"
+#include "dsp/fft.hpp"
+#include "../ieee754.hpp"
+#include "../functions.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -41,7 +41,7 @@
 SCENARIO("the FFT needs to be calculated") {
     GIVEN("a sequence with no signal (length 1)") {
         std::vector<std::complex<float>> sequence = {0};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -52,7 +52,7 @@ SCENARIO("the FFT needs to be calculated") {
     }
     GIVEN("a sequence with no signal (length 2)") {
         std::vector<std::complex<float>> sequence = {0, 0};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -64,7 +64,7 @@ SCENARIO("the FFT needs to be calculated") {
     }
     GIVEN("a sequence with the unit impulse") {
         std::vector<std::complex<float>> sequence = {1};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -75,7 +75,7 @@ SCENARIO("the FFT needs to be calculated") {
     }
     GIVEN("a sequence with the unit impulse (length 2)") {
         std::vector<std::complex<float>> sequence = {1, 0};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -87,7 +87,7 @@ SCENARIO("the FFT needs to be calculated") {
     }
     GIVEN("a sequence with the unit impulse (length 4)") {
         std::vector<std::complex<float>> sequence = {1, 0, 0, 0};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -104,7 +104,7 @@ SCENARIO("the FFT needs to be calculated") {
         const float SAMPLE_RATE = 44100;
         constexpr int FFT_BINS = 4096;
         const auto sequence = generate_sinusoid<std::complex<float>>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         WHEN("the FFT is calculated.") {
             fft.compute();
@@ -133,7 +133,7 @@ SCENARIO("the RFFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse (length 4)") {
         std::vector<float> sequence = {1, 0, 0, 0};
         std::vector<float> window(sequence.size(), 1.f);
-        Math::OnTheFlyRFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyRFFT<float> fft(sequence.size());
         fft.buffer(sequence.data(), window);
         WHEN("the FFT is calculated") {
             fft.compute();
@@ -151,7 +151,7 @@ SCENARIO("the RFFT needs to be calculated") {
         constexpr int FFT_BINS = 4096;
         const auto sequence = generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
         std::vector<float> window(sequence.size(), 1.f);
-        Math::OnTheFlyRFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyRFFT<float> fft(sequence.size());
         fft.buffer(sequence.data(), window);
         WHEN("the FFT is calculated.") {
             fft.compute();
@@ -179,8 +179,8 @@ SCENARIO("the RFFT needs to be calculated") {
 SCENARIO("the IFFT needs to be calculated") {
     GIVEN("a sequence with no signal (length 2)") {
         std::vector<std::complex<float>> sequence = {0, 0};
-        Math::OnTheFlyFFT<float> fft(sequence.size());
-        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyIFFT<float> ifft(sequence.size());
         fft.buffer(sequence.data());
         fft.compute();
         ifft.buffer(fft.coefficients.data());
@@ -195,11 +195,11 @@ SCENARIO("the IFFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse (length 2)") {
         std::vector<std::complex<float>> sequence = {1, 0};
         // Compute the FFT
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         fft.compute();
         // Compute the IFFT
-        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        Fourier::OnTheFlyIFFT<float> ifft(sequence.size());
         ifft.buffer(fft.coefficients.data());
         WHEN("the IFFT is calculated") {
             ifft.compute();
@@ -212,11 +212,11 @@ SCENARIO("the IFFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse (length 4)") {
         std::vector<std::complex<float>> sequence = {1, 0, 0, 0};
         // Compute the FFT
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         fft.compute();
         // Compute the IFFT
-        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        Fourier::OnTheFlyIFFT<float> ifft(sequence.size());
         ifft.buffer(fft.coefficients.data());
         WHEN("the IFFT is calculated") {
             ifft.compute();
@@ -232,11 +232,11 @@ SCENARIO("the IFFT needs to be calculated") {
         constexpr int FFT_BINS = 4096;
         const auto sequence = generate_sinusoid<std::complex<float>>(FUNDAMENTAL, SAMPLE_RATE, FFT_BINS);
         // Compute the FFT
-        Math::OnTheFlyFFT<float> fft(sequence.size());
+        Fourier::OnTheFlyFFT<float> fft(sequence.size());
         fft.buffer(sequence.data());
         fft.compute();
         // Compute the IFFT
-        Math::OnTheFlyIFFT<float> ifft(sequence.size());
+        Fourier::OnTheFlyIFFT<float> ifft(sequence.size());
         ifft.buffer(fft.coefficients.data());
         WHEN("the IFFT is calculated.") {
             ifft.compute();
@@ -270,7 +270,7 @@ TEMPLATE_TEST_CASE("IFFT reconstructs known complex signals", "[ifft]", float, d
         const size_t bin = n == 1 ? 0 : 1;
         spectrum[bin] = amplitude * T(n);
         for (size_t i = 0; i < n; ++i) {
-            const T angle = T(2) * Math::pi<T>() * T(bin * i) / T(n);
+            const T angle = T(2) * Fourier::pi<T>() * T(bin * i) / T(n);
             expected[i] = amplitude * Complex(std::cos(angle), std::sin(angle));
         }
     }
@@ -280,7 +280,7 @@ TEMPLATE_TEST_CASE("IFFT reconstructs known complex signals", "[ifft]", float, d
             expected[i] = (i % 2 == 0) ? amplitude : -amplitude;
     }
 
-    Math::OnTheFlyIFFT<T> ifft(n);
+    Fourier::OnTheFlyIFFT<T> ifft(n);
     const auto original = spectrum;
     ifft.buffer(spectrum.data());
     ifft.compute();
@@ -303,11 +303,11 @@ TEMPLATE_TEST_CASE("IFFT matches the complex inverse DFT", "[ifft]", float, doub
     for (size_t k = 0; k < n; ++k)
         spectrum[k] = Complex(T(int(k % 7) - 3) / T(4),
                               T(int(k % 5) - 2) / T(3));
-    Math::OnTheFlyIFFT<T> ifft(n);
+    Fourier::OnTheFlyIFFT<T> ifft(n);
     ifft.buffer(spectrum.data());
     ifft.compute();
     // Independent O(N^2) complex reference using long double arithmetic.
-    // Math::idft returns only the real component and cannot check phase here.
+    // Fourier::idft returns only the real component and cannot check phase here.
     const long double pi = std::acos(-1.L);
     const long double tolerance = 64.L * std::numeric_limits<T>::epsilon();
     for (size_t i = 0; i < n; ++i) {
@@ -334,8 +334,8 @@ TEMPLATE_TEST_CASE("FFT and IFFT preserve complex samples", "[ifft]", float, dou
     for (size_t i = 0; i < n; ++i)
         input[i] = Complex(T(int(i % 11) - 5) / T(8),
                            T(int(i % 7) - 3) / T(4));
-    Math::OnTheFlyFFT<T> fft(n);
-    Math::OnTheFlyIFFT<T> ifft(n);
+    Fourier::OnTheFlyFFT<T> fft(n);
+    Fourier::OnTheFlyIFFT<T> ifft(n);
     fft.buffer(input.data());
     fft.compute();
     ifft.buffer(fft.coefficients.data());
@@ -351,7 +351,7 @@ TEMPLATE_TEST_CASE("FFT and IFFT preserve complex samples", "[ifft]", float, dou
 TEST_CASE("IFFT steps include incremental output normalization", "[ifft]") {
     const size_t n = GENERATE(1, 2, 8, 32);
     CAPTURE(n);
-    Math::OnTheFlyIFFT<float> ifft(n);
+    Fourier::OnTheFlyIFFT<float> ifft(n);
     const std::complex<float> amplitude(2, -3);
     std::vector<std::complex<float>> spectrum(n, 0.f);
     spectrum[0] = amplitude * float(n);
@@ -387,7 +387,7 @@ TEST_CASE("IFFT hop scheduling matches complete computation", "[ifft]") {
     std::vector<std::complex<float>> spectrum(n);
     for (size_t i = 0; i < n; ++i)
         spectrum[i] = {float(int(i % 5) - 2), float(int(i % 3) - 1)};
-    Math::OnTheFlyIFFT<float> complete(n), incremental(n);
+    Fourier::OnTheFlyIFFT<float> complete(n), incremental(n);
     complete.buffer(spectrum.data());
     complete.compute();
     incremental.buffer(spectrum.data());
@@ -408,7 +408,7 @@ TEST_CASE("IFFT can restart and buffer its own output", "[ifft]") {
     // Restart before work, during butterflies, during normalization, or done.
     const size_t steps = GENERATE(0, 1, 13, 20);
     CAPTURE(steps);
-    Math::OnTheFlyIFFT<float> ifft(8);
+    Fourier::OnTheFlyIFFT<float> ifft(8);
     std::vector<std::complex<float>> spectrum(8, 1.f);
     ifft.buffer(spectrum.data());
     for (size_t i = 0; i < steps; ++i) ifft.step();
@@ -431,7 +431,7 @@ TEST_CASE("IFFT resize clears pending work and permits reuse", "[ifft]") {
     const size_t n = GENERATE(1, 2, 8, 32);
     const size_t steps = GENERATE(0, 1, 13, 20);
     CAPTURE(n, steps);
-    Math::OnTheFlyIFFT<float> ifft(8);
+    Fourier::OnTheFlyIFFT<float> ifft(8);
     std::vector<std::complex<float>> spectrum(8, 1.f);
     ifft.buffer(spectrum.data());
     for (size_t i = 0; i < steps; ++i) ifft.step();
@@ -453,8 +453,8 @@ TEST_CASE("IFFT resize clears pending work and permits reuse", "[ifft]") {
 TEST_CASE("IFFT rejects invalid lengths without changing pending work", "[ifft]") {
     const size_t invalid = GENERATE(0, 3, 6);
     CAPTURE(invalid);
-    REQUIRE_THROWS_AS(Math::OnTheFlyIFFT<float>(invalid), std::invalid_argument);
-    Math::OnTheFlyIFFT<float> ifft(4);
+    REQUIRE_THROWS_AS(Fourier::OnTheFlyIFFT<float>(invalid), std::invalid_argument);
+    Fourier::OnTheFlyIFFT<float> ifft(4);
     const std::vector<std::complex<float>> spectrum(4, {2.f, -1.f});
     ifft.buffer(spectrum.data());
     ifft.step();

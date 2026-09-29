@@ -39,7 +39,7 @@ scons test
 Run one suite through its alias, which includes the source `.cpp` suffix:
 
 ```shell
-scons test/dsp/math/test_fft.cpp
+scons test/dsp/test_fft.cpp
 ```
 
 Every test `.cpp` is a separate executable with its own
@@ -48,13 +48,13 @@ marked `AlwaysBuild`. To pass Catch2 options, build the executable target
 and invoke it directly:
 
 ```shell
-scons build_test/dsp/math/test_fft
-./build_test/dsp/math/test_fft --list-test-names-only
+scons build_test/dsp/test_fft
+./build_test/dsp/test_fft --list-test-names-only
 ```
 
 Use names returned by that executable when selecting individual cases.
 Other suites cover DFT, windows, circular buffers, math helpers, IEEE-754
-behavior, and triggers. Add focused tests under the corresponding domain;
+behavior, and triggers. Add focused tests directly under `test/dsp/`;
 SCons discovers new `.cpp` files without a hand-maintained suite list.
 
 Prefer deterministic `SCENARIO`/`GIVEN`/`WHEN`/`THEN` or `TEST_CASE` checks.
@@ -156,10 +156,10 @@ The existing command and focused alias are:
 
 ```shell
 scons benchmark
-scons benchmark/dsp/math/benchmark_fft.cpp
+scons benchmark/dsp/benchmark_fft.cpp
 ```
 
-Currently `benchmark/dsp/math/benchmark_fft.cpp` enables Catch2 benchmarking
+Currently `benchmark/dsp/benchmark_fft.cpp` enables Catch2 benchmarking
 but contains an empty `TEST_CASE`. A successful run supplies no performance
 measurement. Add a meaningful workload before using it to evaluate changes.
 

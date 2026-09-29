@@ -24,8 +24,8 @@
 #include "constants.hpp"  // pi, j
 #include "window.hpp"     // window, coherent_gain
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief Compute the Discrete Fourier Transform (DFT).
 ///
@@ -124,6 +124,6 @@ std::vector<T> idft(const std::vector<std::complex<T>>& input) {
     return output;
 }
 
-}  // namespace Math
+}  // namespace Fourier
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_DFT_HPP_

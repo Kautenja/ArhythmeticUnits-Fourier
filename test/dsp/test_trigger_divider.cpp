@@ -1,4 +1,4 @@
-// Test cases for the Trigger:Divider structure.
+// Test cases for the Fourier::TriggerDivider structure.
 //
 // Copyright (c) 2020 Christian Kauten
 //
@@ -21,21 +21,21 @@
 // SOFTWARE.
 //
 
-#include "dsp/trigger/divider.hpp"
+#include "dsp/trigger_divider.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-TEST_CASE("Trigger::Divider accessors should be const") {
-    const Trigger::Divider divider;
+TEST_CASE("Fourier::TriggerDivider accessors should be const") {
+    const Fourier::TriggerDivider divider;
     REQUIRE(divider.getDivision() == 1);
     REQUIRE(divider.getClock() == 0);
     REQUIRE(divider.getPhase() == 0.f);
     REQUIRE(divider.getGate() == true);
 }
 
-SCENARIO("Trigger::Divider accessors and mutators are used") {
+SCENARIO("Fourier::TriggerDivider accessors and mutators are used") {
     GIVEN("an initialized divider") {
-        Trigger::Divider divider;
+        Fourier::TriggerDivider divider;
         WHEN("the default values are accessed") {
             THEN("the values are correct") {
                 REQUIRE(divider.getDivision() == 1);
@@ -69,9 +69,9 @@ SCENARIO("Trigger::Divider accessors and mutators are used") {
     }
 }
 
-SCENARIO("Trigger::Divider processes signals") {
+SCENARIO("Fourier::TriggerDivider processes signals") {
     GIVEN("an initialized divider") {
-        Trigger::Divider divider;
+        Fourier::TriggerDivider divider;
         WHEN("the divider processes at a division of 1") {
             for (unsigned i = 0; i < 10; i++) {  // arbitrarily check 10 samples
                 // the division is 1, so the divider should always fire

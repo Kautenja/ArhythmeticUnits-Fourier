@@ -21,9 +21,9 @@
 // SOFTWARE.
 //
 
-#include "dsp/math/dft.hpp"
-#include "../../ieee754.hpp"
-#include "../../functions.hpp"
+#include "dsp/dft.hpp"
+#include "../ieee754.hpp"
+#include "../functions.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -35,7 +35,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("an empty sequence") {
         std::vector<float> sequence;
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output is empty") {
                 REQUIRE(output.size() == 0);
             }
@@ -44,7 +44,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with no signal") {
         std::vector<float> sequence = {0};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 1);
                 REQUIRE(epsilon_equal(std::complex<float>(0, -0), output[0]));
@@ -54,7 +54,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with no signal (length 2)") {
         std::vector<float> sequence = {0, 0};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 2);
                 REQUIRE(epsilon_equal(std::complex<float>(0, -0), output[0]));
@@ -65,7 +65,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse") {
         std::vector<float> sequence = {1};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 1);
                 REQUIRE(epsilon_equal(std::complex<float>(1, -0), output[0]));
@@ -75,7 +75,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse (length 2)") {
         std::vector<float> sequence = {1, 0};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 2);
                 REQUIRE(approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
@@ -86,7 +86,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with the unit impulse (length 3)") {
         std::vector<float> sequence = {1, 0, 0};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 3);
                 REQUIRE(approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
@@ -98,7 +98,7 @@ SCENARIO("the DFT needs to be calculated") {
     GIVEN("a sequence with a shifted unit impulse (length 3)") {
         std::vector<float> sequence = {0, 1, 0};
         WHEN("the DFT is calculated") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has a unit DC coefficient") {
                 REQUIRE(output.size() == 3);
                 REQUIRE(approx_equal(output[0], std::complex<float>(1, -0), 1e-6f));
@@ -113,7 +113,7 @@ SCENARIO("the DFT needs to be calculated") {
         const float DFT_BINS = 4096;
         const auto sequence = generate_sinusoid<float>(FUNDAMENTAL, SAMPLE_RATE, DFT_BINS);
         WHEN("the DFT is calculated.") {
-            auto output = Math::dft(sequence);
+            auto output = Fourier::dft(sequence);
             THEN("the output has the same size as the input") {
                 REQUIRE(sequence.size() == output.size());
             }
@@ -138,7 +138,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("an empty coefficient sequence") {
         std::vector<std::complex<float>> sequence;
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output is empty") {
                 REQUIRE(output.size() == 0);
             }
@@ -147,7 +147,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {0}") {
         std::vector<std::complex<float>> sequence = {{0, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output has no signal content") {
                 REQUIRE(output.size() == 1);
                 REQUIRE(epsilon_equal(0.f, output[0]));
@@ -157,7 +157,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {0, 0}") {
         std::vector<std::complex<float>> sequence = {{0, 0}, {0, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output has no signal content") {
                 REQUIRE(output.size() == 2);
                 REQUIRE(epsilon_equal(0.f, output[0]));
@@ -168,7 +168,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {1}") {
         std::vector<std::complex<float>> sequence = {{1, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 1);
                 REQUIRE(epsilon_equal(1.f, output[0]));
@@ -178,7 +178,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {1, 0}") {
         std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 2);
                 REQUIRE(epsilon_equal(1.f/2.f, output[0]));
@@ -189,7 +189,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {1, 0, 0}") {
         std::vector<std::complex<float>> sequence = {{1, 0}, {0, 0}, {0, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 3);
                 REQUIRE(epsilon_equal(1.f/3.f, output[0]));
@@ -201,7 +201,7 @@ SCENARIO("the IDFT needs to be calculated") {
     GIVEN("a coefficient sequence {0, 1, 0}") {
         std::vector<std::complex<float>> sequence = {{0, 0}, {1, 0}, {0, 0}};
         WHEN("the IDFT is calculated") {
-            auto output = Math::idft(sequence);
+            auto output = Fourier::idft(sequence);
             THEN("the output is correct") {
                 REQUIRE(output.size() == 3);
                 REQUIRE(epsilon_equal(1.f/3.f, output[0]));
@@ -218,13 +218,13 @@ SCENARIO("the IDFT needs to be calculated") {
         const float FUNDAMENTAL = 441;
         const float SAMPLE_RATE = 44100;
         WHEN("the inverse DFT is calculated.") {
-            auto output = Math::idft(coefficients);
+            auto output = Fourier::idft(coefficients);
             THEN("the output has the same size as the input") {
                 REQUIRE(output.size() == coefficients.size());
             }
             THEN("the output is a cosine wave in the time domain") {
                 for (size_t i = 0; i < output.size(); i++) {
-                    const auto expected = std::cos(2.f * Math::pi<float>() * FUNDAMENTAL * i / SAMPLE_RATE);
+                    const auto expected = std::cos(2.f * Fourier::pi<float>() * FUNDAMENTAL * i / SAMPLE_RATE);
                     REQUIRE(approx_equal<float>(DFT_BINS * output[i], expected, 1e-6));
                 }
             }

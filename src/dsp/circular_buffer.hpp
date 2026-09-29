@@ -14,17 +14,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CIRCULAR_BUFFER_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CIRCULAR_BUFFER_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_CIRCULAR_BUFFER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_CIRCULAR_BUFFER_HPP_
 
 #include <cstddef>    // size_t
 #include <cstdint>    // int32_t
 #include <algorithm>  // std::fill
 #include <vector>     // std::vector
-#include "functions.hpp"
+#include "math.hpp"
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief A circular buffer based on std::vector.
 /// @tparam T the data type to store in the circular buffer
@@ -187,6 +187,6 @@ struct ContiguousCircularBuffer {
     inline const T* contiguous() const { return &buffer[head + 1]; }
 };
 
-}  // namespace Math
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_CIRCULAR_BUFFER_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_CIRCULAR_BUFFER_HPP_

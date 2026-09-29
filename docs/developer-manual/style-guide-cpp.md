@@ -11,9 +11,9 @@ namespaces, build structure, and licensing.
     `SConstruct`. Do not introduce a newer language requirement incidentally.
 -   Use `.hpp` for C++ headers and `.cpp` for implementation and test files.
     Keep templates in headers. Most current DSP is intentionally header-only.
--   Use existing domain namespaces: `Math`, `Filter`, `Trigger`, and
-    `MusicTheory`, with nested namespaces where appropriate. Keep Rack types
-    and host dependencies out of reusable DSP headers.
+-   Use the `Fourier` namespace for reusable DSP, with `Window`, `ColorMap`,
+    and `Eurorack` groups where they clarify otherwise generic names. Keep
+    Rack types and host dependencies out of reusable DSP headers.
 -   Use conventional include guards. For new headers, follow the descriptive
     `ARHYTHMETIC_UNITS_FOURIER_..._HPP_` pattern; preserve existing guards in
     unrelated code.
@@ -27,9 +27,10 @@ namespaces, build structure, and licensing.
 ## File Shape
 
 Prefer one clear domain per file: a filter, transform family, trigger,
-buffer, or window family. Umbrella headers should collect child headers
-rather than acquire behavior. Keep Rack registration, module processing,
-and rendering recognizable even where they share a module `.cpp` file.
+buffer, or window family. Keep DSP headers directly under `src/dsp/` and
+include dependencies explicitly instead of introducing umbrella headers.
+Keep Rack registration, module processing, and rendering recognizable even
+where they share a module `.cpp` file.
 
 Split by responsibility, ownership, or test seam when that improves
 navigation. File length is a design smell, not a mandatory limit. Large

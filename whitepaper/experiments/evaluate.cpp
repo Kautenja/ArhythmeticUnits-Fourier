@@ -14,7 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include "dsp/math/fft.hpp"
+#include "dsp/fft.hpp"
 
 namespace {
 using Clock = std::chrono::steady_clock;
@@ -66,7 +66,7 @@ void verify(const char* precision) {
                 if (window)
                     for (size_t i = 0; i < n; ++i)
                         w[i] = float(0.5L - 0.5L * std::cos(2 * std::acos(-1.L) * i / n));
-                Math::OnTheFlyRFFT<T> full(n);
+                Fourier::OnTheFlyRFFT<T> full(n);
                 full.buffer(x.data(), w);
                 full.compute();
                 if (n <= 128) {
@@ -90,7 +90,7 @@ void verify(const char* precision) {
                     }
                 }
                 for (const auto hop : {size_t(1), n / 4, n / 2, n, n + 7}) {
-                    Math::OnTheFlyRFFT<T> incremental(n);
+                    Fourier::OnTheFlyRFFT<T> incremental(n);
                     incremental.buffer(x.data(), w);
                     const size_t b = incremental.get_total_steps();
                     const size_t q = b / hop + (b % hop != 0);
@@ -118,7 +118,7 @@ void measure(size_t n, size_t hop, size_t repetition, bool incremental) {
     std::vector<float> w(n);
     for (size_t i = 0; i < n; ++i)
         w[i] = float(0.5 - 0.5 * std::cos(2 * std::acos(-1.0) * i / n));
-    Math::OnTheFlyRFFT<float> fft(n);
+    Fourier::OnTheFlyRFFT<float> fft(n);
     for (size_t frame = 0; frame < 16; ++frame) {
         fft.buffer(x.data(), w);
         fft.compute();

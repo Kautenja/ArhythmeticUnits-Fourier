@@ -25,11 +25,11 @@
 #include <utility>        // swap
 #include <vector>         // vector
 #include "constants.hpp"  // M_PI, j<T>, etc.
-#include "functions.hpp"  // complex_multiply, etc.
+#include "math.hpp"       // complex_multiply, etc.
 #include "window.hpp"     // window_function
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// A type for DFT coefficient buffers.
 typedef std::vector<std::complex<float>> DFTCoefficients;
@@ -42,7 +42,7 @@ typedef std::vector<DFTCoefficients> STFTCoefficients;
 /// @param index The floating point index to sample from the coefficients.
 /// @returns The linearly interpolated coefficient at the given index.
 static inline std::complex<float> interpolate_coefficients(
-    const Math::DFTCoefficients& coeff,
+    const Fourier::DFTCoefficients& coeff,
     float index
 ) {
     int y0 = floorf(index);
@@ -609,6 +609,6 @@ class OnTheFlyIFFT {
     inline void compute() { while (!is_done_computing()) step(); }
 };
 
-}  // namespace Math
+}  // namespace Fourier
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FFT_HPP_

@@ -14,13 +14,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_EURORACK_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_EURORACK_HPP_
 
-#include "functions.hpp"
+#include "math.hpp"
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief Constants defined by the Eurorack standard.
 namespace Eurorack {
@@ -71,6 +71,6 @@ inline T toAC(const T& value) { return value * T(5); }
 
 }  // namespace Eurorack
 
-}  // namespace Math
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_EURORACK_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_EURORACK_HPP_

@@ -25,7 +25,7 @@
 #define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <random>
 #include "catch.hpp"
-#include "dsp/math/fft.hpp"
+#include "dsp/fft.hpp"
 
 TEST_CASE("Compute FFTs") {
 

@@ -38,7 +38,7 @@ def main():
                "whitepaper/experiments/evaluate.cpp", "-o", str(binary)]
     source_paths = [ROOT / "whitepaper/experiments/evaluate.cpp",
                     ROOT / "whitepaper/experiments/run.py"]
-    source_paths += sorted((ROOT / "src/dsp/math").glob("*.hpp"))
+    source_paths += sorted((ROOT / "src/dsp").glob("*.hpp"))
     before = {str(p.relative_to(ROOT)): digest(p) for p in source_paths}
     meta = {
         "started_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),

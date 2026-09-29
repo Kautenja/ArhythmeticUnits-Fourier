@@ -19,6 +19,17 @@
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
+#include "dsp/circular_buffer.hpp"
+#include "dsp/color_map.hpp"
+#include "dsp/constants.hpp"
+#include "dsp/dc_blocker.hpp"
+#include "dsp/eurorack.hpp"
+#include "dsp/fft.hpp"
+#include "dsp/math.hpp"
+#include "dsp/threshold_trigger.hpp"
+#include "dsp/trigger_divider.hpp"
+#include "dsp/western_scale.hpp"
+#include "dsp/window.hpp"
 
 /// @brief A spectrogram module.
 struct Spectrogram : Module {
@@ -60,31 +71,31 @@ struct Spectrogram : Module {
     float sample_rate = 0.f;
 
     /// DC-blocking filters for AC-coupled mode.
-    Filter::DCBlocker<float> dc_blocker;
+    Fourier::DCBlocker<float> dc_blocker;
 
     /// The delay line for tracking the input signal x[t]
-    Math::ContiguousCircularBuffer<float> delay;
+    Fourier::ContiguousCircularBuffer<float> delay;
 
     /// The window function for windowing the FFT.
-    Math::Window::CachedWindow<float> window_function;
+    Fourier::Window::CachedWindow<float> window_function;
 
     /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT<float> fft;
+    Fourier::OnTheFlyRFFT<float> fft;
 
     /// A copy of the low-pass filtered coefficients.
-    Math::DFTCoefficients filtered_coefficients;
+    Fourier::DFTCoefficients filtered_coefficients;
 
     /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
-    Math::STFTCoefficients coefficients;
+    Fourier::STFTCoefficients coefficients;
 
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
 
     /// a clock divider for updating the lights every 512 frames
-    Trigger::Divider light_divider;
+    Fourier::TriggerDivider light_divider;
 
     /// a Schmitt Trigger for handling presses on the clock button
-    Trigger::Threshold<float> run_trigger;
+    Fourier::ThresholdTrigger<float> run_trigger;
 
     /// Whether the analyzer is running or not.
     bool is_running = true;
@@ -94,13 +105,13 @@ struct Spectrogram : Module {
     bool is_ac_coupled = true;
 
     /// The color map to use when rasterizing STFT coefficients to images.
-    Math::ColorMap::Function color_map = Math::ColorMap::Function::Magma;
+    Fourier::ColorMap::Function color_map = Fourier::ColorMap::Function::Magma;
 
     /// @brief Initialize a new spectrogram.
     Spectrogram() :
         sample_rate(APP->engine->getSampleRate()),
         delay(N_FFT),
-        window_function(Math::Window::Function::Boxcar, N_FFT, false, true),
+        window_function(Fourier::Window::Function::Boxcar, N_FFT, false, true),
         fft(N_FFT),
         filtered_coefficients(N_FFT),
         coefficients(N_STFT) {
@@ -114,7 +125,7 @@ struct Spectrogram : Module {
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configSwitch(PARAM_WINDOW_FUNCTION, 0, Math::Window::names().size() - 1, static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, Fourier::Window::names().size() - 1, static_cast<size_t>(Fourier::Window::Function::Flattop), "Window", Fourier::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
@@ -160,7 +171,7 @@ struct Spectrogram : Module {
             getParamQuantity(i)->randomizeEnabled = false;
         // Setup the buffer of coefficients.
         for (std::size_t i = 0; i < coefficients.size(); i++)
-            coefficients[i] = Math::DFTCoefficients(N_FFT);
+            coefficients[i] = Fourier::DFTCoefficients(N_FFT);
         // Resize the delay line for the number of FFT bins.
         onReset();
     }
@@ -172,7 +183,7 @@ struct Spectrogram : Module {
         is_running = true;
         hop_index = 0;
         is_ac_coupled = true;
-        color_map = Math::ColorMap::Function::Magma;
+        color_map = Fourier::ColorMap::Function::Magma;
         // Clear delay lines and cached coefficients.
         delay.clear();
         for (std::size_t i = 0; i < coefficients.size(); i++)
@@ -225,14 +236,14 @@ struct Spectrogram : Module {
             is_running = json_boolean_value(opt);
         if ((opt = json_object_get(rootJ, "is_ac_coupled")))
             is_ac_coupled = json_boolean_value(opt);
-        color_map = Math::ColorMap::Function::Magma;
+        color_map = Fourier::ColorMap::Function::Magma;
         opt = json_object_get(rootJ, "color_map");
         if (json_is_integer(opt)) {
             // Validate before narrowing so large saved integers cannot wrap.
             const json_int_t value = json_integer_value(opt);
             if (value >= 0 &&
-                value < static_cast<json_int_t>(Math::ColorMap::Function::NumFunctions))
-                color_map = static_cast<Math::ColorMap::Function>(value);
+                value < static_cast<json_int_t>(Fourier::ColorMap::Function::NumFunctions))
+                color_map = static_cast<Fourier::ColorMap::Function>(value);
         }
     }
 
@@ -250,7 +261,7 @@ struct Spectrogram : Module {
 
     /// @brief Return the STFT coefficients.
     /// @returns The current STFT coefficients.
-    inline const Math::STFTCoefficients& get_coefficients() const {
+    inline const Fourier::STFTCoefficients& get_coefficients() const {
         return coefficients;
     }
 
@@ -258,14 +269,14 @@ struct Spectrogram : Module {
 
     /// @brief Return the window function.
     /// @returns The window function for computing DFT coefficients.
-    inline Math::Window::Function get_window_function() {
+    inline Fourier::Window::Function get_window_function() {
         const auto value = params[PARAM_WINDOW_FUNCTION].getValue();
-        return static_cast<Math::Window::Function>(value);
+        return static_cast<Fourier::Window::Function>(value);
     }
 
     /// @brief Set the window function.
     /// @param value The window function for computing DFT coefficients.
-    inline void set_window_function(const Math::Window::Function& value) {
+    inline void set_window_function(const Fourier::Window::Function& value) {
         params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
     }
 
@@ -403,7 +414,7 @@ struct Spectrogram : Module {
     /// @brief Process input signal.
     inline void process_input_signal() {
         // Get the input signal and convert to normalized bipolar [-1, 1].
-        auto signal = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
+        auto signal = Fourier::Eurorack::fromAC(inputs[INPUT_SIGNAL].getVoltageSum());
         // Determine the gain to apply to this channel's input signal.
         const auto gain = params[PARAM_INPUT_GAIN].getValue();
         // Pass signal through the DC blocking filter. Do this regardless
@@ -514,10 +525,10 @@ struct SpectralImageDisplay : TransparentWidget {
         // calculate the normalized x,y positions in [0, 1]. Account for
         // padding to ensure relative position corresponds to the plot.
         position.x = (position.x - pad_left) / (box.size.x - pad_left - pad_right);
-        position.x = Math::clip(position.x, 0.f, 1.f);
+        position.x = Fourier::clip(position.x, 0.f, 1.f);
         // y axis increases downward in pixel space, so invert about 1.
         position.y = 1.f - (position.y - pad_top) / (box.size.y - pad_top - pad_bottom);
-        position.y = Math::clip(position.y, 0.f, 1.f);
+        position.y = Fourier::clip(position.y, 0.f, 1.f);
         return position;
     }
 
@@ -641,7 +652,7 @@ struct SpectralImageDisplay : TransparentWidget {
             // nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            const auto freq_string = Math::freq_to_string(freq);
+            const auto freq_string = Fourier::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
@@ -673,7 +684,7 @@ struct SpectralImageDisplay : TransparentWidget {
             // Apply the same translation and scaling as used in draw_spectrogram.
             float point_y = pad_top + (t - texture_y_high) * scale_y;
             // Render the tick label.
-            const auto freq_string = Math::freq_to_string(base_frequency);
+            const auto freq_string = Fourier::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
@@ -698,13 +709,13 @@ struct SpectralImageDisplay : TransparentWidget {
         for (int y = 0; y < height; y++) {
             // Compute the gain based on the octave offset.
             auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
-            gain = Math::decibels2amplitude(slope * gain);
+            gain = Fourier::decibels2amplitude(slope * gain);
             for (int x = 0; x < width; x++) {
                 float scaled_y = y;
                 if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
-                    scaled_y = height * Math::squared(scaled_y / height);
-                auto coeff = gain * Math::interpolate_coefficients(module->get_coefficients()[x], scaled_y);
-                auto color = Math::ColorMap::color_map(module->color_map, abs(coeff) / height);
+                    scaled_y = height * Fourier::squared(scaled_y / height);
+                auto coeff = gain * Fourier::interpolate_coefficients(module->get_coefficients()[x], scaled_y);
+                auto color = Fourier::ColorMap::color_map(module->color_map, abs(coeff) / height);
                 int index = 4 * (width * (height - 1 - y) + x);
                 pixels[index + 0] = color.r * 255;
                 pixels[index + 1] = color.g * 255;
@@ -823,12 +834,12 @@ struct SpectralImageDisplay : TransparentWidget {
         nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
 
         // Render the hovered frequency at the top left.
-        const auto freq_string = Math::freq_to_string(hover_freq);
+        const auto freq_string = Fourier::freq_to_string(hover_freq);
         nvgText(args.vg, pad_left + 3, pad_top / 2, freq_string.c_str(), NULL);
 
         // Optionally, also render musical note information.
         if (hover_freq > 0) {
-            MusicTheory::TunedNote note(hover_freq);
+            Fourier::TunedNote note(hover_freq);
             nvgText(args.vg, pad_left + 55, pad_top / 2, note.note_string().c_str(), NULL);
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
@@ -840,7 +851,7 @@ struct SpectralImageDisplay : TransparentWidget {
         int coeff_y = module->get_coefficients()[0].size() * hover_freq / module->get_sample_rate();
         // Retrieve the coefficient, compute its magnitude in dB.
         float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
-        float db = Math::amplitude2decibels(coeff_value) - 60.f;
+        float db = Fourier::amplitude2decibels(coeff_value) - 60.f;
         // Format and render the decibel value.
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(1) << db << " dB";
@@ -954,7 +965,7 @@ struct SpectrogramWidget : ModuleWidget {
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
         menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
-        menu->addChild(createIndexPtrSubmenuItem("Color Map", Math::ColorMap::names(), reinterpret_cast<int*>(&getModule<Spectrogram>()->color_map)));
+        menu->addChild(createIndexPtrSubmenuItem("Color Map", Fourier::ColorMap::names(), reinterpret_cast<int*>(&getModule<Spectrogram>()->color_map)));
         ModuleWidget::appendContextMenu(menu);
     }
 };

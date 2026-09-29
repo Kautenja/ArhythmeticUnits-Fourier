@@ -746,10 +746,10 @@ and records the actual compiler and command. The original command used
 using the methodology in Section~\ref{sec:method}, including the intentionally
 fixed cadence.
 
-The primary implementation paths are \path{src/dsp/math/fft.hpp},
+The primary implementation paths are \path{src/dsp/fft.hpp},
 \path{src/SpectrumAnalyzer.cpp}, and \path{src/Spectrogram.cpp}.
-\path{src/dsp/math/window.hpp} provides cached windows;
-\path{src/dsp/math/circular_buffer.hpp} provides the contiguous ring.
+\path{src/dsp/window.hpp} provides cached windows;
+\path{src/dsp/circular_buffer.hpp} provides the contiguous ring.
 The independent report driver is \path{whitepaper/experiments/evaluate.cpp}.
 \code{metadata.json} records the revision, header/driver hashes, compiler,
 hardware declaration, timestamps, and raw-data hashes. \code{timing.csv} stores

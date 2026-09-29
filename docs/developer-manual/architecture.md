@@ -13,9 +13,10 @@ changing DSP, Rack modules, or displays.
     and widget. It uses scalar processing and a history of spectra.
 -   `src/structs.hpp` contains shared display/analysis enums and conversions.
 -   `src/dsp/` contains mostly header-only math, filters, triggers, and music
-    theory. Domain umbrella headers include focused child headers.
+    theory in a flat set of focused headers. Consumers include the headers
+    they use directly.
 -   `src/rack_extensions/` contains Rack graphics and control helpers.
--   `test/dsp/` mirrors DSP responsibilities. `test/functions.hpp` and
+-   `test/dsp/` mirrors the flat DSP header layout. `test/functions.hpp` and
     `test/ieee754.hpp` provide test helpers.
 -   `benchmark/dsp/` holds the benchmark harness; see the testing article
     before treating it as performance evidence.

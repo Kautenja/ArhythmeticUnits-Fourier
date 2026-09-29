@@ -14,18 +14,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_WINDOW_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_WINDOW_HPP_
 
 #include <cmath>
 #include <limits>
 #include <string>
 #include <vector>
 #include "constants.hpp"
-#include "functions.hpp"
+#include "math.hpp"
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief Windowing functions.
 namespace Window {
@@ -102,8 +102,8 @@ template<typename T>
 inline T parzen(const T& n, const T& N, const bool& is_symmetric = true) {
     // Shift and scale the domain of n from [0, N) to [-1, 1]
     const T x = T(2) * n / (N - is_symmetric) - T(1);
-    if (abs(x) >= T(0.5)) return T(2) * Math::cubed(T(1) - abs(x));
-    return T(1) - T(6) * Math::squared(x) + T(6) * Math::cubed(abs(x));
+    if (abs(x) >= T(0.5)) return T(2) * Fourier::cubed(T(1) - abs(x));
+    return T(1) - T(6) * Fourier::squared(x) + T(6) * Fourier::cubed(abs(x));
 }
 
 // MARK: Polynomial Windows
@@ -124,7 +124,7 @@ inline T parzen(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T welch(const T& n, const T& N, const bool& is_symmetric = true) {
-    return T(1) - Math::squared(
+    return T(1) - Fourier::squared(
         (n - (N - T(1) - is_symmetric) / T(2)) /
             ((N + T(1) - is_symmetric) / T(2))
     );
@@ -154,7 +154,7 @@ inline T welch(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T cosine(const T& n, const T& N, const bool& is_symmetric = true) {
-    return sin(Math::pi<T>() * (n + T(0.5)) / (N + !is_symmetric));
+    return sin(Fourier::pi<T>() * (n + T(0.5)) / (N + !is_symmetric));
 }
 
 /// @brief Calculate the value of a Bohman window.
@@ -177,7 +177,7 @@ inline T cosine(const T& n, const T& N, const bool& is_symmetric = true) {
 template<typename T>
 inline T bohman(const T& n, const T& N, const bool& is_symmetric = true) {
     const auto x = abs(T(2) * n / (N - is_symmetric) - T(1));
-    return (T(1) - x) * cos(Math::pi<T>() * x) + (T(1) / Math::pi<T>()) * sin(Math::pi<T>() * x);
+    return (T(1) - x) * cos(Fourier::pi<T>() * x) + (T(1) / Fourier::pi<T>()) * sin(Fourier::pi<T>() * x);
 }
 
 /// @brief Calculate the value of a Lanczos window.
@@ -204,7 +204,7 @@ inline T bohman(const T& n, const T& N, const bool& is_symmetric = true) {
 template<typename T>
 inline T lanczos(const T& n, const T& N, const bool& is_symmetric = true) {
     if (n == floor((N - is_symmetric)/T(2))) return 1;
-    T x = Math::pi<T>() * (T(2) * n / (N - is_symmetric) - T(1));
+    T x = Fourier::pi<T>() * (T(2) * n / (N - is_symmetric) - T(1));
     return sin(x) / (x + std::numeric_limits<T>::min());
 }
 
@@ -224,7 +224,7 @@ inline T lanczos(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T hann(const T& n, const T& N, const bool& is_symmetric = true) {
-    return T(0.50) - T(0.50) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric));
+    return T(0.50) - T(0.50) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Bartlett-Hann window.
@@ -246,7 +246,7 @@ inline T hann(const T& n, const T& N, const bool& is_symmetric = true) {
 template<typename T>
 inline T barthann(const T& n, const T& N, const bool& is_symmetric = true) {
     return T(0.62) - T(0.48) * abs(n / (N - is_symmetric) - T(0.5))
-        - T(0.38) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric));
+        - T(0.38) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Hamming window.
@@ -263,7 +263,7 @@ inline T barthann(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T hamming(const T& n, const T& N, const bool& is_symmetric = true) {
-    return T(0.54) - T(0.46) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric));
+    return T(0.54) - T(0.46) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Blackman window.
@@ -284,7 +284,7 @@ inline T hamming(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T blackman(const T& n, const T& N, const bool& is_symmetric = true) {
-    return T(0.42) - T(0.50) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric)) + T(0.08) * cos(T(4) * Math::pi<T>() * n / (N - is_symmetric));
+    return T(0.42) - T(0.50) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric)) + T(0.08) * cos(T(4) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Blackman-Harris window.
@@ -307,9 +307,9 @@ inline T blackman(const T& n, const T& N, const bool& is_symmetric = true) {
 template<typename T>
 inline T blackmanharris(const T& n, const T& N, const bool& is_symmetric = true) {
     return T(0.35875)
-        - T(0.48829) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric))
-        + T(0.14128) * cos(T(4) * Math::pi<T>() * n / (N - is_symmetric))
-        - T(0.01168) * cos(T(6) * Math::pi<T>() * n / (N - is_symmetric));
+        - T(0.48829) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric))
+        + T(0.14128) * cos(T(4) * Fourier::pi<T>() * n / (N - is_symmetric))
+        - T(0.01168) * cos(T(6) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Blackman-BlackmanNuttall window.
@@ -332,9 +332,9 @@ inline T blackmanharris(const T& n, const T& N, const bool& is_symmetric = true)
 template<typename T>
 inline T blackmannuttall(const T& n, const T& N, const bool& is_symmetric = true) {
     return T(0.3635819)
-        - T(0.4891775) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric))
-        + T(0.1365995) * cos(T(4) * Math::pi<T>() * n / (N - is_symmetric))
-        - T(0.0106411) * cos(T(6) * Math::pi<T>() * n / (N - is_symmetric));
+        - T(0.4891775) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric))
+        + T(0.1365995) * cos(T(4) * Fourier::pi<T>() * n / (N - is_symmetric))
+        - T(0.0106411) * cos(T(6) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Kaiser-Bessel window.
@@ -357,9 +357,9 @@ inline T blackmannuttall(const T& n, const T& N, const bool& is_symmetric = true
 template<typename T>
 inline T kaiserbessel(const T& n, const T& N, const bool& is_symmetric = true) {
     return T(0.402)
-        - T(0.498) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric))
-        + T(0.098) * cos(T(4) * Math::pi<T>() * n / (N - is_symmetric))
-        - T(0.001) * cos(T(6) * Math::pi<T>() * n / (N - is_symmetric));
+        - T(0.498) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric))
+        + T(0.098) * cos(T(4) * Fourier::pi<T>() * n / (N - is_symmetric))
+        - T(0.001) * cos(T(6) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Calculate the value of a Flattop window.
@@ -392,10 +392,10 @@ inline T kaiserbessel(const T& n, const T& N, const bool& is_symmetric = true) {
 template<typename T>
 inline T flattop(const T& n, const T& N, const bool& is_symmetric = true) {
     return T(0.21557895)
-        - T(0.416631580) * cos(T(2) * Math::pi<T>() * n / (N - is_symmetric))
-        + T(0.277263158) * cos(T(4) * Math::pi<T>() * n / (N - is_symmetric))
-        - T(0.083578947) * cos(T(6) * Math::pi<T>() * n / (N - is_symmetric))
-        + T(0.006947368) * cos(T(8) * Math::pi<T>() * n / (N - is_symmetric));
+        - T(0.416631580) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric))
+        + T(0.277263158) * cos(T(4) * Fourier::pi<T>() * n / (N - is_symmetric))
+        - T(0.083578947) * cos(T(6) * Fourier::pi<T>() * n / (N - is_symmetric))
+        + T(0.006947368) * cos(T(8) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
 
 /// @brief Window function types.
@@ -725,7 +725,7 @@ inline T exponential(const T& n, const T& N, const bool& is_symmetric = true, co
 template<typename T>
 inline T hannpoisson(const T& n, const T& N, const bool& is_symmetric = true, const T& alpha = 0.5) {
     const T M = (N - is_symmetric) / T(2);
-    return T(0.5) * (T(1) - cos(Math::pi<T>() * n / M)) * exp(-alpha * abs(n - M) / M);
+    return T(0.5) * (T(1) - cos(Fourier::pi<T>() * n / M)) * exp(-alpha * abs(n - M) / M);
 }
 
 /// @brief Calculate the value of a Gaussian window.
@@ -746,7 +746,7 @@ inline T hannpoisson(const T& n, const T& N, const bool& is_symmetric = true, co
 template<typename T>
 inline T gaussian(const T& n, const T& N, const bool& is_symmetric = true, const T& std = 0.25) {
     const T M = (N - is_symmetric) / T(2);
-    return exp(-T(0.5) * Math::squared((n - M)/(std * M)));
+    return exp(-T(0.5) * Fourier::squared((n - M)/(std * M)));
 }
 
 /// @brief Calculate the value of a Tukey window.
@@ -771,7 +771,7 @@ template<typename T>
 inline T tukey(const T& n, const T& N, const bool& is_symmetric = true, const T& alpha = 0.5) {
     const T M = (N - is_symmetric) / T(2);
     if (abs(n - M) < alpha * M) return 1;
-    return T(0.5) * (T(1) + cos(Math::pi<T>() * (abs(n - M) - alpha * M) / ((T(1) - alpha) * M)));
+    return T(0.5) * (T(1) + cos(Fourier::pi<T>() * (abs(n - M) - alpha * M) / ((T(1) - alpha) * M)));
 }
 
 /// @brief Kaiser window design.
@@ -845,6 +845,6 @@ inline T window(const T& n, const T& N, const T& B) {
 
 }  // namespace Window
 
-}  // namespace Math
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_WINDOW_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_WINDOW_HPP_

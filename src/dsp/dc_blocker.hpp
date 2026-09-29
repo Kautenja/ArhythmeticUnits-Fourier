@@ -14,11 +14,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_
 
 /// @brief Structure for digital filtering.
-namespace Filter {
+namespace Fourier {
 
 /// @brief A DC blocking filter comprised of a digital differentiator and a
 /// leaky integrator in cascade.
@@ -126,6 +126,6 @@ struct DCBlocker {
     inline const T& getValue() const { return output; }
 };
 
-}  // namespace Filter
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_FILTER_DC_BLOCKER_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_DC_BLOCKER_HPP_

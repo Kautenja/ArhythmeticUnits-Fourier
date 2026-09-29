@@ -23,8 +23,8 @@
 
 #include <cstddef>
 
-#include "dsp/math/window.hpp"
-#include "../../ieee754.hpp"
+#include "dsp/window.hpp"
+#include "../ieee754.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -43,7 +43,7 @@ TEST_CASE("Calculate an asymmetric Bartlett window impulse response of length 7"
         0.2857142857142858
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bartlett<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::bartlett<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -51,7 +51,7 @@ TEST_CASE("Calculate an asymmetric Bartlett window impulse response of length 7"
 TEST_CASE("Calculate an asymmetric Bartlett window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.25, 0.5, 0.75, 1.0, 0.75, 0.5, 0.25};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bartlett<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::bartlett<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -67,7 +67,7 @@ TEST_CASE("Calculate a symmetric Bartlett window impulse response of length 7") 
         0.f / 3.f
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bartlett<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::bartlett<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -84,7 +84,7 @@ TEST_CASE("Calculate a symmetric Bartlett window impulse response of length 8") 
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bartlett<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::bartlett<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -104,7 +104,7 @@ TEST_CASE("Calculate an asymmetric Hann window impulse response of length 7") {
         0.18825509907063326
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hann<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::hann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -121,7 +121,7 @@ TEST_CASE("Calculate an asymmetric Hann window impulse response of length 8") {
         0.14644660940672627
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hann<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::hann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -137,7 +137,7 @@ TEST_CASE("Calculate a symmetric Hann window impulse response of length 7") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hann<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::hann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -154,7 +154,7 @@ TEST_CASE("Calculate a symmetric Hann window impulse response of length 8") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hann<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::hann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -174,7 +174,7 @@ TEST_CASE("Calculate an asymmetric Bartlett-Hann window impulse response of leng
         0.21164530386511007
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::barthann<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::barthann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -191,7 +191,7 @@ TEST_CASE("Calculate an asymmetric Bartlett-Hann window impulse response of leng
         0.17129942314911195
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::barthann<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::barthann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -207,7 +207,7 @@ TEST_CASE("Calculate a symmetric Bartlett-Hann window impulse response of length
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::barthann<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::barthann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -224,7 +224,7 @@ TEST_CASE("Calculate a symmetric Bartlett-Hann window impulse response of length
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::barthann<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::barthann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -244,7 +244,7 @@ TEST_CASE("Calculate an asymmetric Hamming window impulse response of length 7")
         0.25319469114498266
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hamming<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::hamming<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -261,7 +261,7 @@ TEST_CASE("Calculate an asymmetric Hamming window impulse response of length 8")
         0.21473088065418822
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hamming<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::hamming<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -277,7 +277,7 @@ TEST_CASE("Calculate a symmetric Hamming window impulse response of length 7") {
         0.08000000000000007
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hamming<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::hamming<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -294,7 +294,7 @@ TEST_CASE("Calculate a symmetric Hamming window impulse response of length 8") {
         0.08000000000000007
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hamming<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::hamming<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -314,7 +314,7 @@ TEST_CASE("Calculate an asymmetric Blackman window impulse response of length 7"
         0.09045342435412808
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackman<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackman<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -331,7 +331,7 @@ TEST_CASE("Calculate an asymmetric Blackman window impulse response of length 8"
         0.06644660940672624
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackman<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackman<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -347,7 +347,7 @@ TEST_CASE("Calculate a symmetric Blackman window impulse response of length 7") 
         -1.3877787807814457e-17
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackman<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackman<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -364,7 +364,7 @@ TEST_CASE("Calculate a symmetric Blackman window impulse response of length 8") 
         -1.3877787807814457e-17
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackman<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackman<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -384,7 +384,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Harris window impulse response of le
         0.03339172347815125
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmanharris<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackmanharris<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -401,7 +401,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Harris window impulse response of le
         0.021735837018679628
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmanharris<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackmanharris<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -417,7 +417,7 @@ TEST_CASE("Calculate a symmetric Blackman-Harris window impulse response of leng
         6.0000000000001025e-05
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmanharris<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackmanharris<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -434,7 +434,7 @@ TEST_CASE("Calculate a symmetric Blackman-Harris window impulse response of leng
         6.0000000000001025e-05
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmanharris<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackmanharris<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -454,7 +454,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Nuttall window impulse response of l
         0.03777576895352033
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackmannuttall<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -471,7 +471,7 @@ TEST_CASE("Calculate an asymmetric Blackman-Nuttall window impulse response of l
         0.025205566515401824
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::blackmannuttall<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -487,7 +487,7 @@ TEST_CASE("Calculate a symmetric Blackman-Nuttall window impulse response of len
         0.0003628000000000381
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackmannuttall<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -504,7 +504,7 @@ TEST_CASE("Calculate a symmetric Blackman-Nuttall window impulse response of len
         0.0003628000000000381
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::blackmannuttall<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::blackmannuttall<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -524,7 +524,7 @@ TEST_CASE("Calculate an asymmetric Flattop window impulse response of length 7")
         -0.03684078115492343
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::flattop<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::flattop<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -541,7 +541,7 @@ TEST_CASE("Calculate an asymmetric Flattop window impulse response of length 8")
         -0.026872193286334545
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::flattop<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::flattop<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -557,7 +557,7 @@ TEST_CASE("Calculate a symmetric Flattop window impulse response of length 7") {
         -0.0004210510000000013
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::flattop<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::flattop<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -574,7 +574,7 @@ TEST_CASE("Calculate a symmetric Flattop window impulse response of length 8") {
         -0.0004210510000000013
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::flattop<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::flattop<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -594,7 +594,7 @@ TEST_CASE("Calculate an asymmetric Bohman window impulse response of length 7") 
         0.07072474681109353
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bohman<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::bohman<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -611,7 +611,7 @@ TEST_CASE("Calculate an asymmetric Bohman window impulse response of length 8") 
         0.048302383742639676
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bohman<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::bohman<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -627,7 +627,7 @@ TEST_CASE("Calculate a symmetric Bohman window impulse response of length 7") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bohman<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::bohman<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -644,7 +644,7 @@ TEST_CASE("Calculate a symmetric Bohman window impulse response of length 8") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::bohman<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::bohman<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -664,7 +664,7 @@ TEST_CASE("Calculate an asymmetric Cosine window impulse response of length 7") 
         0.5555702330196022
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::cosine<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::cosine<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -681,7 +681,7 @@ TEST_CASE("Calculate an asymmetric Cosine window impulse response of length 8") 
         0.49999999999999994
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::cosine<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::cosine<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -697,7 +697,7 @@ TEST_CASE("Calculate a symmetric Cosine window impulse response of length 7") {
         0.2225209339563145
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::cosine<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::cosine<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -714,7 +714,7 @@ TEST_CASE("Calculate a symmetric Cosine window impulse response of length 8") {
         0.19509032201612858
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::cosine<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::cosine<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -734,7 +734,7 @@ TEST_CASE("Calculate an asymmetric Parzen window impulse response of length 7") 
         0.046647230320699756
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::parzen<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::parzen<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -742,7 +742,7 @@ TEST_CASE("Calculate an asymmetric Parzen window impulse response of length 7") 
 TEST_CASE("Calculate an asymmetric Parzen window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.03125, 0.25, 0.71875, 1.0, 0.71875, 0.25, 0.03125};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::parzen<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::parzen<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -758,7 +758,7 @@ TEST_CASE("Calculate a symmetric Parzen window impulse response of length 7") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::parzen<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::parzen<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -775,7 +775,7 @@ TEST_CASE("Calculate a symmetric Parzen window impulse response of length 8") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::parzen<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::parzen<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -795,7 +795,7 @@ TEST_CASE("Calculate an asymmetric Lanczos window impulse response of length 7")
         0.348410566278869
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::lanczos<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::lanczos<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -812,7 +812,7 @@ TEST_CASE("Calculate an asymmetric Lanczos window impulse response of length 8")
         0.300105438718908
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::lanczos<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::lanczos<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -828,7 +828,7 @@ TEST_CASE("Calculate a symmetric Lanczos window impulse response of length 7") {
         3.898171832518135e-17
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::lanczos<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::lanczos<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -845,7 +845,7 @@ TEST_CASE("Calculate a symmetric Lanczos window impulse response of length 8") {
         3.898171832518135e-17
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::lanczos<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::lanczos<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -857,7 +857,7 @@ TEST_CASE("Calculate a symmetric Lanczos window impulse response of length 8") {
 TEST_CASE("Calculate an asymmetric Welch window impulse response of length 7") {
     const std::vector<float> reference = {0.4375, 0.75, 0.9375, 1.0, 0.9375, 0.75, 0.4375};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::welch<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::welch<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -874,7 +874,7 @@ TEST_CASE("Calculate an asymmetric Welch window impulse response of length 8") {
         0.3950617283950617
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::welch<float>(i, reference.size(), false);
+        const auto window = Fourier::Window::welch<float>(i, reference.size(), false);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -890,7 +890,7 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 7") {
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::welch<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::welch<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -898,7 +898,7 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 7") {
 TEST_CASE("Calculate a symmetric Welch window impulse response of length 8") {
     const std::vector<float> reference = {0.4375, 0.75, 0.9375, 1.0, 0.9375, 0.75, 0.4375, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::welch<float>(i, reference.size(), true);
+        const auto window = Fourier::Window::welch<float>(i, reference.size(), true);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -908,97 +908,97 @@ TEST_CASE("Calculate a symmetric Welch window impulse response of length 8") {
 // ---------------------------------------------------------------------------
 
 SCENARIO("window function names are indexed by their enum values") {
-    const auto& names = Math::Window::names();
+    const auto& names = Fourier::Window::names();
     REQUIRE(names.size() == 15);
 
-    WHEN("the name of Math::Window::Function::Boxcar is queried") {
+    WHEN("the name of Fourier::Window::Function::Boxcar is queried") {
         THEN("\"Boxcar\" is returned") {
             REQUIRE("Boxcar" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Boxcar)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Boxcar)));
         }
     }
-    WHEN("the name of Math::Window::Function::Bartlett is queried") {
+    WHEN("the name of Fourier::Window::Function::Bartlett is queried") {
         THEN("\"Bartlett\" is returned") {
             REQUIRE("Bartlett" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Bartlett)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Bartlett)));
         }
     }
-    WHEN("the name of Math::Window::Function::BartlettHann is queried") {
+    WHEN("the name of Fourier::Window::Function::BartlettHann is queried") {
         THEN("\"BartlettHann\" is returned") {
             REQUIRE("BartlettHann" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::BartlettHann)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::BartlettHann)));
         }
     }
-    WHEN("the name of Math::Window::Function::Parzen is queried") {
+    WHEN("the name of Fourier::Window::Function::Parzen is queried") {
         THEN("\"Parzen\" is returned") {
             REQUIRE("Parzen" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Parzen)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Parzen)));
         }
     }
-    WHEN("the name of Math::Window::Function::Welch is queried") {
+    WHEN("the name of Fourier::Window::Function::Welch is queried") {
         THEN("\"Welch\" is returned") {
             REQUIRE("Welch" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Welch)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Welch)));
         }
     }
-    WHEN("the name of Math::Window::Function::Cosine is queried") {
+    WHEN("the name of Fourier::Window::Function::Cosine is queried") {
         THEN("\"Cosine\" is returned") {
             REQUIRE("Cosine" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Cosine)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Cosine)));
         }
     }
-    WHEN("the name of Math::Window::Function::Bohman is queried") {
+    WHEN("the name of Fourier::Window::Function::Bohman is queried") {
         THEN("\"Bohman\" is returned") {
             REQUIRE("Bohman" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Bohman)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Bohman)));
         }
     }
-    WHEN("the name of Math::Window::Function::Lanczos is queried") {
+    WHEN("the name of Fourier::Window::Function::Lanczos is queried") {
         THEN("\"Lanczos\" is returned") {
             REQUIRE("Lanczos" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Lanczos)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Lanczos)));
         }
     }
-    WHEN("the name of Math::Window::Function::Hann is queried") {
+    WHEN("the name of Fourier::Window::Function::Hann is queried") {
         THEN("\"Hann\" is returned") {
             REQUIRE("Hann" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Hann)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Hann)));
         }
     }
-    WHEN("the name of Math::Window::Function::Hamming is queried") {
+    WHEN("the name of Fourier::Window::Function::Hamming is queried") {
         THEN("\"Hamming\" is returned") {
             REQUIRE("Hamming" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Hamming)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Hamming)));
         }
     }
-    WHEN("the name of Math::Window::Function::Blackman is queried") {
+    WHEN("the name of Fourier::Window::Function::Blackman is queried") {
         THEN("\"Blackman\" is returned") {
             REQUIRE("Blackman" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Blackman)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Blackman)));
         }
     }
-    WHEN("the name of Math::Window::Function::BlackmanHarris is queried") {
+    WHEN("the name of Fourier::Window::Function::BlackmanHarris is queried") {
         THEN("\"BlackmanHarris\" is returned") {
             REQUIRE("BlackmanHarris" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::BlackmanHarris)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::BlackmanHarris)));
         }
     }
-    WHEN("the name of Math::Window::Function::BlackmanNuttall is queried") {
+    WHEN("the name of Fourier::Window::Function::BlackmanNuttall is queried") {
         THEN("\"BlackmanNuttall\" is returned") {
             REQUIRE("BlackmanNuttall" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::BlackmanNuttall)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::BlackmanNuttall)));
         }
     }
-    WHEN("the name of Math::Window::Function::KaiserBessel is queried") {
+    WHEN("the name of Fourier::Window::Function::KaiserBessel is queried") {
         THEN("\"KaiserBessel\" is returned") {
             REQUIRE("KaiserBessel" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::KaiserBessel)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::KaiserBessel)));
         }
     }
-    WHEN("the name of Math::Window::Function::Flattop is queried") {
+    WHEN("the name of Fourier::Window::Function::Flattop is queried") {
         THEN("\"Flattop\" is returned") {
             REQUIRE("Flattop" ==
-                names.at(static_cast<std::size_t>(Math::Window::Function::Flattop)));
+                names.at(static_cast<std::size_t>(Fourier::Window::Function::Flattop)));
         }
     }
 }
@@ -1008,79 +1008,79 @@ SCENARIO("window function names are indexed by their enum values") {
 // ---------------------------------------------------------------------------
 
 SCENARIO("window functions need to be mapped to coherent gains at run-time") {
-    WHEN("the coherent gain of Math::Window::Function::Boxcar is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Boxcar is queried") {
         THEN("1.0 is returned") {
-            REQUIRE(1.0f == Math::Window::coherent_gain(Math::Window::Function::Boxcar));
+            REQUIRE(1.0f == Fourier::Window::coherent_gain(Fourier::Window::Function::Boxcar));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Bartlett is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Bartlett is queried") {
         THEN("0.5 is returned") {
-            REQUIRE(0.5f == Math::Window::coherent_gain(Math::Window::Function::Bartlett));
+            REQUIRE(0.5f == Fourier::Window::coherent_gain(Fourier::Window::Function::Bartlett));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::BartlettHann is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::BartlettHann is queried") {
         THEN("0.5 is returned") {
-            REQUIRE(0.5f == Math::Window::coherent_gain(Math::Window::Function::BartlettHann));
+            REQUIRE(0.5f == Fourier::Window::coherent_gain(Fourier::Window::Function::BartlettHann));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Parzen is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Parzen is queried") {
         THEN("0.375 is returned") {
-            REQUIRE(0.375f == Math::Window::coherent_gain(Math::Window::Function::Parzen));
+            REQUIRE(0.375f == Fourier::Window::coherent_gain(Fourier::Window::Function::Parzen));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Welch is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Welch is queried") {
         THEN("0.667317 is returned") {
-            REQUIRE(0.667317f == Math::Window::coherent_gain(Math::Window::Function::Welch));
+            REQUIRE(0.667317f == Fourier::Window::coherent_gain(Fourier::Window::Function::Welch));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Cosine is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Cosine is queried") {
         THEN("0.63724 is returned") {
-            REQUIRE(0.63724f == Math::Window::coherent_gain(Math::Window::Function::Cosine));
+            REQUIRE(0.63724f == Fourier::Window::coherent_gain(Fourier::Window::Function::Cosine));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Bohman is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Bohman is queried") {
         THEN("0.405285 is returned") {
-            REQUIRE(0.405285f == Math::Window::coherent_gain(Math::Window::Function::Bohman));
+            REQUIRE(0.405285f == Fourier::Window::coherent_gain(Fourier::Window::Function::Bohman));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Lanczos is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Lanczos is queried") {
         THEN("0.58949 is returned") {
-            REQUIRE(0.58949f == Math::Window::coherent_gain(Math::Window::Function::Lanczos));
+            REQUIRE(0.58949f == Fourier::Window::coherent_gain(Fourier::Window::Function::Lanczos));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Hann is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Hann is queried") {
         THEN("0.5 is returned") {
-            REQUIRE(0.5f == Math::Window::coherent_gain(Math::Window::Function::Hann));
+            REQUIRE(0.5f == Fourier::Window::coherent_gain(Fourier::Window::Function::Hann));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Hamming is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Hamming is queried") {
         THEN("0.54 is returned") {
-            REQUIRE(0.54f == Math::Window::coherent_gain(Math::Window::Function::Hamming));
+            REQUIRE(0.54f == Fourier::Window::coherent_gain(Fourier::Window::Function::Hamming));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Blackman is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Blackman is queried") {
         THEN("0.42 is returned") {
-            REQUIRE(0.42f == Math::Window::coherent_gain(Math::Window::Function::Blackman));
+            REQUIRE(0.42f == Fourier::Window::coherent_gain(Fourier::Window::Function::Blackman));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::BlackmanHarris is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::BlackmanHarris is queried") {
         THEN("0.35875 is returned") {
-            REQUIRE(0.35875f == Math::Window::coherent_gain(Math::Window::Function::BlackmanHarris));
+            REQUIRE(0.35875f == Fourier::Window::coherent_gain(Fourier::Window::Function::BlackmanHarris));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::BlackmanNuttall is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::BlackmanNuttall is queried") {
         THEN("0.363582 is returned") {
-            REQUIRE(0.363582f == Math::Window::coherent_gain(Math::Window::Function::BlackmanNuttall));
+            REQUIRE(0.363582f == Fourier::Window::coherent_gain(Fourier::Window::Function::BlackmanNuttall));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::KaiserBessel is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::KaiserBessel is queried") {
         THEN("0.402 is returned") {
-            REQUIRE(0.402f == Math::Window::coherent_gain(Math::Window::Function::KaiserBessel));
+            REQUIRE(0.402f == Fourier::Window::coherent_gain(Fourier::Window::Function::KaiserBessel));
         }
     }
-    WHEN("the coherent gain of Math::Window::Function::Flattop is queried") {
+    WHEN("the coherent gain of Fourier::Window::Function::Flattop is queried") {
         THEN("0.215579 is returned") {
-            REQUIRE(0.215579f == Math::Window::coherent_gain(Math::Window::Function::Flattop));
+            REQUIRE(0.215579f == Fourier::Window::coherent_gain(Fourier::Window::Function::Flattop));
         }
     }
 }
@@ -1090,11 +1090,11 @@ SCENARIO("window functions need to be mapped to coherent gains at run-time") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("side_lobe_amplitude should map windows to side-lobe amplitudes measured in decibels.") {
-    // REQUIRE(-13 == Math::Window::side_lobe_amplitude(Math::Window::Function::Boxcar));
-    // REQUIRE(-26 == Math::Window::side_lobe_amplitude(Math::Window::Function::Bartlett));
-    // REQUIRE(-31 == Math::Window::side_lobe_amplitude(Math::Window::Function::Hann));
-    // REQUIRE(-41 == Math::Window::side_lobe_amplitude(Math::Window::Function::Hamming));
-    // REQUIRE(-57 == Math::Window::side_lobe_amplitude(Math::Window::Function::Blackman));
+    // REQUIRE(-13 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Boxcar));
+    // REQUIRE(-26 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Bartlett));
+    // REQUIRE(-31 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Hann));
+    // REQUIRE(-41 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Hamming));
+    // REQUIRE(-57 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Blackman));
 }
 
 // ---------------------------------------------------------------------------
@@ -1102,11 +1102,11 @@ TEST_CASE("side_lobe_amplitude should map windows to side-lobe amplitudes measur
 // ---------------------------------------------------------------------------
 
 // TEST_CASE("stopband_attenuation should map windows to stop-band attenuation measured in decibels.") {
-//     REQUIRE(-21 == Math::Window::stopband_attenuation(Math::Window::Function::Boxcar));
-//     REQUIRE(-25 == Math::Window::stopband_attenuation(Math::Window::Function::Bartlett));
-//     REQUIRE(-44 == Math::Window::stopband_attenuation(Math::Window::Function::Hann));
-//     REQUIRE(-53 == Math::Window::stopband_attenuation(Math::Window::Function::Hamming));
-//     REQUIRE(-74 == Math::Window::stopband_attenuation(Math::Window::Function::Blackman));
+//     REQUIRE(-21 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Boxcar));
+//     REQUIRE(-25 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Bartlett));
+//     REQUIRE(-44 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Hann));
+//     REQUIRE(-53 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Hamming));
+//     REQUIRE(-74 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Blackman));
 // }
 
 // ---------------------------------------------------------------------------
@@ -1114,11 +1114,11 @@ TEST_CASE("side_lobe_amplitude should map windows to side-lobe amplitudes measur
 // ---------------------------------------------------------------------------
 
 // TEST_CASE("transition_width should calculate the transition width for an arbitrary window length.") {
-//     REQUIRE(epsilon_equal(0.09f, Math::Window::transition_width<float>(10, Math::Window::Function::Boxcar)));
-//     REQUIRE(epsilon_equal(0.18f, Math::Window::transition_width<float>(10, Math::Window::Function::Bartlett)));
-//     REQUIRE(epsilon_equal(0.31f, Math::Window::transition_width<float>(10, Math::Window::Function::Hann)));
-//     REQUIRE(epsilon_equal(0.33f, Math::Window::transition_width<float>(10, Math::Window::Function::Hamming)));
-//     REQUIRE(epsilon_equal(0.55f, Math::Window::transition_width<float>(10, Math::Window::Function::Blackman)));
+//     REQUIRE(epsilon_equal(0.09f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Boxcar)));
+//     REQUIRE(epsilon_equal(0.18f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Bartlett)));
+//     REQUIRE(epsilon_equal(0.31f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Hann)));
+//     REQUIRE(epsilon_equal(0.33f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Hamming)));
+//     REQUIRE(epsilon_equal(0.55f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Blackman)));
 // }
 
 // ---------------------------------------------------------------------------
@@ -1136,7 +1136,7 @@ TEST_CASE("Calculate an asymmetric exponential window impulse response of length
         0.6996725373751304
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::exponential<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::exponential<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1153,7 +1153,7 @@ TEST_CASE("Calculate an asymmetric exponential window impulse response of length
         0.6872892787909722
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::exponential<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::exponential<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1169,7 +1169,7 @@ TEST_CASE("Calculate a symmetric exponential window impulse response of length 7
         0.6065306597126334
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::exponential<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::exponential<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1186,7 +1186,7 @@ TEST_CASE("Calculate a symmetric exponential window impulse response of length 8
         0.6065306597126334
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::exponential<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::exponential<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1206,10 +1206,10 @@ TEST_CASE("Calculate an asymmetric Hann-Poisson window impulse response of lengt
         0.13171692284055656
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
-        const auto equivalent = Math::Window::exponential<float>(i, reference.size(), false) * Math::Window::hann<float>(i, reference.size(), false);
+        const auto equivalent = Fourier::Window::exponential<float>(i, reference.size(), false) * Fourier::Window::hann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
@@ -1226,10 +1226,10 @@ TEST_CASE("Calculate an asymmetric Hann-Poisson window impulse response of lengt
         0.10065118456053211
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::hannpoisson<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
-        const auto equivalent = Math::Window::exponential<float>(i, reference.size(), false) * Math::Window::hann<float>(i, reference.size(), false);
+        const auto equivalent = Fourier::Window::exponential<float>(i, reference.size(), false) * Fourier::Window::hann<float>(i, reference.size(), false);
         REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
@@ -1245,10 +1245,10 @@ TEST_CASE("Calculate a symmetric Hann-Poisson window impulse response of length 
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
-        const auto equivalent = Math::Window::exponential<float>(i, reference.size(), true) * Math::Window::hann<float>(i, reference.size(), true);
+        const auto equivalent = Fourier::Window::exponential<float>(i, reference.size(), true) * Fourier::Window::hann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
@@ -1265,10 +1265,10 @@ TEST_CASE("Calculate a symmetric Hann-Poisson window impulse response of length 
         0.0
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::hannpoisson<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
         // This window should be the product of a Hann and Poisson window.
-        const auto equivalent = Math::Window::exponential<float>(i, reference.size(), true) * Math::Window::hann<float>(i, reference.size(), true);
+        const auto equivalent = Fourier::Window::exponential<float>(i, reference.size(), true) * Fourier::Window::hann<float>(i, reference.size(), true);
         REQUIRE(approx_equal(equivalent, window, 1e-6f));
     }
 }
@@ -1288,7 +1288,7 @@ TEST_CASE("Calculate an asymmetric Gaussian window impulse response of length 7"
         0.01687988414878991
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::gaussian<float>(i, reference.size(), false, 0.25);
+        const auto window = Fourier::Window::gaussian<float>(i, reference.size(), false, 0.25);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1305,7 +1305,7 @@ TEST_CASE("Calculate an asymmetric Gaussian window impulse response of length 8"
         0.011108996538242306
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::gaussian<float>(i, reference.size(), false, 0.25);
+        const auto window = Fourier::Window::gaussian<float>(i, reference.size(), false, 0.25);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1321,7 +1321,7 @@ TEST_CASE("Calculate a symmetric Gaussian window impulse response of length 7") 
         0.00033546262790251185
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::gaussian<float>(i, reference.size(), true, 0.25);
+        const auto window = Fourier::Window::gaussian<float>(i, reference.size(), true, 0.25);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1338,7 +1338,7 @@ TEST_CASE("Calculate a symmetric Gaussian window impulse response of length 8") 
         0.00033546262790251185
     };
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::gaussian<float>(i, reference.size(), true, 0.25);
+        const auto window = Fourier::Window::gaussian<float>(i, reference.size(), true, 0.25);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1350,7 +1350,7 @@ TEST_CASE("Calculate a symmetric Gaussian window impulse response of length 8") 
 TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 7") {
     const std::vector<float> reference = {0.0, 0.6112604669781572, 1.0, 1.0, 1.0, 1.0, 0.6112604669781575};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::tukey<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::tukey<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1358,7 +1358,7 @@ TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 7") {
 TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.5, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::tukey<float>(i, reference.size(), false, 0.5);
+        const auto window = Fourier::Window::tukey<float>(i, reference.size(), false, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1366,7 +1366,7 @@ TEST_CASE("Calculate an asymmetric Tukey window impulse response of length 8") {
 TEST_CASE("Calculate a symmetric Tukey window impulse response of length 7") {
     const std::vector<float> reference = {0.0, 0.75, 1.0, 1.0, 1.0, 0.7499999999999999, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::tukey<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::tukey<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1374,7 +1374,7 @@ TEST_CASE("Calculate a symmetric Tukey window impulse response of length 7") {
 TEST_CASE("Calculate a symmetric Tukey window impulse response of length 8") {
     const std::vector<float> reference = {0.0, 0.6112604669781572, 1.0, 1.0, 1.0, 1.0, 0.6112604669781575, 0.0};
     for (unsigned i = 0; i < reference.size(); i++) {
-        const auto window = Math::Window::tukey<float>(i, reference.size(), true, 0.5);
+        const auto window = Fourier::Window::tukey<float>(i, reference.size(), true, 0.5);
         REQUIRE(approx_equal(reference[i], window, 1e-6f));
     }
 }
@@ -1385,11 +1385,11 @@ TEST_CASE("Calculate a symmetric Tukey window impulse response of length 8") {
 
 SCENARIO("Cached windows need to be represented") {
     GIVEN("Parameters for an asymmetric Bartlett window of length 7") {
-        const auto function = Math::Window::Function::Bartlett;
+        const auto function = Fourier::Window::Function::Bartlett;
         const size_t N = 7;
         const bool is_symmetric = false;
         WHEN("The CachedWindow is instantiated, the samples matched") {
-            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            Fourier::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
             THEN("The correct function flag is set") {
                 REQUIRE(function == cached_window.get_function());
             }
@@ -1401,16 +1401,16 @@ SCENARIO("Cached windows need to be represented") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, is_symmetric));
             }
         }
     }
     GIVEN("Parameters for an asymmetric Bartlett window of length 8") {
-        const auto function = Math::Window::Function::Bartlett;
+        const auto function = Fourier::Window::Function::Bartlett;
         const size_t N = 8;
         const bool is_symmetric = false;
         WHEN("The CachedWindow is instantiated, the samples matched") {
-            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            Fourier::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
             THEN("The correct function flag is set") {
                 REQUIRE(function == cached_window.get_function());
             }
@@ -1422,16 +1422,16 @@ SCENARIO("Cached windows need to be represented") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, is_symmetric));
             }
         }
     }
     GIVEN("Parameters for a symmetric Bartlett window of length 7") {
-        const auto function = Math::Window::Function::Bartlett;
+        const auto function = Fourier::Window::Function::Bartlett;
         const size_t N = 7;
         const bool is_symmetric = true;
         WHEN("The CachedWindow is instantiated, the samples matched") {
-            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            Fourier::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
             THEN("The correct function flag is set") {
                 REQUIRE(function == cached_window.get_function());
             }
@@ -1443,16 +1443,16 @@ SCENARIO("Cached windows need to be represented") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, is_symmetric));
             }
         }
     }
     GIVEN("Parameters for a symmetric Bartlett window of length 8") {
-        const auto function = Math::Window::Function::Bartlett;
+        const auto function = Fourier::Window::Function::Bartlett;
         const size_t N = 8;
         const bool is_symmetric = true;
         WHEN("The CachedWindow is instantiated, the samples matched") {
-            Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+            Fourier::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
             THEN("The correct function flag is set") {
                 REQUIRE(function == cached_window.get_function());
             }
@@ -1464,7 +1464,7 @@ SCENARIO("Cached windows need to be represented") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, is_symmetric));
             }
         }
     }
@@ -1472,10 +1472,10 @@ SCENARIO("Cached windows need to be represented") {
 
 SCENARIO("Cached windows need to be updated on-the-fly") {
     GIVEN("An existing window function") {
-        const auto function = Math::Window::Function::Bartlett;
+        const auto function = Fourier::Window::Function::Bartlett;
         const size_t N = 7;
         const bool is_symmetric = false;
-        Math::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
+        Fourier::Window::CachedWindow<float> cached_window{function, N, is_symmetric};
         WHEN("The cached window is set with the same parameters") {
             cached_window.set_window(function, N, is_symmetric);
             THEN("The correct function flag is set") {
@@ -1489,7 +1489,7 @@ SCENARIO("Cached windows need to be updated on-the-fly") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, is_symmetric));
             }
         }
         WHEN("The cached window is set with a new length") {
@@ -1505,13 +1505,13 @@ SCENARIO("Cached windows need to be updated on-the-fly") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N + 1; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N + 1, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N + 1, is_symmetric));
             }
         }
         WHEN("The cached window is set with a new window function") {
-            cached_window.set_window(Math::Window::Function::Hann, N, is_symmetric);
+            cached_window.set_window(Fourier::Window::Function::Hann, N, is_symmetric);
             THEN("The correct function flag is set") {
-                REQUIRE(Math::Window::Function::Hann == cached_window.get_function());
+                REQUIRE(Fourier::Window::Function::Hann == cached_window.get_function());
             }
             THEN("The length of the cached window is correct") {
                 REQUIRE(N == cached_window.get_samples().size());
@@ -1521,7 +1521,7 @@ SCENARIO("Cached windows need to be updated on-the-fly") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(Math::Window::Function::Hann, n, N, is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(Fourier::Window::Function::Hann, n, N, is_symmetric));
             }
         }
         WHEN("The cached window is set with a new asymmetry flag") {
@@ -1537,7 +1537,7 @@ SCENARIO("Cached windows need to be updated on-the-fly") {
             }
             THEN("The samples match the window function call outputs") {
                 for (size_t n = 0; n < N; n++)
-                    REQUIRE(cached_window[n] == Math::Window::window<float>(function, n, N, !is_symmetric));
+                    REQUIRE(cached_window[n] == Fourier::Window::window<float>(function, n, N, !is_symmetric));
             }
         }
     }

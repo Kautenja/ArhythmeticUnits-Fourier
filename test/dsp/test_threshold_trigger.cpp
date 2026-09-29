@@ -1,4 +1,4 @@
-// Test cases for the Trigger::Threshold<float> structure.
+// Test cases for the Fourier::ThresholdTrigger<float> structure.
 //
 // Copyright (c) 2020 Christian Kauten
 //
@@ -21,32 +21,32 @@
 // SOFTWARE.
 //
 
-#include "dsp/trigger/threshold.hpp"
+#include "dsp/threshold_trigger.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-TEST_CASE("Trigger::Threshold<float> should be false when initialized") {
-    const Trigger::Threshold<float> trigger;
+TEST_CASE("Fourier::ThresholdTrigger<float> should be false when initialized") {
+    const Fourier::ThresholdTrigger<float> trigger;
     REQUIRE_FALSE(trigger.isHigh());
 }
 
-TEST_CASE("Trigger::Threshold<float> should be false when initialized and reset") {
-    Trigger::Threshold<float> trigger;
+TEST_CASE("Fourier::ThresholdTrigger<float> should be false when initialized and reset") {
+    Fourier::ThresholdTrigger<float> trigger;
     trigger.reset();
     REQUIRE_FALSE(trigger.isHigh());
 }
 
-TEST_CASE("Trigger::Threshold<float> should be false when high and reset") {
-    Trigger::Threshold<float> trigger;
+TEST_CASE("Fourier::ThresholdTrigger<float> should be false when high and reset") {
+    Fourier::ThresholdTrigger<float> trigger;
     trigger.process(1.f);
     REQUIRE(trigger.isHigh());
     trigger.reset();
     REQUIRE_FALSE(trigger.isHigh());
 }
 
-SCENARIO("Trigger::Threshold<float> processes a binary signal") {
+SCENARIO("Fourier::ThresholdTrigger<float> processes a binary signal") {
     GIVEN("a trigger") {
-        Trigger::Threshold<float> trigger;
+        Fourier::ThresholdTrigger<float> trigger;
         WHEN("the signal goes from low to low") {
             trigger.process(0.f);
             bool value = trigger.process(0.f);
@@ -82,9 +82,9 @@ SCENARIO("Trigger::Threshold<float> processes a binary signal") {
     }
 }
 
-SCENARIO("Trigger::Threshold<float> processes a simple triangular signal") {
+SCENARIO("Fourier::ThresholdTrigger<float> processes a simple triangular signal") {
     GIVEN("a trigger") {
-        Trigger::Threshold<float> trigger;
+        Fourier::ThresholdTrigger<float> trigger;
         WHEN("the signal increases to 1.f and decreases to 0.f") {
             {    // 0.0
                 bool value = trigger.process(0.f);

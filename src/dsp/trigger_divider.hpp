@@ -14,17 +14,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_TRIGGER_DIVIDER_HPP
-#define DSP_TRIGGER_DIVIDER_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_DIVIDER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_DIVIDER_HPP_
 
 #include <algorithm>
 #include <cstdint>
 
 /// @brief A collection of structures for detecting trigger events.
-namespace Trigger {
+namespace Fourier {
 
 /// @brief A trigger that detects integer divisions in other triggers.
-struct Divider {
+struct TriggerDivider {
  private:
     /// the current sample of the divider
     uint32_t clock = 0;
@@ -89,6 +89,6 @@ struct Divider {
     }
 };
 
-}  // namespace Trigger
+}  // namespace Fourier
 
-#endif  // DSP_TRIGGER_DIVIDER_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_TRIGGER_DIVIDER_HPP_

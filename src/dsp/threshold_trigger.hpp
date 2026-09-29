@@ -14,16 +14,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef DSP_TRIGGER_THRESHOLD_HPP
-#define DSP_TRIGGER_THRESHOLD_HPP
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_
 
 /// @brief A collection of structures for detecting trigger events.
-namespace Trigger {
+namespace Fourier {
 
 /// @brief A trigger that detects a threshold value.
 /// @tparam T the data type for processing input signals
 template<typename T>
-struct Threshold {
+struct ThresholdTrigger {
  private:
     /// the current value of the trigger's signal
     bool state = false;
@@ -56,6 +56,6 @@ struct Threshold {
     }
 };
 
-}  // namespace Trigger
+}  // namespace Fourier
 
-#endif  // DSP_TRIGGER_THRESHOLD_HPP
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_

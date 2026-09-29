@@ -14,15 +14,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_COLOR_MAP_HPP_
-#define ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_COLOR_MAP_HPP_
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_COLOR_MAP_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_COLOR_MAP_HPP_
 
-#include <exception>  // std::runtime_error
+#include <stdexcept>  // std::runtime_error
 #include <string>     // std::string
 #include <vector>     // std::vector
+#include "math.hpp"    // clip
 
-/// @brief Basic mathematical functions.
-namespace Math {
+/// @brief Reusable Fourier DSP and utilities.
+namespace Fourier {
 
 /// @brief Functions for applying colormaps to scalar values.
 namespace ColorMap {
@@ -58,7 +59,7 @@ template<typename T, size_t N>
 inline Color get_colormap_value(const T (&colormap)[N], float value) {
     static const int TABLE_SIZE = N;
     // Clamp input to [0, 1] and find the segment in the color-map.
-    float scaled_value = Math::clip(value, 0.f, 1.f) * (TABLE_SIZE - 1);
+    float scaled_value = Fourier::clip(value, 0.f, 1.f) * (TABLE_SIZE - 1);
     int index = static_cast<int>(scaled_value);
     float t = scaled_value - index;
     // Interpolate between the two nearest colors
@@ -217,6 +218,6 @@ inline Color color_map(const Function& color_map_, const float& value) {
 
 }  // namespace ColorMap
 
-}  // namespace Math
+}  // namespace Fourier
 
-#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_MATH_COLOR_MAP_HPP_
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_COLOR_MAP_HPP_

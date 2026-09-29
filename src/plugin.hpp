@@ -28,11 +28,7 @@ extern Plugin* plugin_instance;
 #include "./rack_extensions/graphics.hpp"
 #include "./rack_extensions/text_knob.hpp"
 
-// DSP library and mathematical utilities
-#include "./dsp/filter.hpp"
-#include "./dsp/math.hpp"
-#include "./dsp/music_theory.hpp"
-#include "./dsp/trigger.hpp"
+// Shared module display and analysis settings.
 #include "./structs.hpp"
 
 /// The "Fourier" Spectrogram analyzer module.

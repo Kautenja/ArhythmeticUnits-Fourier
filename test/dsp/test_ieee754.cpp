@@ -1,4 +1,4 @@
-// Test cases for Math::IEEE754 functions.
+// Test cases for Fourier::IEEE754 functions.
 //
 // Copyright (c) 2020 Christian Kauten
 //
@@ -21,7 +21,7 @@
 // SOFTWARE.
 //
 
-#include "../../ieee754.hpp"
+#include "../ieee754.hpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
