@@ -107,7 +107,7 @@ struct Spectrogram : Module {
         config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
         // Setup the input signal port and controls.
         configParam(PARAM_INPUT_GAIN, 0, std::pow(10.f, 12.f / 20.f), std::pow(10.f, 6.f / 20.f), "Input Gain", " dB", -10, 20);
-        configInput(INPUT_SIGNAL, "TODO");
+        configInput(INPUT_SIGNAL, "Signal");
         // Configure the run button.
         configButton(PARAM_RUN, "Run");
         getParamQuantity(PARAM_RUN)->description =
