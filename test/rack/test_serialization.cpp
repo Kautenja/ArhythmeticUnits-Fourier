@@ -14,6 +14,7 @@
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 #include <memory>
+#include <set>
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
 #define CATCH_CONFIG_MAIN
@@ -63,6 +64,102 @@ struct RegisteredModule {
 using Json = std::unique_ptr<json_t, decltype(&json_decref)>;
 
 }  // namespace
+
+TEST_CASE("Factory presets load complete state and share names across modules") {
+    RackContext context;
+    const float sample_rate = GENERATE(32000.f, 44100.f, 48000.f, 96000.f);
+    context.context.engine->setSampleRate(sample_rate);
+    std::set<std::string> names[2];
+    const rack::plugin::Model* models[] = {modelSpectrumAnalyzer, modelSpectrogram};
+    for (int model_index = 0; model_index < 2; ++model_index) {
+        const auto model = models[model_index];
+        for (const auto& path : rack::system::getEntries("presets/" + model->slug)) {
+            CAPTURE(path, sample_rate);
+            REQUIRE(rack::system::getExtension(path) == ".vcvm");
+            const auto name = rack::system::getFilename(path);
+            CHECK(name.find_first_of(" \t\n") == std::string::npos);
+            names[model_index].insert(name);
+            Json preset(json_load_file(path.c_str(), JSON_REJECT_DUPLICATES, nullptr), json_decref);
+            REQUIRE(preset);
+            std::unique_ptr<rack::engine::Module> module(
+                model_index == 0 ? modelSpectrumAnalyzer->createModule() : modelSpectrogram->createModule());
+            auto params = json_object_get(preset.get(), "params");
+            REQUIRE(json_is_array(params));
+            REQUIRE(json_array_size(params) == module->params.size());
+            std::set<int> ids;
+            size_t index;
+            json_t* param;
+            json_array_foreach(params, index, param) {
+                REQUIRE(json_is_integer(json_object_get(param, "id")));
+                const int id = json_integer_value(json_object_get(param, "id"));
+                REQUIRE(id >= 0);
+                REQUIRE(id < static_cast<int>(module->params.size()));
+                REQUIRE(ids.insert(id).second);
+                auto value = json_object_get(param, "value");
+                REQUIRE(json_is_number(value));
+                REQUIRE(std::isfinite(json_number_value(value)));
+                auto quantity = module->getParamQuantity(id);
+                CHECK(json_number_value(value) >= quantity->minValue);
+                // Full-band bounds may exceed Nyquist at low sample rates.
+                const int high_id = model_index == 0
+                    ? SpectrumAnalyzer::PARAM_HIGH_FREQUENCY : Spectrogram::PARAM_HIGH_FREQUENCY;
+                const float maximum = id == high_id
+                    ? std::max(20000.f, quantity->maxValue) : quantity->maxValue;
+                CHECK(json_number_value(value) <= maximum);
+                module->params[id].setValue(quantity->minValue);
+            }
+            Json dirty(module->dataToJson(), json_decref);
+            const char* key;
+            json_t* value;
+            json_object_foreach(dirty.get(), key, value) {
+                json_object_set_new(dirty.get(), key, json_is_boolean(value)
+                    ? json_boolean(!json_boolean_value(value)) : json_integer(6));
+            }
+            module->dataFromJson(dirty.get());
+            REQUIRE_NOTHROW(module->fromJson(preset.get()));
+            json_array_foreach(params, index, param) {
+                const int id = json_integer_value(json_object_get(param, "id"));
+                const auto quantity = module->getParamQuantity(id);
+                const float expected = rack::math::clamp(
+                    json_number_value(json_object_get(param, "value")),
+                    quantity->minValue, quantity->maxValue);
+                CHECK(module->params[id].getValue() == Approx(expected));
+            }
+            Json restored(module->dataToJson(), json_decref);
+            CHECK(json_equal(restored.get(), json_object_get(preset.get(), "data")));
+            CHECK(json_is_true(json_object_get(restored.get(), "is_running")));
+        }
+    }
+    REQUIRE(names[0].size() == 5);
+    CHECK(names[0] == names[1]);
+    for (const auto& name : names[0]) {
+        CAPTURE(name);
+        std::unique_ptr<rack::engine::Module> fourier(modelSpectrumAnalyzer->createModule());
+        std::unique_ptr<rack::engine::Module> spectre(modelSpectrogram->createModule());
+        Json first(json_load_file(("presets/SpectrumAnalyzer/" + name).c_str(), 0, nullptr), json_decref);
+        Json second(json_load_file(("presets/Spectrogram/" + name).c_str(), 0, nullptr), json_decref);
+        REQUIRE(first);
+        REQUIRE(second);
+        fourier->fromJson(first.get());
+        spectre->fromJson(second.get());
+        const int shared_ids[][2] = {
+            {SpectrumAnalyzer::PARAM_INPUT_GAIN, Spectrogram::PARAM_INPUT_GAIN},
+            {SpectrumAnalyzer::PARAM_WINDOW_FUNCTION, Spectrogram::PARAM_WINDOW_FUNCTION},
+            {SpectrumAnalyzer::PARAM_FREQUENCY_SCALE, Spectrogram::PARAM_FREQUENCY_SCALE},
+            {SpectrumAnalyzer::PARAM_TIME_SMOOTHING, Spectrogram::PARAM_TIME_SMOOTHING},
+            {SpectrumAnalyzer::PARAM_FREQUENCY_SMOOTHING, Spectrogram::PARAM_FREQUENCY_SMOOTHING},
+            {SpectrumAnalyzer::PARAM_LOW_FREQUENCY, Spectrogram::PARAM_LOW_FREQUENCY},
+            {SpectrumAnalyzer::PARAM_HIGH_FREQUENCY, Spectrogram::PARAM_HIGH_FREQUENCY},
+            {SpectrumAnalyzer::PARAM_SLOPE, Spectrogram::PARAM_SLOPE}
+        };
+        for (const auto& ids : shared_ids)
+            CHECK(fourier->params[ids[0]].getValue() == spectre->params[ids[1]].getValue());
+        for (int channel = 1; channel < SpectrumAnalyzer::NUM_CHANNELS; ++channel)
+            CHECK(fourier->params[channel].getValue() == fourier->params[0].getValue());
+        CHECK(json_equal(json_object_get(json_object_get(first.get(), "data"), "is_ac_coupled"),
+            json_object_get(json_object_get(second.get(), "data"), "is_ac_coupled")));
+    }
+}
 
 TEST_CASE("Fourier saves and reloads each option independently of run state") {
     RackContext context;

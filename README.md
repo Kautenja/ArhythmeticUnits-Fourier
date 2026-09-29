@@ -81,6 +81,41 @@ See the [Manual][Spectre] for more information about the features of this module
 
 [Spectre]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf
 
+## Factory Presets
+
+Fourier and Spectre ship the same five preset names, using filenames without
+spaces. Load them from Rack's module preset menu. Each pair uses the same
+input gain (0 dB), window, frequency scale and bounds, smoothing, slope,
+and AC coupling. All presets start running; Fourier uses unfilled traces
+and Spectre uses Magma colors.
+
+| Preset | Purpose And Shared Settings | Fourier FFT / Hop |
+| --- | --- | --- |
+| `Mastering` | Broad tonal balance: Flattop, logarithmic 0-20 kHz, 300 ms averaging, 1/12-octave smoothing, +4.5 dB/oct slope, AC coupling. | 4096 / 30 ms |
+| `PluginDevelopment` | Inspect levels and artifacts: Flattop, linear 0-20 kHz, no smoothing or slope, DC coupling. Fourier uses its 120 dB scale and straight traces. | 8192 / 30 ms |
+| `BassDetail` | Inspect low-frequency content: Hann, linear 0-500 Hz, 100 ms averaging, no octave smoothing or slope, AC coupling. | 16384 / 30 ms |
+| `Harmonics` | Inspect harmonic spacing: Hann, linear 0-5 kHz, no smoothing or slope, AC coupling. | 4096 / 20 ms |
+| `Transients` | Follow changing spectra: Hann, logarithmic 0-20 kHz, no smoothing or slope, AC coupling. | 1024 / 5 ms |
+
+Spectre always uses a 2048-sample FFT and a 1024-sample hop (about 43 ms
+and 21 ms at 48 kHz). `BassDetail` zooms its display without increasing
+frequency resolution, and `Transients` removes averaging without shortening
+its fixed analysis window. Fourier's longer FFTs improve frequency resolution
+at the cost of temporal detail and processing work. Apart from
+`PluginDevelopment`, Fourier uses its 60 dB scale; only `Mastering` enables
+Bezier curves. Spectre's colors are a separate magnitude representation,
+so matching input gain does not imply matching display brightness.
+
+Frequency bounds are explicit so loading a preset replaces a previous zoom.
+The full-band presets stop at 20 kHz; raise HI Freq manually to inspect
+content above that. Rack clamps bounds to Nyquist at lower sample rates.
+`Mastering` retains its original smoothing and slope but uses a longer
+Fourier FFT. `PluginDevelopment` now uses a linear frequency axis and a
+deeper Fourier magnitude scale. Both Spectre presets replace the previous
++6 dB input boost with unity gain. The former Fourier filename
+`Plugin Development.vcvm` is now `PluginDevelopment.vcvm`; saved patches
+keep their embedded module settings.
+
 ## Development
 
 Start with [AGENTS.md](AGENTS.md) for coding-agent instructions and the

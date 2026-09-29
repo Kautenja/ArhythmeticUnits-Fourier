@@ -12,11 +12,11 @@
       "id": 1
     },
     {
-      "value": 14.0,
+      "value": 8.0,
       "id": 2
     },
     {
-      "value": 0.0,
+      "value": 1.0,
       "id": 3
     },
     {
@@ -42,7 +42,7 @@
   ],
   "data": {
     "is_running": true,
-    "is_ac_coupled": false,
+    "is_ac_coupled": true,
     "color_map": 2
   }
 }

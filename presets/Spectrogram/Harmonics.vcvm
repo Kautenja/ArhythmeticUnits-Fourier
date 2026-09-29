@@ -12,7 +12,7 @@
       "id": 1
     },
     {
-      "value": 14.0,
+      "value": 8.0,
       "id": 2
     },
     {
@@ -32,7 +32,7 @@
       "id": 6
     },
     {
-      "value": 20000.0,
+      "value": 5000.0,
       "id": 7
     },
     {
@@ -42,7 +42,7 @@
   ],
   "data": {
     "is_running": true,
-    "is_ac_coupled": false,
+    "is_ac_coupled": true,
     "color_map": 2
   }
 }
