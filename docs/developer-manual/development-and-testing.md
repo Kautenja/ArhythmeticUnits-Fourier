@@ -135,8 +135,10 @@ combinations of run, fill, Bezier, and AC-coupling settings, plus missing-field
 defaults. Spectre coverage includes round trips for every supported color map
 and fallback to Magma for missing or invalid saved values, including wrong
 JSON types and out-of-range integers. The `test/rack/` tests are built by Make
-and excluded from the standalone SCons suites. They do not exercise the Rack
-UI or loading a complete patch file.
+and excluded from the standalone SCons suites. The suite also checks
+context-menu setting changes through Rack's history API, including undo, redo, unchanged selections, preservation of other module
+state, and missing modules. It does not exercise the Rack UI or loading a
+complete patch file.
 
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that

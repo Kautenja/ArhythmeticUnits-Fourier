@@ -1257,11 +1257,27 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @brief Append the context menu to the module when right clicked.
     /// @param menu the menu object to add context items for the module to
     void appendContextMenu(Menu* menu) override {
+        auto module = getModule<SpectrumAnalyzer>();
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
-        menu->addChild(createBoolPtrMenuItem("Filled Display", "", &getModule<SpectrumAnalyzer>()->is_fill_enabled));
-        menu->addChild(createBoolPtrMenuItem("Bezier Curve", "", &getModule<SpectrumAnalyzer>()->is_bezier_enabled));
-        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<SpectrumAnalyzer>()->is_ac_coupled));
+        menu->addChild(createBoolMenuItem("Filled Display", "",
+            [=]() { return module->is_fill_enabled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change filled display",
+                    "is_fill_enabled", json_boolean(value));
+            }));
+        menu->addChild(createBoolMenuItem("Bezier Curve", "",
+            [=]() { return module->is_bezier_enabled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change bezier curve",
+                    "is_bezier_enabled", json_boolean(value));
+            }));
+        menu->addChild(createBoolMenuItem("AC-coupled", "",
+            [=]() { return module->is_ac_coupled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change ac-coupled",
+                    "is_ac_coupled", json_boolean(value));
+            }));
         ModuleWidget::appendContextMenu(menu);
     }
 };

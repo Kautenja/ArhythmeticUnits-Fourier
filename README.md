@@ -11,6 +11,9 @@
 This repository contains the source code for the _Fourier_ plugin by
 **Arhythmetic Units**.
 
+Both modules support Rack's Undo and Redo commands for context-menu settings:
+AC coupling, Fourier's fill and Bezier options, and Spectre's color map.
+
 <!-- ------------------------------------------------------------ -->
 <!-- MARK: Fourier -->
 <!-- ------------------------------------------------------------ -->

@@ -962,10 +962,21 @@ struct SpectrogramWidget : ModuleWidget {
     /// @brief Append the context menu to the module when right clicked.
     /// @param menu the menu object to add context items for the module to
     void appendContextMenu(Menu* menu) override {
+        auto module = getModule<Spectrogram>();
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
-        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<Spectrogram>()->is_ac_coupled));
-        menu->addChild(createIndexPtrSubmenuItem("Color Map", Fourier::ColorMap::names(), reinterpret_cast<int*>(&getModule<Spectrogram>()->color_map)));
+        menu->addChild(createBoolMenuItem("AC-coupled", "",
+            [=]() { return module->is_ac_coupled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change ac-coupled",
+                    "is_ac_coupled", json_boolean(value));
+            }));
+        menu->addChild(createIndexSubmenuItem("Color Map", Fourier::ColorMap::names(),
+            [=]() { return static_cast<size_t>(module->color_map); },
+            [=](size_t value) {
+                Fourier::set_module_setting(module, "change color map",
+                    "color_map", json_integer(static_cast<json_int_t>(value)));
+            }));
         ModuleWidget::appendContextMenu(menu);
     }
 };

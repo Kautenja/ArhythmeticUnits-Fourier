@@ -1,4 +1,4 @@
-// Save/load regression checks for Fourier and Spectre's custom settings.
+// Save/load and undo regression checks for Fourier and Spectre settings.
 //
 // Copyright 2026 Arhythmetic Units
 //
@@ -26,15 +26,36 @@ namespace {
 /// Supply the engine context required by the real module constructor.
 struct RackContext {
     rack::Context context;
+    rack::plugin::Plugin plugin;
 
     RackContext() {
         rack::contextSet(&context);
         context.engine = new rack::engine::Engine;
         context.engine->setSampleRate(48000.f);
+        context.history = new rack::history::State;
+        plugin.slug = "ArhythmeticUnits-Fourier";
+        plugin.version = "2.1.2";
+        plugin.addModel(modelSpectrumAnalyzer);
+        plugin.addModel(modelSpectrogram);
+        rack::plugin::plugins.push_back(&plugin);
     }
 
     ~RackContext() {
+        rack::plugin::plugins.pop_back();
         rack::contextSet(nullptr);
+    }
+};
+
+/// Register a real module so Rack's history can resolve its persistent ID.
+struct RegisteredModule {
+    std::unique_ptr<rack::engine::Module> module;
+
+    explicit RegisteredModule(rack::plugin::Model* model) : module(model->createModule()) {
+        APP->engine->addModule(module.get());
+    }
+
+    ~RegisteredModule() {
+        APP->engine->removeModule(module.get());
     }
 };
 
@@ -150,4 +171,54 @@ TEST_CASE("Spectre defaults missing or invalid saved color maps to Magma") {
     module.dataFromJson(saved.get());
     CHECK(module.color_map == Fourier::ColorMap::Function::Magma);
     CHECK_NOTHROW(Fourier::ColorMap::color_map(module.color_map, 0.5f));
+}
+
+TEST_CASE("Menu setting changes participate in Rack undo and redo") {
+    RackContext context;
+    const int model_index = GENERATE(0, 1);
+    const auto model = model_index == 0 ? modelSpectrumAnalyzer : modelSpectrogram;
+    RegisteredModule registered(model);
+    auto module = registered.module.get();
+    // Freeze and use a non-default gain to catch unintended state changes.
+    Json state(module->dataToJson(), json_decref);
+    json_object_set_new(state.get(), "is_running", json_false());
+    module->dataFromJson(state.get());
+    module->params[0].setValue(0.75f);
+    const char* fourier_keys[] = {"is_fill_enabled", "is_bezier_enabled", "is_ac_coupled"};
+    const char* spectre_keys[] = {"is_ac_coupled", "color_map"};
+    const auto keys = model == modelSpectrumAnalyzer ? fourier_keys : spectre_keys;
+    const int count = model == modelSpectrumAnalyzer ? 3 : 2;
+    for (int i = 0; i < count; ++i) {
+        CAPTURE(model->slug, keys[i]);
+        Json before(APP->engine->moduleToJson(module), json_decref);
+        auto old_value = json_object_get(json_object_get(before.get(), "data"), keys[i]);
+        Json value(json_is_boolean(old_value)
+            ? json_boolean(!json_boolean_value(old_value))
+            : json_integer(static_cast<int>(Fourier::ColorMap::Function::Gray)), json_decref);
+        const auto action_count = context.context.history->actions.size();
+        Fourier::set_module_setting(module, "change test setting", keys[i], json_incref(value.get()));
+        REQUIRE(context.context.history->actions.size() == action_count + 1);
+        CHECK(context.context.history->getUndoName() == "change test setting");
+        Json after(APP->engine->moduleToJson(module), json_decref);
+        Json expected(json_deep_copy(before.get()), json_decref);
+        json_object_set(json_object_get(expected.get(), "data"), keys[i], value.get());
+        CHECK(json_equal(after.get(), expected.get()));
+
+        context.context.history->undo();
+        Json undone(APP->engine->moduleToJson(module), json_decref);
+        CHECK(json_equal(undone.get(), before.get()));
+        REQUIRE(context.context.history->canRedo());
+        // Choosing the current value must preserve redo and avoid a new action.
+        Fourier::set_module_setting(module, "no change", keys[i], json_incref(old_value));
+        CHECK(context.context.history->actions.size() == action_count + 1);
+        REQUIRE(context.context.history->canRedo());
+        context.context.history->redo();
+        Json redone(APP->engine->moduleToJson(module), json_decref);
+        CHECK(json_equal(redone.get(), after.get()));
+    }
+    // History entries resolve IDs rather than retaining a raw module pointer.
+    APP->engine->removeModule(module);
+    CHECK_NOTHROW(context.context.history->undo());
+    CHECK_NOTHROW(context.context.history->redo());
+    APP->engine->addModule(module);
 }
