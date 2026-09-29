@@ -58,3 +58,14 @@ build/test/rack/inspect_displays: build/test/rack/inspect_displays.cpp.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack $(DISPLAY_GL_LIBS)
 
 -include build/test/rack/inspect_displays.cpp.d
+
+# Exercise Fourier's curve preparation with the actual SIMD module.
+.PHONY: test-spectrum-points
+test-spectrum-points: build/test/rack/test_spectrum_points
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
+
+build/test/rack/test_spectrum_points: build/test/rack/test_spectrum_points.cpp.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+
+build/test/rack/test_spectrum_points.cpp.o: CXXFLAGS += -Idep/Catch2/single_include/catch2
+-include build/test/rack/test_spectrum_points.cpp.d

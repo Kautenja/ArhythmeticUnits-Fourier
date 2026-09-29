@@ -167,6 +167,17 @@ window/context, changes scales, and changes zoom. It checks framebuffer handles
 and GL errors and saves `build/test/rack/display-*.ppm` for visual inspection.
 It is not a complete interactive Rack or DAW session.
 
+Run the headless Fourier spectrum-coordinate regressions:
+
+```shell
+make test-spectrum-points
+```
+
+These checks exercise the actual SIMD module across FFT sizes, sample rates,
+frequency scales, magnitude scales, and slope settings. They verify channel
+independence, silence, and coordinate mapping, including out-of-range bins.
+They do not render the curves or measure performance.
+
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that
 standalone tests exercised the module widgets or patch loading.

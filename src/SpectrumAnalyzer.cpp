@@ -495,32 +495,11 @@ struct SpectrumAnalyzer : Module {
         delay.insert(gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd));
     }
 
-    /// @brief Create a point from a spectral coefficient.
-    /// @param index The index of the frequency bin.
-    /// @param coefficient The value of the frequency bin.
-    /// @param length Half the length of the FFT, i.e., \f$\frac{N}{2}\f$.
-    /// @param slope The slope (dB/oct). It allows you to adjust spectrum
-    /// analyzer display's slope around the reference frequency. Skewing the
-    /// spectrum can be useful because higher frequencies usually have weaker
-    /// power in comparison to the lower frequencies. By choosing an
-    /// appropriate spectrum slope, you can compensate for this fact and make
-    /// the spectrum plot look more convenient and meaningful.
-    /// @param reference_frequency The frequency frequency for spectrum
-    /// scaling. This is the frequency that the gain curve is centered around
-    /// measured in Hertz.
-    /// @param maximum_energy The maximum energy level (measured in decibels.)
-    /// @param minimum_energy The minimum energy level (measured in decibels.)
-    /// The minimum energy only takes effect in logarithmic mode.
-    /// @returns A new point containing the encoded spectral coefficient.
-    /// @details
-    /// The `x` component of the point is either the linear or exponential
-    /// frequency value depending on `get_frequency_scale()`. The `y`
-    /// component is either linear, exponential with a \f$60dB\f$ bias, or
-    /// exponential with a \f$120dB\f$ bias. `x` and `y` are normalized in
-    /// \f$[0, 1]\f$. Points outside this range should likely be removed
-    /// before plotting. This can occur when the minimum and/or maximum
-    /// frequency to render change from their default values.
-    void make_points(const size_t& lane_index) {
+    /// @brief Prepare all four spectrum curves from the filtered magnitudes.
+    /// @details Frequency coordinates and slope gain are shared across lanes.
+    /// Coordinates preserve the existing normalization and may lie outside
+    /// [0, 1] when the selected frequency bounds exclude a bin.
+    void make_points() {
         // The reference frequency for the slope compensation.
         static constexpr float reference_frequency = 1000.f;
         // The maximum amplitude for logarithmic mode.
@@ -535,11 +514,10 @@ struct SpectrumAnalyzer : Module {
         const auto magnitude_scale = get_magnitude_scale();
         // Determine the non-repeated coefficients.
         const float N = filtered_coeffs.size() / 2.f + 1.f;
+        const float max_amplitude = Fourier::decibels2amplitude(max_magnitude);
         for (size_t n = 0; n < static_cast<size_t>(N); n++) {
-            // Set the point to a reference from the rasterized point buffer.
-            Vec& point = raster_coeffs[lane_index][n];
-            // Set the X point to the normalized linear coefficient offset.
-            point.x = n / N;
+            // Start with the normalized linear coefficient offset.
+            float x = n / N;
             // Determine the y-scale from the frequency. The slope is provided
             // in decibels/octave, so first determine the octave offset from
             // the current frequency using, e.g., 1000Hz as the reference
@@ -548,32 +526,36 @@ struct SpectrumAnalyzer : Module {
             // multiply by the slope. Because we're dealing with y first in
             // terms of amplitude, also convert the decibel scaling to an
             // amplitude gain.
-            auto gain = log2f(point.x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
+            auto gain = log2f(x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
             gain = Fourier::decibels2amplitude(slope * gain);
             // Normalize X point based on the minimum and maximum frequencies.
-            point.x -= low_frequency / nyquist_rate;
-            point.x /= (high_frequency - low_frequency) / nyquist_rate;
+            x -= low_frequency / nyquist_rate;
+            x /= (high_frequency - low_frequency) / nyquist_rate;
             // Map the point from linear to logarithmic (Hertz) frequency
             // range. Handle negative points by taking the absolute value
             // before the square root (to avoid NaN) and negating the positive
             // result.
             if (frequency_scale == FrequencyScale::Logarithmic)
-                point.x = point.x < 0 ? -sqrtf(fabs(point.x)) : sqrtf(point.x);
+                x = x < 0 ? -sqrtf(fabs(x)) : sqrtf(x);
             // Set the Y point to the linear coefficient percentage. Apply the
             // gain that was previously calculated from the scaling function.
-            const float max_amplitude = Fourier::decibels2amplitude(max_magnitude);
-            point.y = gain * abs(filtered_coeffs[n]).s[lane_index] / (max_amplitude * N);
-            // Apply magnitude scaling to the Y point.
-            switch (magnitude_scale) {
-            case MagnitudeScale::Linear:
-                break;
-            case MagnitudeScale::Logarithmic60dB:  // Exponential with -60dB bias
-                point.y = Fourier::amplitude2decibels(point.y) / (60.f + max_magnitude) + 1.f;
-                break;
-            case MagnitudeScale::Logarithmic120dB:  // Exponential with -120dB bias
-                point.y = Fourier::amplitude2decibels(point.y) / (120.f + max_magnitude) + 1.f;
-                break;
-            default: break;
+            const auto magnitudes = abs(filtered_coeffs[n]);
+            for (size_t lane_index = 0; lane_index < NUM_CHANNELS; ++lane_index) {
+                Vec& point = raster_coeffs[lane_index][n];
+                point.x = x;
+                point.y = gain * magnitudes.s[lane_index] / (max_amplitude * N);
+                // Apply magnitude scaling to the Y point.
+                switch (magnitude_scale) {
+                case MagnitudeScale::Linear:
+                    break;
+                case MagnitudeScale::Logarithmic60dB:  // Exponential with -60dB bias
+                    point.y = Fourier::amplitude2decibels(point.y) / (60.f + max_magnitude) + 1.f;
+                    break;
+                case MagnitudeScale::Logarithmic120dB:  // Exponential with -120dB bias
+                    point.y = Fourier::amplitude2decibels(point.y) / (120.f + max_magnitude) + 1.f;
+                    break;
+                default: break;
+                }
             }
         }
     }
@@ -592,10 +574,7 @@ struct SpectrumAnalyzer : Module {
             // Pass the coefficients through a smoothing filter.
             for (size_t n = 0; n < fft.coefficients.size(); n++)
                 filtered_coeffs[n] = alpha * abs(filtered_coeffs[n]) + (1.0 - alpha) * abs(fft.coefficients[n]);
-            make_points(0);
-            make_points(1);
-            make_points(2);
-            make_points(3);
+            make_points();
             // Add the delay line to the FFT pipeline.
             fft.buffer(delay.contiguous(), window_function.get_samples());
             // Mark the module as render-able
