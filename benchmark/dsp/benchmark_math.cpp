@@ -2,14 +2,12 @@
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#define CATCH_CONFIG_MAIN
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <cmath>
 #include <complex>
 #include <numeric>
 #include <string>
 #include <vector>
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "../fixtures.hpp"
 #include "dsp/color_map.hpp"
 #include "dsp/eurorack.hpp"

@@ -2,15 +2,13 @@
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#define CATCH_CONFIG_MAIN
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <array>
 #include <cmath>
 #include <string>
 #include <vector>
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "../fixtures.hpp"
 
 Plugin* plugin_instance = nullptr;

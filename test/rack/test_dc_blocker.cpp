@@ -6,8 +6,7 @@
 #include <limits>
 #include <simd/Vector.hpp>
 #include "../../src/dsp/dc_blocker.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEST_CASE("DC blocker SIMD lanes agree with independent scalar filters") {
     using rack::simd::float_4;
@@ -26,7 +25,7 @@ TEST_CASE("DC blocker SIMD lanes agree with independent scalar filters") {
                 // Recovering Hz subtracts a near-unity pole. Optimized scalar
                 // algebra can cancel that subtraction; vector rounding remains.
                 REQUIRE(vector.getTransitionWidth(rates)[lane]
-                    == Approx(scalar[lane].getTransitionWidth(rates[lane]))
+                    == Catch::Approx(scalar[lane].getTransitionWidth(rates[lane]))
                         .epsilon(0).margin(rates[lane] * std::numeric_limits<float>::epsilon()));
             }
         }
@@ -48,7 +47,7 @@ TEST_CASE("DC blocker SIMD lanes agree with independent scalar filters") {
                 CAPTURE(n, lane);
                 const float expected = scalar[lane].process(input[lane]);
                 // Allow a few float ULPs for optimized scalar/SIMD arithmetic.
-                REQUIRE(actual[lane] == Approx(expected).epsilon(2e-6f).margin(2e-6f));
+                REQUIRE(actual[lane] == Catch::Approx(expected).epsilon(2e-6f).margin(2e-6f));
                 REQUIRE(vector.getValue()[lane] == actual[lane]);
             }
         }

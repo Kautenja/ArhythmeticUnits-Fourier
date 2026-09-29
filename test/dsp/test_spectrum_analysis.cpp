@@ -6,8 +6,7 @@
 #include <new>
 #include <vector>
 #include "dsp/spectrum_analysis.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 namespace {
 bool tracking = false;
@@ -80,7 +79,7 @@ TEST_CASE("One-hop spectra match the original RFFT across frames and settings") 
                             previous[bin] = settings.alpha * previous[bin]
                                 + (1.f-settings.alpha)*std::abs(reference.coefficients[bin]);
                             CAPTURE(n, hop, octave, fixture, frame_end, bin);
-                            REQUIRE(result[bin] == Approx(previous[bin]).margin(1e-5f));
+                            REQUIRE(result[bin] == Catch::Approx(previous[bin]).margin(1e-5f));
                         }
                     }
                 }
@@ -106,7 +105,7 @@ TEST_CASE("Scheduled magnitudes agree with an independent direct DFT") {
                 const double value = index < 0 ? 0. : signal(size_t(index), 4);
                 expected += value * std::complex<double>(std::cos(angle), std::sin(angle));
             }
-            REQUIRE(result[k] == Approx(std::abs(expected)).margin(1e-10));
+            REQUIRE(result[k] == Catch::Approx(std::abs(expected)).margin(1e-10));
         }
     }
 }
@@ -176,7 +175,7 @@ TEST_CASE("Freeze retains input while analysis continues at the same cadence") {
     for (size_t i = 0; i < 3*37; ++i) {
         const bool complete = analysis.process(99.f, [&](size_t k, float v) { values[k] = v; }, false);
         if (complete) {
-            CHECK(values[0] == Approx(128.f));
+            CHECK(values[0] == Catch::Approx(128.f));
             for (size_t k = 1; k < values.size(); ++k) CHECK(values[k] == 0.f);
         }
     }
@@ -232,7 +231,7 @@ TEST_CASE("Live window and band caches preserve coherent gain and original smoot
             analysis.process(1.f, [&](size_t k, float v) { result[k] = v; }, false);
         for (size_t k = 0; k < result.size(); ++k) {
             CAPTURE(w, k);
-            REQUIRE(result[k] == Approx(std::abs(reference.coefficients[k])).margin(1e-5f));
+            REQUIRE(result[k] == Catch::Approx(std::abs(reference.coefficients[k])).margin(1e-5f));
         }
     }
 }

@@ -12,7 +12,7 @@ include $(RACK_DIR)/plugin.mk
 # Headless suites share build flags; instrumentation stays out of the plugin.
 RACK_TEST_INSTRUMENT ?=
 RACK_TEST_BUILD := build/test/rack
-RACK_TEST_FLAGS := $(CXXFLAGS) -pthread -Idep/Catch2
+RACK_TEST_FLAGS := $(filter-out -std=%,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
 ifneq ($(RACK_TEST_INSTRUMENT),)
 RACK_TEST_BUILD := build/instrumented/$(RACK_TEST_INSTRUMENT)/rack
 # Clang does not support GCC's -fno-gnu-unique. Preserve SDK ABI and
@@ -42,14 +42,19 @@ test-module-amplitudes: $(RACK_TEST_BUILD)/test_module_amplitudes
 test-serialization test-display-lifecycle test-spectrum-points test-dc-blocker-simd test-module-amplitudes:
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
 
-$(RACK_TEST_BINARIES): $(RACK_TEST_BUILD)/%: $(RACK_TEST_BUILD)/%.cpp.o
-	$(CXX) $(RACK_TEST_FLAGS) -o $@ $< $(if $(filter test_dc_blocker,$*),,-L$(RACK_DIR) -lRack)
+$(RACK_TEST_BINARIES): $(RACK_TEST_BUILD)/%: $(RACK_TEST_BUILD)/%.cpp.o $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o
+	$(CXX) $(RACK_TEST_FLAGS) -o $@ $^ $(if $(filter test_dc_blocker,$*),,-L$(RACK_DIR) -lRack)
 
-$(addsuffix .cpp.o,$(RACK_TEST_BINARIES)): $(RACK_TEST_BUILD)/%.cpp.o: test/rack/%.cpp
+$(addsuffix .cpp.o,$(RACK_TEST_BINARIES)): $(RACK_TEST_BUILD)/%.cpp.o: test/rack/%.cpp Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
 
--include $(addsuffix .cpp.d,$(RACK_TEST_BINARIES))
+# Keep instrumented Catch2 objects separate from ordinary tests and benchmarks.
+$(RACK_TEST_BUILD)/catch_amalgamated.cpp.o: dep/Catch2/catch_amalgamated.cpp Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(RACK_TEST_FLAGS) -c -o $@ $<
+
+-include $(addsuffix .cpp.d,$(RACK_TEST_BINARIES)) $(RACK_TEST_BUILD)/catch_amalgamated.cpp.d
 
 # CPU-side display preparation only; the instrumented renderer does not use GL.
 .PHONY: benchmark-display
@@ -64,7 +69,7 @@ build/benchmark/rack/display.cpp.o: CXXFLAGS += $(DISPLAY_BENCHMARK_FLAGS)
 
 # Catch2 Rack benchmarks use SDK optimization and floating-point flags.
 BENCHMARK_ARGS ?=
-RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2
+RACK_BENCHMARK_FLAGS = $(filter-out -std=%,$(CXXFLAGS)) -std=c++14 -pthread -Idep/Catch2
 RACK_BENCHMARK_NAMES := dsp coordinates graphics modules
 RACK_BENCHMARK_BINARIES := $(addprefix build/benchmark/rack/,$(RACK_BENCHMARK_NAMES))
 .PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules benchmark-rack-build
@@ -77,14 +82,18 @@ benchmark-modules: build/benchmark/rack/modules
 benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-modules:
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< $(BENCHMARK_ARGS)
 
-$(RACK_BENCHMARK_BINARIES): build/benchmark/rack/%: build/benchmark/rack/%.cpp.o
-	$(CXX) $(RACK_BENCHMARK_FLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+$(RACK_BENCHMARK_BINARIES): build/benchmark/rack/%: build/benchmark/rack/%.cpp.o build/benchmark/rack/catch_amalgamated.cpp.o
+	$(CXX) $(RACK_BENCHMARK_FLAGS) -o $@ $^ -L$(RACK_DIR) -lRack
 
-$(addsuffix .cpp.o,$(RACK_BENCHMARK_BINARIES)): build/benchmark/rack/%.cpp.o: benchmark/rack/%.cpp
+$(addsuffix .cpp.o,$(RACK_BENCHMARK_BINARIES)): build/benchmark/rack/%.cpp.o: benchmark/rack/%.cpp Makefile
 	@mkdir -p $(@D)
 	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
 
--include $(addsuffix .cpp.d,$(RACK_BENCHMARK_BINARIES))
+build/benchmark/rack/catch_amalgamated.cpp.o: dep/Catch2/catch_amalgamated.cpp Makefile
+	@mkdir -p $(@D)
+	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
+
+-include $(addsuffix .cpp.d,$(RACK_BENCHMARK_BINARIES)) build/benchmark/rack/catch_amalgamated.cpp.d
 
 # Optional native OpenGL inspection; requires a graphical desktop session.
 ifdef ARCH_MAC

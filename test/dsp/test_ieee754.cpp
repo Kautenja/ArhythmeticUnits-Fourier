@@ -22,8 +22,7 @@
 //
 
 #include "../ieee754.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 // ---------------------------------------------------------------------------
 // MARK: `epsilon_equal`

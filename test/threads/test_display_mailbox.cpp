@@ -5,8 +5,7 @@
 #include <atomic>
 #include <thread>
 #include "rack_extensions/display_mailbox.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEST_CASE("Display mailbox retains the latest complete publication without overwriting a reader") {
     struct Packet { std::array<unsigned, 64> values{}; };

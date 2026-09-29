@@ -23,8 +23,7 @@
 #include <vector>
 #include "../../src/Spectrogram.cpp"
 #include "../../src/SpectrumAnalyzer.cpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 Plugin* plugin_instance = nullptr;
 

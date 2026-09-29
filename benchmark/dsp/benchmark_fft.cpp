@@ -21,13 +21,11 @@
 // SOFTWARE.
 //
 
-#define CATCH_CONFIG_MAIN
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <cmath>
 #include <complex>
 #include <string>
 #include <vector>
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "../fixtures.hpp"
 #include "dsp/fft.hpp"
 #include "dsp/window.hpp"

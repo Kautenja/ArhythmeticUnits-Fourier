@@ -22,8 +22,7 @@
 //
 
 #include "dsp/trigger_divider.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEST_CASE("Fourier::TriggerDivider accessors should be const") {
     const Fourier::TriggerDivider divider;

@@ -2,8 +2,6 @@
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#define CATCH_CONFIG_MAIN
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -11,7 +9,7 @@
 #include <vector>
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "../fixtures.hpp"
 #include "../../test/rack/display_test_support.hpp"
 

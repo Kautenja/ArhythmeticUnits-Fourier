@@ -22,8 +22,7 @@
 //
 
 #include "dsp/threshold_trigger.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEST_CASE("Fourier::ThresholdTrigger<float> should be false when initialized") {
     const Fourier::ThresholdTrigger<float> trigger;

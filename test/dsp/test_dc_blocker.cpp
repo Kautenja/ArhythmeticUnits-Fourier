@@ -4,8 +4,7 @@
 #include <cmath>
 #include <limits>
 #include "dsp/dc_blocker.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEMPLATE_TEST_CASE("DC blocker starts silent with the default transition width",
                   "[dc-blocker]", float, double) {
@@ -15,7 +14,7 @@ TEMPLATE_TEST_CASE("DC blocker starts silent with the default transition width",
     for (const TestType rate : {TestType(44100), TestType(48000), TestType(96000)}) {
         CAPTURE(rate);
         const double expected = double(rate) * (1.0 - double(TestType(0.999))) / 2;
-        REQUIRE(filter.getTransitionWidth(rate) == Approx(expected).epsilon(
+        REQUIRE(filter.getTransitionWidth(rate) == Catch::Approx(expected).epsilon(
             4 * std::numeric_limits<TestType>::epsilon()));
     }
 }
@@ -35,7 +34,7 @@ TEMPLATE_TEST_CASE("DC blocker impulse and step responses follow geometric decay
             CAPTURE(width, n);
             const double expected = n == 0 ? gain : gain * (p - 1) * std::pow(p, n - 1);
             const TestType actual = filter.process(n == 0 ? 1 : 0);
-            REQUIRE(actual == Approx(expected).epsilon(tolerance).margin(tolerance));
+            REQUIRE(actual == Catch::Approx(expected).epsilon(tolerance).margin(tolerance));
             REQUIRE(filter.getValue() == actual);
         }
     }
@@ -43,7 +42,7 @@ TEMPLATE_TEST_CASE("DC blocker impulse and step responses follow geometric decay
         // Summing the impulse response gives s[n] = g*p^n.
         for (int n = 0; n < 256; ++n) {
             CAPTURE(width, n);
-            REQUIRE(filter.process(1) == Approx(gain * std::pow(p, n))
+            REQUIRE(filter.process(1) == Catch::Approx(gain * std::pow(p, n))
                 .epsilon(tolerance).margin(tolerance));
         }
     }
@@ -79,7 +78,7 @@ TEMPLATE_TEST_CASE("DC blocker has unity steady-state Nyquist gain",
             const TestType actual = filter.process(input);
             if (n >= 32768) {
                 CAPTURE(width, n);
-                REQUIRE(actual == Approx(input).epsilon(0).margin(tolerance));
+                REQUIRE(actual == Catch::Approx(input).epsilon(0).margin(tolerance));
             }
         }
     }
@@ -94,15 +93,15 @@ TEMPLATE_TEST_CASE("DC blocker transition width controls the response at each sa
             filter.setTransitionWidth(width, rate);
             const double epsilon = std::numeric_limits<TestType>::epsilon();
             // Width recovery subtracts a near-unity pole, so use an Hz bound.
-            REQUIRE(filter.getTransitionWidth(rate) == Approx(width)
+            REQUIRE(filter.getTransitionWidth(rate) == Catch::Approx(width)
                 .epsilon(0).margin(double(rate) * epsilon));
-            REQUIRE(filter.getTransitionWidth(2 * rate) == Approx(2 * width)
+            REQUIRE(filter.getTransitionWidth(2 * rate) == Catch::Approx(2 * width)
                 .epsilon(0).margin(2 * double(rate) * epsilon));
             const double p = 1 - 2 * double(width) / double(rate);
             const double gain = (1 + p) / 2;
             for (int n = 0; n < 64; ++n) {
                 CAPTURE(n);
-                REQUIRE(filter.process(1) == Approx(gain * std::pow(p, n))
+                REQUIRE(filter.process(1) == Catch::Approx(gain * std::pow(p, n))
                     .epsilon(0).margin(64 * epsilon));
             }
         }

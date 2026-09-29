@@ -9,7 +9,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 namespace BenchmarkFixtures {
 

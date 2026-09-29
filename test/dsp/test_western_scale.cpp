@@ -17,8 +17,7 @@
 #include <cmath>
 #include <limits>
 
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 TEST_CASE("Reported low C frequencies have the correct octave") {
     const float frequency = GENERATE(130.813f, 65.4064f);
@@ -28,7 +27,7 @@ TEST_CASE("Reported low C frequencies have the correct octave") {
     REQUIRE(note.octave == (frequency > 100.f ? 3 : 2));
     REQUIRE(note.note_string() == (frequency > 100.f ? "C3" : "C2"));
     // The supplied frequencies are rounded to at most six significant digits.
-    REQUIRE(note.cents == Approx(0.f).margin(0.01f));
+    REQUIRE(note.cents == Catch::Approx(0.f).margin(0.01f));
 }
 
 TEST_CASE("Every chromatic note retains its pitch class and octave") {
@@ -47,7 +46,7 @@ TEST_CASE("Every chromatic note retains its pitch class and octave") {
             REQUIRE(note.octave == octave);
             REQUIRE(note.note_string() == names[pitch] + std::to_string(octave));
             // Float frequency rounding is much smaller than 0.001 cent.
-            REQUIRE(note.cents == Approx(0.f).margin(0.001f));
+            REQUIRE(note.cents == Catch::Approx(0.f).margin(0.001f));
         }
     }
 }
@@ -65,7 +64,7 @@ TEST_CASE("Cents offsets select the nearest note across octave boundaries") {
                 offset > 50.f ? offset - 100.f : offset;
             REQUIRE(note.note == expected_note);
             REQUIRE(note.octave == (offset < -50.f ? octave - 1 : octave));
-            REQUIRE(note.cents == Approx(expected_cents).margin(0.001f));
+            REQUIRE(note.cents == Catch::Approx(expected_cents).margin(0.001f));
         }
     }
 }
@@ -77,7 +76,7 @@ TEST_CASE("Hover tuning strings preserve the sign and two decimal places") {
     for (float offset : {-25.f, 25.f}) {
         const Fourier::TunedNote note(220.0 * std::exp2(offset / 1200.0));
         REQUIRE(note.note_string() == "A3");
-        REQUIRE(note.cents == Approx(offset).margin(0.001f));
+        REQUIRE(note.cents == Catch::Approx(offset).margin(0.001f));
         REQUIRE(note.tuning_string() == (offset < 0 ? "-25.00 cents" : "+25.00 cents"));
     }
 }
@@ -130,7 +129,7 @@ TEST_CASE("Positive finite float extremes produce finite tuning") {
     const int midi_note = 12 * (note.octave + 1) + static_cast<int>(note.note);
     const double reconstructed = 440.0 *
         std::exp2((midi_note - 69) / 12.0 + note.cents / 1200.0);
-    REQUIRE(reconstructed == Approx(static_cast<double>(frequency)).epsilon(1e-6));
+    REQUIRE(reconstructed == Catch::Approx(static_cast<double>(frequency)).epsilon(1e-6));
 }
 
 TEST_CASE("Note names reject identifiers outside the chromatic scale") {

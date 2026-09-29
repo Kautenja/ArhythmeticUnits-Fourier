@@ -2,13 +2,11 @@
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#define CATCH_CONFIG_MAIN
-#define CATCH_CONFIG_ENABLE_BENCHMARKING
 #include <algorithm>
 #include <cmath>
 #include <string>
 #include <vector>
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 #include "../fixtures.hpp"
 #include "dsp/circular_buffer.hpp"
 #include "dsp/dc_blocker.hpp"

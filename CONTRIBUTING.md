@@ -30,7 +30,7 @@ Fourier has two separate build paths:
 
 | Work | Required Tools |
 | --- | --- |
-| Standalone DSP tests | Git, Python 3, SCons, and a C++11 compiler |
+| Standalone DSP tests | Git, Python 3, SCons, and a C++14 compiler |
 | Rack plugin and integration tests | The above, plus Make, `jq`, and a compatible Rack 2 SDK or prepared Rack source tree |
 | Interactive module checks | A Rack 2 installation matching your plugin's platform and architecture |
 | User manual PDFs | Make and a TeX distribution with `pdflatex` and the manual's packages |
@@ -77,15 +77,15 @@ request, fork it on GitHub first and substitute your fork's clone URL:
 ```shell
 git clone https://github.com/Kautenja/ArhythmeticUnits-Fourier.git Fourier
 cd Fourier
-test -f dep/Catch2/catch.hpp
+test -f dep/Catch2/catch_amalgamated.hpp
+test -f dep/Catch2/catch_amalgamated.cpp
 ```
 
-Catch2 2.13.10's amalgamated single header is vendored in this repository;
+Catch2 3.16.0's amalgamated header and source are vendored in this repository;
 no submodule initialization or system Catch2 installation is needed. See
-[the dependency notes](dep/Catch2/README.md) for its source, license, and
-update procedure. This v2 release preserves the C++11 test baseline; Catch2
-v3 requires C++14 and its amalgamated distribution needs both a header and
-a source file.
+[the dependency notes](dep/Catch2/README.md) for their source, license, and
+update procedure. Tests and benchmarks use C++14; reusable DSP and the
+shipped Rack plugin retain their C++11 baseline.
 
 Run all remaining commands from this repository root unless noted otherwise.
 Create a branch for your contribution; replace the example name with one
@@ -261,8 +261,8 @@ the VCV Rack plugin.
 
 ### Standalone DSP Tests
 
-Use Python 3, SCons, a C++11-capable compiler, and the supplied Catch2
-headers from the [environment setup](#set-up-your-environment). SCons
+Use Python 3, SCons, a C++14-capable compiler, and the supplied Catch2
+sources from the [environment setup](#set-up-your-environment). SCons
 defaults to `g++`, which may resolve to Apple Clang on macOS. To choose
 Clang explicitly, use `scons CXX=clang++ test`; an environment `CXX` alone
 does not override this build's default.
@@ -279,14 +279,16 @@ Run one suite through its alias, which includes the source `.cpp` suffix:
 scons test/dsp/test_fft.cpp
 ```
 
-Every test `.cpp` is a separate executable with its own
-`CATCH_CONFIG_MAIN`. The SCons aliases build and execute the suites and are
+Every test `.cpp` is a separate executable linked with Catch2's supplied
+`main`. Its amalgamated implementation is compiled once per build
+configuration, with separate objects for tests, benchmarks, and each
+instrumentation mode. The SCons aliases build and execute the suites and are
 marked `AlwaysBuild`. To pass Catch2 options, build the executable target
 and invoke it directly:
 
 ```shell
 scons build_test/dsp/test_fft
-./build_test/dsp/test_fft --list-test-names-only
+./build_test/dsp/test_fft --list-tests --verbosity quiet
 ```
 
 Use names returned by that executable when selecting individual cases.
@@ -302,8 +304,10 @@ length boundaries, hop scheduling, and window normalization. Select error
 tolerances from the numerical contract rather than widening them until a
 test passes. Seed randomized fixtures when used.
 
-Tests compile as C++11 without `-O3`; benchmarks use `-O3`. Scalar DSP test
-success does not prove Rack SIMD instantiations compile or behave correctly.
+Standalone tests compile as C++14 without `-O3`; benchmarks use C++14 and
+`-O3`. Scalar DSP test success does not prove Rack SIMD instantiations compile
+or behave correctly. Headless Rack tests also use C++14, while the plugin
+build keeps the SDK's C++11 default.
 
 The dedicated DC-blocker suite checks float and double impulse/step responses,
 DC rejection, Nyquist gain, transition-width configuration, and reset. Its
@@ -324,9 +328,9 @@ reset. It is separate from `scons test` and runs in CI's Rack job.
 The [DSP tests workflow](.github/workflows/dsp-tests.yml) runs
 `scons test` on pull requests and pushes to `main`, including merges. Pushes
 to other branches do not trigger a separate run. It verifies the vendored
-Catch2 header is present. Its three DSP jobs use Ubuntu 24.04 with GCC,
-macOS 14 with Apple Clang, and Windows 2022 with
-MSYS2 UCRT64 GCC. Windows uses MSYS2's SCons and Python to preserve POSIX
+Catch2 header and source are present. Its three DSP jobs use Ubuntu 24.04
+with GCC, macOS 14 with Apple Clang, and Windows 2022 with MSYS2 UCRT64 GCC.
+Windows uses MSYS2's SCons and Python to preserve POSIX
 paths and GNU build tools. Each job runs the same `scons test` command.
 
 A separate Ubuntu 24.04 x64 job downloads the official Rack 2.6.3 SDK,
@@ -591,8 +595,8 @@ version, sample rate, relevant settings, and observed result.
 
 ### Benchmarks
 
-The standalone Catch2 v2 benchmarks cover every computational DSP header.
-They build with C++11 and `-O3`, independently of Rack. Run from the repository
+The standalone Catch2 v3 benchmarks cover every computational DSP header.
+They build with C++14 and `-O3`, independently of Rack. Run from the repository
 root with the same dependencies as the standalone tests:
 
 ```shell
@@ -647,7 +651,7 @@ scons benchmark BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 100
 For focused runs, listing workloads, or machine-readable Catch2 XML:
 
 ```shell
-./build_benchmark/dsp/benchmark_fft --list-test-names-only
+./build_benchmark/dsp/benchmark_fft --list-tests --verbosity quiet
 ./build_benchmark/dsp/benchmark_fft "[fft]" --reporter xml --out /tmp/fourier-fft.xml
 ```
 
@@ -720,8 +724,8 @@ make benchmark-modules BENCHMARK_ARGS="[lifecycle]"
 ```
 
 The executable is also included in `make benchmark-rack-build`. It uses the
-same SDK flags and Catch2 statistics as the other Rack benchmarks. Workloads
-are named by module, settings, and units:
+same SDK optimization flags and Catch2 statistics as the other Rack
+benchmarks. Workloads are named by module, settings, and units:
 
 | Workload | Timed Work Per Iteration |
 | --- | --- |

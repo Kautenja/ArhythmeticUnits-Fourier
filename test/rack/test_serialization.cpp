@@ -17,8 +17,7 @@
 #include <set>
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 Plugin* plugin_instance = nullptr;
 
@@ -123,7 +122,7 @@ TEST_CASE("Factory presets load complete state and share names across modules") 
                 const float expected = rack::math::clamp(
                     json_number_value(json_object_get(param, "value")),
                     quantity->minValue, quantity->maxValue);
-                CHECK(module->params[id].getValue() == Approx(expected));
+                CHECK(module->params[id].getValue() == Catch::Approx(expected));
             }
             Json restored(module->dataToJson(), json_decref);
             CHECK(json_equal(restored.get(), json_object_get(preset.get(), "data")));

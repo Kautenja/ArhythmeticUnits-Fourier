@@ -47,7 +47,7 @@ INCLUDES = [
 
 # the compiler and linker flags for the testing C++ environment
 TEST_FLAGS = [
-    '-std=c++11',
+    '-std=c++14',
     '-pthread',
     # '-march=native',
     '-pipe',
@@ -73,8 +73,8 @@ BENCHMARK_ENV = Environment(
     ENV=os.environ,
     CXX=ARGUMENTS.get('CXX', 'g++'),
     CPPFLAGS=['-Wno-unused-value'],
-    CXXFLAGS=PROD_FLAGS,
-    LINKFLAGS=PROD_FLAGS,
+    CXXFLAGS=PROD_FLAGS + ['-std=c++14'],
+    LINKFLAGS=PROD_FLAGS + ['-std=c++14'],
     CPPPATH=INCLUDES + TEST_INCLUDES,
 )
 
@@ -86,6 +86,12 @@ PRODUCTION_ENV = Environment(
     LINKFLAGS=PROD_FLAGS,
     CPPPATH=INCLUDES,
 )
+
+
+# Compile Catch2's implementation and main once per flag/instrumentation set.
+CATCH_SOURCE = 'dep/Catch2/catch_amalgamated.cpp'
+TEST_CATCH = TESTING_ENV.Object(TEST_BUILD + '/catch_amalgamated', CATCH_SOURCE)
+BENCHMARK_CATCH = BENCHMARK_ENV.Object('build_benchmark/catch_amalgamated', CATCH_SOURCE)
 
 
 def find_source_files(src_dir, build_dir):
@@ -129,7 +135,7 @@ UNIT_TEST_ALIASES = []
 DSP_TEST_ALIASES = []
 MAILBOX_TEST_ALIASES = []
 for file in TEST_FILES:
-    program = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_SRC)
+    program = TESTING_ENV.Program(file.replace('.cpp', ''), [file] + TEST_SRC + TEST_CATCH)
     relative = file[len(TEST_BUILD) + 1:]
     alias = TESTING_ENV.Alias('test/' + relative, [program], program[0].path)
     AlwaysBuild(alias)
@@ -155,7 +161,7 @@ BENCHMARK_PROGRAMS = []
 BENCHMARK_ARGS = ' '.join(shlex.quote(arg) for arg in
                           shlex.split(ARGUMENTS.get('BENCHMARK_ARGS', '')))
 for benchmark in find_source_files('benchmark/dsp', 'build_benchmark/dsp'):
-    program = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_SRC)
+    program = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_SRC + BENCHMARK_CATCH)
     alias = BENCHMARK_ENV.Alias(benchmark.replace('build_', ''), [program],
                                program[0].path + ' ' + BENCHMARK_ARGS)
     AlwaysBuild(alias)

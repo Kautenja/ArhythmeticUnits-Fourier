@@ -20,8 +20,7 @@
 #include <new>
 #include <string>
 #include "../../src/SpectrumAnalyzer.cpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 Plugin* plugin_instance = nullptr;
 
@@ -121,8 +120,8 @@ TEST_CASE("Spectrum coordinates preserve per-channel magnitudes across settings"
                                     expected_y = Fourier::amplitude2decibels(expected_y) / range + 1.f;
                                 }
                                 const Vec actual = points[lane];
-                                REQUIRE(actual.x == Approx(expected_x).margin(1e-6f));
-                                REQUIRE(actual.y == Approx(expected_y).epsilon(1e-5f).margin(1e-6f));
+                                REQUIRE(actual.x == Catch::Approx(expected_x).margin(1e-6f));
+                                REQUIRE(actual.y == Catch::Approx(expected_y).epsilon(1e-5f).margin(1e-6f));
                             }
                         }
                     }
@@ -169,7 +168,7 @@ TEST_CASE("Scheduled SIMD spectra agree with independent scalar lanes") {
                             // Unnormalized sums scale with N. Rack fast-math may
                             // round scalar/SIMD products and magnitudes differently;
                             // compare per-sample amplitudes, including near-zero bins.
-                            REQUIRE(actual[k].s[lane]/n == Approx(expected[lane][k]/n)
+                            REQUIRE(actual[k].s[lane]/n == Catch::Approx(expected[lane][k]/n)
                                 .margin(32*std::numeric_limits<float>::epsilon()));
                         }
                 }
@@ -414,7 +413,7 @@ TEST_CASE("Fourier run button freezes capture while finishing and publishing ana
         previous = current;
     }
     for (size_t lane = 0; lane < 4; ++lane) {
-        REQUIRE(previous->points[lane][0].y == Approx(
+        REQUIRE(previous->points[lane][0].y == Catch::Approx(
             retained.points[lane][0].y * module.get_time_smoothing_alpha()));
         REQUIRE(previous->points[lane][0].y < retained.points[lane][0].y);
     }

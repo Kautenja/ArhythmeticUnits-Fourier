@@ -25,8 +25,7 @@
 #include <new>
 #include <vector>
 #include "dsp/fft.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 namespace {
 /// Count allocations only during DSP operations, excluding Catch2 assertions.
@@ -43,7 +42,7 @@ struct AllocationScope {
 };
 }  // namespace
 
-// This standalone executable intercepts the C++11 allocation forms used by
+// This standalone executable intercepts the allocation forms used by
 // std::vector without changing the allocator in production DSP types.
 void* operator new(std::size_t size) {
     if (count_allocations) ++allocation_count;
@@ -54,6 +53,9 @@ void* operator new(std::size_t size) {
 void* operator new[](std::size_t size) { return ::operator new(size); }
 void operator delete(void* memory) noexcept { std::free(memory); }
 void operator delete[](void* memory) noexcept { std::free(memory); }
+// C++14 permits sized deallocation; keep it paired with the malloc-backed new.
+void operator delete(void* memory, std::size_t) noexcept { std::free(memory); }
+void operator delete[](void* memory, std::size_t) noexcept { std::free(memory); }
 
 TEST_CASE("RFFT reuses scratch storage after construction and resizing", "[rfft]") {
     Fourier::OnTheFlyRFFT<float> fft(128);
@@ -73,8 +75,8 @@ TEST_CASE("RFFT reuses scratch storage after construction and resizing", "[rfft]
             // A windowed impulse has the same real coefficient in every bin;
             // silence between impulses catches stale packed samples.
             for (const auto& coefficient : fft.coefficients) {
-                REQUIRE(coefficient.real() == Approx(amplitude * 0.5f));
-                REQUIRE(coefficient.imag() == Approx(0.f).margin(1e-6f));
+                REQUIRE(coefficient.real() == Catch::Approx(amplitude * 0.5f));
+                REQUIRE(coefficient.imag() == Catch::Approx(0.f).margin(1e-6f));
             }
             {
                 AllocationScope scope;
@@ -83,7 +85,7 @@ TEST_CASE("RFFT reuses scratch storage after construction and resizing", "[rfft]
             CHECK(allocation_count == 0);
             for (std::size_t k = 0; k < n; ++k) {
                 const float expected = k <= n / 2 ? amplitude * 0.5f : 0.f;
-                REQUIRE(fft.coefficients[k].real() == Approx(expected));
+                REQUIRE(fft.coefficients[k].real() == Catch::Approx(expected));
                 REQUIRE(fft.coefficients[k].imag() == 0.f);
             }
         }

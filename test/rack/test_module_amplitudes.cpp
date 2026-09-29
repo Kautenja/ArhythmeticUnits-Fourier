@@ -19,8 +19,7 @@
 #include <vector>
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 Plugin* plugin_instance = nullptr;
 
@@ -143,7 +142,7 @@ void check_spectrum(SpectrumAnalyzer& module, size_t length, size_t rotation,
             // Bound float FFT/filter error per input sample, then convert
             // that absolute bound to display units. Relative tolerance covers
             // the rounded filter pole, most visible near its transition band.
-            CHECK(spectrum.points[lane][bin].y == Approx(expected)
+            CHECK(spectrum.points[lane][bin].y == Catch::Approx(expected)
                 .epsilon(2e-4).margin(magnitude_error(length, lane, cable) / display_scale));
         }
     }
@@ -162,7 +161,7 @@ void check_spectrum(Spectrogram& module, size_t length, size_t rotation,
         CAPTURE(bin);
         const double expected = expected_magnitude(bin, length, 0,
             cables[rotation], module.is_ac_coupled, module.get_sample_rate(), window);
-        CHECK(column->values[bin] == Approx(expected)
+        CHECK(column->values[bin] == Catch::Approx(expected)
             .epsilon(2e-4).margin(magnitude_error(length, 0, cables[rotation])));
     }
 }

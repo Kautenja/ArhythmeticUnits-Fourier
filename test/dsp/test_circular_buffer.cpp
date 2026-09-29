@@ -22,8 +22,7 @@
 //
 
 #include "dsp/circular_buffer.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 // ---------------------------------------------------------------------------
 // MARK: CircularBuffer

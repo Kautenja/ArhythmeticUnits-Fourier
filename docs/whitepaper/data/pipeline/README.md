@@ -118,7 +118,8 @@ The archived `run.py` also needs SCons and the original
 [Catch2 2.13.3 header](https://raw.githubusercontent.com/catchorg/Catch2/ff349a50bfc6214b4081f4ca63c7de35e2162f60/single_include/catch2/catch.hpp)
 at `dep/Catch2/single_include/catch2/catch.hpp` in the extracted source tree
 to run its original test suite. The current repository vendors a newer
-version at `dep/Catch2/catch.hpp`. Preserve the old campaign metadata rather
+version in `dep/Catch2/catch_amalgamated.hpp` and
+`dep/Catch2/catch_amalgamated.cpp`. Preserve the old campaign metadata rather
 than attributing its measurements to the production implementation. Current
 production validation commands are documented in the
 [contributor guide](../../../../CONTRIBUTING.md#development-and-testing).

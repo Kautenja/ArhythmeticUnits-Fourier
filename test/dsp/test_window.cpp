@@ -25,8 +25,7 @@
 
 #include "dsp/window.hpp"
 #include "../ieee754.hpp"
-#define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "catch_amalgamated.hpp"
 
 // ---------------------------------------------------------------------------
 // MARK: Bartlett Window
@@ -1115,12 +1114,12 @@ TEST_CASE("Window metadata preserves attenuation and length-dependent bandwidth"
     for (const auto& reference : references) {
         CAPTURE(static_cast<int>(reference.window));
         CHECK(Fourier::Window::side_lobe_amplitude(reference.window)
-            == Approx(reference.side_lobe_db));
+            == Catch::Approx(reference.side_lobe_db));
         CHECK(Fourier::Window::stopband_attenuation(reference.window)
-            == Approx(reference.stopband_db));
+            == Catch::Approx(reference.stopband_db));
         for (double length : {64.0, 1024.0})
             CHECK(Fourier::Window::transition_width(reference.window, length)
-                == Approx(reference.bandwidth / length));
+                == Catch::Approx(reference.bandwidth / length));
     }
 }
 

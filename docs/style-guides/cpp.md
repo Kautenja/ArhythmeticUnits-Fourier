@@ -7,8 +7,10 @@ namespaces, build structure, and licensing.
 
 ## Project Defaults
 
--   Use C++11 for reusable DSP and standalone tests, as specified by
-    `SConstruct`. Do not introduce a newer language requirement incidentally.
+-   Use C++11 for reusable DSP and the shipped Rack plugin. Tests and
+    benchmarks use C++14 for Catch2 v3, as specified by `SConstruct` and
+    the headless targets in `Makefile`. Keep newer language features out of
+    production headers and sources.
 -   Use `.hpp` for C++ headers and `.cpp` for implementation and test files.
     Keep templates in headers. Most current DSP is intentionally header-only.
 -   Use the `Fourier` namespace for reusable DSP, with `Window`, `ColorMap`,
@@ -22,7 +24,7 @@ namespaces, build structure, and licensing.
     using the appropriate year and attribution. Tests and imported code may
     carry different existing notices; do not replace them mechanically.
 -   Do not import Quadra-specific C ABI structs, Swift bridging, C++17,
-    Catch2 v3, or `djkernel::dsp` conventions from the reference guide.
+    or `djkernel::dsp` conventions from the reference guide.
 
 ## File Shape
 
@@ -146,7 +148,7 @@ and lifetime for buffers crossing that boundary.
 
 ## Tests And Review
 
-Use the pinned Catch2 v2 harness. Follow
+Use the pinned Catch2 v3 harness. Follow
 [Development And Testing](../../CONTRIBUTING.md#development-and-testing)
 for executable targets, signal fixtures, tolerances, Rack checks, and
 benchmark evidence.

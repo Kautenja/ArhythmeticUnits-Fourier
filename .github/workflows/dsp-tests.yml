@@ -57,7 +57,8 @@ jobs:
 
       - name: Run DSP suites
         run: |
-          test -f dep/Catch2/catch.hpp
+          test -f dep/Catch2/catch_amalgamated.hpp
+          test -f dep/Catch2/catch_amalgamated.cpp
           g++ --version
           scons --version
           scons test
@@ -96,7 +97,8 @@ jobs:
           RACK_DIR="$RUNNER_TEMP/Rack-SDK"
           test -f "$RACK_DIR/plugin.mk"
           test -f "$RACK_DIR/libRack.so"
-          test -f dep/Catch2/catch.hpp
+          test -f dep/Catch2/catch_amalgamated.hpp
+          test -f dep/Catch2/catch_amalgamated.cpp
           echo "RACK_DIR=$RACK_DIR" >> "$GITHUB_ENV"
 
       - name: Build Rack plugin
