@@ -122,11 +122,13 @@ PAPER_FLAGS :=
 PAPER_LIBS :=
 PAPER_FEATURES :=
 PAPER_NATIVE_INPUTS :=
+PAPER_IDENTITY_FLAGS = -DPAPER_RACK_LIBRARY=$(call shell-quote,"$(abspath $(firstword $(wildcard $(RACK_DIR)/libRack.*)))")
 ifneq ($(strip $(PAPER_FFTW_PREFIX)),)
 PAPER_FLAGS += -DPAPER_HAVE_FFTW -I"$(PAPER_FFTW_PREFIX)/include"
 PAPER_LIBS += "$(PAPER_FFTW_PREFIX)/lib/libfftw3f.a" "$(PAPER_FFTW_PREFIX)/lib/libfftw3.a"
 PAPER_NATIVE_INPUTS += $(PAPER_FFTW_PREFIX)/lib/libfftw3f.a $(PAPER_FFTW_PREFIX)/lib/libfftw3.a
 PAPER_FEATURES += fftw
+PAPER_IDENTITY_FLAGS += -DPAPER_FFTW_DIRECTORY=$(call shell-quote,"$(abspath $(PAPER_FFTW_PREFIX))")
 endif
 
 ifeq ($(PAPER_VDSP),1)
@@ -150,24 +152,55 @@ benchmark-rack-build: benchmark-paper-build
 
 -include .build/benchmark/rack/paper.cpp.d
 
-.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json benchmark/paper/generate_registry.py benchmark/paper/contracts.py .build/benchmark/paper-config
-	python3 benchmark/paper/generate_registry.py $@ --features="$(PAPER_FEATURES)"
+.build/benchmark/generate-registry$(RACK_TEST_SUFFIX): benchmark/paper/generate_registry.cpp .build/rack-config
+	@mkdir -p $(@D)
+	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
+
+.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) .build/benchmark/paper-config
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) $< $@ "$(PAPER_FEATURES)"
 
 .build/benchmark/rack/paper.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) -I.build/benchmark -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) $(PAPER_IDENTITY_FLAGS) -I.build/benchmark -c -o $@ $<
 
 .build/benchmark/rack/paper-audit.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk .build/rack-config
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
+	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) $(PAPER_IDENTITY_FLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
 
 .build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper-audit.cpp.o $(PAPER_NATIVE_INPUTS)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
 -include .build/benchmark/rack/paper-audit.cpp.d
 
-.build/benchmark/paper-config: PRIVATE_CONFIG := $(PAPER_FLAGS) $(PAPER_LIBS) $(PAPER_FEATURES)
+.build/benchmark/paper-config: PRIVATE_CONFIG := $(PAPER_FLAGS) $(PAPER_LIBS) $(PAPER_FEATURES) $(PAPER_IDENTITY_FLAGS)
 .build/benchmark/rack/paper.cpp.o .build/benchmark/rack/paper-audit.cpp.o: .build/benchmark/paper-config
+
+# Native development modes share a serial recipe, even with both goals and -j.
+# Only the timing executable is needed; the publication audit build stays opt-in.
+BENCHMARK_DEV_ARGS ?=
+BENCHMARK_DEV_OUT ?= .build/benchmark-dev-$(shell date +%Y%m%d-%H%M%S)-$(shell echo $$$$)
+BENCHMARK_DEV_PROFILES = $(if $(filter benchmark-fast,$(MAKECMDGOALS)),fast) $(if $(filter benchmark-full,$(MAKECMDGOALS)),full)
+.PHONY: benchmark-fast benchmark-full run-development-benchmarks benchmark-dev-build test-benchmark-dev
+benchmark-dev-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX)
+benchmark-fast benchmark-full: run-development-benchmarks
+run-development-benchmarks: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX)
+	@set -e; for profile in $(BENCHMARK_DEV_PROFILES); do \
+		DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< --development \
+		--profile "$$profile" --output "$(BENCHMARK_DEV_OUT)-$$profile" $(BENCHMARK_DEV_ARGS); \
+	done
+
+test-benchmark-dev: $(RACK_TEST_BUILD)/test_benchmark_development$(RACK_TEST_SUFFIX)
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $<
+test-rack: test-benchmark-dev
+
+$(RACK_TEST_BUILD)/test_benchmark_development$(RACK_TEST_SUFFIX): $(RACK_TEST_BUILD)/test_benchmark_development.cpp.o $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o
+	$(CXX) $(RACK_TEST_FLAGS) -o $@ $^ -L$(RACK_DIR) -lRack
+
+$(RACK_TEST_BUILD)/test_benchmark_development.cpp.o: test/rack/test_benchmark_development.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk $(RACK_TEST_BUILD)/config
+	@mkdir -p $(@D)
+	$(CXX) $(RACK_TEST_FLAGS) -I.build/benchmark -c -o $@ $<
+
+-include $(RACK_TEST_BUILD)/test_benchmark_development.cpp.d
 
 # Rebuild when the compiler, SDK path, or effective flags change. Stamps
 # never enter a link command; only the objects depend on them.

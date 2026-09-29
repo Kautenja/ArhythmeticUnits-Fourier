@@ -157,10 +157,11 @@ struct Driver {
 
 /// @brief Compare matched frames despite their different publication delays.
 template<typename T>
-void verify_controls() {
+void verify_controls(const std::vector<size_t>& sizes = {128u, 2048u, 16384u},
+        const std::vector<size_t>& hops = {257u, 1024u}) {
     const auto input = signal();
-    for (size_t n : {128u, 2048u, 16384u})
-        for (size_t hop : {257u, 1024u})
+    for (size_t n : sizes)
+        for (size_t hop : hops)
             for (bool smooth : {false, true})
                 for (const std::string state : {"steady", "live"}) {
                     Config c;
@@ -467,37 +468,104 @@ size_t integer(const char* value) {
 
 #include "../paper/channels.hpp"
 
+namespace Paper {
+/// @brief Independent correctness preflight, shared by both runners.
+void verify_all() {
+    verify_transform<float, Fourier::OnTheFlyFFT<float>>(false, false);
+    verify_transform<double, Fourier::OnTheFlyFFT<double>>(false, false);
+    verify_transform<float, Fourier::OnTheFlyRFFT<float>>(true, false);
+    verify_transform<double, Fourier::OnTheFlyRFFT<double>>(true, false);
+    verify_transform<float, Fourier::OnTheFlyIFFT<float>>(false, true);
+    verify_transform<double, Fourier::OnTheFlyIFFT<double>>(false, true);
+    verify_analyzer<float>();
+    verify_analyzer<double>();
+    verify_controls<float>();
+    verify_controls<double>();
+    verify_synthesis<float>();
+    verify_synthesis<double>();
+    verify_external<float, PffftBackend>("pffft", "float");
+    verify_hybrid<PffftBackend>();
+    verify_channels();
+#ifdef PAPER_HAVE_VDSP
+    verify_external<float, VdspBackend<float>>("vdsp", "float");
+    verify_external<double, VdspBackend<double>>("vdsp", "double");
+#endif
+#ifdef PAPER_HAVE_FFTW
+    verify_external<float, FftwBackend<float>>("fftw", "float");
+    verify_external<double, FftwBackend<double>>("fftw", "double");
+#endif
+    std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
+        << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid verified\n";
+}
+
+/// @brief One workload with unchanged timing and numerical-audit boundaries.
+void execute(const Config& c, bool provider_info = false) {
+    const auto& descriptor = backend_descriptor(c.backend);
+    const std::string kind(descriptor.kind), precision(descriptor.precision);
+    require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
+    Paper::Context context(c.rate);
+    if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
+    else if (c.backend == "core-independent4-float") channel_stream<ScalarChannels<Core<float>>>(c, provider_info);
+    else if (c.backend == "pffft-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, PffftBackend>>>(c, provider_info);
+#ifdef PAPER_HAVE_FFTW
+    else if (c.backend == "fftw-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, FftwBackend<float>>>>(c, provider_info);
+#endif
+#ifdef PAPER_HAVE_VDSP
+    else if (c.backend == "vdsp-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, VdspBackend<float>>>>(c, provider_info);
+#endif
+    else if (kind == "scheduled-analysis") hybrid_dispatch<float, PffftBackend>(c, provider_info);
+    else if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
+#ifdef PAPER_HAVE_FFTW
+    else if (std::string(descriptor.provider) == "fftw") {
+        if (precision == "float") external_dispatch<float, FftwBackend<float>>(c, provider_info);
+        else external_dispatch<double, FftwBackend<double>>(c, provider_info);
+    }
+#endif
+#ifdef PAPER_HAVE_VDSP
+    else if (std::string(descriptor.provider) == "vdsp") {
+        if (precision == "float") external_dispatch<float, VdspBackend<float>>(c, provider_info);
+        else external_dispatch<double, VdspBackend<double>>(c, provider_info);
+    }
+#endif
+    else if (kind == "inverse-job" || kind == "chain") {
+        if (precision == "float") synthesis_stream<float>(c);
+        else synthesis_stream<double>(c);
+    } else if (kind == "driver") stream<Driver>(c);
+    else if (kind == "legacy") {
+        if (precision == "float") stream<Legacy<float>>(c);
+        else stream<Legacy<double>>(c);
+    } else if (kind == "core") {
+        if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
+        else if (precision == "float") stream<Core<float>>(c);
+        else stream<Core<double>>(c);
+    } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
+    else if (kind == "spectre") stream<Host<Spectrogram>>(c);
+    else if (kind == "fft") {
+        if (precision == "float") transform<float, Fourier::OnTheFlyFFT<float>>(c, false, false);
+        else transform<double, Fourier::OnTheFlyFFT<double>>(c, false, false);
+    } else if (kind == "rfft") {
+        if (precision == "float") transform<float, Fourier::OnTheFlyRFFT<float>>(c, true, false);
+        else transform<double, Fourier::OnTheFlyRFFT<double>>(c, true, false);
+    } else if (kind == "ifft") {
+        if (precision == "float") transform<float, Fourier::OnTheFlyIFFT<float>>(c, false, true);
+        else transform<double, Fourier::OnTheFlyIFFT<double>>(c, false, true);
+    } else require(false, "Adapter implementation missing");
+}
+}  // namespace Paper
+
+#include "../paper/development.hpp"
+
 int main(int argc, char** argv) {
     using namespace Paper;
     try {
-        if (argc == 2 && std::string(argv[1]) == "--verify") {
-            verify_transform<float, Fourier::OnTheFlyFFT<float>>(false, false);
-            verify_transform<double, Fourier::OnTheFlyFFT<double>>(false, false);
-            verify_transform<float, Fourier::OnTheFlyRFFT<float>>(true, false);
-            verify_transform<double, Fourier::OnTheFlyRFFT<double>>(true, false);
-            verify_transform<float, Fourier::OnTheFlyIFFT<float>>(false, true);
-            verify_transform<double, Fourier::OnTheFlyIFFT<double>>(false, true);
-            verify_analyzer<float>();
-            verify_analyzer<double>();
-            verify_controls<float>();
-            verify_controls<double>();
-            verify_synthesis<float>();
-            verify_synthesis<double>();
-            verify_external<float, PffftBackend>("pffft", "float");
-            verify_hybrid<PffftBackend>();
-            verify_channels();
-#ifdef PAPER_HAVE_VDSP
-            verify_external<float, VdspBackend<float>>("vdsp", "float");
-            verify_external<double, VdspBackend<double>>("vdsp", "double");
-#endif
-#ifdef PAPER_HAVE_FFTW
-            verify_external<float, FftwBackend<float>>("fftw", "float");
-            verify_external<double, FftwBackend<double>>("fftw", "double");
-#endif
-            std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
-                << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid verified\n";
-            return 0;
-        }
+        if (argc > 1 && std::string(argv[1]) == "--development")
+            return Development::run(argc-2, argv+2, argv[0], execute, verify_all, []() {
+                verify_analyzer<float>();
+                verify_analyzer<double>();
+                verify_controls<float>({128, 2048}, {257, 1024});
+                verify_controls<double>({128, 2048}, {257, 1024});
+            });
+        if (argc == 2 && std::string(argv[1]) == "--verify") { verify_all(); return 0; }
         if (argc == 2 && std::string(argv[1]) == "--inventory") {
             std::cout << registry_json << '\n'; return 0;
         }
@@ -533,56 +601,7 @@ int main(int argc, char** argv) {
         validate_backend(c);
         if (describe) { std::cout << contract_json(c) << '\n'; return 0; }
         c.resources = resources;
-        const auto& descriptor = backend_descriptor(c.backend);
-        const std::string kind(descriptor.kind), precision(descriptor.precision);
-        require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
-        Paper::Context context(c.rate);
-        if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
-        else if (c.backend == "core-independent4-float") channel_stream<ScalarChannels<Core<float>>>(c, provider_info);
-        else if (c.backend == "pffft-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, PffftBackend>>>(c, provider_info);
-#ifdef PAPER_HAVE_FFTW
-        else if (c.backend == "fftw-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, FftwBackend<float>>>>(c, provider_info);
-#endif
-#ifdef PAPER_HAVE_VDSP
-        else if (c.backend == "vdsp-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, VdspBackend<float>>>>(c, provider_info);
-#endif
-        else if (kind == "scheduled-analysis") hybrid_dispatch<float, PffftBackend>(c, provider_info);
-        else if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
-#ifdef PAPER_HAVE_FFTW
-        else if (std::string(descriptor.provider) == "fftw") {
-            if (precision == "float") external_dispatch<float, FftwBackend<float>>(c, provider_info);
-            else external_dispatch<double, FftwBackend<double>>(c, provider_info);
-        }
-#endif
-#ifdef PAPER_HAVE_VDSP
-        else if (std::string(descriptor.provider) == "vdsp") {
-            if (precision == "float") external_dispatch<float, VdspBackend<float>>(c, provider_info);
-            else external_dispatch<double, VdspBackend<double>>(c, provider_info);
-        }
-#endif
-        else if (kind == "inverse-job" || kind == "chain") {
-            if (precision == "float") synthesis_stream<float>(c);
-            else synthesis_stream<double>(c);
-        } else if (kind == "driver") stream<Driver>(c);
-        else if (kind == "legacy") {
-            if (precision == "float") stream<Legacy<float>>(c);
-            else stream<Legacy<double>>(c);
-        } else if (kind == "core") {
-            if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
-            else if (precision == "float") stream<Core<float>>(c);
-            else stream<Core<double>>(c);
-        } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
-        else if (kind == "spectre") stream<Host<Spectrogram>>(c);
-        else if (kind == "fft") {
-            if (precision == "float") transform<float, Fourier::OnTheFlyFFT<float>>(c, false, false);
-            else transform<double, Fourier::OnTheFlyFFT<double>>(c, false, false);
-        } else if (kind == "rfft") {
-            if (precision == "float") transform<float, Fourier::OnTheFlyRFFT<float>>(c, true, false);
-            else transform<double, Fourier::OnTheFlyRFFT<double>>(c, true, false);
-        } else if (kind == "ifft") {
-            if (precision == "float") transform<float, Fourier::OnTheFlyIFFT<float>>(c, false, true);
-            else transform<double, Fourier::OnTheFlyIFFT<double>>(c, false, true);
-        } else require(false, "Adapter implementation missing");
+        execute(c, provider_info);
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

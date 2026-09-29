@@ -367,8 +367,9 @@ pinned SHA-256 checksums, and run `make -j2 all` and `make -j2 test-rack`:
 | macOS 14 | macOS ARM64 | Apple Clang |
 | Windows 2022 | Windows x64 | MSYS2 MINGW64 GCC (MSVCRT) |
 
-Each Rack job runs all five headless suites: SIMD DC blocker, serialization,
-display lifecycle, spectrum coordinates, and module amplitudes. Linux and
+Each Rack job runs five headless module/DSP suites: SIMD DC blocker,
+serialization, display lifecycle, spectrum coordinates, and module amplitudes,
+plus the C++ benchmark-runner checks. Linux and
 macOS link and run against the SDK library. Linux installs the OpenGL, X11,
 and audio runtime dependencies. The Windows SDK has an import library only,
 so CI also verifies and extracts the matching Rack Free installer and adds
@@ -429,7 +430,7 @@ The [LLVM source coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.h
 reports are separate by test workload:
 
 -   `.build/reports/coverage/dsp/`: standalone DSP suites, reporting `src/dsp/`.
--   `.build/reports/coverage/rack/`: all five headless Rack suites, reporting
+-   `.build/reports/coverage/rack/`: headless Rack and benchmark-runner suites, reporting
     first-party `src/`, including DSP templates instantiated by the modules.
 
 Each contains `html/index.html`, `summary.txt`, `coverage.lcov`,
@@ -532,7 +533,7 @@ Reopen Rack and test the affected modules. See the
     Markdown structure, and `git diff --check`. No full build is required
     solely for prose changes.
 
-To run all five headless Rack suites with the configured SDK and its runtime
+To run the headless Rack and benchmark-runner suites with the configured SDK and its runtime
 dependencies, use:
 
 ```shell
@@ -674,6 +675,29 @@ help, but may require other plugins or local sample assets. Record the Rack
 version, sample rate, relevant settings, and observed result.
 
 ### Benchmarks
+
+For the FFT/analyzer optimization loop, start with the native C++ development
+runner. From the repository root with the Rack SDK configured:
+
+```shell
+make -j2 benchmark-dev-build
+make benchmark-fast
+make benchmark-fast BENCHMARK_DEV_ARGS="--backend core-float --pass throughput"
+make benchmark-full
+```
+
+The fast profile runs 24 fixed workloads with three repetitions in one process.
+The full development profile adds sizes, hops, live settings, startup, channel
+banks, transforms, and compiled external providers. Both reuse the paper's C++
+adapters, timing loops, and numerical/cadence checks. Builds are incremental;
+neither mode forces compilation or builds the allocation-audit executable.
+Registry generation, execution, statistics, and baseline comparison are C++.
+Use `make test-benchmark-dev` to check the runner itself; `test-rack` includes
+these checks. See the [development workflow](benchmark/paper/DEVELOPMENT.md)
+for baseline comparison, raw artifacts, filters, and publication boundaries.
+
+These short runs are development feedback. The publication archiver below
+retains its separate fresh-process and independent-session requirements.
 
 The standalone Catch2 v3 benchmarks cover every computational DSP header.
 They build with C++14 and `-O3`, independently of Rack. Run from the repository

@@ -177,7 +177,7 @@ jobs:
           make -j2 all
           test -s "$PLUGIN_BINARY"
 
-      - name: Run all five headless Rack suites
+      - name: Run headless Rack and benchmark-runner suites
         run: |
           if [ "$RUNNER_OS" = Windows ]; then
             # Prefer the compiler's current C++ runtime over the installer's

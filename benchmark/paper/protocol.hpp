@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -62,13 +63,23 @@ struct Row {
     Row(std::string k, size_t i, size_t a, size_t s, size_t length, double time) :
         kind(k), index(i), analyzer(a), sample(s), samples(length), ns(time) {}
 };
-inline void print(const std::vector<Row>& rows) {
-    std::cout.precision(17);
-    std::cout << "kind,index,analyzer,sample,samples,ns,endpoint_age_samples,center_age_samples,callback_visible_age_samples,playback_delay_samples\n";
+/// @brief Optional single-threaded result sink, invoked only after measurement.
+/// Publication CLI output remains unchanged when no development sink is set.
+inline std::function<void(const std::vector<Row>&)>& result_sink() {
+    static std::function<void(const std::vector<Row>&)> sink;
+    return sink;
+}
+inline void print_csv(const std::vector<Row>& rows, std::ostream& out) {
+    out.precision(17);
+    out << "kind,index,analyzer,sample,samples,ns,endpoint_age_samples,center_age_samples,callback_visible_age_samples,playback_delay_samples\n";
     for (const auto& r : rows)
-        std::cout << r.kind << ',' << r.index << ',' << r.analyzer << ',' << r.sample << ','
+        out << r.kind << ',' << r.index << ',' << r.analyzer << ',' << r.sample << ','
             << r.samples << ',' << r.ns << ',' << r.endpoint_age << ',' << r.center_age
             << ',' << r.visible_age << ',' << r.playback_delay << '\n';
+}
+inline void print(const std::vector<Row>& rows) {
+    if (result_sink()) result_sink()(rows);
+    else print_csv(rows, std::cout);
 }
 
 /// @brief Same-thread fixed DSP load; never calibrate load to a target percentage.

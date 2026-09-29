@@ -5,6 +5,13 @@ complements the Catch2 throughput benchmarks with individual observations,
 matched frame controls, and a repeatable protocol for future FFT backends.
 It does not update the manuscript's historical results or claim a speedup.
 
+For routine optimization, use the [fast C++ development pathway](DEVELOPMENT.md):
+`make benchmark-fast` runs a small fixed matrix, and `make benchmark-full`
+checks a broader development matrix. They build incrementally, reuse this
+protocol's C++ adapters and checks, retain raw observations, and compare
+matching baselines. The Python runner described here remains the publication
+archiver with fresh-process, resource-audit, and source/dependency archives.
+
 The [external comparison spec](../../specs/004-external-fft-comparison.md)
 records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
 implementation status, acceptance checks, and intended publication tables and
