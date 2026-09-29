@@ -24,9 +24,13 @@ exhaustive bibliometric survey.
 | `jacobsen2003` | [Jacobsen's later exposition and references](https://www.dsprelated.com/showarticle/776.php) | Sliding DFT distinction; IEEE Signal Processing Magazine 20(2), 74-80 |
 | `lyons2021` | [University author record](https://digital.library.adelaide.edu.au/items/14d4a218-cff8-47ca-aeae-eb543ab04b4f/full), [accepted manuscript](https://digital.library.adelaide.edu.au/dspace/bitstream/2440/133370/3/hdl_133370.pdf) | Abstract and bibliographic metadata: guaranteed-stable sliding networks and frequency-flexible analysis; no reproduced equations or performance ranking |
 | `richardson2019` | [Author-deposited preprint and journal metadata](https://arxiv.org/abs/1707.08213) | Tree reuse across windows; published as Algorithm 991 in ACM TOMS 45(1), article 12 |
+| `garrido2016` | [University-hosted postprint](https://www.diva-portal.org/smash/get/diva2:1014928/FULLTEXT01.pdf) | Sections III-VI: feedforward butterfly reuse, retained buffers, real-input symmetry, and limits of transferring hardware/MATLAB results to Rack |
 | `park2014` | [Author publication list](https://home.sejong.ac.kr/~cspark/2.html), [author-uploaded manuscript](https://www.researchgate.net/publication/260522366_The_Hopping_Discrete_Fourier_Transform_sp_TipsTricks) | Sections 1 and 3-4: reuse across multi-sample hops; separates arithmetic reuse from within-hop work placement |
 | `rafii2018` | [Author-hosted published paper](https://zafarrafii.com/Documents/Journals/Rafii%20-%20Sliding%20Discrete%20Fourier%20Transform%20with%20Kernel%20Windowing%20-%202018.pdf) | Printed pp. 88-90: window kernels, short Hann/Blackman kernels, and approximation when sparsifying general kernels; motivates matched windowing and accuracy checks |
+| `eleftheriadis2023` | [University publication record](https://pure.qub.ac.uk/en/publications/energy-efficient-short-time-fourier-transform-for-partial-window-/), [accepted manuscript](https://pureadmin.qub.ac.uk/ws/portalfiles/portal/487442168/main.pdf) | Partial-overlap frequency decomposition and frequency-domain Hann windowing; fixed-point ASIC evidence does not establish CPU performance |
+| `becoulet2021` | [Author-uploaded preprint](https://www.researchgate.net/publication/348040518_A_Depth-First_Iterative_Algorithm_for_the_Conjugate_Pair_Fast_Fourier_Transform), [published-paper record](https://www.researchgate.net/publication/349414360_A_Depth-First_Iterative_Algorithm_for_the_Conjugate_Pair_Fast_Fourier_Transform), [DOI](https://doi.org/10.1109/TSP.2021.3060279) | Iterative depth-first conjugate-pair FFT; constant auxiliary indexing space, not constant total FFT storage; motivates a separate resumable adaptation |
 | `frigo2005` | [Authors' full paper](https://fftw.org/fftw-paper-ieee.pdf), [author publication record](https://fftw.org/~athena/abstracts/abstract8.html) | Optimized FFT implementations as an unmeasured comparison class |
+| `vanderbyl2016` | [Publisher abstract and section summaries](https://www.sciencedirect.com/science/article/abs/pii/S1051200416000142), [DOI](https://doi.org/10.1016/j.dsp.2016.01.008) | Floating- and fixed-point error across sliding DFT structures; motivates proposed numerical checks without reproducing uninspected rankings |
 | `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
 | `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
 | `wilhelm2008` | [University-hosted published paper](https://www.es.mdh.se/pdf_publications/1258.pdf), [DOI](https://doi.org/10.1145/1347375.1347389) | Section 1 and Figure 1: observed extrema, actual worst-case execution time, and safe bounds; processor-state complications |
@@ -61,6 +65,16 @@ threading comparison and Wilhelm et al. for timing-bound terminology. The
 report distinguishes engine publication from screen updates, and work-count
 bounds from execution-time guarantees. Neither addition supplies new
 measurements or a performance ranking for Fourier.
+
+The further additions cover depth-first FFT traversal (Bécoulet and Verguet),
+feedforward overlap reuse (Garrido), partial-overlap Hann analysis
+(Eleftheriadis et al.), and numerical-error methodology (van der Byl and Inggs).
+Bécoulet and Verguet's inspected preprint is dated 2020; the bibliography uses
+the 2021 journal publication. The van der Byl and Inggs discussion is limited
+to the indexed publisher abstract and section summaries; the full article was
+not accessible. The suggested suspension, matched-window, and long-stream
+accuracy experiments are this report's proposals, not measurements reported
+by those sources or completed experiments in this repository.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.

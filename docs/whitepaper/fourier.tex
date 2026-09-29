@@ -183,7 +183,17 @@ frequency~\cite{lyons2021}. Recursive analysis therefore includes designs that
 explicitly address stability; recursion alone is not grounds to reject it.
 Tree-based sliding-window transforms
 reuse intermediate calculations~\cite{richardson2019}. The plugin's resumable FFT
-has neither form of inter-frame reuse: each new frame begins a fresh transform.
+does not reuse work across frames: each new frame begins a fresh transform.
+
+Garrido's feedforward STFT reuses radix-2 decimation-in-time butterflies across
+successive one-sample window shifts~\cite{garrido2016}. Its feedforward graph
+avoids the feedback accumulation of error in the iterative formulation it
+compares, while retaining intermediate results in buffers. This is distinct
+from claiming zero numerical error. The paper also exploits real-input symmetry.
+Its basic formulation uses a rectangular window and a one-sample hop; matching
+our window and output cadence requires additional consideration. Neither its
+hardware comparisons nor its small MATLAB timing example establish a performance
+ranking for this plugin.
 
 Park and Ko's hopping DFT updates a spectrum from the spectrum one hop earlier,
 without computing every intervening sample's spectrum~\cite{park2014}.
@@ -202,6 +212,23 @@ underlying recurrence. Selecting among these methods requires matching bin
 count, hop, window convention, normalization, and numerical behavior. Our
 experiments do not measure that tradeoff against sliding or hopping methods.
 
+Eleftheriadis, Garrido, and Karakonstantis combine partial window overlap with
+frequency-domain Hann windowing~\cite{eleftheriadis2023}. Their frequency
+decomposition updates a prior spectrum using corrections from entering and
+leaving sample blocks. This connects multi-sample hops and efficient windowing
+in one design. The reported fixed-point ASIC results motivate a software
+comparison, but do not establish CPU savings or long-run floating-point
+accuracy. Scheduling the correction work within our hop budget would be a
+further adaptation, not a result demonstrated by that paper.
+
+Within a single transform, B\'ecoulet and Verguet give a depth-first iterative
+conjugate-pair FFT~\cite{becoulet2021}. Their traversal uses integer indexing
+without recursion or precomputed index tables, with constant auxiliary space
+for traversal and input reordering; this is not a constant-space claim for all
+transform storage. The approach offers another way to organize locality and
+traversal state. It does not itself provide our resumable scheduling contract:
+bounded suspension units and their cost would need to be established separately.
+
 Finally, optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
 time~\cite{frigo2005}. Our timing baseline deliberately holds the arithmetic
@@ -218,7 +245,7 @@ Approach & What changes incrementally & Principal distinction \\
 Batch FFT & A complete frame per invocation & Implementation can optimize the whole call. \\
 Resumable FFT here & Traversal of one frozen frame & Caller controls work placement; no inter-frame reuse. \\
 Acquisition-aware FFT & Available subtransforms during acquisition & Depends on input-arrival order and transform graph. \\
-Sliding/hopping/tree DFT & Spectra or intermediate results across windows & Reuses overlap; different state and error analysis. \\
+Sliding/hopping/tree/\allowbreak feedforward methods & Spectra or intermediate results across windows & Reuses overlap; different state and error analysis. \\
 Worker-thread FFT & Execution on another scheduled thread & Requires ownership, synchronization, and deadline policy. \\
 \bottomrule
 \end{tabular}
@@ -969,15 +996,24 @@ analysis completion. Our exact-hop publication cadence does not guarantee
 equally spaced screen updates or bound the age of the spectrum when displayed;
 the archived timing campaigns do not measure that path.
 
-A complementary experiment should compare hopping and windowed sliding
-methods~\cite{park2014,rafii2018} across transform lengths, hops, and requested
+A complementary experiment should compare hopping, windowed sliding, and
+feedforward methods~\cite{garrido2016,park2014,rafii2018,eleftheriadis2023}
+across transform lengths, supported hops, and requested
 bin counts. It should retain equivalent windowing, normalization, smoothing,
-and output processing, and report memory, aggregate cost, publication delay,
+and output processing, and report storage, memory traffic, aggregate cost, publication delay,
 and block-duration tails. A periodic-Hann baseline would permit an exact short
-window kernel; truncated kernels should be evaluated separately. Long-running
-error checks against independent transforms, including weak tones beside
-strong ones, would test accuracy as well as execution cost. These are proposed
-comparisons, not results of the archived campaigns.
+window kernel; truncated kernels should be evaluated separately. Real-input
+variants should be included where available.
+
+Van der Byl and Inggs examine error in several sliding DFT structures under
+floating- and fixed-point arithmetic~\cite{vanderbyl2016}. Their study motivates
+treating numerical accuracy as a separate criterion from stability. Our proposed
+evaluation would compare long streams against independently recomputed transforms
+in single and double precision, including weak tones beside strong ones and
+silence following a strong signal. It should track complex-bin and magnitude
+error over time, and phase error where the reference magnitude is appreciable.
+These workloads are our proposed methodology, not a reproduction of that study
+or results of the archived campaigns.
 
 Sample-call costs should also not be confused with device-buffer deadlines.
 If the host renders $D$ samples in one device callback, its relevant demand is
@@ -1023,6 +1059,11 @@ short subtransforms under the same hop and publication-latency constraint.
 Coarser units may improve locality and reduce scheduling overhead, but increase
 the indivisible work charged to a call. Both effects require measurement;
 the present study establishes no preferred granularity beyond its tested design.
+The depth-first traversal of B\'ecoulet and Verguet~\cite{becoulet2021}
+suggests a related experiment: compare immediate and resumable execution of
+each candidate kernel, across working-set sizes and concurrent analyzer counts.
+This would separate changes in factorization and locality from the effect of
+suspension, while retaining the same output and latency requirements.
 
 The scheduler always completes its work-count quota before advancing its
 logical hop. If a host call runs late, it does not silently overwrite an
@@ -1307,6 +1348,12 @@ vol. 45, no. 1, article 12, 2019.
 \href{https://doi.org/10.1145/3264426}{doi:10.1145/3264426}.
 Preprint: \url{https://arxiv.org/abs/1707.08213}.
 
+\bibitem{garrido2016}
+M. Garrido, ``The feedforward short-time Fourier transform,''
+\emph{IEEE Transactions on Circuits and Systems II: Express Briefs},
+vol. 63, no. 9, pp. 868--872, 2016.
+\href{https://doi.org/10.1109/TCSII.2016.2534838}{doi:10.1109/TCSII.2016.2534838}.
+
 \bibitem{park2014}
 C.-S. Park and S.-J. Ko, ``The hopping discrete Fourier transform,''
 \emph{IEEE Signal Processing Magazine}, vol. 31, no. 2, pp. 135--139, 2014.
@@ -1317,10 +1364,29 @@ Z. Rafii, ``Sliding discrete Fourier transform with kernel windowing,''
 \emph{IEEE Signal Processing Magazine}, vol. 35, no. 6, pp. 88--92, 2018.
 \href{https://doi.org/10.1109/MSP.2018.2855727}{doi:10.1109/MSP.2018.2855727}.
 
+\bibitem{eleftheriadis2023}
+C. Eleftheriadis, M. Garrido, and G. Karakonstantis, ``Energy-efficient
+short-time Fourier transform for partial window overlapping,'' in
+\emph{Proceedings of the IEEE International Symposium on Circuits and
+Systems (ISCAS)}, 2023.
+\href{https://doi.org/10.1109/ISCAS46773.2023.10181940}{doi:10.1109/ISCAS46773.2023.10181940}.
+
+\bibitem{becoulet2021}
+A. B\'ecoulet and A. Verguet, ``A depth-first iterative algorithm for the
+conjugate pair fast Fourier transform,'' \emph{IEEE Transactions on Signal
+Processing}, vol. 69, pp. 1537--1547, 2021.
+\href{https://doi.org/10.1109/TSP.2021.3060279}{doi:10.1109/TSP.2021.3060279}.
+
 \bibitem{frigo2005}
 M. Frigo and S. G. Johnson, ``The design and implementation of FFTW3,''
 \emph{Proceedings of the IEEE}, vol. 93, no. 2, pp. 216--231, 2005.
 \href{https://doi.org/10.1109/JPROC.2004.840301}{doi:10.1109/JPROC.2004.840301}.
+
+\bibitem{vanderbyl2016}
+A. van der Byl and M. R. Inggs, ``Constraining error---a sliding discrete
+Fourier transform investigation,'' \emph{Digital Signal Processing},
+vol. 51, pp. 54--61, 2016.
+\href{https://doi.org/10.1016/j.dsp.2016.01.008}{doi:10.1016/j.dsp.2016.01.008}.
 
 \bibitem{mytkowicz2009}
 T. Mytkowicz, A. Diwan, M. Hauswirth, and P. F. Sweeney,

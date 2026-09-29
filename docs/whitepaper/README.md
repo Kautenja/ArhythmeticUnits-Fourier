@@ -179,10 +179,14 @@ recorded in [sources.md](sources.md).
 
 The September 29 additions integrate Prusa and Holighaus (2016) into related
 work and the display-latency discussion, and Wilhelm et al. (2008) into the
-discussion of execution-time bounds. The manuscript remains version 2 and is
-now 21 pages with 22 cited references. Both LaTeX builds and the artifact check
+discussion of execution-time bounds. Further additions cover Bécoulet and
+Verguet's depth-first FFT (2021), Garrido's feedforward STFT (2016), and
+Eleftheriadis et al.'s partial-overlap STFT (2023), with van der Byl and Inggs
+(2016) informing the proposed numerical-error evaluation. The manuscript
+remains version 2 and is now 22 pages with 26 cited references.
+Both LaTeX builds and the artifact check
 pass; the final LaTeX pass has no unresolved references or box warnings.
-All 21 rendered pages were visually inspected, and `git diff --check` passes.
+All 22 rendered pages were visually inspected, and `git diff --check` passes.
 These additions preserve the campaign data and introduce no new timing,
 DSP, Rack build, or manual Rack validation results.
 
