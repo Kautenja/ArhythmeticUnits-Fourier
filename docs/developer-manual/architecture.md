@@ -27,8 +27,6 @@ changing DSP, Rack modules, or displays.
 -   `manual/Fourier/` and `manual/Spectre/` contain LaTeX user manuals and
     illustrations. Developer guidance lives here in `docs/developer-manual/`.
 -   `patches/` and `presets/` provide Rack examples and saved module settings.
--   `notebooks/` contains exploratory DSP and window-function calculations.
-    Notebooks support reasoning but do not replace production regression tests.
 
 ## Analysis Flow
 
