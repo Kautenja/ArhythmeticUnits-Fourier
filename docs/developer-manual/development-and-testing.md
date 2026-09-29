@@ -7,19 +7,20 @@ the VCV Rack plugin.
 ## Dependencies
 
 For standalone tests, use Python with SCons, a C++11-capable compiler
-available as `g++`, and the pinned Catch2 submodule. `SConstruct` currently
+available as `g++`, and the repository's Catch2 headers. `SConstruct` currently
 sets `CXX='g++'`; do not assume an environment `CXX` override changes it.
 On macOS, `g++` may resolve to Apple Clang.
 
-Initialize the recorded dependency revision after cloning:
+Initialize any recorded submodules after cloning:
 
 ```shell
 git submodule update --init --recursive
 ```
 
-The checked-in submodule reference supplies Catch2 v2's single-header
-`catch.hpp` at `dep/Catch2/single_include/catch2/`. Do not substitute Catch2
-v3 without a deliberate build/test migration.
+Catch2 v2's single-header `catch.hpp` is currently tracked directly at
+`dep/Catch2/single_include/catch2/`, although `.gitmodules` also records that
+dependency path. Do not substitute Catch2 v3 without a deliberate
+build/test migration.
 
 The plugin requires a compatible Rack 2 SDK or prepared Rack source tree,
 including `plugin.mk`, headers, dependencies, and the Rack library. Its
@@ -67,6 +68,19 @@ test passes. Seed randomized fixtures when used.
 Tests compile as C++11 without `-O3`; benchmarks use `-O3`. Scalar DSP test
 success does not prove Rack SIMD instantiations compile or behave correctly.
 
+## Continuous Integration
+
+The [DSP tests workflow](../../.github/workflows/dsp-tests.yml) runs
+`scons test` on pull requests and pushes to `main`, including merges. Pushes
+to other branches do not trigger a separate run. It checks out dependencies
+recursively, verifies the Catch2 header is present, and installs GCC and
+SCons on one Ubuntu runner. New updates cancel older runs for the same pull
+request or branch, and each job has a 15-minute timeout to limit usage.
+
+This workflow covers the standalone suites only. Rack plugin builds,
+serialization integration tests, benchmarks, and manual UI checks remain
+separate validation steps.
+
 ## Rack Plugin Build
 
 With the default Rack layout:
@@ -111,7 +125,7 @@ using the actual module, plus missing-field defaults. The `test/rack/` tests
 are built by Make and excluded from the standalone SCons suites. This does
 not exercise the Rack UI or loading a complete patch file.
 
-There is currently no automated UI gate or CI workflow in this repository.
+There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that
 standalone tests exercised the module widgets or patch loading.
 

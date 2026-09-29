@@ -1,0 +1,35 @@
+name: DSP tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Standalone DSP suites
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out source and Catch2
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install test tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends g++ scons
+
+      - name: Run DSP suites
+        run: |
+          test -f dep/Catch2/single_include/catch2/catch.hpp
+          scons test
