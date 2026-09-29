@@ -119,4 +119,4 @@ header at `dep/Catch2/single_include/catch2/catch.hpp` to run its original test
 suite. Preserve the old campaign metadata rather than attributing its
 measurements to the production implementation. Current production validation
 commands are documented in the
-[developer manual](../../../developer-manual/development-and-testing.md).
+[contributor guide](../../../../CONTRIBUTING.md#development-and-testing).

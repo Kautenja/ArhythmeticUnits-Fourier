@@ -136,13 +136,12 @@ keep their embedded module settings.
 
 ## Development
 
-The [developer guide](docs/developer-manual/development-and-testing.md)
-covers dependencies, plugin builds, DSP tests, Rack integration checks,
-and manual verification. See the
-[architecture map](docs/developer-manual/architecture.md) for processing
-and display boundaries, the
-[C++ style guide](docs/developer-manual/style-guide-cpp.md) for coding
-conventions, and [AGENTS.md](AGENTS.md) for coding-agent instructions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, architecture,
+builds, tests, benchmarks, and the pull request workflow. The
+[C++](docs/developer-manual/style-guide-cpp.md) and
+[Markdown](docs/developer-manual/style-guide-markdown.md) style guides cover
+coding and documentation conventions. Coding agents should also follow
+[AGENTS.md](AGENTS.md).
 
 Found a problem or have an idea? [Open an issue][issues] with your Rack
 and plugin versions, operating system, and steps to reproduce a bug.

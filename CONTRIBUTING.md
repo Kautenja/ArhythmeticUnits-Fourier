@@ -1,35 +1,269 @@
-# Development And Testing
+# Contributing To Fourier
+
+Help improve Fourier and Spectre through bug reports, documentation, tests,
+and code. This guide gets you from a fresh checkout to a tested contribution.
+It also covers the architecture, build targets, test coverage, benchmarks,
+and platform limitations used when reviewing changes.
+
+-   [Set up your environment](#set-up-your-environment)
+-   [Understand the architecture](#architecture)
+-   [Build and test](#development-and-testing)
+-   [Choose validation for your change](#choosing-validation)
+-   [Submit a pull request](#submit-a-pull-request)
+
+## Before You Start
+
+Search the [existing issues][issues] before reporting a bug or proposing a
+feature. For a bug, include the Rack and plugin versions, operating system,
+sample rate, steps to reproduce, and expected versus observed behavior.
+A minimal patch or screenshot helps; mention any additional plugins or
+sample files it needs. Discuss substantial behavior or interface changes
+in an issue before investing in the implementation.
+
+Read the [architecture overview][architecture] and the relevant
+[C++][cpp-style] or [Markdown][markdown-style] style guide before editing.
+If you use a coding agent, also have it follow [AGENTS.md](AGENTS.md).
+
+## Set Up Your Environment
+
+Fourier has two separate build paths:
+
+| Work | Required Tools |
+| --- | --- |
+| Standalone DSP tests | Git, Python 3, SCons, and a C++11 compiler |
+| Rack plugin and integration tests | The above, plus Make, `jq`, and a compatible Rack 2 SDK or prepared Rack source tree |
+| Interactive module checks | A Rack 2 installation matching your plugin's platform and architecture |
+| User manual PDFs | Make and a TeX distribution with `pdflatex` and the manual's packages |
+
+You can work on reusable DSP and run its tests without installing Rack.
+Markdown-only contributions do not require a C++ or TeX toolchain.
+
+### Install The Test Tools
+
+Run the commands for your platform from any directory. They set up the
+standalone test tools; the Rack build has additional requirements below.
+
+On macOS, install Apple's Command Line Tools if needed, then use an existing
+Homebrew installation:
+
+```shell
+xcode-select --install
+brew install git python scons
+```
+
+On Ubuntu or Debian, use the system packages:
+
+```shell
+sudo apt-get update
+sudo apt-get install git build-essential python3 scons
+```
+
+On Windows, install MSYS2 and use its **UCRT64** shell for standalone tests.
+After completing MSYS2's initial package updates, install:
+
+```shell
+pacman -S --needed git mingw-w64-ucrt-x86_64-gcc python scons
+```
+
+Use MSYS2's Python and SCons in that shell, as in the standalone Windows CI
+environment. For Rack plugin builds, follow VCV's platform toolchain
+instructions below.
+
+### Get The Source
+
+From your projects directory, clone the repository. To submit a pull
+request, fork it on GitHub first and substitute your fork's clone URL:
+
+```shell
+git clone --recurse-submodules https://github.com/Kautenja/ArhythmeticUnits-Fourier.git Fourier
+cd Fourier
+git submodule update --init --recursive
+test -f dep/Catch2/single_include/catch2/catch.hpp
+```
+
+Catch2 v2's header is tracked in this repository, although `.gitmodules`
+also records its path. Use the supplied header rather than installing or
+substituting Catch2 v3.
+
+Run all remaining commands from this repository root unless noted otherwise.
+Create a branch for your contribution; replace the example name with one
+that describes your change:
+
+```shell
+git switch -c docs/contributor-setup
+```
+
+### Configure The Rack SDK
+
+Follow [VCV's build environment instructions][rack-building] for your
+operating system and download a Rack 2 SDK for your platform and CPU
+architecture. An SDK avoids building the host from source. Install the
+listed platform tools, including Make and `jq`; packaging also needs
+`zstd`. Use checkout and SDK paths without spaces.
+
+Replace the placeholder below with the absolute path to the extracted SDK.
+It must contain `plugin.mk`, `include/`, `dep/include/`, and the Rack library:
+
+```shell
+export RACK_DIR=/absolute/path/to/Rack-SDK
+test -f "$RACK_DIR/plugin.mk"
+```
+
+Keep `RACK_DIR` set for subsequent Make commands in the same shell. If the
+checkout lives at `Rack/plugins/Fourier` inside a prepared Rack source tree,
+you can omit the export: the default `RACK_DIR=../..` selects that tree.
+An installed Rack application alone is not an SDK.
+
+Continue with [standalone tests](#standalone-dsp-tests) and the
+[Rack plugin build](#rack-plugin-build) below.
+
+## Architecture
+
+This section maps Fourier's source and the boundaries to preserve when
+changing DSP, Rack modules, or displays.
+
+### Source Map
+
+-   `src/plugin.cpp` registers the two models; `src/plugin.hpp` connects Rack,
+    shared helpers, and the plugin instance.
+-   `src/SpectrumAnalyzer.cpp` contains the Fourier module, display, and
+    widget. It analyzes four input ports using `simd::float_4` lanes.
+-   `src/Spectrogram.cpp` contains the Spectre module, spectral image display,
+    and widget. It uses scalar processing and a history of spectra.
+-   `src/structs.hpp` contains shared display/analysis enums and conversions.
+-   `src/dsp/spectrum_analysis.hpp` owns the bounded one-hop analysis schedule
+    shared by the scalar and SIMD modules.
+-   `src/dsp/` contains mostly header-only math, filters, triggers, and music
+    theory in a flat set of focused headers. Consumers include the headers
+    they use directly.
+-   `src/rack_extensions/` contains Rack graphics and control helpers.
+-   `test/dsp/` mirrors the flat DSP header layout. `test/functions.hpp` and
+    `test/ieee754.hpp` provide test helpers.
+-   `benchmark/dsp/` holds standalone DSP benchmarks; `benchmark/rack/`
+    measures headless module processing and display preparation. See the
+    testing section for workloads and interpretation.
+-   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
+-   `docs/manual/Fourier/` and `docs/manual/Spectre/` contain LaTeX user manuals
+    and illustrations. Contributor guidance lives in this file; style guides
+    live in `docs/developer-manual/`.
+-   `patches/` and `presets/` provide Rack examples and saved module settings.
+
+### Analysis Flow
+
+Rack calls each module's `process(const ProcessArgs&)` for engine samples.
+The modules normalize Eurorack voltages, maintain double-precision DC-blocker
+state per input, and apply gain. The higher-precision filter state prevents
+roundoff from accumulating as a DC offset in short repeating signals; FFT and
+display storage remain float (four SIMD lanes in Fourier).
+`SpectrumAnalysis<T>` retains input and distributes windowing/packing,
+butterflies, real-spectrum reconstruction, magnitude prefix sums,
+frequency/time smoothing, and the output callback over one exact hop.
+
+For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=M+B+2K work units.
+Sample s executes `floor((s+1)W/H)-floor(sW/H)` units. A quotient/remainder
+accumulator implements that schedule without per-sample quota division.
+Frames end at input indices jH and publish at jH+H-1, starting with zero
+padding. This intentionally replaces the earlier restart-on-FFT-completion
+cadence. Settings latch at each frame start; mid-frame changes apply next hop.
+The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
+The [technical report](docs/whitepaper/fourier.tex) derives the work bound,
+input lifetime, smoothing, and timestamp conventions in its production
+successor section; its appendix collects the supporting algorithms. The user
+manuals focus on controls, displays, operating behavior, and practical setting
+choices, and link to the report for mathematical details.
+
+Maximum-size twiddle/permutation tables serve every supported FFT size.
+Window and smoothing-bound changes rebuild their cached entries inside
+scheduled units, without resizing processing storage. A length change clears
+input/averaging logically. Reset and sample-rate callbacks cancel partial
+frames and clear analysis history. Fourier's retained ring is prepared for
+the maximum panel hop at the current sample rate.
+
+Fourier maps each four-lane output bin through `SpectrumCoordinates` into a
+producer-owned curve snapshot. A constant-size atomic exchange publishes the
+complete snapshot; the display keeps the consumer slot until its next read.
+Spectre writes each output bin directly into the next column mailbox and
+publishes when the hop completes. Its coefficient history lives only in the
+UI, which recolors changed columns. Slope, color map, frequency scale, or
+sample rate rebuild all pixels; cropping/resizing reuse the image. Unchanged
+draws do not upload an image. Both modules have no audio outputs.
+
+Read the actual processing functions before changing run/freeze semantics:
+the two modules do not currently gate their processing identically. Also
+check `onReset`, `onSampleRateChange`, `dataToJson`, and `dataFromJson` for
+state transitions affected by a change.
+
+### Ownership And Threading
+
+DSP headers must remain usable by the standalone test build without Rack.
+Generic templates may be instantiated with Rack SIMD values by module code;
+the generic header should not need to include Rack to support that use.
+
+Both displays cache backgrounds and grids with Rack framebuffers, invalidated
+by size, bounds, scale, sample rate, zoom, and graphics-context changes. Label
+strings and positions are cached with the artwork; glyphs render in the live
+context to avoid missing glyphs observed during framebuffer rebuilds.
+Hover overlays remain live. Curve and column buffers cross the engine/UI
+boundary only through single-producer/single-consumer ownership exchanges.
+Displays must not consume each other's mailbox slots concurrently.
+
+Keep analysis on the engine side and NanoVG calls on the display side.
+Document who owns mutable buffers, who reads them, and when a reader can
+observe an update. Avoid new unsynchronized engine/UI sharing or locks that
+could block the engine. Do not assume existing shared vectors and readiness
+flags make concurrent access safe.
+
+Steady-state analysis and live FFT/window/smoothing changes do not allocate.
+Construction prepares maximum-size storage. Increasing the host sample rate
+can grow Fourier's retained-input ring in `onSampleRateChange`; that callback
+may allocate. Spectre's reset still clears and publishes all history columns.
+These lifecycle costs, UI work, OS scheduling, atomics, and unequal unit costs
+prevent a broad claim of constant-time or hard real-time behavior. Existing
+panel/menu state sharing is separate from the synchronized spectrum buffers.
+
+### Compatibility
+
+The plugin slug is `ArhythmeticUnits-Fourier`; the model slugs are
+`SpectrumAnalyzer` and `Spectrogram`. These identities appear in saved
+patches and must remain stable even if display names change.
+
+Rack serializes parameter and port identities by their enum positions.
+Append new IDs where possible, preserve existing positions, and account
+for `ENUMS` ranges. Custom JSON keys and enum values also form a persistence
+contract. Handle missing fields with sensible defaults and validate values
+before they become sizes, indices, or DSP settings.
+
+Treat channel routing, summed polyphonic inputs, voltage normalization,
+FFT bin layout, DC/Nyquist treatment, window coherent gain, and decibel
+scaling as behavior contracts. A refactor must preserve them unless changing
+that contract is the explicit task.
+
+### Build Boundaries
+
+The root `Makefile` compiles `src/*.cpp` into the Rack plugin using the
+selected Rack tree's `plugin.mk`. Nested `.cpp` files are not automatically
+included by that wildcard.
+
+`SConstruct` builds standalone DSP tests and benchmarks and discovers
+`.cpp` files recursively under `src/dsp`, `test`, and `benchmark/dsp`.
+Rack benchmark and test sources are excluded and built separately by Make.
+SCons does not build the Rack modules or exercise their SIMD instantiations
+and UI.
+See [Development And Testing](#development-and-testing) for commands.
+
+## Development And Testing
 
 Run the commands below from the repository root. The two build systems
 serve different purposes: SCons verifies standalone DSP, while Make builds
 the VCV Rack plugin.
 
-## Dependencies
+### Standalone DSP Tests
 
-For standalone tests, use Python with SCons, a C++11-capable compiler
-available as `g++`, and the repository's Catch2 headers. SCons accepts a
-command-line compiler override such as `scons CXX=clang++ test`; an environment
-`CXX` alone does not override its default.
-On macOS, `g++` may resolve to Apple Clang.
-
-Initialize any recorded submodules after cloning:
-
-```shell
-git submodule update --init --recursive
-```
-
-Catch2 v2's single-header `catch.hpp` is currently tracked directly at
-`dep/Catch2/single_include/catch2/`, although `.gitmodules` also records that
-dependency path. Do not substitute Catch2 v3 without a deliberate
-build/test migration.
-
-The plugin requires a compatible Rack 2 SDK or prepared Rack source tree,
-including `plugin.mk`, headers, dependencies, and the Rack library. Its
-Makefiles also use tools such as `jq`; inspect the selected Rack build
-files for platform-specific requirements. The default `RACK_DIR=../..`
-supports a checkout under `Rack/plugins/Fourier`.
-
-## Standalone DSP Tests
+Use Python 3, SCons, a C++11-capable compiler, and the supplied Catch2
+headers from the [environment setup](#set-up-your-environment). SCons
+defaults to `g++`, which may resolve to Apple Clang on macOS. To choose
+Clang explicitly, use `scons CXX=clang++ test`; an environment `CXX` alone
+does not override this build's default.
 
 Run all suites:
 
@@ -83,9 +317,9 @@ The SIMD suite compares independent scalar filters with all four Rack SIMD
 lanes under different signals and settings, including reconfiguration and
 reset. It is separate from `scons test` and runs in CI's Rack job.
 
-## Continuous Integration
+### Continuous Integration
 
-The [DSP tests workflow](../../.github/workflows/dsp-tests.yml) runs
+The [DSP tests workflow](.github/workflows/dsp-tests.yml) runs
 `scons test` on pull requests and pushes to `main`, including merges. Pushes
 to other branches do not trigger a separate run. It checks out dependencies
 recursively and verifies the Catch2 header is present. Its three DSP jobs use
@@ -118,9 +352,9 @@ Rack CI currently covers Linux x64 only. Plugin builds and Rack integration
 tests on macOS and Windows, benchmarks, and manual UI checks remain separate
 validation steps. The headless tests do not replace an interactive Rack session.
 
-## Coverage And Sanitizers
+### Coverage And Sanitizers
 
-The [instrumentation workflow](../../.github/workflows/instrumentation.yml)
+The [instrumentation workflow](.github/workflows/instrumentation.yml)
 runs on pull requests, pushes to `main`, and manual dispatch. Four independent
 Ubuntu 24.04 jobs run DSP/Rack coverage and combined ASan/UBSan with Clang 18.
 Rack jobs use the same pinned Rack 2.6.3 SDK as the ordinary Rack CI job.
@@ -153,7 +387,7 @@ CXX=clang++-18 LLVM_PROFDATA=llvm-profdata-18 LLVM_COV=llvm-cov-18 \
     python3 scripts/check-instrumented.py coverage dsp
 ```
 
-### Coverage Reports
+#### Coverage Reports
 
 The [LLVM source coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html)
 reports are separate by test workload:
@@ -182,7 +416,7 @@ missing profiles can prevent report generation. Coverage reporting has no
 percentage threshold yet; assertion failures, missing profiles, or LLVM
 reporting failures fail the command.
 
-### Sanitizer Scope
+#### Sanitizer Scope
 
 Combined [ASan](https://clang.llvm.org/docs/AddressSanitizer.html) and
 [UBSan](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html) instrument
@@ -216,7 +450,7 @@ Passing these checks is not an instrumented Rack host run or a plugin build.
 Use ordinary builds and manual Rack checks separately. Do not use these
 slower builds for performance measurements or distribute them as plugins.
 
-## Rack Plugin Build
+### Rack Plugin Build
 
 With the default Rack layout:
 
@@ -235,7 +469,21 @@ The build produces a platform-specific `plugin.dylib`, `plugin.so`, or
 Use the selected SDK's install/package targets only when that action is
 part of the task; they are not necessary for a compile check.
 
-## Choosing Validation
+#### Install For Interactive Checks
+
+With the Rack build and packaging dependencies installed, close Rack and run
+from the repository root, using the same `RACK_DIR` as for the build:
+
+```shell
+make install
+```
+
+This builds a package in `dist/` and copies it into the selected Rack user
+folder, replacing that installation of Fourier when Rack next loads it.
+Reopen Rack and test the affected modules. See the
+[VCV plugin tutorial][rack-tutorial] for installation and loading diagnostics.
+
+### Choosing Validation
 
 -   **DSP behavior:** Run the focused suite while iterating, then `scons test`.
     Build the plugin when changed headers are consumed by Rack, especially
@@ -247,6 +495,13 @@ part of the task; they are not necessary for a compile check.
 -   **Documentation:** Check relative links, referenced paths and commands,
     Markdown structure, and `git diff --check`. No full build is required
     solely for prose changes.
+
+To run all five headless Rack suites with the configured SDK and its runtime
+dependencies, use:
+
+```shell
+make test-rack
+```
 
 Run the headless Fourier and Spectre save/load regressions with the same
 Rack dependency and repository Catch2 headers:
@@ -339,7 +594,7 @@ presets or patches when persistence changes. The `patches/` examples can
 help, but may require other plugins or local sample assets. Record the Rack
 version, sample rate, relevant settings, and observed result.
 
-## Benchmarks
+### Benchmarks
 
 The standalone Catch2 v2 benchmarks cover every computational DSP header.
 They build with C++11 and `-O3`, independently of Rack. Run from the repository
@@ -411,9 +666,9 @@ options, repeated results, and uncertainty. A smoke run or a single comparison
 is not evidence of a speedup. A microbenchmark does not establish whole-patch
 engine or display performance.
 
-### Publication Experiments
+#### Publication Experiments
 
-The [publication measurement protocol](../../benchmark/paper/README.md) adds
+The [publication measurement protocol](benchmark/paper/README.md) adds
 raw callback/step observations, continuous throughput, matched fixed-cadence
 RFFT controls, scalar/SIMD and module scaling, spectrum-age audits, background
 DSP load, cache pressure, and FFT/RFFT/IFFT phase measurements. It captures
@@ -431,7 +686,7 @@ underruns. The protocol explains timing overhead, output/latency contracts,
 full matrix/custom workloads, and the additional sessions required for paper
 results. The historical manuscript campaigns are preserved separately.
 
-### Rack DSP Processing
+#### Rack DSP Processing
 
 With the normal Rack build dependencies, run from the repository root:
 
@@ -456,7 +711,7 @@ display consumer, rendering, audio device, or host scheduling in this workload.
 The headless output sanity assertions verify that processing publishes spectra;
 the existing numerical regression suites remain the correctness oracle.
 
-### Module Operating States And Lifecycle
+#### Module Operating States And Lifecycle
 
 `benchmark/rack/modules.cpp` complements the fixed DSP workloads by creating
 both modules through their exported Rack model factories. From the repository
@@ -509,7 +764,7 @@ fixtures publish meaningful spectra, freeze correctly, reset display state,
 and round-trip complete module JSON; the Rack regression suites remain the
 numerical and compatibility oracle.
 
-### Rack Coordinates And Graphics
+#### Rack Coordinates And Graphics
 
 Build the Catch2 Rack benchmark executables, then run each target serially
 from the repository root with the normal Rack dependencies:
@@ -568,7 +823,7 @@ workloads do not time menu actions or serialization. Use the existing
 Rack regression tests and interactive checks for correctness, and record the
 same comparison metadata and uncertainty as for DSP benchmarks.
 
-### Display Preparation
+#### Display Preparation
 
 ```shell
 make benchmark-display
@@ -580,11 +835,11 @@ running, forced-rebuild, and engine-only workloads. Graphics workloads use
 120 frames; running supplies 800 engine samples per frame (48 kHz / 60 Hz).
 Engine-only supplies 32768 samples per iteration without drawing. It does not
 measure driver upload latency, GPU rendering, framebuffer speed, or whole-patch
-performance. The [raw display caching measurements](../../specs/archive/001-display-caching.csv)
+performance. The [raw display caching measurements](specs/archive/001-display-caching.csv)
 retain the historical before/after timings; the removed specification in Git
 history records the workload context and validation limits.
 
-### One-Hop Spectrum Analysis
+#### One-Hop Spectrum Analysis
 
 The production analyzer is tested independently of Rack and in both modules:
 
@@ -599,7 +854,7 @@ allocation-free live settings. Rack coverage adds scalar/SIMD comparison,
 curve ownership and publication, coordinate mapping, module allocation checks,
 and Spectre's exact cadence and freeze/resume behavior.
 
-The [historical pipeline campaign](../whitepaper/data/pipeline/README.md)
+The [historical pipeline campaign](docs/whitepaper/data/pipeline/README.md)
 retains pre-integration timing evidence and reproduction sources in an archive.
 It is not a benchmark of the current plugin. Verify that artifact separately:
 
@@ -607,7 +862,7 @@ It is not a benchmark of the current plugin. Verify that artifact separately:
 python3 docs/whitepaper/data/pipeline/check.py
 ```
 
-## User Manuals And Build Products
+### User Manuals And Build Products
 
 The existing multi-file LaTeX manuals use their own Makefiles and require
 `pdflatex` and their referenced packages:
@@ -621,7 +876,7 @@ The child Makefiles recreate their local build directories and stop on
 LaTeX errors. Shell escape is disabled. Inspect rendered pages
 when changing manual content or layout.
 
-The [user manuals workflow](../../.github/workflows/manuals.yml) builds both
+The [user manuals workflow](.github/workflows/manuals.yml) builds both
 PDFs on relevant pull requests and pushes to `main`, and saves them as the
 `user-manuals` workflow artifact. Ubuntu uses `texlive-latex-extra`,
 `texlive-fonts-recommended`, `texlive-science`, and `poppler-utils`; CI checks
@@ -648,3 +903,35 @@ the manual trigger in that case.
 Keep generated binaries, object files, SCons caches, PDFs, and build folders
 out of source changes. Use explicit SCons targets above: bare `scons` also
 involves the standalone shared-library target and is not the test command.
+
+## Submit A Pull Request
+
+Preserve file-level attribution and the source and artwork terms in
+[LICENSE.md](LICENSE.md).
+
+1.  Update affected user documentation, presets, and resources alongside
+    behavior changes. Keep unrelated formatting and dependency updates out
+    of the diff.
+2.  Review the changes and check whitespace from the repository root:
+
+    ```shell
+    git diff --check
+    git diff
+    git status --short
+    ```
+
+3.  Commit the intended files, push your branch to your fork, and open a
+    pull request against `main`. Complete the
+    [pull request template](.github/PULL_REQUEST_TEMPLATE.md) with the problem,
+    resulting behavior, relevant issue, and validation commands and results.
+4.  Include your OS, compiler, and Rack/SDK versions when relevant. For manual
+    checks, record sample rate, settings, and observations; include screenshots
+    for visual changes. State any checks you could not run and why.
+
+[issues]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/issues
+[testing]: #development-and-testing
+[architecture]: #architecture
+[cpp-style]: docs/developer-manual/style-guide-cpp.md
+[markdown-style]: docs/developer-manual/style-guide-markdown.md
+[rack-building]: https://vcvrack.com/manual/Building
+[rack-tutorial]: https://vcvrack.com/manual/PluginDevelopmentTutorial

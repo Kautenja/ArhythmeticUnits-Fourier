@@ -136,7 +136,8 @@ Keep failures and exceptions from escaping Rack processing callbacks.
 Do not add blocking locks, waits, file I/O, logging, drawing, or allocation
 to repeated engine processing. Prefer preallocated buffers and bounded work.
 Document preparation costs and ownership changes explicitly. Existing
-reconfiguration allocations are described in [Architecture](architecture.md)
+reconfiguration allocations are described in
+[Architecture](../../CONTRIBUTING.md#architecture)
 and should not be generalized into new hot-path behavior.
 
 Display code may prepare pixels and issue NanoVG calls, but must not mutate
@@ -146,8 +147,9 @@ and lifetime for buffers crossing that boundary.
 ## Tests And Review
 
 Use the pinned Catch2 v2 harness. Follow
-[Development And Testing](development-and-testing.md) for executable targets,
-signal fixtures, tolerances, Rack checks, and benchmark evidence.
+[Development And Testing](../../CONTRIBUTING.md#development-and-testing)
+for executable targets, signal fixtures, tolerances, Rack checks, and
+benchmark evidence.
 
 Before completing a change, check that its files have clear ownership,
 math and units are documented, generic DSP remains independent of Rack,

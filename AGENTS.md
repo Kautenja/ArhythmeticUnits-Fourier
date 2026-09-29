@@ -7,21 +7,21 @@ and compatibility with users' saved patches.
 
 ## Start Here
 
-Read this file and the relevant developer-manual articles before editing:
+Read this file and the relevant contributor and style guidance before editing:
 
--   [Architecture](docs/developer-manual/architecture.md): source map,
+-   [Architecture](CONTRIBUTING.md#architecture): source map,
     processing flow, Rack boundaries, and compatibility.
--   [Development And Testing](docs/developer-manual/development-and-testing.md):
+-   [Development And Testing](CONTRIBUTING.md#development-and-testing):
     dependencies, build commands, tests, benchmarks, and manual checks.
 -   [C++ Style Guide](docs/developer-manual/style-guide-cpp.md): required for
     C++ source, headers, tests, and benchmarks.
 -   [Markdown Style Guide](docs/developer-manual/style-guide-markdown.md):
     required for documentation changes.
 
-These instructions and the manual are self-contained. Their starting point
-was the `free-j` project's agent guidance and C++ guide, which was itself
-inspired by Fourier. That project is not a build dependency or a source of
-Fourier product requirements.
+These instructions and the contributor guide are self-contained. Their
+starting point was the `free-j` project's agent guidance and C++ guide,
+which was itself inspired by Fourier. That project is not a build dependency
+or a source of Fourier product requirements.
 
 ## Working In This Repository
 
@@ -103,7 +103,7 @@ For an explicitly authorized release, work from the repository root:
     versions. Preserve plugin and module slugs. Follow the
     [manifest version rules](https://vcvrack.com/manual/Manifest#version).
 2.  Run the applicable checks in
-    [Development And Testing](docs/developer-manual/development-and-testing.md),
+    [Development And Testing](CONTRIBUTING.md#development-and-testing),
     including DSP tests, a Rack plugin build, and affected manual Rack checks.
     Record which platforms were actually checked. VCV's
     [plugin toolchain](https://github.com/VCVRack/rack-plugin-toolchain)
