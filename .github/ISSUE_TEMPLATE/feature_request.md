@@ -1,21 +1,36 @@
 ---
 name: Feature request
-about: Suggest an idea for this package
-
+about: Suggest an improvement to Fourier or Spectre
 ---
 
-### Is your feature request related to a problem? Please describe.
+# Feature Request
 
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+Describe the workflow an improvement to Fourier or Spectre would support.
+No implementation or coding experience is required to suggest an improvement.
 
-### Describe the solution you'd like
+<!-- Search existing issues first. Discuss substantial behavior or interface
+changes before implementing them. Contributor guidance: ../../CONTRIBUTING.md
+Fill in the relevant sections and remove unused prompts. -->
 
-A clear and concise description of what you want to happen.
+## Problem Or Use Case
 
-### Describe alternatives you've considered
+<!-- Which module or development tool is affected? Describe a concrete task
+that is difficult or impossible today, including your current workaround. -->
 
-A clear and concise description of any alternative solutions or features you've considered.
+## Proposed Behavior
 
-### Additional context
+<!-- Describe what you want to happen, with an example of the input, settings,
+and expected result. Include units for frequency, amplitude, or timing.
+How would you tell that the feature works? Screenshots or sketches can help.
+Make the request understandable without any prior chat or session history. -->
 
-Add any other context (e.g. notes, code snippets, figures) about the feature request here.
+## Alternatives
+
+<!-- What existing controls, other modules, or alternative approaches have
+you considered? Explain where they fall short for this use case. -->
+
+## Compatibility And Context
+
+<!-- If relevant, describe effects on existing patches, controls, or display
+behavior. Include performance constraints or related issues. Implementation
+details and benchmarks are welcome but are not required to propose an idea. -->

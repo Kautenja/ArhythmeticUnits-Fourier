@@ -1,37 +1,49 @@
-### Description
+# Pull Request
 
-Please include a summary of the change and which issue is fixed. Please also
-include relevant motivation and context. List any dependencies that are
-required for this change.
+Describe the problem, the resulting behavior, and the evidence for this change.
+Use the same review and validation standards for human and agent-assisted work.
 
--   Fixes #<issue>
+<!-- Follow ../CONTRIBUTING.md and the relevant guide in ../docs/style-guides/.
+Coding agents must also follow ../AGENTS.md. Describe the final change so a
+reviewer can assess it without access to a chat or local session history.
+Fill in the relevant sections and remove unused prompts. Mark checks as not
+applicable with a reason when appropriate. Only claim checks you ran. -->
 
-### Type of change
+## Change
 
-Please select all relevant options:
+<!-- Explain the problem and what changes for users or contributors. Include
+a before/after example when useful. Link an issue with "Fixes #123" only if
+this PR resolves it; otherwise use "Related to #123". -->
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
+## Compatibility And Processing
 
-### How Has This Been Tested?
+<!-- For module/DSP changes, explain effects on saved patches, parameter/port/
+light IDs, slugs, custom JSON, analysis units, channel behavior, and reset or
+sample-rate handling. Describe a compatibility plan for intentional changes.
+For processing/shared-buffer changes, explain allocation, bounded per-sample
+work, and engine/display ownership or synchronization implications. -->
 
-Please describe the tests that you ran to verify your changes. Provide
-instructions so we can reproduce. Please also list any relevant details for
-your test configuration
+## Validation
 
-- [ ] Test A
-- [ ] Test B
+<!-- Choose checks using CONTRIBUTING.md's "Choosing Validation" section.
+Record exact commands run from the repository root and their results, with
+OS/architecture, compiler, and Rack/SDK versions where relevant. Distinguish:
+- Standalone DSP tests and relevant deterministic regression coverage.
+- Rack plugin build and headless integration tests.
+- Manual Rack checks: sample rate, settings, observations, and screenshots
+  for visual changes. Include existing-patch loading when persistence changes.
+- Documentation-only checks: links, paths, commands, and git diff --check;
+  no C++ build is required. Inspect rendered pages for manual PDF changes.
+State skipped checks, failures, and limitations with reasons.
+Separate observed results from assumptions or proposed checks. If reporting
+CI or another contributor's results, link the run or evidence and identify it.
+For performance claims, include comparable baseline/candidate workloads,
+compiler flags, repeated measurements, and uncertainty. -->
 
-### Test Configuration
+## Checklist
 
--   Operating System:
--   Python version:
--   C++ compiler version:
-
-### Checklist
-
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation following the
-      [Doxygen](https://www.doxygen.nl/manual/docblocks.html) style
-- [ ] I have tested that my fix is effective or that my feature works
+- [ ] I reviewed the diff and followed the relevant contributor/style guidance.
+- [ ] I recorded validation results and any skipped or failing checks.
+- [ ] I preserved compatibility or documented intentional changes and evidence.
+- [ ] I updated affected documentation, manifests, presets, and resources,
+      or explained why no updates are needed.
