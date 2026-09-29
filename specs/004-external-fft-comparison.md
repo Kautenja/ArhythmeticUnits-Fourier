@@ -14,8 +14,9 @@ Created: September 29, 2026
 This spec supersedes the detailed plan formerly in
 [`benchmark/paper/comparisons.md`](../benchmark/paper/comparisons.md).
 The [protocol README](../benchmark/paper/README.md) defines current measurement
-semantics. External adapters and external campaign configurations remain
-future work. First-party inverse and complete-chain baselines are implemented;
+semantics. Rack/PFFFT adapters and a matched implementation smoke configuration are
+implemented. Remaining external adapters and final campaign configurations
+are tracked below. First-party inverse and complete-chain baselines are implemented;
 their smoke validation does not constitute external comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
@@ -131,7 +132,7 @@ tasks, not necessarily an audio stream with N=H.
 
 | Priority | Candidate | Question It Answers | Readiness And Route |
 | --- | --- | --- | --- |
-| 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Pin the linked implementation; adapters pending. |
+| 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Implemented as benchmark-only adapters; wrapper/source/library identities retained. |
 | 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Adapters and dependency capture pending. |
 | 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS real and complex transforms with reusable setup and explicit packing/scaling; adapters pending. This is a platform baseline, not an open-source implementation. |
 | Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; optional FR-7; resolve inclusion before the final measurement phase. |
@@ -219,19 +220,19 @@ to every candidate without duplicating them in each checklist.
 
 #### Implementation And Integration
 
-- [ ] Pin the Rack/PFFFT implementation and integrate ordered real analysis
+- [x] Pin the Rack/PFFFT implementation and integrate ordered real analysis
     and complex forward/inverse adapters. Include periodic inverse jobs and
     complete identity/FIR chains with explicit inverse normalization.
-- [ ] Inspect the pinned wrapper and PFFFT scratch behavior, document actual
+- [x] Inspect the pinned wrapper and PFFFT scratch behavior, document actual
     precision/size support, and pass the shared independent correctness checks.
     A direct PFFFT variant needs a specific scratch/layout question and remains
     part of this algorithm family.
 
 #### Benchmark Implementation
 
-- [ ] Wire every supported boundary into the existing runner and checker,
+- [x] Wire every supported boundary into the existing runner and checker,
     charging packing, ordering, normalization, and all required output stores.
-- [ ] Add matched control workloads and short smoke coverage, including setup,
+- [x] Add matched control workloads and short smoke coverage, including setup,
     storage, linked dependency provenance, callback, and throughput paths.
     Verify artifacts without interpreting development timings as results.
 
@@ -397,8 +398,8 @@ to every candidate without duplicating them in each checklist.
 -   Record supported precision, transform kind, sizes, channel count, output
     layout, thread policy, setup policy, and publication contract. Update the
     C++ dispatch, Python workload validation, and artifact checker together.
-    The current checker infers delays and transform steps from backend names;
-    external and hybrid backends need explicit validated contracts. Do not
+    The checker resolves explicit validated contracts from the archived registry;
+    external and hybrid backends must declare their supported boundaries. Do not
     apply the radix-2 step formula to an opaque library execution.
 -   Provide two measurement boundaries: (a) real-transform execution from
     prepared windowed samples through canonical positive complex bins,
@@ -638,6 +639,43 @@ Validation: local links/anchors, referenced paths and command definitions,
 FR numbering and paired checklists, and `git diff --check` passed. No DSP
 tests, Rack build/session, or measurement campaign was run for this
 documentation-only change.
+
+### FR-3 Rack/PFFFT Completion
+
+September 29, 2026: implemented seven float Rack/PFFFT operations in the
+benchmark framework, covering complex/real forward, normalized complex inverse,
+analysis, periodic inverse jobs, and complete overlap-save identity/FIR chains.
+The provider uses ordered Rack wrappers and aligned native transfer buffers;
+analysis writes K positive bins, while isolated RFFT reconstructs all N bins
+for the existing full-complex control. Production module sources and plugin
+link dependencies are unchanged. See [provider evidence](../benchmark/paper/providers/pffft.md)
+for inspected revisions, hashes, native scratch formulas, and ABI limitations.
+
+The common external driver audits all output values, cadence, startup, live
+settings, band smoothing/EMA, and delivered samples. It retains metadata from
+each actual timed instance and each resource-probe instance outside timing.
+Transform setup scope is plans and owned output, with caller fixtures outside
+the probe. Native PFFFT stack scratch is source-derived; opaque setup bytes and
+compiler stack overhead remain unknown. Captured source identity alone does
+not establish that an opaque linked SDK binary was rebuilt from that source.
+
+Validation:
+
+-   `PYTHONPATH=benchmark/paper python3 -m unittest test_run test_contracts test_synthesis test_external test_pffft`:
+    passed, including provider fixtures at every power of two from 128 through
+    16384, positive-bin bounds, normalization, non-Hermitian inverse, invalid
+    operations/sizes, and rejection of NaNs hidden by error accumulation.
+-   `make benchmark-paper-build` and the executable `--verify`: passed.
+    Shared streaming preflight covers small, medium, and maximum sizes,
+    non-dividing hops, wraparound, smoothing, and live controls.
+-   `python3 benchmark/paper/run.py .build/paper-fr3-pffft --config benchmark/paper/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    followed by `python3 benchmark/paper/check.py .build/paper-fr3-pffft`:
+    all 56 native/control runs and their resource pairs passed.
+-   `make check-build` and `git diff --check`: passed. No interactive Rack
+    session or publication-performance campaign was run.
+
+FR-3 is complete. Smoke measurements establish executable coverage only;
+statistical comparisons remain FR-11 work.
 
 ### Shared Adapter And Evidence Contracts Completion
 

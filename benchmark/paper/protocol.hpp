@@ -91,6 +91,13 @@ struct NoAudit {
     void operator()(const Adapter&, const std::vector<float>&, size_t) const {}
 };
 
+/// @brief Optional provenance collection only after the complete timed pass.
+template<typename Audit, typename Adapter>
+auto report_timed_instance(Audit& audit, const Adapter& adapter, int)
+    -> decltype(audit.timed_instance(adapter), void()) { audit.timed_instance(adapter); }
+template<typename Audit, typename Adapter>
+void report_timed_instance(Audit&, const Adapter&, long) {}
+
 template<typename Adapter, typename Audit = NoAudit>
 void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         double playback_delay = -1) {
@@ -158,7 +165,10 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             const auto end = Clock::now();
             rows.emplace_back(c.pass, i, 0, i*samples, samples, elapsed(start, end));
         }
-        for (const auto& adapter : bank) adapter->check();
+        for (const auto& adapter : bank) {
+            adapter->check();
+            report_timed_instance(audit, *adapter, 0);
+        }
     }
     if (std::string(backend_descriptor(c.backend).boundary) == "control") { print(rows); return; }
     // Replay separately so per-sample timing contains no instrumentation for

@@ -8,6 +8,8 @@
 #include "../../src/Spectrogram.cpp"
 #include "../paper/protocol.hpp"
 #include "../paper/synthesis.hpp"
+#include "../paper/external.hpp"
+#include "../paper/providers/pffft.hpp"
 
 Plugin* plugin_instance = nullptr;
 
@@ -471,6 +473,7 @@ int main(int argc, char** argv) {
             verify_controls<double>();
             verify_synthesis<float>();
             verify_synthesis<double>();
+            verify_external<float, PffftBackend>("pffft", "float");
             std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
                 << "inverse jobs and overlap-save identity/FIR verified in both precisions\n";
             return 0;
@@ -478,11 +481,12 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string(argv[1]) == "--inventory") {
             std::cout << registry_json << '\n'; return 0;
         }
-        bool describe = false, resources = false;
+        bool describe = false, resources = false, provider_info = false;
         if (argc == 18) {
             describe = std::string(argv[1]) == "--describe";
             resources = std::string(argv[1]) == "--resources";
-            require(describe || resources, "Unknown command");
+            provider_info = std::string(argv[1]) == "--provider-info";
+            require(describe || resources || provider_info, "Unknown command");
             --argc; ++argv;
         }
         require(argc == 17, "Use benchmark/paper/run.py; expected 16 protocol arguments");
@@ -509,8 +513,10 @@ int main(int argc, char** argv) {
         c.resources = resources;
         const auto& descriptor = backend_descriptor(c.backend);
         const std::string kind(descriptor.kind), precision(descriptor.precision);
+        require(!provider_info || kind == "external", "Provider metadata is only available for external adapters");
         Paper::Context context(c.rate);
-        if (kind == "inverse-job" || kind == "chain") {
+        if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
+        else if (kind == "inverse-job" || kind == "chain") {
             if (precision == "float") synthesis_stream<float>(c);
             else synthesis_stream<double>(c);
         } else if (kind == "driver") stream<Driver>(c);

@@ -32,6 +32,30 @@ struct FrameSchedule {
     void advance() { phase = (phase+1)%hop; }
 };
 
+/// @brief Shared non-Hermitian inverse jobs with closed-form expected output.
+template<typename T>
+void inverse_fixtures(size_t n, std::vector<std::complex<T>> (&spectra)[2],
+        std::vector<std::complex<T>> (&expected)[2]) {
+    using Complex = std::complex<T>;
+        for (size_t f = 0; f < 2; ++f) {
+            spectra[f].resize(n);
+            expected[f].resize(n);
+            const Complex dc(T(0.125*(f+1)), T(-0.0625));
+            const Complex positive(T(0.5), T(0.125*(f+1)));
+            const Complex negative(T(-0.25), T(0.0625*(f+1)));
+            spectra[f][0] = T(n)*dc;
+            spectra[f][7] = T(n)*positive;
+            spectra[f][n-3] = T(n)*negative;
+            for (size_t i = 0; i < n; ++i) {
+                const long double angle = 2*std::acos(-1.L)*i/n;
+                const auto a = std::complex<long double>(std::cos(7*angle), std::sin(7*angle));
+                const auto b = std::complex<long double>(std::cos(-3*angle), std::sin(-3*angle));
+                expected[f][i] = Complex(std::complex<long double>(dc)
+                    + std::complex<long double>(positive)*a + std::complex<long double>(negative)*b);
+            }
+        }
+}
+
 /// @brief Periodically released complex spectra, independent of any analyzer.
 /// @details Alternating sparse non-Hermitian fixtures have analytical inverses.
 /// All N output stores are charged. Buffering remains a timed O(N) boundary pass.
@@ -45,23 +69,7 @@ struct InverseStream {
 
     explicit InverseStream(const Config& c) : inverse(c.n), output(c.n),
         schedule(c, inverse.get_total_steps()+c.n) {
-        for (size_t f = 0; f < 2; ++f) {
-            spectra[f].resize(c.n);
-            expected[f].resize(c.n);
-            const Complex dc(T(0.125*(f+1)), T(-0.0625));
-            const Complex positive(T(0.5), T(0.125*(f+1)));
-            const Complex negative(T(-0.25), T(0.0625*(f+1)));
-            spectra[f][0] = T(c.n)*dc;
-            spectra[f][7] = T(c.n)*positive;
-            spectra[f][c.n-3] = T(c.n)*negative;
-            for (size_t i = 0; i < c.n; ++i) {
-                const long double angle = 2*std::acos(-1.L)*i/c.n;
-                const auto a = std::complex<long double>(std::cos(7*angle), std::sin(7*angle));
-                const auto b = std::complex<long double>(std::cos(-3*angle), std::sin(-3*angle));
-                expected[f][i] = Complex(std::complex<long double>(dc)
-                    + std::complex<long double>(positive)*a + std::complex<long double>(negative)*b);
-            }
-        }
+        inverse_fixtures<T>(c.n, spectra, expected);
     }
     void process(float) {
         if (schedule.phase == 0) {
@@ -171,12 +179,15 @@ struct SynthesisAccuracy {
         require(error <= Reference::tolerance<T>()*std::max(1., scale),
             "Independent synthesis output differs");
     }
-    void print() const {
+    void print(const char* reference = "analytical complex inverse or direct time-domain FIR",
+            const std::vector<std::string>& instances = {}) const {
         std::cerr.precision(17);
-        std::cerr << "{\"reference\":\"analytical complex inverse or direct time-domain FIR\","
+        std::cerr << "{\"reference\":\"" << reference << "\","
             << "\"max_abs_error\":" << maximum_error << ",\"max_reference\":" << maximum_reference
             << ",\"checked_samples\":" << checked << ",\"publications\":" << publications
-            << ",\"playback_checked_samples\":" << playback_checked << "}\n";
+            << ",\"playback_checked_samples\":" << playback_checked << ",\"provider_instances\":[";
+        for (size_t i = 0; i < instances.size(); ++i) { if (i) std::cerr << ','; std::cerr << instances[i]; }
+        std::cerr << "]}\n";
     }
 };
 
@@ -184,7 +195,11 @@ struct SynthesisAccuracy {
 struct SynthesisAudit {
     SynthesisAccuracy& accuracy;
     template<typename T>
-    void operator()(const InverseStream<T>& adapter, const std::vector<float>&, size_t sample) const {
+    void operator()(const InverseStream<T>& adapter, const std::vector<float>& input, size_t sample) const {
+        inverse(adapter, input, sample);
+    }
+    template<typename Adapter>
+    void inverse(const Adapter& adapter, const std::vector<float>&, size_t sample) const {
         if (!adapter.published()) return;
         const size_t fixture = ((sample-adapter.delay())/adapter.schedule.hop)%2;
         require(adapter.fixture == fixture, "Inverse spectrum release sequence changed");
@@ -205,6 +220,10 @@ struct SynthesisAudit {
     }
     template<typename T>
     void operator()(const FrequencyChain<T>& adapter, const std::vector<float>& input, size_t sample) const {
+        chain<T>(adapter, input, sample);
+    }
+    template<typename T, typename Adapter>
+    void chain(const Adapter& adapter, const std::vector<float>& input, size_t sample) const {
         accuracy.compare(adapter.audio_output, reference<T>(input,
             int64_t(sample)-int64_t(adapter.playback_delay()), adapter.identity));
         ++accuracy.playback_checked;

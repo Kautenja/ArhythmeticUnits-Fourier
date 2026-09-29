@@ -80,7 +80,7 @@ def validate_synthesis_accuracy(accuracy, config, publications, registry=None):
     playback = (config["callbacks"]*config["block"]*config["count"]
                 if contract["boundary"] == "chain" else 0)
     expected = playback + publications*contract["outputs_per_channel"]
-    tolerance = 2e-5 if contract["precision"] == "float" else 1e-10
+    tolerance = (3e-4 if contract["boundary"] == "analysis" else 2e-5) if contract["precision"] == "float" else 1e-10
     error, scale = accuracy["max_abs_error"], accuracy["max_reference"]
     if (not all(math.isfinite(v) and v >= 0 for v in (error, scale))
             or error > tolerance*max(1, scale)
@@ -112,6 +112,16 @@ def validate_resources(resource):
                 raise ValueError("Invalid peak storage")
     if resource["timing"]["object_bytes"] != resource["allocation"]["object_bytes"]:
         raise ValueError("Resource adapter mismatch")
+
+
+def validate_provider_info(info, descriptor):
+    expected = {"pffft": "rack-pffft", "fftw": "fftw", "vdsp": "Apple Accelerate/vDSP"}
+    if not isinstance(info, dict) or info.get("provider") != expected[descriptor["provider"]]:
+        raise ValueError("Missing or wrong native provider identity")
+    if info.get("precision") != descriptor["precision"]:
+        raise ValueError("Native provider precision mismatch")
+    if descriptor["provider"] == "pffft" and (not info.get("plan_policy") or "native_plan_bytes" not in info):
+        raise ValueError("Missing native setup/storage evidence")
 
 
 def check(directory):
@@ -157,7 +167,11 @@ def check(directory):
         config_ids.add(identity)
         if metadata["contracts"][str(index)] != resolve_contract(config, registry):
             raise ValueError("Evidence contract mismatch")
-        validate_resources(json.loads((directory/metadata["resources"][str(index)]).read_text()))
+        resource = json.loads((directory/metadata["resources"][str(index)]).read_text())
+        validate_resources(resource)
+        if registry[config["backend"]]["kind"] == "external":
+            for label in ("timing", "allocation"):
+                validate_provider_info(resource[label]["provider_info"], registry[config["backend"]])
     identities = set()
     for run in metadata["runs"]:
         identity = (run["workload"], run["repeat"])
@@ -169,7 +183,16 @@ def check(directory):
         validate_rows(directory/run["raw"], config, registry)
         if summarize(directory/run["raw"], config) != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
-        if contract["boundary"] in ("inverse-job", "chain"):
+        external = registry[config["backend"]]["kind"] == "external"
+        if external:
+            report = json.loads((directory/run["stderr"]).read_text())
+            if len(report["provider_instances"]) != config["count"]:
+                raise ValueError("Missing measured provider instances")
+            for instance in report["provider_instances"]:
+                validate_provider_info(instance, registry[config["backend"]])
+            if contract["boundary"] == "transform" and report["checked_bins"] != config["n"]:
+                raise ValueError("Missing external transform bins")
+        if contract["boundary"] in ("inverse-job", "chain") or (external and contract["boundary"] == "analysis"):
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry)
         if contract["boundary"] == "transform":

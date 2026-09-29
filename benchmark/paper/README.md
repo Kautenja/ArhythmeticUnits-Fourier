@@ -9,7 +9,8 @@ The [external comparison spec](../../specs/004-external-fft-comparison.md)
 records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
 implementation status,
 acceptance checks, and intended publication tables and figures. Those external
-adapters are planned; the commands below currently run first-party backends.
+adapters are benchmark-only. Rack/PFFFT is implemented; FFTW and vDSP remain
+optional integrations tracked in the spec.
 
 ## Build And Run
 
@@ -71,8 +72,8 @@ DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --
 
 Each descriptor declares provider, precision, channel count, transform/output
 layout, normalization, supported sizes and settings, schedule, plan policy,
-and dependency scope. Unavailable PFFFT, FFTW, and vDSP placeholders fail before
-a campaign is created; they are not substitutes for actual adapters. Add an
+and dependency scope. Unavailable backend names fail before a campaign is created; they are not
+substitutes for actual adapters. Use explicit operation/precision names. Add an
 implementation and its correctness checks before marking a backend available.
 
 The runner rejects unsupported or duplicate workloads before building. For
@@ -126,6 +127,48 @@ changes during the build and campaign. The checker compares archived dependency
 bytes with their recorded hashes and resolves contracts from the archived
 registry. System libraries are identified through loader output and OS metadata;
 their bytes are not archived.
+
+## External Library Workloads
+
+Rack/PFFFT is available through the existing benchmark's Rack dependency.
+Its seven float operations are `pffft-{fft,rfft,ifft,analysis,inverse,ols-identity,ols-fir}-float`.
+See [provider details](providers/pffft.md) for the pinned source/library
+identities, canonical layouts, normalization, and stack scratch behavior.
+Run its matched smoke configuration from the repository root:
+
+```shell
+python3 benchmark/paper/run.py .build/paper-fr3-pffft --config benchmark/paper/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 benchmark/paper/check.py .build/paper-fr3-pffft
+```
+
+[`external.hpp`](external.hpp) provides the common immediate batch analyzer,
+periodic inverse jobs, and complete overlap-save identity/FIR paths. The
+analyzer stores only K positive bins before magnitudes, band averaging and
+EMA; isolated real transforms reconstruct all N bins to match the existing
+full-complex RFFT control. These different output boundaries are deliberate.
+Live windows/bands, input retention, zero-padding, inverse normalization,
+valid-output extraction, and the continuous dependent delivery sink are
+included where applicable. Batch results publish immediately at frame/release
+index jH; chain playback adds H-1 samples of buffering latency.
+
+Untimed replay checks all required outputs. Small analysis frames use direct
+DFT references; larger frames use the independently implemented first-party
+complex FFT with direct band sums and EMA. They share the specified float
+window bytes. Analyzer tolerances are 3e-4 float and 1e-10 double; inverse and
+filtering tolerances remain 2e-5 and 1e-10. Isolated transforms check all bins
+against the independent implementation, direct DFT probes, and a round trip.
+NaNs cannot be hidden by maximum-error accumulation.
+
+Each external run's numerical report retains `provider_instances` from the
+actual timed instances, collected after measurement. Resource probes likewise
+record their own `provider_info` outside setup/execution/destruction timing
+and C++ allocation counting. Native plan choices and storage evidence therefore
+belong to the instance that was measured. Transform resource scope is plans
+and owned canonical output; caller input/window fixtures are prepared outside
+the probe, matching first-party scope. Native aligned transfer buffers and
+opaque plan overhead remain additional provider costs. The runner retains
+available PFFFT source bytes as well as its wrapper and linked Rack library;
+source identities do not prove that an opaque SDK binary was rebuilt from them.
 
 ## Workload Matrix
 

@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <new>
+#include <string>
 
 namespace PaperResources {
 struct Counts { size_t allocations = 0, allocated = 0, live = 0, peak = 0; };
@@ -58,6 +59,11 @@ inline void phase(double ns, const Counts& snapshot) {
     std::cout << '}';
 }
 
+template<typename Object>
+auto provider_info(const Object& object, int) -> decltype(object.info_json()) { return object.info_json(); }
+template<typename Object>
+std::string provider_info(const Object&, long) { return "null"; }
+
 /// @brief Factory owns one object; run includes buffering and required output work.
 template<typename Object, typename Factory, typename Run>
 void inspect(Factory factory, Run run, size_t operations) {
@@ -74,7 +80,11 @@ void inspect(Factory factory, Run run, size_t operations) {
     run(*object);
     const auto executed = Clock::now();
     const auto execution = counts;
+    active = false;
+    const std::string implementation = provider_info(*object, 0);
+    active = true;
     reset_phase();
+    const auto teardown_start = Clock::now();
     delete object;
     const auto destroyed = Clock::now();
     const auto teardown = counts;
@@ -92,10 +102,10 @@ void inspect(Factory factory, Run run, size_t operations) {
         << "\"object_bytes\":" << sizeof(Object) << ",\"operations\":" << operations << ",\"setup\":";
     phase(elapsed(start, prepared), setup);
     std::cout << ",\"execution\":"; phase(elapsed(prepared, executed), execution);
-    std::cout << ",\"destruction\":"; phase(elapsed(executed, destroyed), teardown);
+    std::cout << ",\"destruction\":"; phase(elapsed(teardown_start, destroyed), teardown);
     std::cout << ",\"heap_scratch_peak_over_setup_bytes\":";
     number(execution.peak > setup.live ? execution.peak-setup.live : 0);
-    std::cout << "}\n";
+    std::cout << ",\"provider_info\":" << implementation << "}\n";
 }
 }  // namespace PaperResources
 

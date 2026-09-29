@@ -73,7 +73,7 @@ def validate_config(config, registry=None, measurement=False):
             or (config["smooth"] and not d["smoothing"])
             or (config["state"] == "startup" and config["alignment"] != "aligned")):
         raise ValueError("Unsupported smoothing/state combination")
-    if d["kind"] == "chain" and hop > n-2:
+    if d["boundary"] == "chain" and hop > n-2:
         raise ValueError("Overlap-save requires H <= N-2")
     transform = d["boundary"] == "transform"
     passes = (("complete", "incremental", "phases", "steps") if d["step_model"] in

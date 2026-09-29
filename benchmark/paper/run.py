@@ -240,7 +240,8 @@ def main():
                      {ROOT/"Makefile", ROOT/"plugin.json", *ROOT.glob("mk/*.mk")})
     # SDK headers/build rules and linked library affect generated code/behavior.
     sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*") if p.is_file()} |
-                 {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()})
+                 {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
+                 {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
     build_inputs = {p: digest(p) for p in sources+sdk}
     with (output/"build.log").open("w") as log:
         subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
@@ -268,6 +269,7 @@ def main():
         raise RuntimeError("Cannot identify linked implementations") from error
     try:
         metadata["rack_revision"] = capture(["git", "rev-parse", "HEAD"], rack)
+        metadata["pffft_revision"] = capture(["git", "rev-parse", "HEAD"], rack/"dep/pffft") if (rack/"dep/pffft/.git").exists() else "source revision unavailable in SDK"
         metadata["rack_status"] = capture(["git", "status", "--porcelain", "--untracked-files=no"], rack)
     except subprocess.CalledProcessError:
         metadata["rack_revision"] = "SDK without Git metadata"
