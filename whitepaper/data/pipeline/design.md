@@ -4,9 +4,8 @@ This archived experiment extended Fourier's resumable-work idea from butterflies
 input preparation, real-spectrum reconstruction, magnitude smoothing, and
 snapshot publication. It provides two bounded-work schedules with different
 latency tradeoffs. It did not change the shipping Rack modules or manuscript
-version 1. Production integration is recorded separately in
-[spec 003](../../../specs/archive/003-one-hop-spectrum-analysis.md). The [owning specification](../../../specs/archive/002-complete-analysis-pipeline.md)
-records validation and completion evidence.
+version 1. The removed specifications in Git history record production
+integration, validation, and completion evidence.
 
 ## Historical Sources
 

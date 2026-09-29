@@ -143,7 +143,7 @@ compiled in the built-in LaTeX editor and with
 artifact check passes for both campaigns, including the new prototype table
 and exact-cadence example. Historical driver extraction, compilation, and
 numerical verification also passed. Detailed documentation and production
-validation evidence is retained in [spec 003](../specs/archive/003-one-hop-spectrum-analysis.md).
+validation evidence remains in the removed specifications in Git history.
 
 ## Historical Verification Of Manuscript Version 1
 

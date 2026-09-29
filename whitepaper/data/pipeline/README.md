@@ -89,11 +89,11 @@ includes full-spectrum smoothing/EMA and copying the positive output.
 data hashes. These hashes describe the original experiment, not today's
 production source. The original full campaign checker remains in the source
 archive.
-Individual per-call observations are not retained. See the owning
-[specification](../../../specs/archive/002-complete-analysis-pipeline.md) for the full
-test/sanitizer commands. The historical manuscript-check failure recorded
-there is resolved by verifying the original campaign's archived sources;
-its measured-source hashes were not changed.
+Individual per-call observations are not retained. The removed pipeline
+specification in Git history records the full test/sanitizer commands. The
+historical manuscript-check failure recorded there is resolved by verifying
+the original campaign's archived sources; its measured-source hashes were
+not changed.
 
 ## Reproduce The Historical Experiment
 
@@ -118,4 +118,5 @@ The archived `run.py` also needs SCons and the repository's unchanged Catch2
 header at `dep/Catch2/single_include/catch2/catch.hpp` to run its original test
 suite. Preserve the old campaign metadata rather than attributing its
 measurements to the production implementation. Current production validation
-is recorded in [spec 003](../../../specs/archive/003-one-hop-spectrum-analysis.md).
+commands are documented in the
+[developer manual](../../../docs/developer-manual/development-and-testing.md).

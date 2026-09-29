@@ -448,8 +448,9 @@ running, forced-rebuild, and engine-only workloads. Graphics workloads use
 120 frames; running supplies 800 engine samples per frame (48 kHz / 60 Hz).
 Engine-only supplies 32768 samples per iteration without drawing. It does not
 measure driver upload latency, GPU rendering, framebuffer speed, or whole-patch
-performance. See the [display caching measurements](../../specs/archive/001-display-caching.md)
-for the baseline comparison, flags, memory tradeoffs, and validation limits.
+performance. The [raw display caching measurements](../../specs/archive/001-display-caching.csv)
+retain the historical before/after timings; the removed specification in Git
+history records the workload context and validation limits.
 
 ### One-Hop Spectrum Analysis
 
