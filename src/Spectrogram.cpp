@@ -916,7 +916,7 @@ struct SpectrogramWidget : ModuleWidget {
         display->setSize(Vec(465, 350));
         addChild(display);
         // Inputs
-        addInput(createInput<PJ301MPort>(Vec(11, 30), module, Spectrogram::INPUT_SIGNAL));
+        addInput(createInput<ThemedPJ301MPort>(Vec(11, 30), module, Spectrogram::INPUT_SIGNAL));
         addParam(createParam<Trimpot>(Vec(13, 66), module, Spectrogram::PARAM_INPUT_GAIN));
         // Buttons.
         addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, Spectrogram::PARAM_RUN));

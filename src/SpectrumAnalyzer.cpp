@@ -1191,7 +1191,7 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
         ));
         // Input signals, gains, output signals, and meters.
         for (std::size_t i = 0; i < SpectrumAnalyzer::NUM_CHANNELS; i++) {
-            addInput(createInput<PJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
+            addInput(createInput<ThemedPJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
             addParam(createParam<Trimpot>(Vec(13, 66 + 75 * i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));
         }
         // Buttons.
