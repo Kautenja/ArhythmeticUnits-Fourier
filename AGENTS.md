@@ -74,6 +74,92 @@ settings, repeated measurements, and a practically meaningful effect.
 Record uncertainty; a passing test or empty benchmark is not evidence of
 a speedup.
 
+## VCV Library Releases
+
+Use these permanent links when preparing a release:
+
+-   [Fourier's VCV Library thread, #826](https://github.com/VCVRack/library/issues/826)
+    is the update channel for `ArhythmeticUnits-Fourier`. Reuse this thread;
+    do not create a new issue for each version.
+-   [Fourier's library listing](https://library.vcvrack.com/ArhythmeticUnits-Fourier)
+    shows the distributed plugin. The library's
+    [source revision](https://github.com/VCVRack/library/tree/v2/repos/ArhythmeticUnits-Fourier)
+    records the commit selected by its maintainers.
+-   [GitHub releases](https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases)
+    host the manuals used by `plugin.json`.
+-   [VCV's update instructions](https://github.com/VCVRack/library#pushing-an-update)
+    require a new manifest version and an exact commit hash. Maintainers
+    reopen the thread after an update comment and close it when the build
+    is updated. Posting a comment does not itself publish a library build.
+-   Prior examples: [Fourier 2.1.1](https://github.com/VCVRack/library/issues/826#issuecomment-2719964276),
+    [PotatoChips](https://github.com/VCVRack/library/issues/652), and
+    [RackNES](https://github.com/VCVRack/library/issues/650). Follow the existing
+    short format: version, full commit hash or commit link, and a brief change
+    summary when useful.
+
+For an explicitly authorized release, work from the repository root:
+
+1.  Increment `plugin.json`'s version and align `CHANGELOG.md` and the manual
+    versions. Preserve plugin and module slugs. Follow the
+    [manifest version rules](https://vcvrack.com/manual/Manifest#version).
+2.  Run the applicable checks in
+    [Development And Testing](docs/developer-manual/development-and-testing.md),
+    including DSP tests, a Rack plugin build, and affected manual Rack checks.
+    Record which platforms were actually checked. VCV's
+    [plugin toolchain](https://github.com/VCVRack/rack-plugin-toolchain)
+    supports cross-platform build validation; standalone DSP CI alone does
+    not validate the Rack plugin.
+3.  Commit and push the approved release changes and a matching `vX.Y.Z`
+    tag. Verify that the tag resolves to the intended commit and that its
+    `plugin.json` contains version `X.Y.Z`. Do not move a published tag to
+    accommodate a fix; prepare a new version instead.
+4.  Publish the GitHub release and wait for the
+    [manuals workflow](.github/workflows/manuals.yml) to attach `Fourier.pdf`
+    and `Spectre.pdf`. Check both downloads. A regular latest release is
+    needed for the manifest's `/releases/latest/download/` manual links.
+    GitHub publication and VCV Library submission are separate steps.
+5.  Read the latest comments in #826 to avoid duplicate requests. Prepare a
+    comment using the tagged commit, not the current branch tip. Replace
+    `vX.Y.Z` below with the actual release tag. This block only writes a
+    local draft and requires Git, `jq`, and an existing local tag:
+
+    ```shell
+    release_tag=vX.Y.Z
+    release_commit="$(git rev-parse "refs/tags/$release_tag^{commit}")" &&
+    release_version="$(git show "$release_commit:plugin.json" | jq -er '.version')" &&
+    test "$release_tag" = "v$release_version" &&
+    printf 'Updated to %s\n\nCommit: https://github.com/Kautenja/ArhythmeticUnits-Fourier/commit/%s\nRelease: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/tag/%s\n' \
+      "$release_version" "$release_commit" "$release_tag" \
+      > /tmp/fourier-vcv-library-update.md
+    ```
+
+6.  Review the draft and confirm the commit is publicly available. When the
+    user has authorized notifying VCV, post it with an authenticated GitHub
+    CLI session, or paste it into #826:
+
+    ```shell
+    gh issue comment 826 --repo VCVRack/library \
+      --body-file /tmp/fourier-vcv-library-update.md
+    ```
+
+    Comment on the existing thread even if it is closed. Leave reopening
+    and build publication to the VCV maintainers. Report the comment URL
+    as a submission receipt; verify the library listing/revision separately
+    before claiming the release is available in Rack.
+
+No automatic VCV notification is configured. If requested later, trigger it
+after successful stable-release validation and manual uploads, and deduplicate
+comments by version and commit. The workflow's built-in
+[`GITHUB_TOKEN`](https://docs.github.com/en/actions/concepts/security/github_token)
+is restricted to this repository, so it cannot comment in `VCVRack/library`.
+A separate credential would be required. GitHub currently documents
+[fine-grained token limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations)
+for contributing to public repositories where the user is not a member;
+a classic token with `public_repo` scope is one option, subject to the target
+organization's policy. Keep any such token in an Actions secret, never in
+tracked files or chat. Setting `issues: write` in this repository does not
+grant access to VCV's repository.
+
 ## Planning And Completion
 
 Small fixes can be planned in the chat. For substantial work that needs a
