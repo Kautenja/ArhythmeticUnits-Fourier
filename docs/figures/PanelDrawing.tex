@@ -1,0 +1,93 @@
+% Shared technical illustration vocabulary for the user manuals.
+% Original artwork for Arhythmetic Units; see LICENSE.md for artwork terms.
+\usetikzlibrary{arrows.meta,shapes.geometric}
+\definecolor{panelInk}{HTML}{24313D}
+\definecolor{panelMuted}{HTML}{667580}
+\definecolor{panelRule}{HTML}{AAB4BC}
+\definecolor{panelPaper}{HTML}{FAFBFC}
+\definecolor{fourierAccent}{HTML}{2368A0}
+\definecolor{spectreAccent}{HTML}{73549E}
+\definecolor{channelOne}{HTML}{BD4844}
+\definecolor{channelTwo}{HTML}{42835F}
+\definecolor{channelThree}{HTML}{3D69AC}
+\definecolor{channelFour}{HTML}{A37A1F}
+\ifdefined\PanelMonochrome
+  \definecolor{panelInk}{gray}{0.15}
+  \definecolor{panelMuted}{gray}{0.40}
+  \definecolor{panelRule}{gray}{0.66}
+  \definecolor{panelPaper}{gray}{0.985}
+  \colorlet{fourierAccent}{panelInk}
+  \colorlet{spectreAccent}{panelInk}
+  \colorlet{channelOne}{panelMuted}
+  \colorlet{channelTwo}{panelMuted}
+  \colorlet{channelThree}{panelMuted}
+  \colorlet{channelFour}{panelMuted}
+\fi
+\tikzset{
+  panel line/.style={draw=panelInk,line width=.65pt},
+  panel fine/.style={draw=panelRule,line width=.4pt},
+  panel note/.style={text=panelMuted,font=\sffamily\fontsize{11}{13}\selectfont},
+  panel label/.style={text=panelInk,font=\sffamily\bfseries\fontsize{10}{11}\selectfont},
+  panel leader/.style={draw=panelAccent,line width=.85pt,line cap=round,line join=round},
+  panel badge/.style={circle,fill=panelAccent,draw=white,line width=1.2pt,
+    inner sep=0pt,minimum size=19pt,text=white,font=\sffamily\bfseries\fontsize{12}{12}\selectfont},
+}
+\newcommand{\PanelScrew}[2]{%
+  \draw[panel fine,fill=white] (#1,#2) circle[radius=5.2];
+  \draw[panel fine] (#1-2.4,#2+2.4)--(#1+2.4,#2-2.4);
+}
+\newcommand{\PanelJack}[2]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw[panel fine,fill=white] (0,0) circle[radius=11.5];
+    \node[regular polygon,regular polygon sides=6,draw=panelInk,
+      line width=.55pt,minimum size=20pt,inner sep=0pt] at (0,0) {};
+    \draw[panel fine] (0,0) circle[radius=8.8];
+    \draw[panel line,fill=white] (0,0) circle[radius=6.8];
+    \draw[panel fine,fill=panelInk!12] (0,0) circle[radius=4.4];
+  \end{scope}
+}
+\newcommand{\PanelKnob}[2]{%
+  \begin{scope}[shift={(#1,#2)}]
+    \draw[panel fine] (0,0) circle[radius=11.5];
+    \foreach \a in {35,65,...,305} {
+      \draw[panel fine] (\a:9.7)--(\a:11.3);
+    }
+    \draw[panel line,fill=white] (0,0) circle[radius=8.5];
+    \draw[panel fine] (0,0) circle[radius=6.6];
+    \draw[draw=panelInk,line width=1.4pt,line cap=round] (-3.2,-3.2)--(-6,-6);
+  \end{scope}
+}
+\newcommand{\PanelRun}[2]{%
+  \draw[panel fine,fill=white] (#1,#2) circle[radius=14];
+  \draw[panel line] (#1,#2) circle[radius=11.8];
+  \node[panel label] at (#1,#2-24) {RUN};
+}
+\newcommand{\PanelChassis}[3]{%
+  \draw[panel line,rounded corners=3pt,fill=panelPaper] (0,0) rectangle (#1,380);
+  \draw[panel fine,rounded corners=2pt] (2,2) rectangle (#1-2,378);
+  \foreach \x in {22.5,\the\numexpr#1-23\relax} {
+    \PanelScrew{\x}{7.5}\PanelScrew{\x}{372.5}
+  }
+  \node[anchor=west,text=panelInk,font=\sffamily\bfseries\fontsize{13}{14}\selectfont]
+    at (#2,7.5) {#3};
+  \node[panel note,anchor=east,font=\sffamily\fontsize{8}{9}\selectfont]
+    at (#1-40,7.5) {ARHYTHMETIC UNITS};
+  \node[panel note,font=\sffamily\fontsize{8}{9}\selectfont]
+    at (#1/2,371) {ARHYTHMETIC UNITS};
+}
+% Label-only controls keep the map independent of current values/defaults.
+\newcommand{\PanelTextControl}[3]{%
+  \node[panel label] at (#1,334) {#2};
+  \draw[panel fine] (#1-14,348)--(#1+14,348);
+  \ifdefined\PanelBare\else
+    % Break at the lower rail so leaders never run through the wordmark.
+    \draw[panel leader] (#1,355)--(#1,363) (#1,382)--(#1,400);
+    \node[panel badge] at (#1,412) {#3};
+  \fi
+}
+\newcommand{\PanelKey}[5]{%
+  \node[panel badge] at (#1,#2) {#3};
+  \node[anchor=west,text=panelInk,font=\sffamily\bfseries\fontsize{14}{15}\selectfont]
+    at (#1+17,#2-4) {#4};
+  \node[anchor=west,panel note] at (#1+17,#2+11) {#5};
+}

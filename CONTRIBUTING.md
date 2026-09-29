@@ -971,8 +971,9 @@ python3 docs/whitepaper/data/pipeline/check.py
 
 ### User Manuals And Build Products
 
-Each LaTeX manual is a self-contained project with its own Makefile,
-stylesheet, and images. Both require `pdflatex` and their referenced packages:
+Each LaTeX manual has its own Makefile, stylesheet, and images. Both copy
+the shared panel-drawing primitives from `docs/figures/` during the build.
+They require `pdflatex` and their referenced packages:
 
 ```shell
 make -C docs/manual-fourier
@@ -990,26 +991,96 @@ rendered pages when changing manual content or layout.
 
 Each manual uses one module screenshot on its cover: the checked-in
 `img/PanelLayout.png`. Generate it from the real Rack widgets, rather than
-maintaining a separate SVG/PDF imitation of the UI. Explanatory figures are
-conceptual TikZ sources in each manual's `img/` directory; they compile with
-the PDF and explain controls or analysis without duplicating UI artwork or
-captured data. Branding and Fourier's historical portrait remain separate
-illustrations.
+maintaining a separate screenshot imitation. Panel references use detailed
+TikZ line drawings of the physical layout, with numbered callouts that match
+the manual's control sections. Draw recognizable jacks, knobs, buttons, and
+display controls at their real positions; keep screens schematic and omit
+current values or captured spectra. Other explanatory figures remain
+conceptual. Branding and Fourier's historical portrait remain separate.
 
 Choose the source to update:
 
 | Figure | Fourier Source | Spectre Source | When To Update |
 | --- | --- | --- | --- |
 | Cover module screenshot | [`PanelLayout.png`](docs/manual-fourier/img/PanelLayout.png) | [`PanelLayout.png`](docs/manual-spectre/img/PanelLayout.png) | Visible panel artwork or controls change |
-| Control-group wireframe | [`PanelLayout.tex`](docs/manual-fourier/img/PanelLayout.tex) | [`PanelLayout.tex`](docs/manual-spectre/img/PanelLayout.tex) | Control grouping or purpose changes |
+| Annotated panel reference | [`PanelLayout.tex`](docs/manual-fourier/img/PanelLayout.tex) | [`PanelLayout.tex`](docs/manual-spectre/img/PanelLayout.tex) | Control positions, labels, or section numbering change |
 | Window tradeoffs | [`WindowTradeoffs.tex`](docs/manual-fourier/img/WindowTradeoffs.tex) | Not used | The explanation of window behavior changes |
 | Frame duration and bin spacing | [`FrameLength.tex`](docs/manual-fourier/img/FrameLength.tex) | Not used | The explanation of FFT length changes |
 | History scanning | Not used | [`History.tex`](docs/manual-spectre/img/History.tex) | The explanation of history acquisition changes |
+| Ideal harmonic series | [`Harmonics.tex`](docs/manual-fourier/img/Harmonics.tex) | Not used | The harmonic comparison exercise changes |
+| Before/after routing | [`FilterPatch.tex`](docs/manual-fourier/img/FilterPatch.tex) | Not used | The filter comparison exercise changes |
+| Time-frequency signatures | Not used | [`SoundShapes.tex`](docs/manual-spectre/img/SoundShapes.tex) | The sound interpretation guide changes |
+
+Each manual's `Guide.tex` provides linked page references; `Tutorials.tex`
+contains practical experiments. Keep the starting patch, explicit settings,
+steps, expected observations, and interpretation together. Explain what an
+experiment cannot establish as well as what it reveals. Check defaults and
+preset values against the implementation, distinguish capture/analysis
+changes from display changes, and state the sample rate for numerical timing
+examples. Use schematic illustrations for relationships and identify ideal
+or qualitative examples in their captions. New teaching sections should use
+unnumbered subsections so they do not disrupt the panel's control numbering.
+Rebuild both passes to resolve the guide's page links after moving sections.
 
 The PNG and similarly named `.tex` file serve different purposes. The manual
-includes both explicitly; do not recreate `Module.svg`, `Module.pdf`, or
-`PanelLayout.pdf`. For diagram-only edits, change the TikZ source and run the
-ordinary manual build; no screenshot refresh or Rack environment is needed.
+includes both explicitly. Keep the old `Module.svg`, `Module.pdf`, and
+`img/PanelLayout.pdf` assets retired; standalone vector exports belong in
+the ignored output directory described below. For drawing-only edits, change
+the TikZ source and run the ordinary manual build; no screenshot refresh or
+Rack environment is needed.
+
+**Revise the panel drawings.** The shared
+[`PanelDrawing.tex`](docs/figures/PanelDrawing.tex) defines the ink colors,
+line weights, hardware primitives, callout badges, and legend typography.
+Each module's `PanelLayout.tex` provides the geometry and numbered key.
+Coordinates use Rack pixels with a downward y axis; check them against
+[`PanelLayout`](src/rack_extensions/panel.hpp) and the widget constructors in
+[`SpectrumAnalyzer.cpp`](src/SpectrumAnalyzer.cpp) and
+[`Spectrogram.cpp`](src/Spectrogram.cpp). Text-control positions are defined
+in those constructors, not in the shared geometry header.
+
+Keep fine hardware outlines quieter than the callouts. Use blue for Fourier
+and purple for Spectre; numbers and labels must convey the same information
+without color. Keep leaders outside the panel where possible, avoid crossings,
+and preserve legibility at the actual size used on the manual page. Match
+the numbered key to the control subsections after any insertion or reorder.
+The screen axes and Spectre's palette swatches are explanatory marks, not
+an additional representation of measured data or a specific palette.
+
+**Export for web and print.** From the repository root, with Python 3
+(standard library only), the manual's TeX packages plus `standalone`, and
+Poppler's `pdftocairo` installed, run:
+
+```shell
+make -C docs/figures
+```
+
+This runs [`export_panel_drawings.py`](scripts/export_panel_drawings.py) and
+writes tightly cropped PDFs and SVGs to `.build/manual-figures/`:
+
+| Filename Pattern | Use |
+| --- | --- |
+| `{fourier,spectre}-guide.{pdf,svg}` | Annotated panel plus numbered key |
+| `{fourier,spectre}-panel.{pdf,svg}` | Panel illustration without callouts or key |
+| `{fourier,spectre}-guide-mono.{pdf,svg}` | Grayscale annotated guide |
+| `{fourier,spectre}-panel-mono.{pdf,svg}` | Grayscale panel illustration |
+
+The braces describe filenames, not an argument to the exporter. To export
+one module, use `make -C docs/figures MODULE=spectre`. `PYTHON`, `PDFLATEX`,
+and `PDFTOCAIRO` may be overridden with absolute executable paths. Build
+logs are retained beside the exports. The SVGs contain vector paths,
+including outlined text, so they need no external fonts or raster images;
+edit the TikZ sources and regenerate rather than editing the outlined text.
+Use the PDFs for print placement and the SVGs for web or vector editors.
+Existing [visual-asset license terms](LICENSE.md) still apply.
+
+Review the color and grayscale guides, the bare panels, and both manual
+pages after changing shared primitives. Ensure every callout appears once
+in its key, points to the intended control, and stays readable at print size.
+Ordinary manual builds use the TikZ sources directly and do not require
+Python or Poppler. The export command does not refresh screenshots or alter
+the manuals. Keep generated PDFs, SVGs, and logs untracked; regenerate them
+from the same source revision when preparing web or print material.
 
 **Refresh the screenshot.** First [configure the Rack build environment](#configure-the-rack-sdk)
 and ensure its `res/` assets are available, as required by
@@ -1112,7 +1183,8 @@ This writes `docs/whitepaper/.build/paper.pdf` without running experiments.
 
 The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
 all three PDFs on relevant pull requests and pushes to `main`: changes to
-either manual directory, the white paper's source or Makefile, `plugin.json`,
+either manual directory, the shared `docs/figures/` directory,
+the white paper's source or Makefile, `plugin.json`,
 or the workflow itself. Version tags matching `v*` build PDFs regardless of
 path filters. Other branch pushes do not run the workflow. New PR or `main`
 updates cancel obsolete PDF builds; tag and release runs are kept separate

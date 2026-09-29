@@ -1,0 +1,191 @@
+\clearpage
+\section{Hearing Harmonics}\label{sec:harmonics}
+
+A spectrum connects a sound's timbre to its partials. Try this with an
+oscillator that offers sine, triangle, saw, and square outputs at one pitch.
+
+\paragraph{Starting point}
+Load \textbf{Harmonics}. Set all input gains to $0\,\mathrm{dB}$, Length
+4096, Hop $30\,\mathrm{ms}$, and Y Scale to Log 60dB. Keep Average and
+Smooth off, Slope at zero, and the view at $0$--$5\,\mathrm{kHz}$.
+Tune the oscillator near $220\,\mathrm{Hz}$; exact tuning is not required.
+
+\begin{enumerate}
+  \item Patch sine to red and saw to green. Look for a shared lowest peak,
+  the fundamental. The saw should have peaks near integer multiples of it:
+  $440$, $660$, $880\,\mathrm{Hz}$, and so on.
+  \item Patch triangle to blue and a square with 50\% pulse width to yellow.
+  Compare peaks near $3f_0$ and $5f_0$. An ideal triangle's upper harmonics
+  fall faster than a square's; both lack even harmonics.
+  \item Change the pulse width. Even harmonics can now appear, and some
+  harmonics weaken or disappear. Listen while watching the pattern change.
+  \item Increase Smooth, then return it to None. The broad tonal shape is
+  easier to compare when smoothed, but individual partials merge.
+\end{enumerate}
+
+\begin{figure}[!htp]
+\centering
+\input{img/Harmonics.tex}
+\caption{Ideal harmonic amplitudes relative to each waveform's fundamental.
+Stems indicate discrete partials, not the broadened peaks of a finite FFT.
+Real oscillators may intentionally depart from these shapes.}
+\end{figure}
+
+\paragraph{What to learn}
+Peak spacing reveals harmonic structure; relative heights help explain
+brightness. Equal peak voltage at the oscillator outputs does not guarantee
+equal fundamental height or perceived loudness. To compare only spectral
+shape, temporarily adjust analyzer input gains to align the fundamentals.
+Return to equal gains before making a level comparison. A missing peak may
+also lie below the selected Y Scale or be hidden beneath another trace.
+
+\clearpage
+\section{Comparing A Filter}\label{sec:filter}
+
+Use two inputs to see what a processor changes while keeping the source
+identical. A low-pass filter and a steady saw or noise source are enough.
+
+\begin{figure}[!htp]
+\centering
+\input{img/FilterPatch.tex}
+\caption{Tap the signal before and after the filter. Analyzer cables are
+branches of the listening path; Fourier is not an audio effect.}
+\end{figure}
+
+\paragraph{Starting point}
+Load \textbf{Mastering}, then set Slope to zero and Smooth to None. Use
+$0\,\mathrm{dB}$ gain on both connected inputs. Keep Length 4096 and
+Hop $30\,\mathrm{ms}$. Choose Average $300\,\mathrm{ms}$ for noise, or
+turn it off for a steady saw. Start with low filter resonance.
+
+\begin{enumerate}
+  \item Branch the source to the red input and the filter input. Patch
+  the filter output to green and to your listening path.
+  \item With the cutoff high, compare levels well below the cutoff. A
+  constant difference here can be the filter's passband gain; it is not
+  necessarily a change in spectral shape.
+  \item Lower the cutoff slowly. The green trace should fall below red at
+  higher frequencies. Raise resonance to look for a peak near the cutoff.
+  Wait for Average to settle after each change.
+  \item At a frequency with useful energy in both traces, place the cursor
+  on each trace and subtract their dB levels. If red is $-12\,\mathrm{dB}$
+  and green is $-24\,\mathrm{dB}$, the observed change is $-12\,\mathrm{dB}$:
+  about one quarter of the amplitude at that frequency.
+\end{enumerate}
+
+\paragraph{Read the comparison carefully}
+A saw samples the response only at its harmonics; noise fills more of the
+spectrum but fluctuates. The ratio becomes unreliable where the source is
+very weak. Fourier does not divide traces or measure phase automatically.
+This is a visual magnitude comparison, not a complete transfer-function
+measurement. Saturation, modulation, or other nonlinear behavior can create
+new harmonics, so the result then depends on the source and its level.
+
+\paragraph{Go further}
+Use blue for a second filter or processing stage. Keep analyzer gains equal
+and compare all taps simultaneously. Disable Filled Display if overlapping
+areas obscure the curves. A processor's latency can make changing sounds
+appear at different stages of their envelope; use a steady sound first.
+
+\clearpage
+\section{Separating Nearby Tones}\label{sec:resolution}
+
+Two low notes can look like one broad peak. This experiment distinguishes
+frequency resolution from simply enlarging the display.
+
+\paragraph{Starting point}
+Use two sine oscillators near $100$ and $110\,\mathrm{Hz}$, summed through
+a mixer into red. At a Rack sample rate of $48\,\mathrm{kHz}$, choose Hann,
+Length 2048, Hop $30\,\mathrm{ms}$, Linear Freq Scale, and
+$0$--$300\,\mathrm{Hz}$. Set Average and Smooth off and Slope to zero.
+
+\begin{enumerate}
+  \item Observe the mixture, then mute each oscillator in turn to locate
+  its contribution. At Length 2048 the two tones are closer than one bin.
+  They will be difficult to distinguish in the mixture.
+  \item Restore both tones and increase Length to 16384. Allow fresh audio
+  to fill the new frame. The finer bin spacing should make them easier to
+  separate with Hann; a broader window such as Flattop may still merge them.
+  \item Return to Length 2048 and narrow LO/HI Freq around the peaks.
+  The existing shape grows on screen, but the missing detail does not return.
+  Turn off Bezier Curve in the context menu to see the bin connections.
+  \item Return to Length 16384 and change one oscillator's pitch abruptly.
+  Notice the transition taking time to pass through the long frame. A smaller
+  Hop updates more frequently but does not shorten that frame.
+\end{enumerate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+\textbf{Length at 48 kHz} & \textbf{Audio span} & \textbf{Bin spacing} \\
+\midrule
+2048 & $42.67\,\mathrm{ms}$ & $23.44\,\mathrm{Hz}$ \\
+4096 & $85.33\,\mathrm{ms}$ & $11.72\,\mathrm{Hz}$ \\
+8192 & $170.67\,\mathrm{ms}$ & $5.86\,\mathrm{Hz}$ \\
+16384 & $341.33\,\mathrm{ms}$ & $2.93\,\mathrm{Hz}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What sets the limit?}
+Bin spacing is $f_s/N$; it is not a promise that every pair of tones that far
+apart will resolve. Window width, relative levels, and leakage also matter.
+Frequency smoothing trades more detail for a steadier broad shape. Increasing
+Rack's sample rate at the same Length widens bin spacing; it does not improve
+bass resolution. Choose Length for the detail needed, then Hop for how often
+you need an update, while watching the patch's CPU load.
+
+\clearpage
+\section{Making Useful Measurements}\label{sec:measurements}
+
+\paragraph{Establish a reference}
+For a controlled check at $48\,\mathrm{kHz}$, use a $750\,\mathrm{Hz}$ sine:
+with Length 2048 it falls exactly on bin 32. Use a known $5\,\mathrm{V}$
+peak ($10\,\mathrm{V}$ peak-to-peak) source, unity input gain, Flattop,
+zero Slope, no smoothing, and AC coupling off. After the frame fills,
+the peak should be approximately $0\,\mathrm{dB}$ or $100\,\%$.
+Use the source's frequency setting or a separate tuner to establish pitch;
+the cursor does not snap to a peak. An off-bin tone can read differently.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+\textbf{Sine peak voltage} & \textbf{Relative amplitude} & \textbf{Level} \\
+\midrule
+$5\,\mathrm{V}$ & $100\,\%$ & $0\,\mathrm{dB}$ \\
+$2.5\,\mathrm{V}$ & $50\,\%$ & $-6.02\,\mathrm{dB}$ \\
+$0.5\,\mathrm{V}$ & $10\,\%$ & $-20\,\mathrm{dB}$ \\
+$0.005\,\mathrm{V}$ & $0.1\,\%$ & $-60\,\mathrm{dB}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These ideal isolated-tone values follow $20\log_{10}(V_{\rm peak}/5\,\mathrm{V})$.
+They are not a conversion from an arbitrary signal's largest spectral peak
+to its total voltage. This reference is not dBFS, SPL, LUFS, or a calibrated
+noise-power density measurement.
+
+\paragraph{Know what is being summed}
+Each jack sums all voices of a polyphonic cable before analysis. Two identical,
+in-phase voices add to twice the amplitude (about $+6.02\,\mathrm{dB}$);
+equal opposite-polarity voices cancel. To inspect voices independently, split
+them into separate monophonic cables and use different inputs. Equal-looking
+magnitude spectra alone cannot tell you the relative phase or predict the
+result of mixing two signals.
+
+\paragraph{Separate signal changes from viewing changes}
+Input gain and AC coupling affect newly captured samples. Window, Average,
+and Smooth affect the analysis. Frequency bounds and scales determine the
+view; Slope deliberately weights levels by frequency. Turn Run off to compare
+analysis choices on retained audio, but remember that Fourier keeps
+reanalyzing and Average can still settle. Changing Length clears that audio.
+
+\paragraph{Record the conditions}
+When comparing a patch revision, note the Rack sample rate, input source and
+gain, Length, Hop, window, smoothing, Slope, scales, and AC coupling. A noise
+trace can change height when Length or window changes because each bin covers
+a different effective bandwidth. Do not diagnose a quieter source from that
+change alone. Save settings as a preset; save an external image if you need a
+record of the trace, because patches do not retain captured spectra.

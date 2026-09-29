@@ -5,6 +5,7 @@ on:
     paths:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
+      - docs/figures/**
       - docs/whitepaper/fourier.tex
       - docs/whitepaper/makefile
       - plugin.json
@@ -15,6 +16,7 @@ on:
     paths:
       - docs/manual-fourier/**
       - docs/manual-spectre/**
+      - docs/figures/**
       - docs/whitepaper/fourier.tex
       - docs/whitepaper/makefile
       - plugin.json

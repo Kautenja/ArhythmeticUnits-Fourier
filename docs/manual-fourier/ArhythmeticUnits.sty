@@ -64,7 +64,7 @@
 \let\tempone\itemize
 \let\temptwo\enditemize
 \renewenvironment{itemize}{\tempone\addtolength{\itemsep}{-0.5\baselineskip}}{\temptwo}
-\renewenvironment{enumerate}{\tempone\addtolength{\itemsep}{-0.5\baselineskip}}{\temptwo}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=4pt}
 
 % setup captions for tables
 \captionsetup[table]{%

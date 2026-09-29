@@ -1,0 +1,30 @@
+% Abstract time-frequency signatures; no app data or simulated UI.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+  \foreach \x/\y/\title in {0/3.4/Steady harmonics,7/3.4/Pitch glide,0/0/Attack and decay,7/0/Filtered noise} {
+    \begin{scope}[shift={(\x,\y)}]
+      \fill[panelPaper] (0,0) rectangle (5.5,2.1);
+      \node[anchor=west,font=\small\bfseries,text=spectreAccent] at (0,2.5) {\title};
+      \draw[->,panelMuted] (0,0)--(5.7,0) node[right,font=\scriptsize] {$t$};
+      \draw[->,panelMuted] (0,0)--(0,2.2) node[above,font=\scriptsize] {$f$};
+    \end{scope}
+  }
+  \foreach \y/\a in {.45/90,.95/65,1.45/40} {
+    \draw[spectreAccent!\a,line width=2pt] (.3,3.4+\y)--(5.1,3.4+\y);
+  }
+  \foreach \y/\a in {.2/90,.65/60,1.1/35} {
+    \draw[spectreAccent!\a,line width=2pt] (7.3,3.4+\y) .. controls
+      (8.5,3.4+\y) and (9,3.8+\y) .. (12.1,4.3+\y);
+  }
+  \fill[spectreAccent!70] (.6,.15) rectangle (.85,1.95);
+  \foreach \i in {0,...,15} {
+    \pgfmathtruncatemacro{\shade}{85-\i*5}
+    \draw[spectreAccent!\shade,line width=2.5pt] (.85+\i*.25,.6)--(1.1+\i*.25,.6);
+    \draw[spectreAccent!\shade,line width=1.5pt] (.85+\i*.19,1.2)--(1.04+\i*.19,1.2);
+  }
+  \fill[spectreAccent!12] (7.3,.15)--(7.3,.6).. controls (9,.6) and (9,1.8)..(12.1,1.8)--(12.1,.15)--cycle;
+  \draw[spectreAccent,line width=1.6pt] (7.3,.6)..controls (9,.6) and (9,1.8)..(12.1,1.8);
+  \foreach \i in {0,...,22} {
+    \pgfmathsetmacro{\xx}{7.35+\i*.21}
+    \draw[spectreAccent!25,line width=.6pt] (\xx,.22)--(\xx,.38);
+  }
+\end{tikzpicture}

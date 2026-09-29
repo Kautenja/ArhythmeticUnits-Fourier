@@ -1,0 +1,183 @@
+\clearpage
+\section{Recognizing Sound Shapes}\label{sec:shapes}
+
+A spectrogram turns musical events into shapes. Read position as frequency,
+horizontal extent as captured time, and color as magnitude. Start with
+Average and Smooth off so their blending does not disguise the pattern.
+
+\begin{figure}[!htp]
+\centering
+\input{img/SoundShapes.tex}
+\caption{Schematic sound signatures, shown in chronological order within
+one sweep. Marks indicate energy; their shade is illustrative rather than a
+calibrated palette. Spectre's scan line wraps when it reaches the right edge.}
+\end{figure}
+
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt]
+  \item[Steady tone] A sine produces one horizontal band. A harmonic sound
+  adds bands near integer multiples of its fundamental. With Linear Freq
+  Scale, equally spaced harmonics are equally spaced on the frequency axis.
+  \item[Pitch movement] A glide bends the bands upward or downward.
+  Vibrato makes them undulate. Harmonics move together as the fundamental
+  changes; frequency smoothing can blend neighboring bands.
+  \item[Attack and decay] A short broadband attack produces a vertical
+  mark. Resonances can continue as horizontal tails. A pitched percussion
+  sound may combine a vertical attack with a falling pitch curve.
+  \item[Sustained noise] Energy spreads over a frequency region instead
+  of forming stable harmonic lines. A moving filter changes that region's
+  boundary and may leave a bright resonant band near its cutoff.
+\end{description}
+
+\paragraph{Use shape as evidence}
+A thick band can be a window's broad peak, modulation, several nearby tones,
+or smoothing. It does not establish that the source is noisy. An evenly
+colored region can simply be above Ceil or below Floor. Change one viewing
+control at a time, then compare the sound again with minimal smoothing.
+The next walkthroughs isolate these causes.
+
+\clearpage
+\section{Following An Envelope}\label{sec:envelope}
+
+Follow how a sound develops rather than only how bright its final spectrum
+looks. Use an oscillator or noise source, a VCA, and a repeating envelope.
+
+\paragraph{Starting point}
+Load \textbf{DecibelInspection}. It sets unity input gain, Flattop, no
+smoothing, zero Slope, and a $-90$ to $+12\,\mathrm{dB}$ color range.
+Change Window to Hann. Use Linear Freq Scale and $0$--$5\,\mathrm{kHz}$
+for a pitched source, or a wider range for noise. Keep Rack at
+$48\,\mathrm{kHz}$ for the timing examples here.
+
+\begin{enumerate}
+  \item Patch the sound through the VCA. Send the envelope to the VCA's
+  level input, and branch the VCA output to Spectre and your listening path.
+  Trigger a short attack and a decay of roughly half a second once a second.
+  \item Watch several repetitions. A sine leaves one band whose color
+  brightens at each attack and fades during decay. Noise leaves a broad
+  vertical event. Your envelope shape controls how those colors fade.
+  \item Set Average to $300\,\mathrm{ms}$ and observe new events. Their
+  level changes should look more gradual. Previously recorded columns are
+  unchanged; Average affects newly analyzed spectra. Restore Average to zero.
+  \item Send an envelope to oscillator pitch or to a filter's cutoff.
+  Compare movement in frequency with fading amplitude. Freeze after a few
+  events and inspect their shapes; resume to try a different envelope.
+\end{enumerate}
+
+\paragraph{What time detail survives?}
+At $48\,\mathrm{kHz}$ each column summarizes about $42.7\,\mathrm{ms}$
+of audio, and successive windows overlap by half. A very short click can
+therefore affect several columns. Its drawn width is not its exact duration.
+Averaging adds further persistence. Use an oscilloscope for individual sample
+edges or precise attack timing, and Spectre for the changing frequency content.
+
+\paragraph{Try a fair comparison}
+Keep gain, Floor, Ceil, window, and sample rate fixed while changing the
+source. A darker decay after raising Floor does not show that the VCA became
+quieter: it shows that you hid more low-level detail. Likewise, changing
+Slope can make upper partials appear to sustain longer by making them more
+visible. Use zero Slope while comparing decay across frequencies.
+
+\clearpage
+\section{Finding Quiet Detail}\label{sec:detail}
+
+Separate an acquisition change from a viewing change by recoloring the same
+frozen history. Use a sound with both strong and weak partials or a long decay.
+
+\paragraph{Starting point}
+Load \textbf{DecibelInspection} and capture a few seconds of the sound.
+Keep input gain at $0\,\mathrm{dB}$ and Slope at zero. Then press Run to freeze.
+
+\begin{enumerate}
+  \item Hover over a strong band and a quieter region. In Decibels mode,
+  Raw reports the stored bin below the cursor frequency; Color reports the
+  weighted, interpolated image sample. Neither readout is clamped to the
+  palette's endpoints.
+  \item Raise Floor from $-90$ to $-60\,\mathrm{dB}$ using its right-click
+  numeric entry. Weak detail now shares the bottom color. This changes
+  contrast; it does not remove noise or rewrite the stored spectra.
+  \item Lower Floor again and lower Ceil toward the quiet detail. More of
+  the palette is allocated to that range, while strong peaks can saturate at
+  the top color. Raise Ceil again to distinguish the strong values.
+  \item Try Cividis or Gray to compare color and lightness cues. Switch to
+  Linear and back to Decibels. Each scale restores its own range; the stored
+  history is the same throughout the experiment.
+\end{enumerate}
+
+\paragraph{A worked contrast example}
+With Floor $-90$ and Ceil $0\,\mathrm{dB}$, a $-60\,\mathrm{dB}$ sample
+sits one third of the way through the palette. With Floor $-70$ and Ceil
+$-50\,\mathrm{dB}$, that same sample sits halfway through it. Values above
+$-50\,\mathrm{dB}$ all reach the top color in the second view. Palette
+position is numeric; equal steps need not look equally bright in every map.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}p{.35\textwidth}X@{}}
+\toprule
+\textbf{Change while frozen} & \textbf{Effect} \\
+\midrule
+Palette, range, Slope & Recolors retained history. \\
+Freq Scale, LO/HI Freq & Remaps or crops the frequency view. \\
+Window, Average, Smooth & Takes effect on new analysis after resuming. \\
+Input gain, AC coupling & Affects samples captured after resuming. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+To compare analysis settings, resume and allow fresh history to replace the
+old columns. Save an external image to preserve a result: a saved Rack patch
+retains settings and Run state, but not the captured history.
+
+\clearpage
+\section{Time And Measurement Limits}\label{sec:time}
+
+\paragraph{Read the sweep as a circular timeline}
+After the first full sweep, the oldest column is just ahead of the scan line
+and the newest is just behind it. To follow events from old to new, start at
+the scan line, read rightward to the edge, then continue from the left edge
+back to the scan line. Events on opposite sides of the scan line are almost
+one history length apart, despite being neighbors on screen.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrrr@{}}
+\toprule
+\textbf{Rack rate} & \textbf{Bin spacing} & \textbf{Column interval} & \textbf{Full sweep} \\
+\midrule
+$44.1\,\mathrm{kHz}$ & $21.53\,\mathrm{Hz}$ & $23.22\,\mathrm{ms}$ & $11.89\,\mathrm{s}$ \\
+$48\,\mathrm{kHz}$ & $23.44\,\mathrm{Hz}$ & $21.33\,\mathrm{ms}$ & $10.92\,\mathrm{s}$ \\
+$96\,\mathrm{kHz}$ & $46.88\,\mathrm{Hz}$ & $10.67\,\mathrm{ms}$ & $5.46\,\mathrm{s}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The analysis window lasts twice the column interval. At $48\,\mathrm{kHz}$,
+one quarter of the history width represents about $2.73\,\mathrm{s}$ of
+captured time. This is an estimate, not a cursor time measurement. Pauses are
+excluded, and resuming can finish a window that began before the pause; the
+first resumed columns need not represent uninterrupted real-world time.
+After a sample-rate change, wait a full sweep before using one time scale
+for the entire image.
+
+\paragraph{Know what a level means}
+For a steady isolated sine, unity gain, zero Slope, no smoothing, AC coupling
+off, and a bin-centered frequency, $5\,\mathrm{V}$ peak is approximately
+$0\,\mathrm{dB}$ in Decibels mode. Half that amplitude is about
+$-6.02\,\mathrm{dB}$; one tenth is $-20\,\mathrm{dB}$. At
+$48\,\mathrm{kHz}$, $750\,\mathrm{Hz}$ is exactly bin 32 of the fixed
+2048-sample FFT and provides a convenient reference tone. Inspect Raw near
+that bin; between bins, the Color readout can differ because it interpolates.
+
+\paragraph{Know what a level cannot tell you}
+The largest spectral bin is not total RMS, perceived loudness, or noise power
+per hertz. A finite window spreads a tone over neighboring bins. Quiet bands
+near a strong tone can be window leakage; changing window requires new
+capture to test that possibility. Spectre's fixed length cannot resolve every
+pair of nearby bass tones: cropping magnifies existing detail. Use Fourier's
+longer frames when frequency separation matters more than history.
+
+\paragraph{Keep sources separate when needed}
+A polyphonic input sums voices before analysis. Identical in-phase voices
+reinforce; opposite-polarity copies can cancel. The image contains no phase
+measurement. Split voices before Spectre to inspect one voice, or use separate
+Fourier inputs to compare several signals at once.

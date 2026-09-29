@@ -1,0 +1,19 @@
+% Functional routing diagram, not a Rack patch screenshot.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small,
+  block/.style={draw=panelRule,rounded corners=2pt,fill=panelPaper,
+    minimum width=2.3cm,minimum height=.8cm,align=center},
+  wire/.style={-{Stealth[length=5pt]},line width=.9pt,draw=panelInk}]
+  \node[block] (source) at (1.3,2) {Saw / noise};
+  \node[block] (filter) at (6,2) {Filter};
+  \node[block] (listen) at (11,2) {Listening path};
+  \node[block,draw=channelOne] (red) at (3.6,0) {Fourier: red};
+  \node[block,draw=channelTwo] (green) at (8.4,0) {Fourier: green};
+  \draw[wire] (source)--(filter);
+  \draw[wire] (filter)--(listen);
+  \fill[panelInk] (3.6,2) circle[radius=.06];
+  \fill[panelInk] (8.4,2) circle[radius=.06];
+  \draw[wire,draw=channelOne] (3.6,2)--(red);
+  \draw[wire,draw=channelTwo] (8.4,2)--(green);
+  \node[above,text=panelMuted] at (3.6,2.1) {Before};
+  \node[above,text=panelMuted] at (8.4,2.1) {After};
+\end{tikzpicture}

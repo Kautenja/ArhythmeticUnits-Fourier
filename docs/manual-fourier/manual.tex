@@ -1,14 +1,18 @@
 \documentclass[12pt,letterpaper]{article}
 \usepackage[moduleName={Fourier},version={2.1.2}]{ArhythmeticUnits}
 
+\input{PanelDrawing.tex}
+
 \begin{document}
 \titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
+\input{Guide.tex}
+\clearpage
 
 % ----------------------------------------------------------------------------
 % MARK: Overview
 % ----------------------------------------------------------------------------
 
-\section{Overview}
+\section{Overview}\label{sec:overview}
 
 \textbf{Fourier} is a four-input spectrum analyzer for VCV Rack 2. It shows
 how a signal's amplitude is distributed across frequencies. Each input has
@@ -40,7 +44,7 @@ simpler trigonometric functions.
 \end{figure}
 
 \clearpage
-\section{Quick Start}
+\section{Quick Start}\label{sec:quick-start}
 
 \begin{itemize}
   \item Connect an oscillator or other audio source to the red input. Keep
@@ -81,18 +85,21 @@ provide examples of these choices.
 % ----------------------------------------------------------------------------
 
 \clearpage
-\section{Panel Layout}
+\section{Panel Layout}\label{sec:panel}
 
 \begin{figure}[!htp]
 \centering
-\input{img/PanelLayout.tex}
-\caption{A schematic of Fourier's control groups. Positions and proportions
-are simplified; the cover shows the rendered module.}
+\resizebox{\textwidth}{!}{\input{img/PanelLayout.tex}}
+\caption{Panel reference. Numbered callouts match the control sections
+below. The screen and value fields are schematic; the cover shows the module
+in operation.}
 \end{figure}
 
-Use the left strip for the four inputs, their gains, and Run; use the lower
-strip for shared analysis and display settings. Text controls brighten when
-hovered. The sections below give the current ranges and defaults.
+Each input and gain pair controls one trace. The lower strip controls the
+analysis and display for all four inputs. The reference shows control
+locations without prescribing settings. Text controls brighten when hovered.
+
+\clearpage
 
 \subsection{Input}
 
@@ -251,7 +258,7 @@ This is a visual weighting of spectral magnitudes. Set it to zero to inspect
 relative amplitudes without that weighting.
 
 \clearpage
-\section{Reading The Display}
+\section{Reading The Display}\label{sec:display}
 
 Frequency runs from left to right and spectral amplitude from bottom to top.
 Each colored trace represents one input port's summed signal. Input gain,
@@ -268,7 +275,7 @@ level. It does not automatically find a peak. Spectre's hover readout instead
 measures a stored spectral bin at the selected time and frequency, before
 Slope weighting.
 
-\section{Context Menu And Saved Settings}
+\section{Context Menu And Saved Settings}\label{sec:settings}
 
 Right-click the module to find these options under \textbf{Render Settings}:
 \begin{itemize}
@@ -292,8 +299,10 @@ press Run to capture a new one.
 Rack's module initialization resets the controls to their defaults, enables
 Run, AC coupling, and Bezier curves, and disables Filled Display.
 
+\input{Tutorials.tex}
+
 \clearpage
-\section{Factory Presets}
+\section{Factory Presets}\label{sec:presets}
 
 Load these examples from Rack's module preset menu. All start running,
 with $0\,\mathrm{dB}$ input gain and Filled Display off. Frequency bounds
@@ -323,7 +332,7 @@ are limited by the current sample rate.
 \end{description}
 
 \clearpage
-\section{Troubleshooting}
+\section{Troubleshooting}\label{sec:troubleshooting}
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
   \item[No trace or a stale trace] Check the source signal, cable, input
@@ -344,7 +353,7 @@ are limited by the current sample rate.
   audio outputs. Stopping Run stops capture but does not stop FFT processing.
 \end{description}
 
-\section{Analysis Timing And Further Reading}
+\section{Analysis Timing And Further Reading}\label{sec:further-reading}
 
 Fourier prepares each spectrum over one Hop interval and displays it when
 complete. Longer Length settings include more past audio, Average slows the

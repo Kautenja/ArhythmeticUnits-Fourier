@@ -1,14 +1,18 @@
 \documentclass[12pt,letterpaper]{article}
 \usepackage[moduleName={Spectre},version={2.1.2}]{ArhythmeticUnits}
 
+\input{PanelDrawing.tex}
+
 \begin{document}
 \titlePage{img/Logo}{img/PanelLayout.png}{img/ArhythmeticUnits}{}
+\input{Guide.tex}
+\clearpage
 
 % ----------------------------------------------------------------------------
 % MARK: Overview
 % ----------------------------------------------------------------------------
 
-\section{Overview}
+\section{Overview}\label{sec:overview}
 
 \textbf{Spectre} is a spectrogram visualizer for VCV Rack 2. It shows how a
 signal's frequency content changes over time: frequency runs from bottom to
@@ -38,7 +42,7 @@ $11.89\,\mathrm{s}$. Increasing Rack's sample rate shortens the history
 duration and increases the spacing between bins.
 
 \clearpage
-\section{Quick Start}
+\section{Quick Start}\label{sec:quick-start}
 
 \begin{itemize}
   \item Connect an oscillator or another signal to the input. The illuminated
@@ -76,18 +80,21 @@ increasing resolution. The factory presets provide examples of these choices.
 % ----------------------------------------------------------------------------
 
 \clearpage
-\section{Panel Layout}
+\section{Panel Layout}\label{sec:panel}
 
 \begin{figure}[!htp]
 \centering
-\input{img/PanelLayout.tex}
-\caption{A schematic of Spectre's control groups. Positions and proportions
-are simplified; the cover shows the rendered module.}
+\resizebox{0.88\textwidth}{!}{\input{img/PanelLayout.tex}}
+\caption{Panel reference. Numbered callouts match the control sections
+below. The screen and value fields are schematic; the cover shows the module
+in operation.}
 \end{figure}
 
-Use the left strip for input, color range, and Run; use the lower strip for
-analysis and display settings. Text controls brighten when hovered. The
-sections below give the current ranges and defaults.
+The left strip controls input gain, color range, and acquisition. The lower
+strip controls analysis and display settings. Callout 2 includes the palette
+and scale menus plus both range handles. Text controls brighten when hovered.
+
+\clearpage
 
 \subsection{Input}
 
@@ -146,6 +153,7 @@ $-45\,\mathrm{dB}$ maps to the palette midpoint. Lowering Ceiling to
 $-20\,\mathrm{dB}$ makes quiet peaks brighter; raising it to
 $+12\,\mathrm{dB}$ separates bright positive-dB regions.
 
+\clearpage
 \paragraph{Why Decibels shows more background} Logarithmic mapping makes
 weak content more visible. A $-60\,\mathrm{dB}$ component uses 0.1\% of the
 palette in the default Linear range, but one third of the palette in the
@@ -155,7 +163,6 @@ Raise Floor (for example, toward $-60$ or $-50\,\mathrm{dB}$) for a quieter
 background, or select Linear. Zero Slope makes unweighted comparisons easier.
 No hidden noise gate or smoothing is applied by the color controls.
 
-\clearpage
 \subsection{Run}
 
 When \textbf{Run} is lit, Spectre buffers and analyzes incoming samples. When
@@ -214,7 +221,6 @@ a fixed recording of the selected duration.
 In Spectre, smoothing can blur transients across time; its duration is not the
 length of the visible history.
 
-\clearpage
 \subsection{Smooth}
 
 \textbf{Smooth} combines neighboring spectral magnitudes over a
@@ -262,7 +268,7 @@ labeled frequencies. Use zero slope for unweighted comparisons.
 % ----------------------------------------------------------------------------
 
 \clearpage
-\section{Reading The Display}
+\section{Reading The Display}\label{sec:display}
 
 The scan line advances from left to right and wraps back to the left edge.
 Each new column replaces the oldest spectrum at that position. The image
@@ -321,7 +327,7 @@ $0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
 Spectre measures recorded spectral data. There is no time readout; use the
 sweep duration in the overview as a guide.
 
-\section{Context Menu And Saved Settings}
+\section{Context Menu And Saved Settings}\label{sec:settings}
 
 Right-click the module to find these options under \textbf{Render Settings}:
 \begin{itemize}
@@ -352,8 +358,10 @@ duration. Existing history is not cleared automatically and is displayed
 using the new frequency mapping; allow a full sweep to replace it before
 comparing frequencies at the new sample rate.
 
+\input{Tutorials.tex}
+
 \clearpage
-\section{Factory Presets}
+\section{Factory Presets}\label{sec:presets}
 
 Load these examples from Rack's module preset menu. All start running, with
 $0\,\mathrm{dB}$ input gain and the Magma color map. Frequency bounds are
@@ -385,7 +393,7 @@ original presets retain Linear mode and their original appearance.
 \end{description}
 
 \clearpage
-\section{Troubleshooting}
+\section{Troubleshooting}\label{sec:troubleshooting}
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
   \item[No image or a stale image] Check the source signal, cable, input
@@ -414,7 +422,7 @@ original presets retain Linear mode and their original appearance.
   you need to trade frequency detail or update rate for analysis workload.
 \end{description}
 
-\section{Analysis Timing And Further Reading}
+\section{Analysis Timing And Further Reading}\label{sec:further-reading}
 
 Spectre prepares each new spectrum over its 1024-sample update interval,
 about $21.3\,\mathrm{ms}$ at $48\,\mathrm{kHz}$. Each spectrum already covers
