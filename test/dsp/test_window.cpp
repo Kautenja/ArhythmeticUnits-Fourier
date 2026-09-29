@@ -1085,41 +1085,56 @@ SCENARIO("window functions need to be mapped to coherent gains at run-time") {
     }
 }
 
-// ---------------------------------------------------------------------------
-// MARK: side_lobe_amplitude
-// ---------------------------------------------------------------------------
-
-TEST_CASE("side_lobe_amplitude should map windows to side-lobe amplitudes measured in decibels.") {
-    // REQUIRE(-13 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Boxcar));
-    // REQUIRE(-26 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Bartlett));
-    // REQUIRE(-31 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Hann));
-    // REQUIRE(-41 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Hamming));
-    // REQUIRE(-57 == Fourier::Window::side_lobe_amplitude(Fourier::Window::Function::Blackman));
+TEST_CASE("Window metadata preserves attenuation and length-dependent bandwidth") {
+    using Function = Fourier::Window::Function;
+    struct Reference {
+        Function window;
+        float side_lobe_db;
+        float stopband_db;
+        double bandwidth;
+    };
+    // Public window-selection metadata. Keep the dB values signed, and check
+    // bandwidth at two lengths so an omitted division by N cannot pass.
+    const Reference references[] = {
+        {Function::Boxcar, -13.2f, -21.f, 0.9},
+        {Function::Bartlett, -26.4f, -25.f, 1.8},
+        {Function::BartlettHann, -35.7f, -42.f, 3.2},
+        {Function::Parzen, -53.f, -31.f, 4.0},
+        {Function::Welch, -21.2f, -31.f, 3.3},
+        {Function::Cosine, -22.8f, -33.f, 3.1},
+        {Function::Bohman, -46.f, -28.f, 3.3},
+        {Function::Lanczos, -26.3f, -28.f, 3.3},
+        {Function::Hann, -31.5f, -44.f, 3.1},
+        {Function::Hamming, -41.7f, -53.f, 3.3},
+        {Function::Blackman, -58.1f, -74.f, 5.5},
+        {Function::BlackmanHarris, -91.8f, -92.f, 6.3},
+        {Function::BlackmanNuttall, -88.7f, -93.f, 6.4},
+        {Function::KaiserBessel, -65.4f, -60.f, 3.6},
+        {Function::Flattop, -83.f, -99.f, 7.5},
+    };
+    for (const auto& reference : references) {
+        CAPTURE(static_cast<int>(reference.window));
+        CHECK(Fourier::Window::side_lobe_amplitude(reference.window)
+            == Approx(reference.side_lobe_db));
+        CHECK(Fourier::Window::stopband_attenuation(reference.window)
+            == Approx(reference.stopband_db));
+        for (double length : {64.0, 1024.0})
+            CHECK(Fourier::Window::transition_width(reference.window, length)
+                == Approx(reference.bandwidth / length));
+    }
 }
 
-// ---------------------------------------------------------------------------
-// MARK: stopband_attenuation
-// ---------------------------------------------------------------------------
-
-// TEST_CASE("stopband_attenuation should map windows to stop-band attenuation measured in decibels.") {
-//     REQUIRE(-21 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Boxcar));
-//     REQUIRE(-25 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Bartlett));
-//     REQUIRE(-44 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Hann));
-//     REQUIRE(-53 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Hamming));
-//     REQUIRE(-74 == Fourier::Window::stopband_attenuation(Fourier::Window::Function::Blackman));
-// }
-
-// ---------------------------------------------------------------------------
-// MARK: transition_width
-// ---------------------------------------------------------------------------
-
-// TEST_CASE("transition_width should calculate the transition width for an arbitrary window length.") {
-//     REQUIRE(epsilon_equal(0.09f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Boxcar)));
-//     REQUIRE(epsilon_equal(0.18f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Bartlett)));
-//     REQUIRE(epsilon_equal(0.31f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Hann)));
-//     REQUIRE(epsilon_equal(0.33f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Hamming)));
-//     REQUIRE(epsilon_equal(0.55f, Fourier::Window::transition_width<float>(10, Fourier::Window::Function::Blackman)));
-// }
+TEST_CASE("Window functions and metadata reject unknown window identifiers") {
+    for (int value : {-1, 15}) {
+        const auto window = static_cast<Fourier::Window::Function>(value);
+        CAPTURE(value);
+        CHECK_THROWS_AS(Fourier::Window::window(window, 0.0, 16.0), std::runtime_error);
+        CHECK_THROWS_AS(Fourier::Window::coherent_gain(window), std::runtime_error);
+        CHECK_THROWS_AS(Fourier::Window::side_lobe_amplitude(window), std::runtime_error);
+        CHECK_THROWS_AS(Fourier::Window::stopband_attenuation(window), std::runtime_error);
+        CHECK_THROWS_AS(Fourier::Window::transition_width(window, 16.0), std::runtime_error);
+    }
+}
 
 // ---------------------------------------------------------------------------
 // MARK: Exponential Window

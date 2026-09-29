@@ -8,7 +8,10 @@ import sys
 INSTRUMENT = ARGUMENTS.get('INSTRUMENT', '')
 INSTRUMENT_FLAGS = {
     '': [],
-    'coverage': ['-O0', '-g', '-fprofile-instr-generate', '-fcoverage-mapping'],
+    # Emit inline bodies even when unused in a suite, so multi-binary LLVM
+    # reports cannot prefer an empty mapping over another suite's execution.
+    'coverage': ['-O0', '-g', '-fprofile-instr-generate', '-fcoverage-mapping',
+                 '-femit-all-decls'],
     'asan-ubsan': ['-O1', '-g', '-fno-omit-frame-pointer',
                    '-fsanitize=address,undefined', '-fno-sanitize-recover=all'],
     'tsan': ['-O1', '-g', '-fno-omit-frame-pointer', '-fsanitize=thread'],

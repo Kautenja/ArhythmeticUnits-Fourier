@@ -534,3 +534,62 @@ TEST_CASE("IFFT rejects invalid lengths without changing pending work", "[ifft]"
     for (size_t i = 1; i < ifft.size(); ++i)
         REQUIRE(ifft.coefficients[i] == std::complex<float>(0, 0));
 }
+
+TEMPLATE_TEST_CASE("Complex FFT applies a window before transforming and can reuse unwindowed input",
+        "[fft]", float, double) {
+    using T = TestType;
+    for (size_t n : {8u, 32u}) {
+        Fourier::OnTheFlyFFT<T> fft(n);
+        std::vector<std::complex<T>> input(n);
+        std::vector<T> weights(n);
+        for (size_t i = 0; i < n; ++i) {
+            input[i] = {T(int(i % 7) - 3) / T(4), T(int(i % 5) - 2) / T(4)};
+            weights[i] = T(i) / T(n - 1);
+        }
+        const auto original = input;
+        for (bool windowed : {true, false}) {
+            CAPTURE(n, windowed);
+            fft.buffer(input.data(), windowed ? weights : std::vector<T>{});
+            fft.compute();
+            CHECK(input == original);
+            // Independent complex DFT checks both phase and amplitude. The
+            // asymmetric ramp exposes windowing after bit reversal by mistake.
+            for (size_t k = 0; k < n; ++k) {
+                std::complex<long double> expected(0, 0);
+                for (size_t i = 0; i < n; ++i) {
+                    const long double angle = -2.L * std::acos(-1.L) * k * i / n;
+                    expected += std::complex<long double>(input[i].real(), input[i].imag())
+                        * (windowed ? static_cast<long double>(weights[i]) : 1.L)
+                        * std::complex<long double>(std::cos(angle), std::sin(angle));
+                }
+                const std::complex<long double> actual(fft.coefficients[k].real(),
+                                                       fft.coefficients[k].imag());
+                CAPTURE(k);
+                CHECK(std::abs(actual - expected) < 32.L * n * std::numeric_limits<T>::epsilon());
+            }
+        }
+    }
+}
+
+TEST_CASE("Coefficient interpolation preserves endpoints and interpolates real and imaginary parts") {
+    const Fourier::DFTCoefficients coefficients = {{2.f, -4.f}, {6.f, 8.f}, {-2.f, 4.f}};
+    CHECK(Fourier::interpolate_coefficients(coefficients, 0.f) == coefficients.front());
+    CHECK(Fourier::interpolate_coefficients(coefficients, 2.f) == coefficients.back());
+    CHECK(Fourier::interpolate_coefficients(coefficients, 0.5f) == std::complex<float>(4.f, 2.f));
+    CHECK(Fourier::interpolate_coefficients(coefficients, 1.25f) == std::complex<float>(4.f, 7.f));
+}
+
+TEST_CASE("Bit reversal resizes and restores indices when applied twice") {
+    Fourier::BitReversalTable table(8);
+    const size_t expected[] = {0, 4, 2, 6, 1, 5, 3, 7};
+    REQUIRE(table.size() == 8);
+    for (size_t i = 0; i < table.size(); ++i) CHECK(table[i] == expected[i]);
+    for (size_t n : {32u, 4u, 1u}) {
+        table.resize(n);
+        REQUIRE(table.size() == n);
+        for (size_t i = 0; i < n; ++i) {
+            REQUIRE(table[i] < n);
+            CHECK(table[table[i]] == i);
+        }
+    }
+}

@@ -22,7 +22,8 @@ RACK_TEST_BUILD := build/instrumented/$(RACK_TEST_INSTRUMENT)/rack
 # floating-point flags while keeping useful sanitizer stacks.
 RACK_TEST_FLAGS := $(filter-out -fno-gnu-unique,$(RACK_TEST_FLAGS)) -g -fno-omit-frame-pointer
 ifeq ($(RACK_TEST_INSTRUMENT),coverage)
-RACK_TEST_FLAGS += -fprofile-instr-generate -fcoverage-mapping
+# Keep complete inline mappings across the separate test executables.
+RACK_TEST_FLAGS += -fprofile-instr-generate -fcoverage-mapping -femit-all-decls
 else ifeq ($(RACK_TEST_INSTRUMENT),asan-ubsan)
 RACK_TEST_FLAGS := $(filter-out -O%,$(RACK_TEST_FLAGS)) -O1 -fsanitize=address,undefined -fno-sanitize-recover=all
 else

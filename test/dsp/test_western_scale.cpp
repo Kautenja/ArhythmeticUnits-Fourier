@@ -132,3 +132,9 @@ TEST_CASE("Positive finite float extremes produce finite tuning") {
         std::exp2((midi_note - 69) / 12.0 + note.cents / 1200.0);
     REQUIRE(reconstructed == Approx(static_cast<double>(frequency)).epsilon(1e-6));
 }
+
+TEST_CASE("Note names reject identifiers outside the chromatic scale") {
+    for (int value : {-1, 12})
+        CHECK_THROWS_AS(Fourier::to_string(static_cast<Fourier::Note>(value)),
+                        std::runtime_error);
+}

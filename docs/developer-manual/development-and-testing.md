@@ -164,8 +164,10 @@ reports are separate by test workload:
 
 Each contains `html/index.html`, `summary.txt`, `coverage.lcov`,
 `coverage.json`, merged `coverage.profdata`, raw profiles, `test-status.json`, and `run.log`.
-Catch2, test fixtures, SDK headers, and system libraries are excluded from
-report totals. Reports cover compiled functions, not every file in the
+Coverage builds use `-femit-all-decls` so an unused inline declaration in one
+suite cannot mask the executed body from another suite when LLVM combines
+binaries. Catch2, test fixtures, SDK headers, and system libraries are excluded
+from report totals. Reports cover compiled functions, not every file in the
 repository: uninstantiated templates and unlinked code are not measured.
 The two percentages must not be added or treated as a combined whole-plugin
 coverage figure. Rack coverage includes headless display calls but does not

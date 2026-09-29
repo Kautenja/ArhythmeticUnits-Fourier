@@ -119,3 +119,19 @@ SCENARIO("Fourier::TriggerDivider processes signals") {
         }
     }
 }
+
+TEST_CASE("Reset restarts the divider on a downbeat without changing its period") {
+    Fourier::TriggerDivider divider;
+    divider.setDivision(4);
+    divider.process();
+    divider.process();
+    REQUIRE(divider.getClock() == 2);
+    divider.reset();
+    CHECK(divider.getDivision() == 4);
+    CHECK(divider.getClock() == 0);
+    CHECK(divider.getPhase() == 0.f);
+    CHECK(divider.getGate());
+    CHECK(divider.process());
+    for (int i = 0; i < 3; ++i) CHECK_FALSE(divider.process());
+    CHECK(divider.process());
+}
