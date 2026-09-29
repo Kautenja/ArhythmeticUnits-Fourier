@@ -165,12 +165,22 @@ display storage remain float (four SIMD lanes in Fourier).
 butterflies, real-spectrum reconstruction, magnitude prefix sums,
 frequency/time smoothing, and the output callback over one exact hop.
 
-For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=M+B+2K work units.
+For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=pM+B+(1+o)K scheduling
+units, where p=4 while rebuilding the window cache and p=1 otherwise. A pair
+executes at its first unit; the remaining credit is skipped. This spreads
+expensive coefficient preparation over more of the hop. Output weight o is
+the analyzer's compile-time `OutputWeight` (default one). Fourier uses two
+because its output callback maps four display coordinates on the engine
+thread; Spectre uses one. Output bins also execute at their first credit.
 Sample s executes `floor((s+1)W/H)-floor(sW/H)` units. A quotient/remainder
 accumulator implements that schedule without per-sample quota division.
 Dense schedules dispatch contiguous units in stage segments within the same
-sample quota; sparse schedules retain the per-unit loop. This reduces dispatch
-overhead without changing the work budget or output-bin schedule.
+sample quota; sparse schedules retain the per-unit loop. SIMD butterfly
+segments share stride/group setup while honoring that quota. Dirty and clean
+frames have different intermediate bin-emission positions; complete-frame
+publication and numerical processing remain the same. `work_per_frame()`
+describes the active frame, or the next frame at a frame boundary, including
+immediately after configure, reset, and publication.
 Frames end at input indices jH and publish at jH+H-1, starting with zero
 padding. This intentionally replaces the earlier restart-on-FFT-completion
 cadence. Settings latch at each frame start; mid-frame changes apply next hop.

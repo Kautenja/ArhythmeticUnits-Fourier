@@ -41,8 +41,13 @@ struct SpectrumSettings {
 
 /// @brief Windowed real FFT, positive-bin smoothing and output within one hop.
 /// @tparam T Scalar or SIMD real arithmetic with ADL abs support.
+/// @tparam OutputWeight Scheduling credit per output bin (1 or 2).
 /// @details One producer owns this object. Storage is prepared at construction.
-/// For M=N/2, K=M+1 and B=(M/2)log2(M), each frame has W=M+B+2K units.
+/// For M=N/2, K=M+1 and B=(M/2)log2(M), each frame has W=pM+B+(1+o)K units,
+/// where o=OutputWeight (default 1), allowing for a more costly output callback,
+/// and p=4 while rebuilding the window cache or p=1 otherwise. Each pair
+/// executes at its first preparation unit; the remaining p-1 units are credit.
+/// Output bins similarly execute at the first of their o units.
 /// Call s executes floor((s+1)W/H)-floor(sW/H), at most ceil(W/H) units.
 /// Preparation, butterflies, reconstruction/prefix sums and per-bin output
 /// execute in dependency order. A frame ending at sample jH publishes at
@@ -50,8 +55,10 @@ struct SpectrumSettings {
 /// The output callback runs once per positive bin in the last stage; it must
 /// not allocate, block, or retain references. Only publish its destination
 /// after process() returns true. Input is assumed finite.
-template<typename T>
+template<typename T, size_t OutputWeight = 1>
 class SpectrumAnalysis {
+    static_assert(OutputWeight == 1 || OutputWeight == 2,
+        "Spectrum output weight must be one or two");
     /// Maximum-size plans also serve smaller transforms by index/stride scaling.
     const size_t maximum_length;
     BitReversalTable reversal;
@@ -68,11 +75,19 @@ class SpectrumAnalysis {
     size_t head = 0, available = 0, origin = 0, frame_available = 0;
     /// Hop phase, dependency stage and unit index; butterfly traversal state.
     size_t phase = 0, stage = 0, cursor = 0, span = 2, group = 0, pair = 0;
-    size_t butterflies = 0, reversal_shift = 0;
+    size_t butterflies = 0, reversal_shift = 0, preparation_units = 0;
     /// Quotient/remainder accumulator realizes the balanced quota without division per sample.
     size_t quota_base = 0, quota_remainder = 0, quota_error = 0;
     bool window_dirty = true, bands_dirty = true, clear_average = true;
     float window_gain = 1.f, half_band = 1.f, band_ratio = 1.f;
+
+    /// @brief Refresh the next frame's weighted schedule at a cache/configuration boundary.
+    void update_schedule() {
+        preparation_units = (window_dirty ? 4 : 1) * (settings.length / 2);
+        const size_t work = work_per_frame();
+        quota_base = work / settings.hop;
+        quota_remainder = work % settings.hop;
+    }
 
     /// @brief Reject invalid capacities before constructing any FFT plan.
     static size_t checked_length(size_t length, size_t hop) {
@@ -89,8 +104,9 @@ class SpectrumAnalysis {
     }
 
     /// @brief Fuse window preparation/application, real packing and permutation.
+    template<bool Rebuild>
     void prepare_pair(size_t k) {
-        if (window_dirty) {
+        if (Rebuild) {
             for (size_t i = 2*k; i < 2*k+2; ++i)
                 window[i] = window_gain * Window::window<float>(settings.window,
                     static_cast<float>(i), static_cast<float>(settings.length), false);
@@ -111,6 +127,29 @@ class SpectrumAnalysis {
             pair = 0;
             group += span;
             if (group == settings.length / 2) { group = 0; span *= 2; }
+        }
+    }
+
+    /// @brief Resume SIMD butterflies within the current quota, splitting at group ends.
+    void butterfly_segment(size_t count) {
+        while (count) {
+            const size_t half = span / 2;
+            const size_t end = pair + std::min(count, half - pair);
+            const size_t stride = maximum_length / span;
+            size_t twiddle = pair * stride;
+            count -= end - pair;
+            for (; pair < end; ++pair, twiddle += stride) {
+                const std::complex<T> w(twiddles[twiddle]);
+                const auto even = packed[group + pair];
+                const auto odd = complex_multiply(packed[group + pair + half], w);
+                packed[group + pair] = even + odd;
+                packed[group + pair + half] = even - odd;
+            }
+            if (pair == half) {
+                pair = 0;
+                group += span;
+                if (group == settings.length / 2) { group = 0; span *= 2; }
+            }
         }
     }
 
@@ -189,13 +228,17 @@ class SpectrumAnalysis {
         clear_average = true;
         // A cancelled cache rebuild may have written only some entries.
         window_dirty = bands_dirty = true;
+        update_schedule();
     }
 
     /// @brief Whether settings can be latched before the next input sample.
     bool is_frame_start() const { return phase == 0; }
     size_t size() const { return settings.length; }
     size_t hop_length() const { return settings.hop; }
-    size_t work_per_frame() const { return settings.length / 2 + butterflies + 2*(size()/2+1); }
+    /// @brief Scheduling units for the active frame, or the next frame when idle.
+    size_t work_per_frame() const {
+        return preparation_units + butterflies + (1+OutputWeight)*(size()/2+1);
+    }
 
     /// @brief Latch settings at a frame boundary; reject invalid values without mutation.
     /// @returns false for a mid-frame call or out-of-capacity/invalid settings.
@@ -223,8 +266,7 @@ class SpectrumAnalysis {
         for (size_t m = settings.length / 2; m > 1; m /= 2) butterflies += settings.length / 4;
         reversal_shift = 0;
         for (size_t n = settings.length; n < maximum_length; n *= 2) ++reversal_shift;
-        quota_base = work_per_frame() / settings.hop;
-        quota_remainder = work_per_frame() % settings.hop;
+        update_schedule();
         return true;
     }
 
@@ -248,37 +290,65 @@ class SpectrumAnalysis {
         size_t quota = quota_base;
         quota_error += quota_remainder;
         if (quota_error >= settings.hop) { quota_error -= settings.hop; ++quota; }
-        const size_t lengths[] = {size()/2, butterflies, size()/2+1, size()/2+1};
+        const size_t lengths[] = {preparation_units, butterflies,
+            size()/2+1, OutputWeight*(size()/2+1)};
         // Retain the simple loop when calls do at most two units. Segment
         // setup costs more than it saves for these sparse schedules.
         if (quota_base <= 1) {
             for (size_t i = 0; i < quota; ++i) {
                 switch (stage) {
-                case 0: prepare_pair(cursor); break;
+                case 0:
+                    if (!window_dirty) prepare_pair<false>(cursor);
+                    else if (cursor % 4 == 0) prepare_pair<true>(cursor / 4);
+                    break;
                 case 1: butterfly(); break;
                 case 2: reconstruct(cursor); break;
-                case 3: output_bin(cursor, emit); break;
+                case 3:
+                    if (cursor % OutputWeight == 0) output_bin(cursor / OutputWeight, emit);
+                    break;
                 }
                 if (++cursor == lengths[stage]) { cursor = 0; ++stage; }
             }
         } else {
             // Dispatch once per contiguous stage segment, without changing this
-            // sample's quota, arithmetic order, or per-bin callback positions.
+            // sample's weighted quota or arithmetic order.
             while (quota) {
                 const size_t count = std::min(quota, lengths[stage] - cursor);
                 const size_t end = cursor + count;
                 switch (stage) {
                 case 0:
-                    for (; cursor < end; ++cursor) prepare_pair(cursor);
+                    if (window_dirty) {
+                        // Execute exactly the multiples of four in [cursor,end).
+                        // Skipping credit in one step avoids per-pair bookkeeping.
+                        const size_t stop = (end + 3) / 4;
+                        for (size_t k = (cursor + 3) / 4; k < stop; ++k)
+                            prepare_pair<true>(k);
+                        cursor = end;
+                    } else {
+                        for (; cursor < end; ++cursor) prepare_pair<false>(cursor);
+                    }
                     break;
                 case 1:
-                    for (; cursor < end; ++cursor) butterfly();
+                    // Keep scalar traversal; SIMD shares stride/group setup.
+                    if (std::is_floating_point<T>::value) {
+                        for (; cursor < end; ++cursor) butterfly();
+                    } else {
+                        butterfly_segment(count);
+                        cursor = end;
+                    }
                     break;
                 case 2:
                     for (; cursor < end; ++cursor) reconstruct(cursor);
                     break;
                 case 3:
-                    for (; cursor < end; ++cursor) output_bin(cursor, emit);
+                    if (OutputWeight == 1) {
+                        for (; cursor < end; ++cursor) output_bin(cursor, emit);
+                    } else {
+                        const size_t stop = (end + OutputWeight-1) / OutputWeight;
+                        for (size_t k = (cursor + OutputWeight-1) / OutputWeight; k < stop; ++k)
+                            output_bin(k, emit);
+                        cursor = end;
+                    }
                     break;
                 }
                 quota -= count;
@@ -287,7 +357,11 @@ class SpectrumAnalysis {
         }
         if (++phase != settings.hop) return false;
         phase = 0;
-        window_dirty = bands_dirty = clear_average = false;
+        if (window_dirty) {
+            window_dirty = false;
+            update_schedule();
+        }
+        bands_dirty = clear_average = false;
         return true;
     }
 };

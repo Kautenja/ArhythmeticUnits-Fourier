@@ -57,8 +57,9 @@ TEST_CASE("One-hop spectra match the original RFFT across frames and settings") 
                     Fourier::OnTheFlyRFFT<float> reference(n);
                     Fourier::Window::CachedWindow<float> window(settings.window, n, false, true);
                     std::vector<float> input(n), previous(n/2+1, 0.f), result(n/2+1);
-                    const size_t w = analysis.work_per_frame(), k = n/2+1;
+                    const size_t k = n/2+1;
                     for (size_t t = 0; t < 6*hop; ++t) {
+                        const size_t w = analysis.work_per_frame();
                         size_t emitted = 0;
                         const bool ready = analysis.process(signal(t, fixture), [&](size_t bin, float value) {
                             result[bin] = value;
@@ -155,6 +156,7 @@ TEMPLATE_TEST_CASE("Quota segments preserve direct spectra through live size and
                     }
                     next_bin = 0;
                 }
+                const size_t w = analysis.work_per_frame(), bins = n/2+1;
                 size_t emitted = 0;
                 const bool ready = analysis.process(input, [&](size_t k, T value) {
                     CAPTURE(n, hop, tick, k);
@@ -164,7 +166,6 @@ TEMPLATE_TEST_CASE("Quota segments preserve direct spectra through live size and
                         .margin(std::is_same<T, float>::value ? 2e-5 : 1e-10));
                     ++emitted;
                 }, capture);
-                const size_t w = analysis.work_per_frame(), bins = n/2+1;
                 const auto outputs = [=](size_t units) {
                     return units > w-bins ? units-(w-bins) : 0;
                 };
@@ -172,6 +173,135 @@ TEMPLATE_TEST_CASE("Quota segments preserve direct spectra through live size and
                 REQUIRE(emitted == outputs((phase+1)*w/hop)-outputs(phase*w/hop));
                 REQUIRE(ready == (phase+1 == hop));
                 if (ready) REQUIRE(next_bin == bins);
+            }
+        }
+    }
+}
+
+TEMPLATE_TEST_CASE("Cache weights preserve frame-latched parameter response",
+    "[spectrum][schedule][controls]", float, double) {
+    using T = TestType;
+    constexpr size_t n = 32, hop = 37, bins = n/2+1;
+    // Independent counts: 16 pairs, 32 butterflies and two 17-bin stages.
+    constexpr size_t clean_work = 82, dirty_work = 130;
+    SpectrumAnalysis<T> analysis(n, hop);
+    SpectrumSettings settings;
+    settings.length = n;
+    settings.hop = hop;
+    settings.window = Fourier::Window::Function::Hann;
+    REQUIRE(analysis.configure(settings));
+    std::vector<T> history(n, T(0)), expected(bins);
+    size_t request_sample = 0, first_changed_publication = 0;
+    for (size_t frame = 0; frame < 5; ++frame) {
+        if (frame == 2) {
+            settings.window = Fourier::Window::Function::BlackmanHarris;
+            REQUIRE(analysis.configure(settings));
+        } else if (frame == 4) {
+            // Rebuild band bounds alone, without invalidating the window.
+            settings.sample_rate = 96000.f;
+            REQUIRE(analysis.configure(settings));
+        }
+        const size_t work = frame == 0 || frame == 2 ? dirty_work : clean_work;
+        Fourier::Window::CachedWindow<float> window(settings.window, n, false, true);
+        size_t next_bin = 0;
+        for (size_t phase = 0; phase < hop; ++phase) {
+            const size_t tick = frame*hop + phase;
+            if (frame == 1 && phase == 1) {
+                auto requested = settings;
+                requested.window = Fourier::Window::Function::BlackmanHarris;
+                REQUIRE_FALSE(analysis.configure(requested));
+                request_sample = tick;
+            }
+            REQUIRE(analysis.work_per_frame() == work);
+            const T value = T(signal(tick, 4));
+            std::rotate(history.begin(), history.begin()+1, history.end());
+            history.back() = value;
+            if (phase == 0) {
+                for (size_t k = 0; k < bins; ++k) {
+                    std::complex<double> sum(0, 0);
+                    for (size_t i = 0; i < n; ++i) {
+                        const double angle = -2*std::acos(-1.)*k*i/n;
+                        const T sample = history[i] * window.get_samples()[i];
+                        sum += double(sample) * std::complex<double>(std::cos(angle), std::sin(angle));
+                    }
+                    expected[k] = T(std::abs(sum));
+                }
+            }
+            size_t emitted = 0;
+            const bool ready = analysis.process(value, [&](size_t k, T magnitude) {
+                REQUIRE(k == next_bin++);
+                REQUIRE(magnitude == Catch::Approx(double(expected[k]))
+                    .margin(std::is_same<T, float>::value ? 2e-5 : 1e-10));
+                ++emitted;
+            });
+            const auto outputs = [=](size_t units) {
+                return units > work-bins ? units-(work-bins) : 0;
+            };
+            REQUIRE(emitted == outputs((phase+1)*work/hop)-outputs(phase*work/hop));
+            REQUIRE(ready == (phase+1 == hop));
+            if (ready) {
+                REQUIRE(next_bin == bins);
+                REQUIRE(analysis.work_per_frame() == clean_work);
+                if (frame == 2) first_changed_publication = tick;
+            }
+        }
+    }
+    REQUIRE(first_changed_publication-request_sample == 2*hop-2);
+    analysis.reset();
+    REQUIRE(analysis.work_per_frame() == dirty_work);
+    REQUIRE(analysis.configure(settings));
+    REQUIRE(analysis.work_per_frame() == dirty_work);
+}
+
+TEMPLATE_TEST_CASE("Weighted output credit preserves spectra and exact publication",
+    "[spectrum][schedule][output]", float, double) {
+    using T = TestType;
+    constexpr size_t n = 32, bins = 17;
+    for (size_t hop : {1u, 3u, 37u, 307u}) {
+        SpectrumAnalysis<T> reference(n, 307);
+        SpectrumAnalysis<T, 2> weighted(n, 307);
+        SpectrumSettings settings;
+        settings.length = n;
+        settings.hop = hop;
+        settings.window = Fourier::Window::Function::Hann;
+        REQUIRE(reference.configure(settings));
+        REQUIRE(weighted.configure(settings));
+        std::vector<T> expected(bins), actual(bins);
+        for (size_t frame = 0; frame < 4; ++frame) {
+            if (frame == 2) {
+                settings.window = Fourier::Window::Function::BlackmanHarris;
+                REQUIRE(reference.configure(settings));
+                REQUIRE(weighted.configure(settings));
+            }
+            // 16 preparation pairs, 32 butterflies, 17 reconstruction units,
+            // and 34 output units. Dirty pairs receive four units each.
+            const size_t work = frame % 2 ? 99 : 147;
+            size_t next_bin = 0;
+            for (size_t phase = 0; phase < hop; ++phase) {
+                const size_t tick = frame*hop + phase;
+                const T value = T(signal(tick, 5));
+                const bool capture = tick % 7 != 0;
+                REQUIRE(weighted.work_per_frame() == work);
+                const bool expected_ready = reference.process(value,
+                    [&](size_t k, T magnitude) { expected[k] = magnitude; }, capture);
+                size_t emitted = 0;
+                const bool ready = weighted.process(value, [&](size_t k, T magnitude) {
+                    REQUIRE(k == next_bin++);
+                    actual[k] = magnitude;
+                    ++emitted;
+                }, capture);
+                const auto outputs = [=](size_t units) {
+                    const size_t credit = units > work-2*bins ? units-(work-2*bins) : 0;
+                    return (credit+1)/2;
+                };
+                REQUIRE(emitted == outputs((phase+1)*work/hop)-outputs(phase*work/hop));
+                REQUIRE(ready == expected_ready);
+                REQUIRE(ready == (phase+1 == hop));
+                if (ready) {
+                    REQUIRE(next_bin == bins);
+                    REQUIRE(actual == expected);
+                    REQUIRE(weighted.work_per_frame() == 99);
+                }
             }
         }
     }

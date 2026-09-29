@@ -125,20 +125,34 @@ for mode, title in [('legacy', 'Legacy'), ('stage_burst', 'Stage bursts'),
             f' & {min(maxima):.3f}--{max(maxima):.3f} & {age}')
     assert line in tex, line
 
-# Verify the worked whole-pipeline example and the quotient/remainder algorithm.
-work, horizon = 8194, 1024
-base, remainder = divmod(work, horizon)
-error = done = 0
-counts = []
-for phase in range(horizon):
-    quota = base
-    error += remainder
-    if error >= horizon:
-        error -= horizon
-        quota += 1
-    counts.append(quota)
-    done += quota
-    assert done == (phase + 1) * work // horizon
-assert counts.count(8) == 1022 and counts.count(9) == 2
-assert 'W=8194' in tex
-print('Passed: prototype table, frame ages, and whole-pipeline schedule example.')
+# Verify both clean and dirty whole-pipeline examples independently.
+for weight, output_weight, work, lower, extra in [
+        (1, 1, 8194, 8, 2), (4, 1, 11266, 11, 2),
+        (1, 2, 9219, 9, 3), (4, 2, 12291, 12, 3)]:
+    horizon, pairs, butterflies, bins = 1024, 1024, 5120, 1025
+    assert work == weight * pairs + butterflies + (1 + output_weight) * bins
+    base, remainder = divmod(work, horizon)
+    error = done = packed = emitted = 0
+    counts = []
+    for phase in range(horizon):
+        quota = base
+        error += remainder
+        if error >= horizon:
+            error -= horizon
+            quota += 1
+        counts.append(quota)
+        preparation = sum(unit % weight == 0
+                          for unit in range(done, min(done + quota, weight * pairs)))
+        assert preparation <= math.ceil(math.ceil(work / horizon) / weight)
+        packed += preparation
+        output_start = weight * pairs + butterflies + bins
+        output = sum((unit - output_start) % output_weight == 0
+                     for unit in range(max(done, output_start), done + quota))
+        assert output <= math.ceil(math.ceil(work / horizon) / output_weight)
+        emitted += output
+        done += quota
+        assert done == (phase + 1) * work // horizon
+    assert packed == pairs and emitted == bins
+    assert counts.count(lower) == horizon - extra and counts.count(lower + 1) == extra
+    assert f'W={work}' in tex
+print('Passed: prototype table, frame ages, and clean/dirty whole-pipeline schedule examples.')

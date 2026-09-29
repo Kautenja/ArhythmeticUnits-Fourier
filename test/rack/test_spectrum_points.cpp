@@ -177,6 +177,57 @@ TEST_CASE("Scheduled SIMD spectra agree with independent scalar lanes") {
     }
 }
 
+TEST_CASE("SIMD quotas match scalar lanes through cache and hop transitions") {
+    Fourier::SpectrumAnalysis<simd::float_4> vector(2048, 307);
+    std::array<Fourier::SpectrumAnalysis<float>, 4> scalar{{
+        Fourier::SpectrumAnalysis<float>(2048, 307),
+        Fourier::SpectrumAnalysis<float>(2048, 307),
+        Fourier::SpectrumAnalysis<float>(2048, 307),
+        Fourier::SpectrumAnalysis<float>(2048, 307)}};
+    size_t tick = 0;
+    for (size_t n : {4u, 32u, 2048u, 128u}) {
+        for (size_t hop : {1u, 3u, 37u, 307u}) {
+            Fourier::SpectrumSettings settings;
+            settings.length = n;
+            settings.hop = hop;
+            settings.window = hop % 3 ? Fourier::Window::Function::Hann
+                                      : Fourier::Window::Function::BlackmanHarris;
+            REQUIRE(vector.configure(settings));
+            for (auto& lane : scalar) REQUIRE(lane.configure(settings));
+            std::vector<simd::float_4> actual(n/2+1);
+            std::array<std::vector<float>, 4> expected;
+            for (auto& lane : expected) lane.resize(n/2+1);
+            std::vector<size_t> emitted;
+            emitted.reserve(n/2+1);
+            for (size_t phase = 0; phase < 2*hop; ++phase, ++tick) {
+                const bool capture = tick % 11 != 0;
+                simd::float_4 input;
+                for (size_t lane = 0; lane < 4; ++lane)
+                    input.s[lane] = lane == 3 ? 0.f : std::sin((lane+1)*.071f*tick);
+                emitted.clear();
+                const bool ready = vector.process(input, [&](size_t k, simd::float_4 value) {
+                    emitted.push_back(k);
+                    actual[k] = value;
+                }, capture);
+                for (size_t lane = 0; lane < 4; ++lane) {
+                    size_t index = 0;
+                    REQUIRE(scalar[lane].process(input.s[lane], [&](size_t k, float value) {
+                        REQUIRE(index < emitted.size());
+                        REQUIRE(k == emitted[index++]);
+                        expected[lane][k] = value;
+                    }, capture) == ready);
+                    REQUIRE(index == emitted.size());
+                }
+                for (size_t k : emitted) for (size_t lane = 0; lane < 4; ++lane) {
+                    CAPTURE(n, hop, phase, k, lane);
+                    REQUIRE(actual[k].s[lane]/n == Catch::Approx(expected[lane][k]/n)
+                        .margin(32*std::numeric_limits<float>::epsilon()));
+                }
+            }
+        }
+    }
+}
+
 TEST_CASE("Fourier publishes only complete curves and retains a held snapshot") {
     rack::Context context;
     rack::contextSet(&context);

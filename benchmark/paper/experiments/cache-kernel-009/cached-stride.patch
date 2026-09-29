@@ -1,0 +1,41 @@
+diff --git a/src/dsp/spectrum_analysis.hpp b/src/dsp/spectrum_analysis.hpp
+index 5d00fbb..04ddf27 100644
+--- a/src/dsp/spectrum_analysis.hpp
++++ b/src/dsp/spectrum_analysis.hpp
+@@ -69,6 +69,8 @@ class SpectrumAnalysis {
+     /// Hop phase, dependency stage and unit index; butterfly traversal state.
+     size_t phase = 0, stage = 0, cursor = 0, span = 2, group = 0, pair = 0;
+     size_t butterflies = 0, reversal_shift = 0;
++    /// Maximum-plan twiddle stride, halved once per completed FFT stage.
++    size_t butterfly_stride = 0;
+     /// Quotient/remainder accumulator realizes the balanced quota without division per sample.
+     size_t quota_base = 0, quota_remainder = 0, quota_error = 0;
+     bool window_dirty = true, bands_dirty = true, clear_average = true;
+@@ -102,7 +104,7 @@ class SpectrumAnalysis {
+     /// @brief Execute one radix-2 butterfly with the maximum-size twiddle table.
+     void butterfly() {
+         const size_t half = span / 2;
+-        const std::complex<T> w(twiddles[pair * (maximum_length / span)]);
++        const std::complex<T> w(twiddles[pair * butterfly_stride]);
+         const auto even = packed[group + pair];
+         const auto odd = complex_multiply(packed[group + pair + half], w);
+         packed[group + pair] = even + odd;
+@@ -110,7 +112,9 @@ class SpectrumAnalysis {
+         if (++pair == half) {
+             pair = 0;
+             group += span;
+-            if (group == settings.length / 2) { group = 0; span *= 2; }
++            if (group == settings.length / 2) {
++                group = 0; span *= 2; butterfly_stride /= 2;
++            }
+         }
+     }
+
+@@ -243,6 +247,7 @@ class SpectrumAnalysis {
+             frame_available = available;
+             stage = cursor = group = pair = quota_error = 0;
+             span = 2;
++            butterfly_stride = maximum_length / 2;
+             prefix[0] = T(0.f);
+         }
+         size_t quota = quota_base;

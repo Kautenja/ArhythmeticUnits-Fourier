@@ -97,7 +97,9 @@ struct SpectrumAnalyzer : Module {
     std::array<Fourier::DCBlocker<double>, NUM_CHANNELS> dc_blockers;
 
     /// Engine-owned analysis and a frame's latched coordinate settings.
-    Fourier::SpectrumAnalysis<simd::float_4> analysis{MAX_FFT, MAX_FFT};
+    // Each bin maps four display coordinates on the engine thread. Give this
+    // output stage extra credit so cache rebuilds do not compress its bursts.
+    Fourier::SpectrumAnalysis<simd::float_4, 2> analysis{MAX_FFT, MAX_FFT};
     Fourier::SpectrumCoordinates coordinates;
 
     /// Producer writes scheduled bins; only the UI consumes complete frames.

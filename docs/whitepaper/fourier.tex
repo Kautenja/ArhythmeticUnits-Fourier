@@ -775,14 +775,20 @@ The production \code{SpectrumAnalysis<T>} replaces the modules' original
 completion-driven loop with one ordered sequence per frame. It computes the
 same windowed transform and magnitude processing while omitting unused
 conjugate bins. The Fourier module instantiates four independent SIMD channels;
-the Spectre module uses scalar samples. No alternate research scheduler is
-part of this path.
+the Spectre module uses scalar samples. The current implementation also
+weights window-cache rebuilding and Fourier's coordinate output as described
+below. The historical timing
+campaigns retained in this report predate that integration; their measurements
+must not be attributed to the revised scheduler.
 
 \subsection{Dependency order and work bound}
 Let $M=N/2$, $K=M+1$, and $B=(M/2)\log_2 M$. Table~\ref{tab:units} defines
-one schedulable unit in each stage. The ordered sequence has length
+the operations in each stage. Let $p=4$ while rebuilding window coefficients
+and $p=1$ for a clean window cache. Let $o$ be the compile-time output weight:
+one by default, or two for Fourier's four-channel coordinate mapping. The
+ordered scheduling sequence has length
 \begin{equation}
- W=M+B+2K=\frac{N}{4}\log_2(N/2)+\frac{3N}{2}+2.
+ W=pM+B+(1+o)K=\frac{N}{4}\log_2(N/2)+\frac{(p+1+o)N}{2}+1+o.
  \label{eq:wholework}
 \end{equation}
 All packing completes before any butterfly, all butterflies before any
@@ -799,18 +805,19 @@ twiddle precision or compiler transformations.
 \toprule
 Count & Stage & Work performed by one unit \\
 \midrule
-$M$ & Pack & Read two retained samples; prepare/apply window weights; store one complex pair at its bit-reversed address. \\
+$pM$ & Pack & Each pair occupies $p$ units: read two retained samples, prepare/apply window weights and store the permuted pair at the first unit; skip the remaining credit. \\
 $B$ & Transform & Execute one complex butterfly and advance traversal indices. \\
 $K$ & Reconstruct & Recover one bin from DC through Nyquist, take its magnitude, and append one prefix sum. \\
-$K$ & Output & Prepare/use one smoothing interval, evaluate its mean and EMA, and write one bin to producer-owned output. \\
+$oK$ & Output & Each bin occupies $o$ units: prepare/use one smoothing interval, evaluate its mean and EMA, and invoke the output callback at the first unit; skip the remaining credit. \\
 \bottomrule
 \end{tabular}
-\caption{Production work units. Cache rebuilding is included in the associated units. Units have different arithmetic and memory costs.}
+\caption{Production scheduling units. Dirty window preparation has weight four; Fourier's coordinate output has weight two. Other operations have weight one. These are bookkeeping units, not equal-duration operations.}
 \label{tab:units}
 \end{table}
 
 Apply Equation~\eqref{eq:balanced} with $W$ replacing $B$. Quotient and
-remainder $a=\floor{W/H}$ and $r=W\bmod H$ are computed at configuration.
+remainder $a=\floor{W/H}$ and $r=W\bmod H$ are refreshed at configuration,
+reset, and the transition from a rebuilt window to a clean cache.
 Starting the accumulator $e$ at zero, each sample executes $a$ units plus one
 when $e+r\ge H$, then retains $(e+r)\bmod H$:
 \begin{lstlisting}[language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
@@ -822,7 +829,10 @@ size_t quota = a;
 e += r;
 if (e >= H) { e -= H; ++quota; }
 for (size_t i = 0; i < quota; ++i) execute_next_unit();
-if (++phase == H) { publish_owned_output(); phase = 0; }
+if (++phase == H) {
+    publish_owned_output(); phase = 0;
+    if (window_was_dirty) use_clean_frame_quota();
+}
 \end{lstlisting}
 
 \begin{proposition}[Exact completion and per-call work]
@@ -836,8 +846,18 @@ $sa+\floor{sr/H}=\floor{sW/H}$ units. At $s=H$ this is $W$;
 at $s=H-1$ it is strictly smaller. Each difference is either $a$ or $a+1$.
 Substitution of Equation~\eqref{eq:wholework} gives the asymptotic bound.
 \end{proof}
-For $N=2048,H=1024$, $W=8194$ and the maximum quota is nine: 1022 calls
-execute eight units and two execute nine. The bound includes window/cache
+For a clean $N=2048,H=1024,o=1$ frame, $W=8194$ and the maximum quota is nine:
+1022 calls execute eight units and two execute nine. With a dirty window,
+$W=11266$: 1022 calls receive eleven units and two receive twelve.
+At most $\ceil{\ceil{W/H}/4}$ preparation pairs execute in a dirty call,
+whereas subsequent stages may execute up to $\ceil{W/H}$ operations.
+For Fourier ($o=2$), the corresponding counts are $W=9219$ for a clean cache
+and $W=12291$ for a dirty cache. Output calls execute at most
+$\ceil{\ceil{W/H}/o}$ bins, limiting the additional concentration of costly
+coordinate mapping during a window rebuild. Reweighting redistributes bursts
+between stages; it does not reduce the transform arithmetic. Dense dispatch skips
+credit over a whole segment, and SIMD butterflies share traversal setup
+within the same quota. The bound includes window/cache
 rebuilds, but excludes construction and host lifecycle callbacks. Constant
 input/control work and frame configuration remain, including an $O(\log N)$
 plan-index calculation. No $O(N)$ boundary pass remains in steady-state engine
@@ -847,8 +867,9 @@ It does not assert equal duration across units or bound OS interruptions.
 
 \subsection{Retained samples, plans, and publication time}
 Let the frame endpoint be $t_r=rH$, counting continuously captured samples
-from zero. The first work executes on call $t_r$, and the last work and
-publication execute on call $t_r+H-1$. Consequently
+from zero. Frame selection occurs on call $t_r$, and the last scheduling
+credit and publication occur on call $t_r+H-1$. The last actual output may
+precede its final credit; it remains private until publication. Consequently
 \begin{equation}
  A_{\mathrm{newest}}=(H-1)/f_s,\qquad
  A_{\mathrm{mid}}=((N-1)/2+H-1)/f_s.
@@ -1072,10 +1093,13 @@ execution states, so their combination does not establish a safe execution-time
 bound.
 
 The one-hop implementation makes those formerly concentrated passes resumable
-and defines cancellation and ownership explicitly. Its unweighted quota still
-permits systematic cost differences between stages. Calibrated weights might
-reduce those differences, but would add machine-dependent assumptions and
-would not prove worst-case execution time on a general-purpose OS.
+and defines cancellation and ownership explicitly. The current fixed weight
+for dirty window preparation and Fourier's output reduces their operation
+density, but still permits systematic cost differences between stages and
+windows. Further calibrated
+weights would add machine-dependent assumptions and would not prove worst-case
+execution time on a general-purpose OS. The historical measurements above do
+not evaluate this newer weighting policy.
 Following the transform-subdivision discussion in Wefers~\cite{wefers2015},
 another experiment could compare individual butterflies with small batches or
 short subtransforms under the same hop and publication-latency constraint.
