@@ -15,8 +15,10 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdlib>
 #include <new>
+#include <string>
 #include "../../src/SpectrumAnalyzer.cpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
@@ -236,4 +238,235 @@ TEST_CASE("Fourier processing and live analysis controls do not allocate") {
     }
     track_allocations = false;
     CHECK(allocation_count == 0);
+}
+
+namespace {
+
+/// Use finite, changing spectra in every lane so stale frames cannot pass silently.
+void drive_fourier(SpectrumAnalyzer& module, size_t sample,
+        const rack::engine::Module::ProcessArgs& args) {
+    for (size_t lane = 0; lane < 4; ++lane)
+        module.inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].setVoltage(
+            0.3f * (lane + 1) + std::sin((lane + 1) * 0.071f * sample));
+    module.process(args);
+}
+
+void configure_fourier(SpectrumAnalyzer& module) {
+    module.set_window_length(128);
+    module.set_hop_length(512);
+    module.set_window_function(Fourier::Window::Function::Boxcar);
+    module.set_slope(0.f);
+    module.set_frequency_scale(FrequencyScale::Linear);
+    module.set_magnitude_scale(MagnitudeScale::Linear);
+    module.set_time_smoothing(0.f);
+    module.set_frequency_smoothing(FrequencySmoothing::None);
+    module.is_ac_coupled = false;
+    for (size_t lane = 0; lane < 4; ++lane)
+        module.inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].channels = 1;
+}
+
+/// Identical modules with identical input must publish identical complete curves.
+void require_same_curve(const SpectrumAnalyzer::DisplaySpectrum& actual,
+        const SpectrumAnalyzer::DisplaySpectrum& expected) {
+    REQUIRE(actual.count == expected.count);
+    for (size_t lane = 0; lane < 4; ++lane)
+        for (size_t bin = 0; bin < actual.count; ++bin) {
+            CAPTURE(lane, bin);
+            REQUIRE(actual.points[lane][bin].x == expected.points[lane][bin].x);
+            REQUIRE(actual.points[lane][bin].y == expected.points[lane][bin].y);
+        }
+}
+
+}  // namespace
+
+TEST_CASE("Fourier latches mid-frame controls at the next frame boundary") {
+    const auto control = GENERATE("length", "hop", "time smoothing",
+        "frequency smoothing", "frequency scale", "magnitude scale", "bounds and slope");
+    // Just after frame start, transform work, and partially emitted output.
+    const size_t phase = GENERATE(1u, 256u, 511u);
+    CAPTURE(control, phase);
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    context.engine->setSampleRate(48000.f);
+    SpectrumAnalyzer changed, boundary, unchanged;
+    for (auto* module : {&changed, &boundary, &unchanged}) configure_fourier(*module);
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = 48000.f;
+    args.sampleTime = 1.f / args.sampleRate;
+    const size_t old_hop = changed.get_hop_length();
+    REQUIRE(old_hop == 512);
+    const auto change = [control](SpectrumAnalyzer& module) {
+        const std::string name(control);
+        if (name == "length") module.set_window_length(2048);
+        else if (name == "hop") module.set_hop_length(768);
+        else if (name == "time smoothing") module.set_time_smoothing(0.7f);
+        else if (name == "frequency smoothing")
+            module.set_frequency_smoothing(FrequencySmoothing::_1_1);
+        else if (name == "frequency scale")
+            module.set_frequency_scale(FrequencyScale::Logarithmic);
+        else if (name == "magnitude scale")
+            module.set_magnitude_scale(MagnitudeScale::Logarithmic120dB);
+        else {
+            module.set_low_frequency(100.f);
+            module.set_high_frequency(10000.f);
+            module.set_slope(3.f);
+        }
+    };
+    size_t sample = 0;
+    for (; sample < 3 * old_hop + phase; ++sample)
+        for (auto* module : {&changed, &boundary, &unchanged}) drive_fourier(*module, sample, args);
+    auto* previous = &changed.consume_display_spectrum();
+    REQUIRE(previous->count == 65);
+    change(changed);
+    for (size_t i = phase; i < old_hop; ++i, ++sample) {
+        for (auto* module : {&changed, &boundary, &unchanged}) drive_fourier(*module, sample, args);
+        const auto* current = &changed.consume_display_spectrum();
+        REQUIRE((current != previous) == (i + 1 == old_hop));
+        previous = current;
+    }
+    require_same_curve(*previous, boundary.consume_display_spectrum());
+    require_same_curve(*previous, unchanged.consume_display_spectrum());
+    change(boundary);
+    const size_t new_hop = changed.get_hop_length();
+    for (size_t frame = 0; frame < 2; ++frame) {
+        for (size_t i = 0; i < new_hop; ++i, ++sample) {
+            for (auto* module : {&changed, &boundary, &unchanged}) drive_fourier(*module, sample, args);
+            const auto* current = &changed.consume_display_spectrum();
+            REQUIRE((current != previous) == (i + 1 == new_hop));
+            previous = current;
+        }
+        require_same_curve(*previous, boundary.consume_display_spectrum());
+        REQUIRE(previous->count == changed.get_window_length() / 2 + 1);
+        // A boundary reference alone could miss a control ignored by both modules.
+        // Hop adoption is checked by its exact publication deadline above.
+        if (std::string(control) != "hop") {
+            const auto& old = unchanged.consume_display_spectrum();
+            bool differs = previous->count != old.count;
+            for (size_t bin = 0; bin < std::min(previous->count, old.count); ++bin)
+                differs = differs || previous->points[0][bin].x != old.points[0][bin].x
+                    || previous->points[0][bin].y != old.points[0][bin].y;
+            REQUIRE(differs);
+        }
+    }
+}
+
+TEST_CASE("Fourier run button freezes capture while finishing and publishing analysis") {
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    context.engine->setSampleRate(48000.f);
+    SpectrumAnalyzer module, reference;
+    for (auto* item : {&module, &reference}) {
+        configure_fourier(*item);
+        item->set_time_smoothing(0.7f);
+        for (size_t lane = 0; lane < 4; ++lane)
+            item->inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].setVoltage(lane + 1.f);
+    }
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = 48000.f;
+    args.sampleTime = 1.f / args.sampleRate;
+    const size_t hop = module.get_hop_length();
+    for (size_t i = 0; i < 3 * hop + hop / 2; ++i) {
+        module.process(args);
+        reference.process(args);
+    }
+    auto* previous = &module.consume_display_spectrum();
+    const float before = previous->points[0][0].y;
+    module.params[SpectrumAnalyzer::PARAM_RUN].setValue(1.f);
+    for (size_t lane = 0; lane < 4; ++lane)
+        module.inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].setVoltage(9.f - lane);
+    // Hold the button across publications: one rising edge must toggle only once.
+    for (size_t i = hop / 2; i < 3 * hop; ++i) {
+        module.process(args);
+        reference.process(args);
+        const auto* current = &module.consume_display_spectrum();
+        REQUIRE((current != previous) == ((i + 1) % hop == 0));
+        if (current != previous) require_same_curve(*current, reference.consume_display_spectrum());
+        previous = current;
+    }
+    REQUIRE(previous->points[0][0].y > before);  // EMA still advances while frozen.
+    // Release during the next frame, then resume halfway through that frame.
+    module.params[SpectrumAnalyzer::PARAM_RUN].setValue(0.f);
+    for (size_t i = 0; i < hop / 2; ++i) {
+        module.process(args);
+        reference.process(args);
+    }
+    module.params[SpectrumAnalyzer::PARAM_RUN].setValue(1.f);
+    for (size_t lane = 0; lane < 4; ++lane)
+        module.inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].setVoltage(0.f);
+    for (size_t i = hop / 2; i < hop; ++i) {
+        module.process(args);
+        reference.process(args);
+        const auto* current = &module.consume_display_spectrum();
+        REQUIRE((current != previous) == (i + 1 == hop));
+        previous = current;
+    }
+    require_same_curve(*previous, reference.consume_display_spectrum());
+    const auto retained = *previous;
+    // More than N zeros were captured after resume; the next frame must decay.
+    for (size_t i = 0; i < hop; ++i) {
+        module.process(args);
+        const auto* current = &module.consume_display_spectrum();
+        REQUIRE((current != previous) == (i + 1 == hop));
+        previous = current;
+    }
+    for (size_t lane = 0; lane < 4; ++lane) {
+        REQUIRE(previous->points[lane][0].y == Approx(
+            retained.points[lane][0].y * module.get_time_smoothing_alpha()));
+        REQUIRE(previous->points[lane][0].y < retained.points[lane][0].y);
+    }
+}
+
+TEST_CASE("Fourier sample-rate changes discard pending nonzero input and averaging") {
+    const size_t phase = GENERATE(1u, 256u, 511u);
+    const float rate = GENERATE(44100.f, 96000.f);
+    CAPTURE(phase, rate);
+    rack::Context context;
+    rack::contextSet(&context);
+    context.engine = new rack::engine::Engine;
+    context.engine->setSampleRate(48000.f);
+    SpectrumAnalyzer reused;
+    configure_fourier(reused);
+    reused.is_ac_coupled = true;
+    reused.set_time_smoothing(0.7f);
+    reused.set_frequency_smoothing(FrequencySmoothing::_1_3);
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = 48000.f;
+    args.sampleTime = 1.f / args.sampleRate;
+    for (size_t i = 0; i < 3 * reused.get_hop_length() + phase; ++i)
+        drive_fourier(reused, i, args);
+    auto* previous = &reused.consume_display_spectrum();
+    REQUIRE(previous->points[0][3].y > 0.f);
+    context.engine->setSampleRate(rate);
+    reused.onSampleRateChange();
+    SpectrumAnalyzer fresh;
+    // Preserve the seconds-valued hop and frequency bounds across the callback.
+    for (size_t i = 0; i < SpectrumAnalyzer::NUM_PARAMS; ++i)
+        fresh.params[i].setValue(reused.params[i].getValue());
+    for (size_t lane = 0; lane < 4; ++lane)
+        fresh.inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].channels = 1;
+    args.sampleRate = rate;
+    args.sampleTime = 1.f / rate;
+    REQUIRE(reused.get_sample_rate() == rate);
+    const size_t hop = reused.get_hop_length();
+    REQUIRE(hop != 512);
+    for (size_t frame = 0; frame < 3; ++frame) {
+        for (size_t i = 0; i < hop; ++i) {
+            for (auto* module : {&reused, &fresh}) {
+                for (size_t lane = 0; lane < 4; ++lane)
+                    module->inputs[SpectrumAnalyzer::INPUT_SIGNAL + lane].setVoltage(
+                        frame == 0 ? 0.f : (lane + 1) * std::sin(0.09f * i));
+                module->process(args);
+            }
+            const auto* current = &reused.consume_display_spectrum();
+            REQUIRE((current != previous) == (i + 1 == hop));
+            previous = current;
+        }
+        require_same_curve(*previous, fresh.consume_display_spectrum());
+        if (frame == 0)
+            for (size_t lane = 0; lane < 4; ++lane)
+                for (size_t bin = 0; bin < previous->count; ++bin)
+                    REQUIRE(previous->points[lane][bin].y == 0.f);
+    }
 }

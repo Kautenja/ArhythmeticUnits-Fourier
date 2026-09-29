@@ -13,12 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cmath>
 #include <map>
 #include <memory>
 #include <limits>
+#include <string>
 #include <vector>
 #include "../../src/Spectrogram.cpp"
 #include "../../src/SpectrumAnalyzer.cpp"
@@ -399,4 +401,179 @@ TEST_CASE("Spectre publishes on exact hops and resumes an unfinished frozen fram
     CHECK(module.get_hop_index() == 2);
     module.process(args);
     CHECK(module.get_hop_index() == 3);
+}
+
+namespace {
+
+void configure_spectre(Spectrogram& module) {
+    module.set_window_function(Fourier::Window::Function::Boxcar);
+    module.set_time_smoothing(0.f);
+    module.set_frequency_smoothing(FrequencySmoothing::None);
+    module.is_ac_coupled = false;
+    module.inputs[Spectrogram::INPUT_SIGNAL].channels = 1;
+    // Discard reset publications before checking the next engine publication.
+    for (size_t column = 0; column < Spectrogram::N_STFT; ++column)
+        module.consume_display_column(column);
+}
+
+void drive_spectre(Spectrogram& module, size_t sample,
+        const rack::engine::Module::ProcessArgs& args) {
+    module.inputs[Spectrogram::INPUT_SIGNAL].setVoltage(
+        0.3f + std::sin(0.071f * sample) + 0.2f * std::cos(0.19f * sample));
+    module.process(args);
+}
+
+}  // namespace
+
+TEST_CASE("Spectre latches smoothing and window changes at the next frame boundary") {
+    const auto control = GENERATE("time smoothing", "frequency smoothing", "window");
+    const size_t phase = GENERATE(1u, 512u, 1023u);
+    CAPTURE(control, phase);
+    RackContext context;
+    Spectrogram changed, boundary, unchanged;
+    for (auto* module : {&changed, &boundary, &unchanged}) configure_spectre(*module);
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = changed.get_sample_rate();
+    args.sampleTime = 1.f / args.sampleRate;
+    const size_t hop = changed.get_hop_length();
+    const auto change = [control](Spectrogram& module) {
+        const std::string name(control);
+        if (name == "time smoothing") module.set_time_smoothing(0.7f);
+        else if (name == "frequency smoothing")
+            module.set_frequency_smoothing(FrequencySmoothing::_1_1);
+        else module.set_window_function(Fourier::Window::Function::Hann);
+    };
+    size_t sample = 0;
+    for (; sample < 3 * hop + phase; ++sample)
+        for (auto* module : {&changed, &boundary, &unchanged}) drive_spectre(*module, sample, args);
+    change(changed);
+    for (size_t i = phase; i < hop; ++i, ++sample) {
+        for (auto* module : {&changed, &boundary, &unchanged}) drive_spectre(*module, sample, args);
+        REQUIRE(changed.get_hop_index() == (i + 1 == hop ? 4 : 3));
+        const auto* column = changed.consume_display_column(3);
+        REQUIRE((column != nullptr) == (i + 1 == hop));
+        if (column) {
+            const auto* expected = boundary.consume_display_column(3);
+            REQUIRE(expected != nullptr);
+            REQUIRE(column->values == expected->values);
+            REQUIRE(*std::max_element(column->values.begin(), column->values.end()) > 0.f);
+        }
+    }
+    change(boundary);
+    for (size_t frame = 4; frame < 6; ++frame) {
+        for (size_t i = 0; i < hop; ++i, ++sample) {
+            for (auto* module : {&changed, &boundary, &unchanged}) drive_spectre(*module, sample, args);
+            REQUIRE(changed.get_hop_index() == frame + (i + 1 == hop));
+            const auto* column = changed.consume_display_column(frame);
+            REQUIRE((column != nullptr) == (i + 1 == hop));
+            if (column) {
+                const auto* expected = boundary.consume_display_column(frame);
+                const auto* old = unchanged.consume_display_column(frame);
+                REQUIRE(expected != nullptr);
+                REQUIRE(old != nullptr);
+                REQUIRE(column->values == expected->values);
+                REQUIRE(column->values != old->values);
+            }
+        }
+    }
+}
+
+TEST_CASE("Spectre sample-rate changes discard pending nonzero input and averaging") {
+    const size_t phase = GENERATE(1u, 512u, 1023u);
+    const float rate = GENERATE(44100.f, 96000.f);
+    CAPTURE(phase, rate);
+    RackContext context;
+    context.context.engine->setSampleRate(48000.f);
+    Spectrogram reused;
+    configure_spectre(reused);
+    reused.is_ac_coupled = true;
+    reused.set_time_smoothing(0.7f);
+    reused.set_frequency_smoothing(FrequencySmoothing::_1_3);
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = 48000.f;
+    args.sampleTime = 1.f / args.sampleRate;
+    const size_t hop = reused.get_hop_length();
+    for (size_t i = 0; i < 3 * hop + phase; ++i) drive_spectre(reused, i, args);
+    const auto* held = reused.consume_display_column(2);
+    REQUIRE(held != nullptr);
+    const auto saved = *held;
+    REQUIRE(*std::max_element(saved.values.begin(), saved.values.end()) > 0.f);
+    context.context.engine->setSampleRate(rate);
+    reused.onSampleRateChange();
+    Spectrogram fresh;
+    configure_spectre(fresh);
+    fresh.is_ac_coupled = true;
+    for (size_t i = 0; i < Spectrogram::NUM_PARAMS; ++i)
+        fresh.params[i].setValue(reused.params[i].getValue());
+    args.sampleRate = rate;
+    args.sampleTime = 1.f / rate;
+    REQUIRE(reused.get_sample_rate() == rate);
+    // Existing display history survives; only pending analysis is cancelled.
+    REQUIRE(reused.get_hop_index() == 3);
+    REQUIRE(reused.consume_display_column(2) == nullptr);
+    REQUIRE(held->values == saved.values);
+    REQUIRE(held->revision == saved.revision);
+    for (size_t frame = 0; frame < 3; ++frame) {
+        for (size_t i = 0; i < hop; ++i) {
+            for (auto* module : {&reused, &fresh}) {
+                module->inputs[Spectrogram::INPUT_SIGNAL].setVoltage(
+                    frame == 0 ? 0.f : std::sin(0.09f * i));
+                module->process(args);
+            }
+            REQUIRE(reused.get_hop_index() == 3 + frame + (i + 1 == hop));
+            const auto* column = reused.consume_display_column(3 + frame);
+            REQUIRE((column != nullptr) == (i + 1 == hop));
+            if (column) {
+                const auto* expected = fresh.consume_display_column(frame);
+                REQUIRE(expected != nullptr);
+                REQUIRE(column->values == expected->values);
+                if (frame == 0)
+                    for (float value : column->values) REQUIRE(value == 0.f);
+            }
+        }
+    }
+}
+
+TEST_CASE("Spectre display scale changes during a frame preserve spectral columns") {
+    RackContext context;
+    Spectrogram module, reference;
+    for (auto* item : {&module, &reference}) configure_spectre(*item);
+    TestRenderer renderer;
+    SpectralImageDisplay display(&module);
+    display.setSize(Vec(465, 350));
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = module.get_sample_rate();
+    args.sampleTime = 1.f / args.sampleRate;
+    const size_t hop = module.get_hop_length();
+    size_t sample = 0;
+    for (; sample < 4 * hop - 1; ++sample) {
+        drive_spectre(module, sample, args);
+        drive_spectre(reference, sample, args);
+    }
+    renderer.draw(display);
+    const auto old_pixels = renderer.last_pixels;
+    module.set_frequency_scale(FrequencyScale::Linear);
+    // Spectre maps raw columns in the UI: a scale change immediately redraws
+    // completed history, without publishing the engine's partially written column.
+    renderer.draw(display);
+    REQUIRE(renderer.updated == 1);
+    REQUIRE(bool(renderer.last_pixels != old_pixels));
+    REQUIRE(bool(renderer.last_pixels == reference_pixels(module)));
+    REQUIRE(module.get_hop_index() == 3);
+    REQUIRE(module.consume_display_column(3) == nullptr);
+    for (; sample < 5 * hop; ++sample) {
+        drive_spectre(module, sample, args);
+        drive_spectre(reference, sample, args);
+        if ((sample + 1) % hop == 0) {
+            const size_t index = module.get_hop_index() - 1;
+            // Let the display consume first, then inspect its held snapshot.
+            renderer.draw(display);
+            const auto* column = module.consume_display_column(index, true);
+            const auto* expected = reference.consume_display_column(index);
+            REQUIRE(column != nullptr);
+            REQUIRE(expected != nullptr);
+            REQUIRE(column->values == expected->values);
+            REQUIRE(bool(renderer.last_pixels == reference_pixels(module)));
+        }
+    }
 }
