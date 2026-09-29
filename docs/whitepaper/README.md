@@ -21,7 +21,9 @@ repository root:
 make -C docs/whitepaper
 ```
 
-This writes `docs/whitepaper/build/Fourier-Technical-Report.pdf`. Compilation
+This writes `docs/whitepaper/build/paper.pdf` and removes LaTeX auxiliary
+files after a successful build. Failed builds retain their logs for diagnosis.
+Experiment results and source archives in `build/` are preserved. Compilation
 never runs a benchmark or fetches data. The single-column, 11-point layout
 prioritizes readable derivations, code, and numerical results. No shell
 escape or BibTeX pass is required.
