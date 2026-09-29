@@ -123,17 +123,20 @@ part of the task; they are not necessary for a compile check.
     Markdown structure, and `git diff --check`. No full build is required
     solely for prose changes.
 
-Run the headless Fourier save/load regression with the same Rack dependency
-and pinned Catch2 headers:
+Run the headless Fourier and Spectre save/load regressions with the same
+Rack dependency and repository Catch2 headers:
 
 ```shell
 make test-serialization
 ```
 
-This checks all combinations of run, fill, Bezier, and AC-coupling settings
-using the actual module, plus missing-field defaults. The `test/rack/` tests
-are built by Make and excluded from the standalone SCons suites. This does
-not exercise the Rack UI or loading a complete patch file.
+These checks use the actual modules. Fourier coverage includes all
+combinations of run, fill, Bezier, and AC-coupling settings, plus missing-field
+defaults. Spectre coverage includes round trips for every supported color map
+and fallback to Magma for missing or invalid saved values, including wrong
+JSON types and out-of-range integers. The `test/rack/` tests are built by Make
+and excluded from the standalone SCons suites. They do not exercise the Rack
+UI or loading a complete patch file.
 
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that

@@ -225,8 +225,15 @@ struct Spectrogram : Module {
             is_running = json_boolean_value(opt);
         if ((opt = json_object_get(rootJ, "is_ac_coupled")))
             is_ac_coupled = json_boolean_value(opt);
-        if ((opt = json_object_get(rootJ, "color_map")))
-            color_map = static_cast<Math::ColorMap::Function>(json_integer_value(opt));
+        color_map = Math::ColorMap::Function::Magma;
+        opt = json_object_get(rootJ, "color_map");
+        if (json_is_integer(opt)) {
+            // Validate before narrowing so large saved integers cannot wrap.
+            const json_int_t value = json_integer_value(opt);
+            if (value >= 0 &&
+                value < static_cast<json_int_t>(Math::ColorMap::Function::NumFunctions))
+                color_map = static_cast<Math::ColorMap::Function>(value);
+        }
     }
 
     // -----------------------------------------------------------------------

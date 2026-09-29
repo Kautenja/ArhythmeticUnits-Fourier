@@ -1,4 +1,4 @@
-// Save/load regression checks for Fourier's custom module settings.
+// Save/load regression checks for Fourier and Spectre's custom settings.
 //
 // Copyright 2026 Arhythmetic Units
 //
@@ -15,6 +15,7 @@
 
 #include <memory>
 #include "../../src/SpectrumAnalyzer.cpp"
+#include "../../src/Spectrogram.cpp"
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
@@ -94,4 +95,59 @@ TEST_CASE("Fourier retains defaults when loading missing custom settings") {
     CHECK(module.is_ac_coupled);
     Json saved(module.dataToJson(), json_decref);
     CHECK(json_is_true(json_object_get(saved.get(), "is_running")));
+}
+
+TEST_CASE("Spectre saves and reloads every supported color map") {
+    RackContext context;
+    Spectrogram module;
+    for (int value = 0;
+         value < static_cast<int>(Math::ColorMap::Function::NumFunctions);
+         ++value) {
+        CAPTURE(value);
+        module.color_map = static_cast<Math::ColorMap::Function>(value);
+        Json saved(module.dataToJson(), json_decref);
+        REQUIRE(json_is_integer(json_object_get(saved.get(), "color_map")));
+        CHECK(json_integer_value(json_object_get(saved.get(), "color_map")) == value);
+        module.color_map = Math::ColorMap::Function::Magma;
+        module.dataFromJson(saved.get());
+        CHECK(static_cast<int>(module.color_map) == value);
+        CHECK_NOTHROW(Math::ColorMap::color_map(module.color_map, 0.5f));
+    }
+}
+
+TEST_CASE("Spectre defaults missing or invalid saved color maps to Magma") {
+    RackContext context;
+    Spectrogram module;
+    const char* patches[] = {
+        "{}",
+        "{\"color_map\": -1}",
+        "{\"color_map\": 4294967296}",
+        "{\"color_map\": 9223372036854775807}",
+        "{\"color_map\": -9223372036854775808}",
+        "{\"color_map\": null}",
+        "{\"color_map\": true}",
+        "{\"color_map\": false}",
+        "{\"color_map\": 1.0}",
+        "{\"color_map\": 1.5}",
+        "{\"color_map\": \"1\"}",
+        "{\"color_map\": []}",
+        "{\"color_map\": {}}"
+    };
+    for (const auto patch : patches) {
+        CAPTURE(patch);
+        Json saved(json_loads(patch, 0, nullptr), json_decref);
+        REQUIRE(saved);
+        module.color_map = Math::ColorMap::Function::Gray;
+        module.dataFromJson(saved.get());
+        CHECK(module.color_map == Math::ColorMap::Function::Magma);
+        CHECK_NOTHROW(Math::ColorMap::color_map(module.color_map, 0.5f));
+    }
+
+    Json saved(json_object(), json_decref);
+    json_object_set_new(saved.get(), "color_map",
+        json_integer(static_cast<int>(Math::ColorMap::Function::NumFunctions)));
+    module.color_map = Math::ColorMap::Function::Gray;
+    module.dataFromJson(saved.get());
+    CHECK(module.color_map == Math::ColorMap::Function::Magma);
+    CHECK_NOTHROW(Math::ColorMap::color_map(module.color_map, 0.5f));
 }
