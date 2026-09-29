@@ -14,6 +14,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <cctype>
 #include <string>
 #include "rack.hpp"
 
@@ -22,6 +23,8 @@
 
 /// @brief A knob that renders the label and value as text on the widget.
 struct TextKnob : app::Knob {
+    /// UI-only hover state; null-module browser previews remain unhighlighted.
+    bool hovered = false;
     struct {
         /// The text for the label.
         std::string text = "";
@@ -41,8 +44,20 @@ struct TextKnob : app::Knob {
         minAngle = 0.f * M_PI;
         maxAngle = 1.66f * M_PI;
         // Set the default colors for the label and value.
-        label.color = {{{0.f / 255.f, 90.f / 255.f, 11.f / 255.f, 1.f}}};
+        label.color = {{{0.f / 255.f, 125.f / 255.f, 15.f / 255.f, 1.f}}};
         value.color = {{{0.f / 255.f, 215.f / 255.f, 26.f / 255.f, 1.f}}};
+    }
+
+    /// @brief Highlight an adjustable control while preserving Rack tooltips.
+    void onEnter(const EnterEvent& e) override {
+        hovered = getParamQuantity() != nullptr;
+        app::Knob::onEnter(e);
+    }
+
+    /// @brief Clear highlighting and retain Rack's scroll/undo handling.
+    void onLeave(const LeaveEvent& e) override {
+        hovered = false;
+        app::Knob::onLeave(e);
     }
 
     /// @brief Respond to changes of the parameter.
@@ -59,13 +74,19 @@ struct TextKnob : app::Knob {
 
     /// @brief Draw the layer on the screen.
     void drawLayer(const DrawArgs& args, int layer) override {
-        auto path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
-        std::shared_ptr<Font> font = APP->window->loadFont(path);
         if (layer == 1) {
+            const auto path = asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf");
+            const auto font = APP->window->loadFont(path);
+            if (!font) {
+                app::Knob::drawLayer(args, layer);
+                return;
+            }
+            nvgSave(args.vg);
+            const NVGcolor label_color = hovered ? nvgRGB(0, 175, 21) : label.color;
             // render the label.
             nvgFontSize(args.vg, label.font_size);
             nvgFontFaceId(args.vg, font->handle);
-            nvgFillColor(args.vg, label.color);
+            nvgFillColor(args.vg, label_color);
             nvgTextLineHeight(args.vg, label.line_height);
             nvgTextAlign(args.vg, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
             nvgText(args.vg, box.size.x / 2.f, 0, label.text.c_str(), NULL);
@@ -76,6 +97,7 @@ struct TextKnob : app::Knob {
             nvgTextLineHeight(args.vg, value.line_height);
             nvgTextAlign(args.vg, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
             nvgText(args.vg, box.size.x / 2.f, 18, value.text.c_str(), NULL);
+            nvgRestore(args.vg);
         }
         app::Knob::drawLayer(args, layer);
     }

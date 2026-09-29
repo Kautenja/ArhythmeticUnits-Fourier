@@ -67,7 +67,7 @@ struct Panel : rack::widget::Widget {
             const NVGcolor ink = dark ? nvgRGB(255, 255, 255) : nvgRGB(0, 0, 0);
             nvgBeginPath(vg);
             nvgRoundedRect(vg, 0.f, 0.f, box.size.x, box.size.y, 5.f);
-            nvgFillColor(vg, dark ? nvgRGB(0, 0, 0) : nvgRGB(230, 230, 230));
+            nvgFillColor(vg, dark ? nvgRGB(24, 24, 24) : nvgRGB(230, 230, 230));
             nvgFill(vg);
 
             const NVGcolor channels[] = {
@@ -161,6 +161,25 @@ struct Panel : rack::widget::Widget {
             cache->setDirty();
         }
         rack::widget::Widget::step();
+    }
+
+    /// @brief Draw channel identifiers in the live context, outside the cache.
+    void draw(const DrawArgs& args) override {
+        rack::widget::Widget::draw(args);
+        if (artwork->kind != PanelKind::FOURIER) return;
+        const auto font = APP->window->uiFont;
+        if (!font) return;
+        nvgSave(args.vg);
+        nvgFontFaceId(args.vg, font->handle);
+        nvgFontSize(args.vg, 9.f);
+        nvgTextAlign(args.vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        nvgFillColor(args.vg, artwork->dark ? nvgRGB(170, 170, 170) : nvgRGB(95, 95, 95));
+        const char* labels[] = {"1", "2", "3", "4"};
+        for (int channel = 0; channel < 4; ++channel) {
+            const auto input = PanelLayout::input(channel);
+            nvgText(args.vg, input.x + 11.5f, input.y - 7.f, labels[channel], nullptr);
+        }
+        nvgRestore(args.vg);
     }
 };
 

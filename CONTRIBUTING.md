@@ -594,11 +594,16 @@ This renders both real module widgets with test signals and both null-module
 browser previews. Each set covers light and dark themes, 75-percent zoom,
 one-pixel density, native pixel density, and graphics-context recreation.
 It verifies module dimensions, settled panel framebuffers, and GL errors, and
-saves `.build/test/rack/panel-{live,preview}-{0,1,2,3,4}.ppm`. Scenarios 0 and 4
-show the light panel before and after context recreation; 1 is dark, 2 is zoomed
-out, and 3 is dark at one-pixel density. On a standard-density desktop, native
-and one-pixel density are the same. The inspector does not open an audio device
-or exercise mouse interaction or patch loading.
+saves `.build/test/rack/panel-{live,preview}-{0,1,2,3,4,5,6,7}.ppm`. Scenarios 0
+and 4 show the light panel before and after context recreation; 1 is dark, 2 is
+zoomed out, and 3 is dark at one-pixel density. Scenarios 5 and 6 check hover enter
+and leave on the Fourier frequency control through Rack's event dispatcher;
+only live controls highlight, changes stay within the control and its one-pixel
+antialiasing fringe, and leaving restores identical pixels. Scenario 7 checks
+the dark theme at 50-percent zoom. The inspector also checks that the
+frequency labels stay consistent and rendering does not change their values.
+On a standard-density desktop, native and one-pixel density are the same. The inspector does not open an audio device
+or exercise mouse dragging or patch loading.
 
 For a visual comparison against an older panel export, the executable accepts
 an optional final directory containing that version's four panel SVGs. For

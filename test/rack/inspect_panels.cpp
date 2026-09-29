@@ -71,6 +71,12 @@ int main(int argc, char** argv) {
             if (fw->box.size.x != 720.f || sw->box.size.x != 525.f ||
                 fw->box.size.y != 380.f || sw->box.size.y != 380.f)
                 throw std::runtime_error("Module dimensions changed");
+            auto frequency_control = dynamic_cast<TextKnob*>(
+                fw->getParam(SpectrumAnalyzer::PARAM_FREQUENCY_SCALE));
+            auto spectre_frequency_control = dynamic_cast<TextKnob*>(
+                sw->getParam(Spectrogram::PARAM_FREQUENCY_SCALE));
+            if (!frequency_control || !spectre_frequency_control)
+                throw std::runtime_error("Missing frequency controls");
             if (!preview) {
                 rack::engine::Module::ProcessArgs process = {};
                 process.sampleRate = 48000.f;
@@ -90,10 +96,14 @@ int main(int argc, char** argv) {
                     spectre->process(process);
                 }
             }
-            // Change themes on the same widgets; also recreate their GL context.
-            for (int scenario = 0; scenario < 5; ++scenario) {
-                rack::settings::preferDarkPanels = scenario == 1 || scenario == 3;
-                const float zoom = scenario == 2 ? 0.75f : 1.f;
+            std::vector<unsigned char> dark_pixels;
+            // Exercise hover events on the actual widget through Rack's event state.
+            for (int scenario = 0; scenario < 8; ++scenario) {
+                rack::settings::preferDarkPanels = scenario == 1 || scenario == 3 || scenario >= 5;
+                const float zoom = scenario == 7 ? 0.5f : (scenario == 2 ? 0.75f : 1.f);
+                context.event->setHoveredWidget(scenario == 5 ? frequency_control : nullptr);
+                if (frequency_control->hovered != (scenario == 5 && !preview))
+                    throw std::runtime_error("Text control hover state is incorrect");
                 if (scenario == 4) {
                     rack::widget::Widget::ContextDestroyEvent destroy;
                     destroy.vg = context.window->vg;
@@ -122,6 +132,9 @@ int main(int argc, char** argv) {
                 for (int frame = 0; frame < 40; ++frame) {
                     fw->step();
                     sw->step();
+                    if (frequency_control->label.text != "FREQ SCALE" ||
+                        spectre_frequency_control->label.text != "FREQ SCALE")
+                        throw std::runtime_error("Frequency labels diverged after step");
                     auto vg = context.window->vg;
                     nvgBeginFrame(vg, 1280, 410, ratio);
                     rack::widget::Widget::DrawArgs args = {};
@@ -160,6 +173,30 @@ int main(int argc, char** argv) {
                 for (int y = height - 1; y >= 0; --y)
                     output.write(reinterpret_cast<const char*>(pixels.data() + y * width * 3), width * 3);
                 if (!output) throw std::runtime_error("Cannot write " + filename);
+                if (scenario == 1) dark_pixels = pixels;
+                if (scenario == 5 && (pixels == dark_pixels) != preview)
+                    throw std::runtime_error("Hover must highlight live controls only");
+                if (scenario == 5) {
+                    // NanoVG's glyph antialiasing extends beyond the nominal box.
+                    const auto bounds = frequency_control->box.grow(Vec(1.f, 1.f));
+                    for (int y = 0; y < height; ++y) {
+                        for (int x = 0; x < width; ++x) {
+                            const Vec point((x + 0.5f) / ratio - 10.f,
+                                (height - y - 0.5f) / ratio - 15.f);
+                            if (bounds.contains(point)) continue;
+                            const auto offset = (y * width + x) * 3;
+                            for (int color = 0; color < 3; ++color) {
+                                if (pixels[offset + color] != dark_pixels[offset + color])
+                                    throw std::runtime_error("Hover changed pixels outside its control");
+                            }
+                        }
+                    }
+                }
+                if (scenario == 6 && pixels != dark_pixels)
+                    throw std::runtime_error("Hover highlighting did not clear on leave");
+                if (!preview && (fourier->params[SpectrumAnalyzer::PARAM_FREQUENCY_SCALE].getValue() != 1.f ||
+                    spectre->params[Spectrogram::PARAM_FREQUENCY_SCALE].getValue() != 1.f))
+                    throw std::runtime_error("Rendering changed frequency scale parameters");
                 std::cout << filename << " theme=" << rack::settings::preferDarkPanels
                     << " zoom=" << zoom << " pixelRatio=" << ratio << " GL=OK\n";
             }

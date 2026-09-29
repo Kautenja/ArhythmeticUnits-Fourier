@@ -90,13 +90,16 @@ provide examples of these choices.
 \end{figure}
 
 The numbered illustration identifies control positions. Its displayed values
-are examples from an earlier interface; Length is now shown in samples.
-The sections below give the current ranges and defaults.
+are examples from an earlier interface; Length is now shown in samples, and
+the former X Scale control is now labeled \textbf{Freq Scale}. Text controls
+brighten when hovered. The sections below give the
+current ranges and defaults.
 
 \subsection{Input}
 
-The four inputs are independent and appear as red, green, blue, and yellow
-traces, matching their panel colors. A polyphonic cable is supported, but
+The four inputs are numbered 1--4 from top to bottom. They are independent
+and appear as red, green, blue, and yellow traces, matching their panel colors.
+A polyphonic cable is supported, but
 \textbf{all voices on each port are summed into one analyzed signal}; voices
 are not drawn separately. Summed voices can increase the level or cancel
 one another, depending on their phase.
@@ -186,9 +189,9 @@ Hop and Length are independent. Successive audio frames overlap when Hop is
 shorter than the frame duration $N/f_s$. If Hop exceeds that duration, there
 are gaps between analyzed frames and a brief event may be missed.
 
-\subsection{X Scale}
+\subsection{Freq Scale}
 
-\textbf{X Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the default).
+\textbf{Freq Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the default).
 Linear places equal frequency intervals at equal distances. The mode named
 Logarithmic expands the low-frequency portion of the view. In this version,
 it uses a square-root mapping of the selected frequency range, so equal
@@ -299,23 +302,23 @@ are limited by the current sample rate.
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
   \item[Mastering] Broad tonal balance: Flattop, Length 4096, Hop
-  $30\,\mathrm{ms}$, Logarithmic X Scale, Log 60dB Y Scale, $0$--$20\,\mathrm{kHz}$,
+  $30\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale, $0$--$20\,\mathrm{kHz}$,
   Average $300\,\mathrm{ms}$, Smooth $1/12$ octave, Slope
   $+4.5\,\mathrm{dB/oct}$. AC coupling and Bezier curves are on.
   \item[Harmonics] Individual harmonics: Hann, Length 4096, Hop
-  $20\,\mathrm{ms}$, Linear X Scale, Log 60dB Y Scale, $0$--$5\,\mathrm{kHz}$.
+  $20\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$5\,\mathrm{kHz}$.
   Average and Smooth are off; Slope is zero. AC coupling is on and Bezier
   curves are off.
   \item[BassDetail] Low-frequency detail: Hann, Length 16384, Hop
-  $30\,\mathrm{ms}$, Linear X Scale, Log 60dB Y Scale, $0$--$500\,\mathrm{Hz}$,
+  $30\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$500\,\mathrm{Hz}$,
   Average $100\,\mathrm{ms}$. Smooth is off and Slope is zero. AC coupling
   is on and Bezier curves are off.
   \item[Transients] Shorter frames and frequent updates: Hann, Length 1024,
-  Hop $5\,\mathrm{ms}$, Logarithmic X Scale, Log 60dB Y Scale,
+  Hop $5\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale,
   $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
   AC coupling is on and Bezier curves are off.
   \item[PluginDevelopment] Wider amplitude range: Flattop, Length 8192,
-  Hop $30\,\mathrm{ms}$, Linear X Scale, Log 120dB Y Scale,
+  Hop $30\,\mathrm{ms}$, Linear Freq Scale, Log 120dB Y Scale,
   $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
   AC coupling and Bezier curves are off.
 \end{description}

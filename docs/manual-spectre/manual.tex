@@ -84,8 +84,9 @@ increasing resolution. The factory presets provide examples of these choices.
 \caption{Spectre's input, Run button, and display controls.}
 \end{figure}
 
-The numbered illustration identifies control positions. The sections below
-give the current ranges and defaults.
+The numbered illustration identifies control positions. Its former Y Scale
+control is now labeled \textbf{Freq Scale}. Text controls brighten when hovered.
+The sections below give the current ranges and defaults.
 
 \subsection{Input}
 
@@ -108,7 +109,7 @@ it is dark, buffering and FFT processing pause and the current history remains
 available for inspection. Resuming continues from the paused position; audio
 received during the pause is not captured. Run is initially enabled.
 
-While frozen, you can change \textbf{Y Scale}, \textbf{LO Freq}, \textbf{HI
+While frozen, you can change \textbf{Freq Scale}, \textbf{LO Freq}, \textbf{HI
 Freq}, \textbf{Slope}, and the \textbf{Color Map} to view the same history
 differently. Input gain, window, \textbf{Average}, \textbf{Smooth}, and
 AC-coupling changes affect subsequent analysis after you resume, not spectra
@@ -136,16 +137,16 @@ levels.
 
 Changing the window affects new spectra; it does not recalculate the history.
 
-\subsection{Y Scale}
+\subsection{Freq Scale}
 
-\textbf{Y Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the
+\textbf{Freq Scale} offers \textbf{Linear} and \textbf{Logarithmic} (the
 default). Linear places equal frequency intervals at equal distances. The mode
 named Logarithmic expands the low-frequency portion of the view. In this
 version, it uses a square-root mapping of frequency, so equal octaves are not
 equally spaced. Read the axis labels or cursor frequency rather than treating
 it as a mathematically logarithmic axis. Frequency is on Spectre's vertical
-axis; Fourier uses \textbf{X Scale} for frequency and \textbf{Y Scale} for
-amplitude.
+axis; both modules use \textbf{Freq Scale} for frequency, while Fourier
+uses \textbf{Y Scale} for amplitude.
 
 \subsection{Average}
 
@@ -258,21 +259,21 @@ limited by the current sample rate. Unlike Fourier's presets, these cannot
 change FFT length or hop size; both remain fixed in Spectre.
 
 \begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
-  \item[Mastering] Broad tonal balance: Flattop, Logarithmic Y Scale,
+  \item[Mastering] Broad tonal balance: Flattop, Logarithmic Freq Scale,
   $0$--$20\,\mathrm{kHz}$, Average $300\,\mathrm{ms}$, Smooth $1/12$ octave,
   Slope $+4.5\,\mathrm{dB/oct}$. AC coupling is on.
-  \item[Harmonics] Individual harmonics: Hann, Linear Y Scale,
+  \item[Harmonics] Individual harmonics: Hann, Linear Freq Scale,
   $0$--$5\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
   AC coupling is on.
-  \item[BassDetail] Low-frequency view: Hann, Linear Y Scale,
+  \item[BassDetail] Low-frequency view: Hann, Linear Freq Scale,
   $0$--$500\,\mathrm{Hz}$, Average $100\,\mathrm{ms}$. Smooth is off and
   Slope is zero. AC coupling is on. Cropping the view does not provide the
   finer bin spacing of Fourier's longer FFT in its BassDetail preset.
-  \item[Transients] Unsmoothed changes over time: Hann, Logarithmic Y Scale,
+  \item[Transients] Unsmoothed changes over time: Hann, Logarithmic Freq Scale,
   $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
   AC coupling is on. Frame duration and update interval remain fixed.
   \item[PluginDevelopment] Unweighted spectrum including DC: Flattop,
-  Linear Y Scale, $0$--$20\,\mathrm{kHz}$. Average and Smooth are off;
+  Linear Freq Scale, $0$--$20\,\mathrm{kHz}$. Average and Smooth are off;
   Slope is zero. AC coupling is off.
 \end{description}
 

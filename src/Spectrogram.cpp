@@ -138,7 +138,7 @@ struct Spectrogram : Module {
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
         // Setup the discrete frequency scale selector.
-        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "Y Scale", frequency_scale_names());
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "Freq Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
@@ -944,7 +944,8 @@ struct SpectrogramWidget : ModuleWidget {
         // Frequency scale control with custom angles to match discrete range.
         auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 1 * 66, 330), module, Spectrogram::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
-        frequency_scale_param->label.text = "Y SCALE";
+        frequency_scale_param->label.text = "FREQ SCALE";
+        frequency_scale_param->label.font_size = 8.5f;
         addParam(frequency_scale_param);
         // Time smoothing control.
         auto time_smoothing_param = createParam<TextKnob>(Vec(50 + 2 * 66, 330), module, Spectrogram::PARAM_TIME_SMOOTHING);
