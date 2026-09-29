@@ -18,6 +18,14 @@ semantics. External adapters and external campaign configurations remain
 future work. First-party inverse and complete-chain baselines are implemented;
 their smoke validation does not constitute external comparison evidence.
 
+Complete implementation, correctness checks, and benchmark tooling first.
+Each framework or algorithm has its own functional requirement (FR), with an
+implementation/integration step followed by a benchmark implementation step.
+Short smoke runs validate the tooling during development; all comparative
+metric gathering, including the pilot, waits until FR-11's final measurement
+phase on a prepared host. Individual implementation FRs can complete before
+that phase; this spec remains in progress until the results and paper pass.
+
 ## Review Of The Current Work
 
 The reviewed checkout is `4e58290`. Its relevant improvements are:
@@ -126,7 +134,7 @@ tasks, not necessarily an audio stream with N=H.
 | 1 | [Rack/PFFFT][rack-fft] | Would using the FFT already available in this host be preferable? | Ordered `dsp::RealFFT` for analysis; ordered `dsp::ComplexFFT` forward/inverse for matched inverse and chain work. Pin the linked implementation; adapters pending. |
 | 2 | [FFTW3][fftw-real] | How does an optimized portable library with reusable plans compare? | Single-threaded float real-to-complex and complex forward/backward plans, with explicit inverse scaling; double separately. Adapters and dependency capture pending. |
 | 3 | [Apple Accelerate/vDSP][vdsp] | What is the practical platform-library alternative on the Apple measurement host? | macOS real and complex transforms with reusable setup and explicit packing/scaling; adapters pending. This is a platform baseline, not an open-source implementation. |
-| Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; add only if this question remains material after the first three. |
+| Reserve | [KISS FFT][kiss] | What changes with a small, portable C implementation and different setup/storage tradeoffs? | Upstream provides a real-transform API. No local integration verified; optional FR-7; resolve inclusion before the final measurement phase. |
 | Academic follow-on | [Garrido's feedforward STFT][garrido] | Does reusing work across overlapping windows change the cost/age frontier? | The paper supplies algorithm descriptions; a matched CPU implementation, supported hops/windowing, and accuracy validation need feasibility review. Not a ready drop-in backend. |
 
 Keep `core-*` and `legacy-*` as controls. PFFFT through Rack and direct PFFFT
@@ -135,9 +143,9 @@ is justified for a specific caller-owned scratch or layout question. The
 inspected Rack wrapper passes null scratch pointers; inspect the pinned PFFFT
 source and report actual scratch behavior rather than assuming it.
 
-Windowed sliding/hopping methods are a second academic route if the pilot
-identifies high overlap as important. [Rafii's window kernels][rafii] provide
-windowing context; choose a specific update algorithm with its own stability
+Windowed sliding/hopping methods are a second, optional academic route when
+high overlap is an agreed research question before measurement.
+[Rafii's window kernels][rafii] provide windowing context; choose a specific update algorithm with its own stability
 analysis. Check implementation availability, license, precision, supported
 hops, endpoint convention, and real-input support before committing to a
 reimplementation. Charge updates between requested publications and include
@@ -150,7 +158,235 @@ comparators, but their complete applications are different workloads.
 comparison. Neither a batch library nor a new interpretation of academic
 pseudocode should be presented as the authors' measured implementation.
 
-## Requirements
+## Functional Requirements
+
+Implement the required FRs in order, completing each candidate's integration
+and correctness checks before its benchmark wiring. FR-1 records completed
+baseline work; FR-2 supplies shared protocol support. FR-3 through FR-6 are
+required contenders/experiments. FR-7 through FR-9 retain the reserve and
+academic scope above: record inclusion or deferral before FR-11, and complete
+both steps for any included candidate. An unchecked optional FR does not block
+measurement when its deferral and reason are recorded. Do not add candidates
+mid-campaign based on favorable timings; later additions need a new campaign.
+
+For each implementation FR, record files, dependency decisions, exact build
+and verification commands, supported combinations, and results in this spec.
+Benchmark completion means the workload, runner, checker, and smoke artifacts
+work; it does not require a performance result. Shared contracts below apply
+to every candidate without duplicating them in each checklist.
+
+### FR-1: First-Party Transform And Streaming Baselines
+
+#### Implementation And Integration
+
+- [x] Retain the existing FFT/RFFT/IFFT and production analyzer controls; add
+    batch/incremental periodic inverse jobs and complete identity/FIR chains.
+- [x] Verify independent all-output references, normalization, release cadence,
+    valid-output boundaries, and sample-delivery latency. Preserve the bulk
+    preparation limitations described in First-Party Evidence Pathways.
+
+#### Benchmark Implementation
+
+- [x] Add isolated, periodic inverse, and complete-chain workloads, callback
+    and throughput passes, explicit latency contracts, and artifact checks.
+- [x] Supply the synthesis smoke configuration and factor profile; pass short
+    replay/artifact checks. Evidence is recorded below. Final measurements
+    for these controls remain part of FR-11.
+
+### FR-2: Shared Adapter And Evidence Contracts
+
+#### Implementation And Integration
+
+- [ ] Extend the existing adapter interface with explicit capability and
+    latency contracts; keep dependencies optional and reject unavailable
+    requested backends. Preserve ordinary plugin and standalone test builds.
+- [ ] Provide shared independent numerical fixtures and tolerances for the
+    transform, analyzer, inverse-job, and complete-chain boundaries. Check
+    startup, settings changes, output completeness, and time origins.
+
+#### Benchmark Implementation
+
+- [ ] Update C++ dispatch, Python workload validation, and artifact checking
+    together. Replace backend-name assumptions where external/hybrid contracts
+    require it; opaque library calls have no radix-2 step-count claim.
+- [ ] Capture linked implementation identity, plans, setup/destruction,
+    persistent/scratch storage, allocation behavior, and supported workloads.
+- [ ] Add regressions rejecting wrong scaling/layout, missing outputs, wrong
+    publication age, unsupported configurations, altered dependencies,
+    duplicate/missing runs, and invalid timing values.
+
+### FR-3: Rack/PFFFT
+
+#### Implementation And Integration
+
+- [ ] Pin the Rack/PFFFT implementation and integrate ordered real analysis
+    and complex forward/inverse adapters. Include periodic inverse jobs and
+    complete identity/FIR chains with explicit inverse normalization.
+- [ ] Inspect the pinned wrapper and PFFFT scratch behavior, document actual
+    precision/size support, and pass the shared independent correctness checks.
+    A direct PFFFT variant needs a specific scratch/layout question and remains
+    part of this algorithm family.
+
+#### Benchmark Implementation
+
+- [ ] Wire every supported boundary into the existing runner and checker,
+    charging packing, ordering, normalization, and all required output stores.
+- [ ] Add matched control workloads and short smoke coverage, including setup,
+    storage, linked dependency provenance, callback, and throughput paths.
+    Verify artifacts without interpreting development timings as results.
+
+### FR-4: FFTW3
+
+#### Implementation And Integration
+
+- [ ] Add optional single-threaded float real-to-complex and complex
+    forward/backward plans, then separate double support. Integrate analysis,
+    periodic inverse jobs, and identity/FIR chains; verify packing and scaling.
+- [ ] Use `FFTW_MEASURE`, no imported wisdom, and fresh processes as the primary
+    plan policy. Restore inputs after planning and pass independent checks.
+    An `ESTIMATE` sensitivity study is a separate configuration.
+
+#### Benchmark Implementation
+
+- [ ] Register matched workloads for each supported precision and boundary;
+    capture plan creation/destruction, storage, build/SIMD options, linked
+    library identity, and exported plan/wisdom information when available.
+- [ ] Add smoke/artifact coverage for plan policy, full output, normalization,
+    latency, and unsupported combinations. Document dependency/build commands.
+
+### FR-5: Apple Accelerate/vDSP
+
+#### Implementation And Integration
+
+- [ ] Add macOS real and complex adapters with reusable setup, explicit native
+    packing/scaling, and the matched analyzer, inverse-job, and filtering paths.
+- [ ] Verify each supported precision and transform boundary independently;
+    make platform unavailability explicit. Record OS/SDK/framework identity
+    and what cannot be independently rebuilt or hashed.
+
+#### Benchmark Implementation
+
+- [ ] Register supported workloads, setup/storage accounting, and required
+    conversion work in the existing runner/checker with matched controls.
+- [ ] Pass macOS smoke/artifact checks and unavailable-platform regressions.
+    Keep the platform-library scope explicit in metadata and generated outputs.
+
+### FR-6: Hybrid Scheduled Analysis
+
+#### Implementation And Integration
+
+- [ ] Build the benchmark-only hybrid using Rack/PFFFT as the initial external
+    FFT, so implementation does not depend on a timing pilot. Parameterize the
+    adapter seam if practical; any additional library variant is named explicitly.
+- [ ] Spread preparation and postprocessing across the hop while executing the
+    FFT as one indivisible call. Define the schedule, verify stage dependencies
+    and exact H-1 publication age, and charge retained input and scheduling.
+- [ ] Match surrounding operations to the batch and production controls where
+    possible; record arithmetic, layout, and storage differences. Legacy
+    batch/incremental controls isolate scheduling within their arithmetic;
+    legacy-versus-production comparisons do not isolate scheduling alone.
+    If claiming production scheduling overhead causally, also implement batch
+    execution of that same positive-bin pipeline before the measurement gate.
+
+#### Benchmark Implementation
+
+- [ ] Add matched full-batch, hybrid, and resumable analyzer workloads and
+    checker contracts. The indivisible FFT call has no constant-cost butterfly
+    interpretation or work-count timing guarantee.
+- [ ] Pass numerical, cadence, and smoke/artifact checks across the planned
+    workload range. Build the attribution report path now; measure it in FR-11.
+
+### FR-7: KISS FFT (Optional)
+
+#### Implementation And Integration
+
+- [ ] Record whether the portable setup/storage question warrants inclusion.
+    If included, pin the source/license/build configuration and integrate real
+    and complex transforms plus matched streaming paths and independent checks.
+
+#### Benchmark Implementation
+
+- [ ] If included, add supported workloads, conversion/setup/storage accounting,
+    provenance, and smoke/artifact checks under the same adapter contract.
+    A forward-only adapter is not a completed library contender.
+
+### FR-8: Garrido Feedforward STFT (Optional)
+
+#### Implementation And Integration
+
+- [ ] Review implementation availability/license, CPU feasibility, precision,
+    supported hops/windowing, endpoint convention, and real-input support.
+    Record inclusion or a concrete reason for deferral.
+- [ ] If included, implement a matched overlap-reuse analysis path and verify
+    numerical output, publication cadence, and long-stream stability. Clearly
+    distinguish a local reimplementation from the authors' measured code.
+
+#### Benchmark Implementation
+
+- [ ] If included, register the supported analysis subset with matched controls,
+    charging all overlap reuse, windowing, updates, output, and refresh work.
+    Mark inverse/filtering boundaries unsupported unless actually implemented.
+- [ ] Add long-stream error, phase-threshold, weak/strong-tone, and post-signal
+    silence checks plus smoke/artifact coverage before final measurement.
+
+### FR-9: Windowed Sliding/Hopping Transform (Optional)
+
+#### Implementation And Integration
+
+- [ ] Select a specific update algorithm and stability analysis; Rafii's window
+    kernels supply context, not an implicit choice of transform implementation.
+    Review availability/license and the FR-8 feasibility criteria, then record
+    inclusion or deferral separately from Garrido's method.
+- [ ] If included, integrate and independently verify the chosen algorithm,
+    window kernels, endpoint/cadence contract, and long-stream stability.
+
+#### Benchmark Implementation
+
+- [ ] If included, add matched supported analysis workloads and numerical/smoke
+    checks, charging intermediate updates, window kernels, and periodic refresh.
+    Distinguish computing every spectrum from exploiting hop H directly.
+- [ ] Record unsupported boundaries and expose error/storage/cost/age output
+    through the common runner/checker without a separate timing harness.
+
+### FR-10: Campaign And Report Tooling
+
+- [ ] Add tracked `external-smoke.json` and `external-pilot.json` configurations
+    with explicit supported backends per host. Resolve and report workload
+    counts, matched controls, independent channel counts, and family constraints.
+- [ ] Implement the focused extension sweeps described below, including the
+    hybrid, four-channel SIMD comparison, and supported double workloads.
+- [ ] Supply deterministic table/figure generation with fixture-based checks
+    for numerical, provenance, storage, workload, latency, and uncertainty
+    outputs. Smoke data must remain clearly labeled and outside paper results.
+- [ ] Record exact reproduction commands and supply the tooling evidence for
+    the readiness gate below. Final counts/durations remain pilot decisions.
+
+### FR-11: Final Metric Gathering
+
+- [ ] After the readiness gate passes, prepare otherwise idle measurement
+    hosts and record power/thermal conditions, host activity, toolchain,
+    dependency identity, and session/order policy. Build before timed passes.
+- [ ] Run and retain the focused pilot below for all included candidates and
+    controls. Use variability, timer resolution, and tail-event counts to
+    justify the final matrix, repetitions, session count, and duration.
+- [ ] Freeze the confirmation configurations and exact commands, then run
+    serially across independent sessions with all artifact checks passing.
+    Preserve cases favoring batch and report missing hardware explicitly.
+- [ ] Collect the required cost, tail, storage, error, completion/publication,
+    and sample-delivery metrics. Generate validated reports without conflating
+    workload families, time origins, or simulated deadlines with device data.
+
+### FR-12: Paper Integration And Completion
+
+- [ ] Integrate FR-11's generated tables/figures into the paper, pin the measured
+    revision, and preserve historical campaigns and their interpretation.
+- [ ] Report benefits, regressions, crossover regimes, numerical accuracy,
+    confounds, uncertainty, and measured platform scope. Update citations
+    consistently; an unfavorable supported result still satisfies this spec.
+- [ ] Pass artifact checks, the paper build, and PDF review; record evidence
+    here and archive the completed spec only after all required criteria pass.
+
+## Shared Contracts
 
 ### Comparable Adapters
 
@@ -184,14 +420,12 @@ pseudocode should be presented as the authors' measured implementation.
     allocation behavior. Do not interpret the core's maximum-capacity plans
     and an exact-size library plan as equivalent memory policies; report both
     capacities and test sensitivity where material.
--   Start FFTW with single-threaded `FFTW_MEASURE`, no imported wisdom, and a
-    fresh process as documented in [planner flags][fftw-flags]. Restore inputs
-    after planning. Retain exported plan/wisdom information when available to
-    explain plan variation. An `ESTIMATE` sensitivity study is a separate
-    configuration. Record library versions, build/SIMD options, source and
-    binary hashes, compiler/FP flags, and OS/SDK/framework identity. Hashing
-    a wrapper alone does not identify its linked implementation. For opaque
-    platform libraries, state what cannot be independently rebuilt or hashed.
+-   Follow each backend's setup policy (including FR-4's FFTW planning policy
+    and [planner flags][fftw-flags]). Record library versions, build/SIMD
+    options, source and binary hashes, compiler/FP flags, and OS/SDK/framework
+    identity. Hashing a wrapper alone does not identify its linked implementation.
+    For opaque platform libraries, state what cannot be independently rebuilt
+    or hashed.
 
 ### Correctness Before Timing
 
@@ -218,55 +452,54 @@ pseudocode should be presented as the authors' measured implementation.
     references throughout the stream; define phase error only above a stated
     reference-magnitude threshold. Include any periodic refresh cost.
 
-### Attribution Experiment
+## Implementation Readiness Gate
 
-After the batch pilot, add a benchmark-only hybrid using a competitive external
-FFT: spread preparation and postprocessing across the hop, but execute the FFT
-as one indivisible library call. Define its stage schedule before measuring;
-verify dependencies and exact H-1 publication age, and charge all retained-input
-and scheduling costs. The library call is not equivalent to one constant-cost
-butterfly unit and receives no work-count timing guarantee.
+Before FR-11 starts, FR-1 through FR-6 and FR-10 must be complete, and each
+optional FR must either pass both steps or have a recorded deferral. Require
+independent correctness checks, supported-host builds, verified smoke artifacts,
+resolved workload inventories, explicit dependency/setup/storage/latency
+contracts, and tested report generation. No speedup or final metric is needed
+to pass this gate. A short run that emits timing fields validates mechanics;
+its measurements cannot establish a ranking or enter the final paper.
 
-Compare full batch, hybrid, and production resumable analysis. This tests
-whether a resumable FFT earns a useful improvement beyond scheduling its
-surrounding passes. Use matched surrounding operations where possible and
-state remaining differences in arithmetic, storage, and data layout. Existing
-legacy batch/incremental controls isolate scheduling within their arithmetic;
-comparing the legacy controls with the production core does not isolate
-scheduling alone. If a causal claim about production scheduling overhead is
-needed, also supply a batch execution of the same positive-bin pipeline.
+Implement and test all selected algorithms and measurement paths before
+preparing the clean measurement environment. Do not require an early pilot to
+choose the hybrid library or unblock another implementation FR. If the final
+pilot exposes a correctness/tooling defect, return to implementation, revalidate,
+and restart affected measurements under a newly identified revision/configuration.
+Do not mix pre-fix and post-fix observations into one confirmation campaign.
 
-## Staged Measurement Plan
+## Final Measurement Sequence
 
-1.  **Adapter gate:** Implement and verify Rack/PFFFT first, then FFTW and
-    vDSP. Produce a backend inventory and a short smoke configuration for all
-    available adapters. Require real forward analysis and complex forward,
-    inverse, periodic inverse, and end-to-end float controls; double follows
-    for supported libraries. Do not replace a production backend.
-2.  **Focused pilot:** Start with N=2048/4096/16384, H=1024, blocks of 16/64/256,
+The following sequence belongs entirely to FR-11, after implementation:
+
+1.  **Focused pilot:** Start with N=2048/4096/16384, H=1024, blocks of 16/64/256,
     48 kHz, float, one analyzer, steady state, smoothing off/on, and separate
-    callback/throughput passes. Include the core and matched legacy controls.
-    Use a resolved configuration file and report the workload count. Inspect
-    timer resolution and session variability before choosing repetitions.
-    Include inverse jobs and both overlap-save controls as separate families;
-    do not combine their costs or time origins in a single ranking.
-3.  **Discriminating extensions:** Add N=128, H=257, 96 kHz, 1/4/16 analyzers,
-    aligned/staggered phases, fixed background load, and startup/live/cache
-    pressure as focused sweeps. Include callback-origin phase offsets where
-    needed: analyzer staggering alone does not vary every shared relationship
-    between the callback grid and frame schedule. Add equal four-channel work
-    for `core-simd4`; double is a separate supported-backend sweep.
-4.  **Hybrid and confirmation:** Run the attribution experiment, then repeat
-    the frozen comparison across independent sessions. Use at least three
-    sessions as an initial coverage floor, with final run lengths and counts
-    justified by pilot variability and the tail events of interest. Repeat a
-    focused portable subset on ARM64 and x86-64 before making cross-architecture
-    claims. Missing hardware limits claims; it does not justify invented data.
-5.  **Publication integration:** Generate tables and figures from validated
-    campaigns. Pin the measured production revision, distinguish historical
-    evidence, and reorganize the paper around the measured tradeoffs. Preserve
-    prior campaign archives. Promote academic/worker/host comparisons only
-    when a remaining research question warrants their added scope.
+    callback/throughput passes. Include the core, matched legacy controls,
+    all included external candidates, and the implemented hybrid. Use a resolved
+    configuration and report the workload count. Inspect timer resolution and
+    session variability before choosing repetitions. Include inverse jobs and
+    both overlap-save controls as separate families; do not combine their costs
+    or time origins in a single ranking.
+2.  **Focused extensions:** Use the implemented sweeps for N=128, H=257,
+    96 kHz, 1/4/16 analyzers, aligned/staggered phases, fixed background load,
+    and startup/live/cache pressure. Resolve valid family-specific combinations.
+    Include callback-origin offsets where needed: analyzer staggering alone
+    does not vary every relationship between the callback grid and frame
+    schedule. Include equal four-channel work for `core-simd4` and a separate
+    supported-backend double sweep. Any reduction from the planned matrix
+    needs an explicit rationale; do not select only favorable results.
+3.  **Frozen confirmation:** Include the full-batch/hybrid/resumable attribution
+    comparison and repeat the frozen matrix across independent sessions. Use
+    at least three sessions as an initial coverage floor, with final run lengths
+    and counts justified by pilot variability and the tail events of interest.
+    Repeat a focused portable subset on ARM64 and x86-64 before making
+    cross-architecture claims. Missing hardware limits claims; it does not
+    justify invented data.
+4.  **Validated reporting:** Generate FR-10's tables/figures from checked final
+    artifacts for FR-12. Preserve prior archives and distinguish pilot, smoke,
+    and confirmation evidence. New academic/worker/host questions discovered
+    here are follow-on campaigns, not prerequisites for this implementation.
 
 Measure serially on otherwise idle hosts; never run compilation or other
 benchmarks concurrently. Record power/thermal conditions, host activity,
@@ -284,36 +517,40 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 
 ## Outputs And Acceptance Criteria
 
-- [x] First-party inverse jobs and complete identity/FIR chains have batch and
-    incremental controls, independent all-output validation, latency contracts,
-    workload configurations, and raw-artifact checks. Publication campaigns
-    and external comparisons remain outstanding.
-- [ ] Three primary backend adapters pass independent numerical and matched
-    analysis/inverse/complete-chain checks on supported hosts; unavailable
-    cases are explicit. Required output normalization is included in cost.
-- [ ] Dependency/setup/storage/publication contracts and exact reproduction
-    commands are documented. Archived artifacts identify measured sources,
-    libraries, flags, workloads, and numerical checks without relying on HEAD.
-- [ ] Runner/checker regressions reject wrong scaling/layout, missing outputs,
-    wrong publication age, unsupported configurations, altered dependencies,
-    duplicate/missing runs, and invalid timing values.
-- [ ] A retained pilot justifies the final matrix, repetitions, session count,
-    and observation duration. A frozen confirmation campaign follows the pilot;
-    cases favoring batch processing remain in the reported matrix.
-- [ ] The hybrid comparison separates the practical value of suspending the
-    FFT from scheduling the surrounding work, with remaining confounds stated.
-- [ ] Generated outputs include an implementation/provenance/error/storage
-    table; matched workload/cost/age table; transform and full-analysis cost
-    versus N; callback tail distributions; and cost versus spectrum-age plots.
-    Inverse and complete-chain panels report release/completion and sample
-    delivery latency, respectively, with their independent numerical evidence.
-    Each output identifies its campaign and includes uncertainty or variation
-    appropriate to that statistic. No upstream performance chart substitutes
-    for these measurements.
-- [ ] The paper reports benefits, regressions, crossover regimes, accuracy,
-    limitations, and measured platform scope. Its tables/figures and citation
-    metadata are updated consistently; build, artifact checks, and PDF review
-    pass. An unfavorable result still satisfies this spec if supported.
+- [x] FR-1: First-party inverse jobs and complete identity/FIR chains have
+    batch and incremental controls, independent all-output validation, latency
+    contracts, workload configurations, and raw-artifact checks. Publication
+    campaigns and external comparisons remain outstanding.
+- [ ] FR-3 through FR-5: Three primary backend adapters pass independent
+    numerical and matched analysis/inverse/complete-chain checks on supported
+    hosts; unavailable cases are explicit. Required output normalization is
+    included in cost.
+- [ ] FR-2 and FR-10: Dependency/setup/storage/publication contracts and exact
+    reproduction commands are documented. Archived artifacts identify measured
+    sources, libraries, flags, workloads, and numerical checks without relying
+    on HEAD.
+- [ ] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
+    outputs, wrong publication age, unsupported configurations, altered
+    dependencies, duplicate/missing runs, and invalid timing values.
+- [ ] FR-11: A retained pilot justifies the final matrix, repetitions, session
+    count, and observation duration. A frozen confirmation campaign follows the
+    pilot; cases favoring batch processing remain in the reported matrix.
+- [ ] FR-6 and FR-11: The hybrid comparison separates the practical value of
+    suspending the FFT from scheduling the surrounding work, with remaining
+    confounds stated.
+- [ ] FR-10 and FR-11: Generated outputs include an
+    implementation/provenance/error/storage table; matched workload/cost/age
+    table; transform and full-analysis cost versus N; callback tail
+    distributions; and cost versus spectrum-age plots. Inverse and
+    complete-chain panels report release/completion and sample delivery latency,
+    respectively, with their independent numerical evidence. Each output
+    identifies its campaign and includes uncertainty or variation appropriate
+    to that statistic. No upstream performance chart substitutes for these
+    measurements.
+- [ ] FR-12: The paper reports benefits, regressions, crossover regimes,
+    accuracy, limitations, and measured platform scope. Its tables/figures and
+    citation metadata are updated consistently; build, artifact checks, and PDF
+    review pass. An unfavorable result still satisfies this spec if supported.
 
 ## Non-Goals
 
@@ -363,12 +600,18 @@ options. Resolve feasible H/N combinations per family before measurement.
 The implementation must add tracked `external-smoke.json` and
 `external-pilot.json` under `benchmark/paper/configs/`, with explicit supported
 backends per host. Those files do not exist yet. Once supplied, these are the
-required smoke/pilot commands; output directories must be new:
+required implementation smoke and inventory commands; output directories must
+be new. Listing the pilot resolves workloads without measuring them:
 
 ```shell
 python3 benchmark/paper/run.py build/paper-external-smoke --config benchmark/paper/configs/external-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 benchmark/paper/check.py build/paper-external-smoke
 python3 benchmark/paper/run.py build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json --list
+```
+
+Only in FR-11, after the readiness gate and host preparation, run the pilot:
+
+```shell
 python3 benchmark/paper/run.py build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json
 python3 benchmark/paper/check.py build/paper-external-pilot
 ```
@@ -381,6 +624,22 @@ deterministic figure/table generator and its validation command as part of
 implementation. Smoke checks are not publication measurements.
 
 ## Review Evidence And Remaining Work
+
+### Requirement Breakdown
+
+September 29, 2026: reorganized the work into FR-1 through FR-12 with separate
+implementation/integration and benchmark implementation checklists. Retained
+first-party baseline completion and optional candidate scope. Moved the pilot,
+comparative sweeps, and confirmation measurements behind the implementation
+readiness gate; the hybrid now starts with Rack/PFFFT without waiting for a
+pilot. This planning change adds no adapters or new performance evidence.
+
+Validation: local links/anchors, referenced paths and command definitions,
+FR numbering and paired checklists, and `git diff --check` passed. No DSP
+tests, Rack build/session, or measurement campaign was run for this
+documentation-only change.
+
+### Initial Review
 
 September 29, 2026: source/protocol/manuscript review completed. The focused
 production suite passed 1,934,764 assertions in seven cases; five Python
