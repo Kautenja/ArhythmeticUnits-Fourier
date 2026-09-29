@@ -107,7 +107,9 @@ The black color screen below Input Gain combines palette selection, intensity
 scale, and the displayed range. Click the palette name (initially
 \textbf{Magma}) to choose Viridis, Cividis, Magma, Plasma, Inferno, Bone, or
 Gray. Click \textbf{Decibels} or \textbf{Linear} below it to switch the
-intensity scale. Both readouts open dropdown menus directly on the panel.
+intensity scale. Both readouts open dropdown menus directly on the panel. Each row brightens
+only while the pointer is over that row; the gradient and numeric values
+do not highlight the menu controls.
 
 Drag the \textbf{lower-left handle} to change Floor and reveal or suppress
 quiet detail. Drag the \textbf{upper-right handle} to change Ceiling and
@@ -315,15 +317,15 @@ Right-click the module to find these options under \textbf{Render Settings}:
   low frequencies. Turn it off when inspecting DC or slow signals, and set
   Slope to zero to avoid frequency weighting near DC. This setting does not
   reprocess history.
-  \item \textbf{Intensity scale}: Decibels (new instances and reset) or
-  Linear, also selectable directly on the color screen. Old patches and
-  presets with no valid intensity mode load in Linear to preserve their
-  colors. Missing endpoint values load as $-90$/$0\,\mathrm{dB}$ and
-  0/100\%, even when loading into an edited module.
 \end{itemize}
 
-Palette selection is on the color screen rather than in the context menu.
-Panel dropdowns and these menu changes support Rack's Undo and Redo commands. Patches and module
+Palette and intensity-scale selection are on the color screen rather than
+in the context menu. New instances and reset use Decibels; old patches and
+presets with no valid intensity mode load in Linear to preserve their
+colors. Missing endpoints load as $-90$/$0\,\mathrm{dB}$ and 0/100\%, even
+when loading into an edited module.
+
+Panel dropdowns and AC-coupling changes support Rack's Undo and Redo commands. Patches and module
 presets save the panel settings, Run state, AC-coupling choice, color map,
 and intensity mode.
 They do not save the recorded spectrogram. A patch saved while frozen reopens

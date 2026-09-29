@@ -610,7 +610,7 @@ TEST_CASE("Spectre recolors frozen dB history without recapture or redundant upl
         handle.module = &module;
         handle.paramId = id;
         const float target = id == Spectrogram::PARAM_COLOR_FLOOR ? -60.f : 12.f;
-        handle.drag_by((module.params[id].getValue() - target) * 120.f / 144.f, 0);
+        handle.drag_by((module.params[id].getValue() - target) * Fourier::PanelLayout::intensity_bar_height() / 144.f, 0);
         CHECK(module.params[id].getValue() == Catch::Approx(target));
         renderer.draw(display);
         CHECK(renderer.updated == ++updates);

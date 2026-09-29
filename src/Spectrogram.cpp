@@ -1052,7 +1052,9 @@ struct SpectreIntensityHandle : ParamWidget {
 
     /// @brief Map endpoints to the mode's fixed dB or normalized-amplitude axis.
     static float position(float value, bool linear = false) {
-        return 60.f + (linear ? (2.f - value) / 2.f : (24.f - value) / 144.f) * 120.f;
+        return Fourier::PanelLayout::intensity_bar_top() +
+            (linear ? (2.f - value) / 2.f : (24.f - value) / 144.f) *
+            Fourier::PanelLayout::intensity_bar_height();
     }
 
     void step() override {
@@ -1077,7 +1079,7 @@ struct SpectreIntensityHandle : ParamWidget {
         const float speed = mods == (RACK_MOD_CTRL | GLFW_MOD_SHIFT) ? 0.01f :
             (mods == RACK_MOD_CTRL ? 0.1f : (mods == GLFW_MOD_SHIFT ? 4.f : 1.f));
         auto quantity = getParamQuantity();
-        quantity->setValue(quantity->getValue() - pixels * (linear() ? 2.f : 144.f) / 120.f * speed);
+        quantity->setValue(quantity->getValue() - pixels * (linear() ? 2.f : 144.f) / Fourier::PanelLayout::intensity_bar_height() * speed);
     }
 
     void onDragMove(const DragMoveEvent& e) override {
@@ -1115,7 +1117,7 @@ struct SpectreIntensityHandle : ParamWidget {
 /// @brief Color screen with direct palette and scale menus, shared by both modes.
 struct SpectreIntensityLegend : OpaqueWidget {
     Spectrogram* module;
-    bool hovered = false;
+    int hovered_choice = -1;
 
     explicit SpectreIntensityLegend(Spectrogram* module) : module(module) {}
     bool linear() const {
@@ -1131,14 +1133,25 @@ struct SpectreIntensityLegend : OpaqueWidget {
         if (!module) return;
         Fourier::set_module_setting(module, "change color map", "color_map", json_integer(value));
     }
-    void onEnter(const EnterEvent& e) override { hovered = module != nullptr; OpaqueWidget::onEnter(e); }
-    void onLeave(const LeaveEvent& e) override { hovered = false; OpaqueWidget::onLeave(e); }
+    /// @brief Share precise hit regions between pointer feedback and activation.
+    static int choice_at(Vec position) {
+        for (int row = 0; row < 2; ++row)
+            if (Fourier::PanelLayout::intensity_choice(row).contains(position)) return row;
+        return -1;
+    }
+    void onHover(const HoverEvent& e) override {
+        hovered_choice = module ? choice_at(e.pos) : -1;
+        OpaqueWidget::onHover(e);
+    }
+    void onLeave(const LeaveEvent& e) override { hovered_choice = -1; OpaqueWidget::onLeave(e); }
     void onButton(const ButtonEvent& e) override {
-        if (module && e.button == GLFW_MOUSE_BUTTON_LEFT && e.action == GLFW_PRESS && e.pos.y < 42.f) {
+        const int choice = choice_at(e.pos);
+        if (module && e.button == GLFW_MOUSE_BUTTON_LEFT && e.action == GLFW_PRESS && choice >= 0) {
             auto menu = createMenu();
             // Put each list directly under its readout rather than nesting a submenu.
-            const bool palette = e.pos.y < 22.f;
-            menu->box.pos = getAbsoluteOffset(Vec(0.f, palette ? 22.f : 42.f));
+            const bool palette = choice == 0;
+            const auto row = Fourier::PanelLayout::intensity_choice(choice);
+            menu->box.pos = getAbsoluteOffset(Vec(row.pos.x, row.getBottomRight().y));
             const auto names = palette ? Fourier::ColorMap::names() : std::vector<std::string>{"Decibels", "Linear"};
             for (size_t i = 0; i < names.size(); ++i) {
                 menu->addChild(createCheckMenuItem(names[i], "", [=]() {
@@ -1170,12 +1183,14 @@ struct SpectreIntensityLegend : OpaqueWidget {
         // Adjacent strips must meet without antialiased seams at fractional zoom.
         nvgSave(vg);
         nvgShapeAntiAlias(vg, 0);
-        for (int row = 0; row < 120; ++row) {
-            const float value = linear() ? 2.f * (1.f - row / 119.f) : 24.f - row * 144.f / 119.f;
+        const int height = Fourier::PanelLayout::intensity_bar_height();
+        for (int row = 0; row < height; ++row) {
+            const float fraction = row / static_cast<float>(height - 1);
+            const float value = linear() ? 2.f * (1.f - fraction) : 24.f - fraction * 144.f;
             const float position = Spectrogram::Intensity::position(value, floor, ceiling, linear());
             const auto color = Fourier::ColorMap::color_map(palette, position);
             nvgBeginPath(vg);
-            nvgRect(vg, 24.f, 60.f + row, 15.f, 1.f);
+            nvgRect(vg, 24.f, Fourier::PanelLayout::intensity_bar_top() + row, 15.f, 1.f);
             nvgFillColor(vg, nvgRGBf(color.r, color.g, color.b));
             nvgFill(vg);
         }
@@ -1187,17 +1202,23 @@ struct SpectreIntensityLegend : OpaqueWidget {
         nvgFontSize(vg, 9.f);
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgFillColor(vg, nvgRGB(230, 230, 230));
-        nvgText(vg, 31.5f, 50.f, (text[0] + text[2]).c_str(), nullptr);
-        nvgText(vg, 31.5f, 194.f, (text[1] + text[2]).c_str(), nullptr);
-        nvgFontSize(vg, 9.f);
-        nvgFillColor(vg, hovered ? nvgRGB(100, 255, 120) : nvgRGB(0, 215, 26));
-        nvgText(vg, 28.f, 12.f, Fourier::ColorMap::names()[static_cast<size_t>(palette)].c_str(), nullptr);
-        nvgText(vg, 28.f, 33.f, linear() ? "Linear" : "Decibels", nullptr);
-        for (float y : {12.f, 33.f}) {
+        nvgText(vg, 31.5f, 48.f, (text[0] + text[2]).c_str(), nullptr);
+        nvgText(vg, 31.5f, 182.f, (text[1] + text[2]).c_str(), nullptr);
+        // Rack display choices align labels to a common left inset and reserve
+        // a fixed right gutter. Keep this plugin's green-on-black treatment.
+        nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        for (int choice = 0; choice < 2; ++choice) {
+            const auto row = Fourier::PanelLayout::intensity_choice(choice);
+            const float y = row.getCenter().y;
+            const float right = row.getBottomRight().x - 2.f;
+            nvgFillColor(vg, hovered_choice == choice ? nvgRGB(100, 255, 120) : nvgRGB(0, 215, 26));
+            const auto label = choice == 0 ? Fourier::ColorMap::names()[static_cast<size_t>(palette)] :
+                (linear() ? "Linear" : "Decibels");
+            nvgText(vg, row.pos.x + 2.f, y, label.c_str(), nullptr);
             nvgBeginPath(vg);
-            nvgMoveTo(vg, 54.f, y - 1.f);
-            nvgLineTo(vg, 59.f, y - 1.f);
-            nvgLineTo(vg, 56.5f, y + 2.f);
+            nvgMoveTo(vg, right - 4.f, y - 1.f);
+            nvgLineTo(vg, right, y - 1.f);
+            nvgLineTo(vg, right - 2.f, y + 1.5f);
             nvgFill(vg);
         }
     }
@@ -1276,12 +1297,6 @@ struct SpectrogramWidget : ModuleWidget {
             [=](bool value) {
                 Fourier::set_module_setting(module, "change ac-coupled",
                     "is_ac_coupled", json_boolean(value));
-            }));
-        menu->addChild(createIndexSubmenuItem("Intensity scale", {"Decibels", "Linear"},
-            [=]() { return static_cast<size_t>(module->intensity_scale); },
-            [=](size_t value) {
-                Fourier::set_module_setting(module, "change intensity scale", "intensity_scale",
-                    json_string(value == 0 ? "decibels" : "legacy_linear"));
             }));
         ModuleWidget::appendContextMenu(menu);
     }

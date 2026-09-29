@@ -35,17 +35,19 @@ at default endpoints. This spec is independent of
 
 ### FR-1: Panel And Interaction
 
-- [x] Use a rounded black color screen at `(6, 106)`, size `63 x 206`,
+- [x] Use a rounded black color screen at `(6, 106)`, size `63 x 194`,
     within a widened left control strip. Preserve the 35 HP module size.
     Move Spectre's plot to `(75, 15)` with size `435 x 350` and evenly
     space its seven bottom controls. Fourier's geometry stays unchanged.
 - [x] Center input, a larger gain knob, color screen, and Run at x=37.5.
     Input and gain centers are about 41 pixels (13.9 mm) apart. Provide
-    22-by-20-pixel handle hit targets on opposite sides of a 120-pixel bar.
+    22-by-20-pixel handle hit targets on opposite sides of a 108-pixel bar.
     This improves physical-style clearance; it is not a hardware prototype.
 - [x] Put palette and intensity-scale readouts with dropdown arrows at the
     top of the screen. Left-click opens each list directly. Remove the
-    redundant context-menu palette list; retain the intensity-scale menu.
+    redundant context-menu palette and intensity-scale lists. Each row alone
+    highlights on hover; screen margins, values and gradient do not highlight
+    either dropdown. Use shared left padding and a fixed arrow gutter.
 - [x] Support vertical dragging, fine adjustment, typed values, reset, and
     one undo action per drag. Disable smoothing and randomization. Clamp
     edits at the other limit without changing the sibling parameter.
@@ -81,8 +83,7 @@ at default endpoints. This spec is independent of
     finite bounds before narrowing, then repair crossed saved pairs by
     lowering the floor to one minimum span below the ceiling. Load order
     must not affect the result. Non-finite external values use defaults.
-- [x] Use Rack's synchronized undo helper for both panel dropdowns and
-    context-menu scale selection. Patches preserve mode, palette, and
+- [x] Use Rack's synchronized undo helper for the panel dropdowns. Patches preserve mode, palette, and
     both ranges without changing module slugs, port/light IDs or DSP.
 - [x] Only active endpoints affect image cache invalidation. Changed
     endpoints, scale, palette, or slope recolor retained history, including
@@ -323,3 +324,39 @@ is `37715a7`. Unrelated analyzer/benchmark and saved-patch work is preserved.
 No push or release was performed. A full manual Rack interaction session
 remains pending; native automated event/render checks are not claimed as
 hands-on use. Keep the spec active until that acceptance check is verified.
+
+### Hover And Spacing Polish
+
+Committed the preceding revision as `5411056` before these refinements.
+Reviewed the user's September 29 screen recording and Rack's local
+`LedDisplayChoice`, Audio/MIDI display rows, and `ChoiceButton` implementation.
+Kept Fourier's green text and black display while adopting separate row hit
+regions, common left padding, and reserved arrow space. Each row highlights
+independently and opens its menu below its own inset. Clicking screen margins
+or the gap below the menu rows does not activate a dropdown.
+
+Reduced the screen height from 206 to 194 pixels and its bar from 120 to 108,
+leaving about 17 pixels above the Run label. Handle motion and palette drawing
+share bar geometry. Removed the duplicate context-menu intensity selector;
+both color choices now live exclusively on the panel.
+
+Validation on the same macOS ARM64/Rack SDK environment:
+
+-   `make -j4 all test-serialization test-display-lifecycle` passed the C++11
+    Rack build, 5,890 serialization assertions / 12 cases, and 89,929
+    display assertions / 13 cases. Existing Rack SDK warnings remain.
+-   `make inspect-panels` passed 72 native rendering cases. Added actual
+    module hover checks for both rows, gradient, endpoint labels and margins;
+    null previews never highlight. Verified pointer exit clears hover, gap
+    clicks do not open menus, and context-menu color duplicates are absent.
+    Existing dropdown selection/undo and handle drag checks still pass.
+    Inspected themes and 100/75/50 percent zoom in native output; review
+    image: `.build/test/rack/color-hover-polish.png`.
+
+`make -C docs/manual-spectre` rebuilt the 12-page manual with the revised
+panel image and panel-only scale instructions. Poppler-rendered pages were
+visually inspected. `git diff --check` and relative spec link checks passed.
+`make install` installed the package for Rack to load on its next restart.
+This polish is included in the user-requested commit. The prior full live-session acceptance
+limitation still applies; the supplied recording verifies the user's current
+UI observations, not every outstanding manual check.

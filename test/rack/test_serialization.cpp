@@ -435,7 +435,7 @@ TEST_CASE("Vertical color range handles change independently with one undoable d
         handle.onDragStart(start);
         handle.drag_by(-5.f, 0);
         handle.drag_by(-5.f, 0);
-        CHECK(module.params[id].getValue() == Catch::Approx(before + 144.f / 120.f * 10.f));
+        CHECK(module.params[id].getValue() == Catch::Approx(before + 144.f / Fourier::PanelLayout::intensity_bar_height() * 10.f));
         CHECK(module.params[other].getValue() == untouched);
         Widget::DragEndEvent end;
         end.button = GLFW_MOUSE_BUTTON_LEFT;
@@ -449,7 +449,7 @@ TEST_CASE("Vertical color range handles change independently with one undoable d
         CHECK(module.params[id].getValue() == after);
         handle.onDragStart(start);
         handle.drag_by(-5.f, RACK_MOD_CTRL);
-        CHECK(module.params[id].getValue() == Catch::Approx(after + 144.f / 120.f * 0.5f));
+        CHECK(module.params[id].getValue() == Catch::Approx(after + 144.f / Fourier::PanelLayout::intensity_bar_height() * 0.5f));
         handle.onDragEnd(end);
         // Typed values and Rack's native parameter reset use the same quantity.
         module.getParamQuantity(id)->setDisplayValueString(id == 9 ? "-72.5" : "12.5");
@@ -480,7 +480,7 @@ TEST_CASE("Panel palette and scale choices are undoable and preserve independent
     handle.step();
     CHECK(handle.visible);
     CHECK_FALSE(module.getParamQuantity(handle.paramId)->smoothEnabled);
-    handle.drag_by(30.f, 0);
+    handle.drag_by(Fourier::PanelLayout::intensity_bar_height() / 4.f, 0);
     CHECK(module.linear_ceiling() == Catch::Approx(0.5f));
     module.getParamQuantity(11)->setDisplayValueString("10");
     CHECK(module.linear_floor() == Catch::Approx(0.1f));
@@ -521,7 +521,7 @@ TEST_CASE("Both intensity ranges allow quiet ceilings and prevent crossed limits
         SpectreIntensityHandle handle;
         handle.module = &module;
         handle.paramId = ceiling;
-        handle.drag_by(linear ? 30.f : 25.f, 0);
+        handle.drag_by(Fourier::PanelLayout::intensity_bar_height() * (linear ? 0.25f : 30.f / 144.f), 0);
         CHECK(module.params[ceiling].getValue() == Catch::Approx(linear ? 0.5f : -30.f).margin(0.00001));
         module.getParamQuantity(floor)->setValue(100.f);
         CHECK(module.params[floor].getValue() == Catch::Approx(module.params[ceiling].getValue() - gap));

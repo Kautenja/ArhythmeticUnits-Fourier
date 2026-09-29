@@ -114,14 +114,51 @@ int main(int argc, char** argv) {
             for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING}) {
                 auto handle = dynamic_cast<SpectreIntensityHandle*>(sw->getParam(id));
                 if (!handle || handle->box.pos.x < 6.f || handle->box.getBottomRight().x > 69.f ||
-                    handle->box.pos.y < 106.f || handle->box.getBottomRight().y > 312.f)
+                    handle->box.pos.y < 106.f || handle->box.getBottomRight().y > 300.f)
                     throw std::runtime_error("Intensity handle bounds escaped the left strip");
             }
             const auto control = Fourier::PanelLayout::intensity_control();
             if (control.pos.x < 6.f || control.pos.y < 106.f ||
-                control.getBottomRight().x > 69.f || control.getBottomRight().y > 312.f)
+                control.getBottomRight().x > 69.f || control.getBottomRight().y > 300.f)
                 throw std::runtime_error("Color control bounds escaped the left strip");
+            SpectreIntensityLegend* legend = nullptr;
+            for (auto child : sw->children)
+                if (auto candidate = dynamic_cast<SpectreIntensityLegend*>(child)) legend = candidate;
+            if (!legend) throw std::runtime_error("Missing color control");
+            // The screen margins, bar, and endpoint labels must not light either row.
+            const Vec hover_points[] = {Vec(25.f, 14.f), Vec(25.f, 32.f), Vec(25.f, 110.f),
+                Vec(3.f, 14.f), Vec(25.f, 43.f), Vec(25.f, 48.f), Vec(0.f, 0.f)};
+            for (int i = 0; i < 7; ++i) {
+                rack::widget::EventContext target;
+                Widget::HoverEvent hover;
+                hover.context = &target;
+                hover.pos = control.pos.plus(hover_points[i]);
+                sw->onHover(hover);
+                context.event->setHoveredWidget(target.target);
+                if (legend->hovered_choice != (!preview && i < 2 ? i : -1))
+                    throw std::runtime_error("Color menu highlight escaped its own row");
+            }
+            context.event->setHoveredWidget(nullptr);
+            if (legend->hovered_choice != -1)
+                throw std::runtime_error("Color menu highlight survived pointer exit");
             if (!preview) {
+                rack::ui::Menu context_menu;
+                sw->appendContextMenu(&context_menu);
+                for (auto child : context_menu.children)
+                    if (auto item = dynamic_cast<rack::ui::MenuItem*>(child))
+                        if (item->text == "Intensity scale" || item->text == "Color Map")
+                            throw std::runtime_error("Duplicate color choice in context menu");
+                // Clicking the gap beneath the dropdowns must not open either menu.
+                const auto child_count = context.scene->children.size();
+                rack::widget::EventContext target;
+                Widget::ButtonEvent press;
+                press.context = &target;
+                press.pos = control.pos.plus(Vec(25.f, 43.f));
+                press.button = GLFW_MOUSE_BUTTON_LEFT;
+                press.action = GLFW_PRESS;
+                sw->onButton(press);
+                if (context.scene->children.size() != child_count)
+                    throw std::runtime_error("Color screen gap opened a dropdown");
                 // Route presses through the complete widget tree, then use the
                 // actual Rack drag callbacks and history rather than setting params.
                 for (const int id : {Spectrogram::PARAM_COLOR_FLOOR, Spectrogram::PARAM_COLOR_CEILING,
@@ -197,7 +234,7 @@ int main(int argc, char** argv) {
             }
             std::vector<unsigned char> dark_pixels;
             // Exercise hover events on the actual widget through Rack's event state.
-            for (int scenario = 0; scenario < 30; ++scenario) {
+            for (int scenario = 0; scenario < 36; ++scenario) {
                 rack::settings::preferDarkPanels = scenario == 1 || scenario == 3 || scenario >= 5;
                 const float zoom = scenario >= 18 ? (scenario % 3 == 0 ? 1.f :
                     (scenario % 3 == 1 ? 0.75f : 0.5f)) :
@@ -230,6 +267,15 @@ int main(int argc, char** argv) {
                     const bool inside = (scenario == 8 || scenario == 13) && !preview;
                     if ((hover_context.target == display) != inside)
                         throw std::runtime_error("Display hover target escaped the plot rectangle");
+                }
+                if (scenario >= 30) {
+                    rack::settings::preferDarkPanels = scenario >= 33;
+                    rack::widget::EventContext hover_context;
+                    Widget::HoverEvent hover;
+                    hover.context = &hover_context;
+                    hover.pos = control.pos.plus(hover_points[scenario % 3]);
+                    sw->onHover(hover);
+                    context.event->setHoveredWidget(hover_context.target);
                 }
                 if (scenario == 4) {
                     rack::widget::Widget::ContextDestroyEvent destroy;
