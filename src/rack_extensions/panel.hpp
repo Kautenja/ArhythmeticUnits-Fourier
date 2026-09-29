@@ -124,7 +124,7 @@ struct Panel : rack::widget::Widget {
                 nvgTranslate(vg, 50.084f, 2.9531f);
                 PanelArtwork::fourier(vg);
             } else {
-                nvgTranslate(vg, 49.6328f, 2.7773f);
+                nvgTranslate(vg, PanelLayout::display_position(kind).x, 2.7773f);
                 PanelArtwork::spectre(vg);
             }
             nvgRestore(vg);

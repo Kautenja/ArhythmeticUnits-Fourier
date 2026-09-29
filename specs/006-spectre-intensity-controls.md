@@ -381,3 +381,18 @@ adjustment. The existing live-session acceptance limitation remains.
 image; the rendered cover was visually checked. Concurrent manual edits
 were preserved. `git diff --check` passed, and `make install` installed the
 updated plugin for the next Rack restart. This width adjustment is included in the user-requested commit.
+
+### Title Alignment
+
+Aligned the Spectre wordmark's left edge with the spectrogram screen at
+x=75, taking its horizontal position directly from shared screen geometry.
+Its vertical position and Fourier's artwork are unchanged. Updated the
+manual cover screenshot using `scripts/export-spectre-screenshot.py`.
+
+`make -j4 all` and all 72 `make inspect-panels` cases passed on macOS ARM64.
+Visually checked title/screen alignment in both themes. The manual rebuilt
+with `make -C docs/manual-spectre`, and its rendered cover was inspected.
+`git diff --check` passed. `make install` installed the updated plugin for
+the next Rack restart. No DSP tests were needed for this artwork-only edit.
+This alignment change is included in the user-requested commit; existing
+live-session limitations remain.
