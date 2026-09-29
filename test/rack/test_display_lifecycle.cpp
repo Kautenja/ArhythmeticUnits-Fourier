@@ -534,3 +534,50 @@ TEST_CASE("Spectre display scale changes during a frame preserve spectral column
         }
     }
 }
+
+/// Exercise the same hover/enter/leave ordering used by Rack's event dispatcher.
+template<typename Display>
+void check_plot_hover(Display& display, float left, float width, bool live) {
+    rack::widget::EventState events;
+    display.setSize(Vec(width, 350.f));
+    const auto hover = [&](Vec position, bool inside) {
+        CAPTURE(position.x, position.y, width, live);
+        rack::widget::EventContext context;
+        rack::widget::Widget::HoverEvent event;
+        event.context = &context;
+        event.pos = position;
+        display.onHover(event);
+        CHECK((context.target == &display) == (inside && live));
+        CHECK(context.consumed == (inside && live));
+        events.setHoveredWidget(context.target);
+    };
+    const float right = width - 15.f;
+    const float bottom = 300.f;
+    // Enter from every gutter, then leave the plot without leaving the widget.
+    for (Vec outside : {Vec(left - 0.01f, 150.f), Vec(100.f, 19.99f),
+            Vec(right, 150.f), Vec(100.f, bottom), Vec(100.f, 330.f)}) {
+        hover(outside, false);
+        hover(Vec(100.f, 150.f), true);
+        hover(outside, false);
+    }
+    // Rack rectangles include the top/left edges and exclude bottom/right.
+    hover(Vec(left, 20.f), true);
+    hover(Vec(right - 0.01f, bottom - 0.01f), true);
+    events.setHoveredWidget(nullptr);
+}
+
+TEST_CASE("Display cursor hover is confined to the plot rectangle") {
+    RackContext context;
+    SpectrumAnalyzer fourier;
+    Spectrogram spectre;
+    SpectrumAnalyzerDisplay fourier_display(&fourier), fourier_preview(nullptr);
+    SpectralImageDisplay spectre_display(&spectre), spectre_preview(nullptr);
+    for (float width : {660.f, 700.f}) {
+        check_plot_hover(fourier_display, 35.f, width, true);
+        check_plot_hover(fourier_preview, 35.f, width, false);
+    }
+    for (float width : {465.f, 500.f}) {
+        check_plot_hover(spectre_display, 40.f, width, true);
+        check_plot_hover(spectre_preview, 40.f, width, false);
+    }
+}

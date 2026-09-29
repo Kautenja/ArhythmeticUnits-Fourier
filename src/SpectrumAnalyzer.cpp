@@ -567,7 +567,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
 
     /// the state of the mouse.
     struct {
-        /// A state variable determining whether the mouse is above the widget.
+        /// Whether the mouse is inside the plot rectangle of a live module.
         bool is_hovering = false;
         /// whether a drag is currently active
         bool is_pressed = false;
@@ -616,14 +616,6 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     // MARK: Interactivity
     // -----------------------------------------------------------------------
 
-    /// @brief Respond to the mouse entering the widget.
-    void onEnter(const EnterEvent& e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the hovering state to true.
-        mouse_state.is_hovering = true;
-    }
-
     /// @brief Respond to the mouse exiting the widget.
     void onLeave(const LeaveEvent& e) override {
         // Consume the event to prevent it from propagating.
@@ -632,12 +624,14 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         mouse_state.is_hovering = false;
     }
 
-    /// @brief Respond to mouse hover events above the widget.
+    /// @brief Activate cursor readouts only inside the rendered plot rectangle.
     void onHover(const HoverEvent& e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the mouse state to the hover position.
         mouse_state.position = e.pos;
+        const Rect plot(Vec(pad_left, pad_top),
+            Vec(box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom));
+        mouse_state.is_hovering = module && plot.contains(e.pos);
+        // Gutters and the control strip must not capture display hover events.
+        if (mouse_state.is_hovering) e.consume(this);
     }
 
     // -----------------------------------------------------------------------

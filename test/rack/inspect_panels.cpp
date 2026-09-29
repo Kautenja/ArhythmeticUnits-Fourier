@@ -77,6 +77,14 @@ int main(int argc, char** argv) {
                 sw->getParam(Spectrogram::PARAM_FREQUENCY_SCALE));
             if (!frequency_control || !spectre_frequency_control)
                 throw std::runtime_error("Missing frequency controls");
+            SpectrumAnalyzerDisplay* fourier_display = nullptr;
+            SpectralImageDisplay* spectre_display = nullptr;
+            for (auto child : fw->children)
+                if (auto display = dynamic_cast<SpectrumAnalyzerDisplay*>(child)) fourier_display = display;
+            for (auto child : sw->children)
+                if (auto display = dynamic_cast<SpectralImageDisplay*>(child)) spectre_display = display;
+            if (!fourier_display || !spectre_display)
+                throw std::runtime_error("Missing display widgets");
             if (!preview) {
                 rack::engine::Module::ProcessArgs process = {};
                 process.sampleRate = 48000.f;
@@ -98,12 +106,29 @@ int main(int argc, char** argv) {
             }
             std::vector<unsigned char> dark_pixels;
             // Exercise hover events on the actual widget through Rack's event state.
-            for (int scenario = 0; scenario < 8; ++scenario) {
+            for (int scenario = 0; scenario < 18; ++scenario) {
                 rack::settings::preferDarkPanels = scenario == 1 || scenario == 3 || scenario >= 5;
                 const float zoom = scenario == 7 ? 0.5f : (scenario == 2 ? 0.75f : 1.f);
                 context.event->setHoveredWidget(scenario == 5 ? frequency_control : nullptr);
                 if (frequency_control->hovered != (scenario == 5 && !preview))
                     throw std::runtime_error("Text control hover state is incorrect");
+                if (scenario >= 8) {
+                    const bool spectre_hover = scenario >= 13;
+                    auto owner = spectre_hover ? static_cast<ModuleWidget*>(sw.get()) : fw.get();
+                    auto display = spectre_hover ? static_cast<Widget*>(spectre_display) : fourier_display;
+                    const float left = spectre_hover ? 40.f : 35.f;
+                    const Vec positions[] = {Vec(100.f, 150.f), Vec(left - 1.f, 150.f),
+                        Vec(100.f, 19.f), Vec(display->box.size.x - 15.f, 150.f), Vec(100.f, 300.f)};
+                    rack::widget::EventContext hover_context;
+                    Widget::HoverEvent hover;
+                    hover.context = &hover_context;
+                    hover.pos = display->box.pos.plus(positions[(scenario - 8) % 5]);
+                    owner->onHover(hover);
+                    context.event->setHoveredWidget(hover_context.target);
+                    const bool inside = (scenario == 8 || scenario == 13) && !preview;
+                    if ((hover_context.target == display) != inside)
+                        throw std::runtime_error("Display hover target escaped the plot rectangle");
+                }
                 if (scenario == 4) {
                     rack::widget::Widget::ContextDestroyEvent destroy;
                     destroy.vg = context.window->vg;
@@ -194,12 +219,18 @@ int main(int argc, char** argv) {
                 }
                 if (scenario == 6 && pixels != dark_pixels)
                     throw std::runtime_error("Hover highlighting did not clear on leave");
+                if (scenario >= 8) {
+                    const bool inside = (scenario == 8 || scenario == 13) && !preview;
+                    if ((pixels != dark_pixels) != inside)
+                        throw std::runtime_error("Cursor overlay must appear only inside a live plot");
+                }
                 if (!preview && (fourier->params[SpectrumAnalyzer::PARAM_FREQUENCY_SCALE].getValue() != 1.f ||
                     spectre->params[Spectrogram::PARAM_FREQUENCY_SCALE].getValue() != 1.f))
                     throw std::runtime_error("Rendering changed frequency scale parameters");
                 std::cout << filename << " theme=" << rack::settings::preferDarkPanels
                     << " zoom=" << zoom << " pixelRatio=" << ratio << " GL=OK\n";
             }
+            context.event->setHoveredWidget(nullptr);
         }
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

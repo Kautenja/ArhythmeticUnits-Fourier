@@ -567,7 +567,9 @@ texture backend. They cover context recreation while frozen, widget deletion,
 unrendered previews, repeated cleanup, texture-creation failure, and ownership
 when switching between live contexts. They also compare cached image bytes
 with the original full-image calculation, check cache invalidation and history
-wraparound. Standalone mailbox concurrency checks run through Make and the
+wraparound. Both displays also have hover-boundary checks for each plot edge,
+the control strip, resized widgets, and null-module previews.
+Standalone mailbox concurrency checks run through Make and the
 focused TSan command above.
 They do not create an OpenGL window. In Rack, also check that Spectre resumes displaying
 its frozen history after closing and reopening a host-managed editor.
@@ -594,7 +596,7 @@ This renders both real module widgets with test signals and both null-module
 browser previews. Each set covers light and dark themes, 75-percent zoom,
 one-pixel density, native pixel density, and graphics-context recreation.
 It verifies module dimensions, settled panel framebuffers, and GL errors, and
-saves `.build/test/rack/panel-{live,preview}-{0,1,2,3,4,5,6,7}.ppm`. Scenarios 0
+saves `.build/test/rack/panel-{live,preview}-N.ppm` for scenarios 0--17. Scenarios 0
 and 4 show the light panel before and after context recreation; 1 is dark, 2 is
 zoomed out, and 3 is dark at one-pixel density. Scenarios 5 and 6 check hover enter
 and leave on the Fourier frequency control through Rack's event dispatcher;
@@ -602,7 +604,11 @@ only live controls highlight, changes stay within the control and its one-pixel
 antialiasing fringe, and leaving restores identical pixels. Scenario 7 checks
 the dark theme at 50-percent zoom. The inspector also checks that the
 frequency labels stay consistent and rendering does not change their values.
-On a standard-density desktop, native and one-pixel density are the same. The inspector does not open an audio device
+Scenarios 8--12 move the cursor inside Fourier's plot and into each surrounding
+gutter; 13--17 do the same for Spectre. They check event targets and verify that
+leaving the plot restores the image without the cursor overlay.
+On a standard-density desktop, native and one-pixel density are the same.
+The inspector does not open an audio device
 or exercise mouse dragging or patch loading.
 
 For a visual comparison against an older panel export, the executable accepts
