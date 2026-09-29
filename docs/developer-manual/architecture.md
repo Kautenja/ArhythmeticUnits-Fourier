@@ -37,9 +37,13 @@ data for the spectrum plot or spectrogram history. FFT work is distributed
 through `step(...)` using the hop length.
 
 Fourier prepares raster coordinates for four lanes. Spectre keeps a ring of
-spectra and converts them to colored pixels in its display code. Rack widget
-callbacks draw using NanoVG. Both modules declare zero audio outputs; their
-observable results are analysis displays and persisted controls.
+spectra and publishes each updated column through a preallocated
+single-producer/single-consumer triple buffer. The display maintains its own
+positive-frequency history and recolors only changed columns. Changes to
+slope, color map, frequency scale, or sample rate rebuild all pixels;
+frequency cropping and display resizing reuse the image. Unchanged draws do
+not upload an image. Rack widget callbacks draw using NanoVG. Both modules
+declare zero audio outputs; their observable results are analysis displays and persisted controls.
 
 Read the actual processing functions before changing run/freeze semantics:
 the two modules do not currently gate their processing identically. Also
@@ -51,6 +55,13 @@ state transitions affected by a change.
 DSP headers must remain usable by the standalone test build without Rack.
 Generic templates may be instantiated with Rack SIMD values by module code;
 the generic header should not need to include Rack to support that use.
+
+Both displays cache backgrounds and grids with Rack framebuffers, invalidated
+by size, bounds, scale, sample rate, zoom, and graphics-context changes. Label
+strings and positions are cached with the artwork; glyphs render in the live
+context to avoid missing glyphs observed during framebuffer rebuilds.
+Hover overlays remain live. Fourier's waveform buffers retain their existing
+engine/UI sharing limitation; the static cache is not a synchronization fix.
 
 Keep analysis on the engine side and NanoVG calls on the display side.
 Document who owns mutable buffers, who reads them, and when a reader can

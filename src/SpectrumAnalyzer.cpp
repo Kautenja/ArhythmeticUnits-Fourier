@@ -653,6 +653,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// The module to render on the display.
     SpectrumAnalyzer* module = nullptr;
 
+    Fourier::CachedDisplay* axes_cache;
+
     /// the state of the mouse.
     struct {
         /// A state variable determining whether the mouse is above the widget.
@@ -695,7 +697,10 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param module_ the module to render on the display.
     explicit SpectrumAnalyzerDisplay(SpectrumAnalyzer* module_) :
         TransparentWidget(),
-        module(module_) { }
+        module(module_) {
+        axes_cache = new Fourier::CachedDisplay([this](const DrawArgs& args) { draw_axes(args); });
+        addChild(axes_cache);
+    }
 
     // -----------------------------------------------------------------------
     // MARK: Interactivity
@@ -805,7 +810,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, point_x, box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(point_x, box.size.y - pad_bottom + 10), freq_string, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
         }
     }
 
@@ -841,7 +846,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10), freq_string, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
         }
     }
 
@@ -863,7 +868,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3, y_position), label, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -896,7 +901,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3, y_position), label, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -1102,60 +1107,76 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, mouse_position_string.c_str(), NULL);
     }
 
+    /// @brief Invalidate static artwork when its rendering inputs change.
+    void prepare_axes_cache() {
+        axes_cache->prepare(box.size, {{get_low_frequency(), get_high_frequency(),
+            module ? module->get_sample_rate() : APP->engine->getSampleRate(),
+            static_cast<float>(module ? module->get_frequency_scale() : FrequencyScale::Logarithmic),
+            static_cast<float>(module ? module->get_magnitude_scale() : MagnitudeScale::Logarithmic60dB)}});
+    }
+
+    /// @brief Rasterize the static background/grid and cache label layout.
+    void draw_axes(const DrawArgs& args) {
+        // Draw the background.
+        nvgBeginPath(args.vg);
+        nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
+        nvgFillColor(args.vg, background_color);
+        nvgFill(args.vg);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // Draw the frequency (X) axis.
+        // - Left border
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, pad_left, pad_top);
+        nvgLineTo(args.vg, pad_left, box.size.y - pad_bottom);
+        nvgStrokeWidth(args.vg, axis_stroke_width);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // - Right border
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, box.size.x - pad_right, pad_top);
+        nvgLineTo(args.vg, box.size.x - pad_right, box.size.y - pad_bottom);
+        nvgStrokeWidth(args.vg, axis_stroke_width);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // - Ticks
+        switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
+        case FrequencyScale::Linear:
+            draw_x_ticks_linear(args);
+            break;
+        case FrequencyScale::Logarithmic:
+            draw_x_ticks_logarithmic(args);
+            break;
+        default:
+            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
+        }
+        // Draw the magnitude (Y) axis.
+        switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
+        case MagnitudeScale::Linear:
+            draw_y_ticks_linear(args);
+            break;
+        case MagnitudeScale::Logarithmic60dB:
+            draw_y_ticks_logarithmic(args, -60.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60});
+            break;
+        case MagnitudeScale::Logarithmic120dB:
+            draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
+            break;
+        default:
+            throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
+        }
+    }
+
     /// @brief Draw the screen.
     /// @param args the arguments for the current draw call
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // Render as a light/display w/o dimming features
-            // Draw the background.
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
-            nvgFillColor(args.vg, background_color);
-            nvgFill(args.vg);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // Draw the frequency (X) axis.
-            // - Left border
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, pad_left, pad_top);
-            nvgLineTo(args.vg, pad_left, box.size.y - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // - Right border
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, box.size.x - pad_right, pad_top);
-            nvgLineTo(args.vg, box.size.x - pad_right, box.size.y - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // - Ticks
-            switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
-            case FrequencyScale::Linear:
-                draw_x_ticks_linear(args);
-                break;
-            case FrequencyScale::Logarithmic:
-                draw_x_ticks_logarithmic(args);
-                break;
-            default:
-                throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
-            }
-            // Draw the magnitude (Y) axis.
-            switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
-            case MagnitudeScale::Linear:
-                draw_y_ticks_linear(args);
-                break;
-            case MagnitudeScale::Logarithmic60dB:
-                draw_y_ticks_logarithmic(args, -60.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60});
-                break;
-            case MagnitudeScale::Logarithmic120dB:
-                draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
-                break;
-            default:
-                throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
-            }
+            prepare_axes_cache();
+            axes_cache->draw_cached(args);
+            const auto font = APP->window->loadFont(asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf"));
+            if (font) axes_cache->draw_labels(args, font->handle, axis_font_size, axis_font_color);
             if (module != nullptr && module->get_is_ready_to_render()) {
                 draw_coefficients(args, module->raster_coeffs[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
                 draw_coefficients(args, module->raster_coeffs[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});

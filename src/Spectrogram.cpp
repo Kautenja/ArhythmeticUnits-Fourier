@@ -14,11 +14,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <array>
+#include <complex>
+#include <cstdint>
+#include <memory>
 #include <algorithm>  // std::fill
 #include <string>     // std::string
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
+#include "rack_extensions/display_mailbox.hpp"
 #include "dsp/circular_buffer.hpp"
 #include "dsp/color_map.hpp"
 #include "dsp/constants.hpp"
@@ -66,6 +71,12 @@ struct Spectrogram : Module {
         NUM_LIGHTS
     };
 
+    /// A complete engine-published spectrum; revisions also locate the scan line.
+    struct DisplayColumn {
+        std::array<float, N_FFT / 2 + 1> values{};
+        uint64_t revision = 0;
+    };
+
  private:
     /// The sample rate of the module.
     float sample_rate = 0.f;
@@ -87,6 +98,24 @@ struct Spectrogram : Module {
 
     /// A buffer for storing the DFT coefficients of x[t-N], ..., x[t]
     Fourier::STFTCoefficients coefficients;
+
+    /// Preallocated mailboxes retain the newest value of every history column.
+    /// Only process/reset publishes; only the module's display consumes.
+    std::unique_ptr<Fourier::DisplayMailbox<DisplayColumn>[]> display_columns{
+        new Fourier::DisplayMailbox<DisplayColumn>[N_STFT]};
+    /// Monotonic engine sequence for scan-line placement; never serialized.
+    uint64_t display_revision = 0;
+
+    /// @brief Publish one column without exposing mutable engine storage.
+    void publish_column(size_t index) {
+        auto& column = display_columns[index].writable();
+        // Smoothing stores real magnitudes. Only DC through Nyquist are drawn.
+        std::transform(coefficients[index].begin(),
+            coefficients[index].begin() + column.values.size(), column.values.begin(),
+            [](const std::complex<float>& value) { return value.real(); });
+        column.revision = ++display_revision;
+        display_columns[index].publish();
+    }
 
     /// The index of the current STFT hop.
     uint32_t hop_index = 0;
@@ -186,8 +215,10 @@ struct Spectrogram : Module {
         color_map = Fourier::ColorMap::Function::Magma;
         // Clear delay lines and cached coefficients.
         delay.clear();
-        for (std::size_t i = 0; i < coefficients.size(); i++)
+        for (std::size_t i = 0; i < coefficients.size(); i++) {
             std::fill(coefficients[i].begin(), coefficients[i].end(), 0.f);
+            publish_column(i);
+        }
         std::fill(filtered_coefficients.begin(), filtered_coefficients.end(), 0.f);
         // Act as if the sample rate has changed to reset remaining state.
         onSampleRateChange();
@@ -259,8 +290,15 @@ struct Spectrogram : Module {
     /// @brief The current hop index in [0, STFT - 1]
     inline const uint32_t& get_hop_index() const { return hop_index; }
 
+    /// @brief UI-only: acquire a newly published history column, if available.
+    const DisplayColumn* consume_display_column(size_t index, bool include_current = false) {
+        if (const auto column = display_columns[index].consume()) return column;
+        return include_current ? &display_columns[index].current() : nullptr;
+    }
+
     /// @brief Return the STFT coefficients.
     /// @returns The current STFT coefficients.
+    /// @details Engine/test access only; displays consume published columns instead.
     inline const Fourier::STFTCoefficients& get_coefficients() const {
         return coefficients;
     }
@@ -442,6 +480,7 @@ struct Spectrogram : Module {
                 filtered_coefficients[n] = alpha * std::abs(filtered_coefficients[n]) + (1.f - alpha) * std::abs(fft.coefficients[n]);
             // Update the coefficients and increment the hop index.
             coefficients[hop_index] = filtered_coefficients;
+            publish_column(hop_index);
             hop_index = (hop_index + 1) % N_STFT;
             // Add the delay line to the FFT pipeline.
             fft.buffer(delay.contiguous(), window_function.get_samples());
@@ -501,6 +540,8 @@ struct SpectralImageDisplay : TransparentWidget {
     /// The spectrogram module to render data from.
     Spectrogram* module = nullptr;
 
+    Fourier::CachedDisplay* axes_cache;
+
     /// the state of the mouse.
     struct {
         /// A state variable determining whether the mouse is above the widget.
@@ -512,6 +553,32 @@ struct SpectralImageDisplay : TransparentWidget {
         /// the current position of the mouse pointer during the drag
         Vec position = {0, 0};
     } mouse_state;
+
+    /// UI-owned coefficient history, never read while the engine writes it.
+    Fourier::STFTCoefficients display_coefficients;
+    uint64_t display_revision = 0;
+    size_t display_hop = 0;
+    bool image_dirty = true;
+    std::array<bool, Spectrogram::N_STFT> dirty_columns{};
+    std::array<float, Spectrogram::N_FFT / 2> row_gain{};
+    std::array<float, Spectrogram::N_FFT / 2> row_position{};
+    /// Pixel key: slope, Nyquist frequency, frequency scale, and color map.
+    std::array<float, 4> image_settings{};
+
+    /// @brief Consume complete columns; skipped GUI frames do not lose history.
+    void sync_history(bool include_current = false) {
+        for (size_t i = 0; i < display_coefficients.size(); ++i) {
+            if (const auto column = module->consume_display_column(i, include_current)) {
+                std::copy(column->values.begin(), column->values.end(), display_coefficients[i].begin());
+                if (column->revision > display_revision) {
+                    display_revision = column->revision;
+                    display_hop = (i + 1) % display_coefficients.size();
+                }
+                image_dirty = true;
+                dirty_columns[i] = true;
+            }
+        }
+    }
 
     /// The pixels being rendered on the display.
     std::vector<uint8_t> pixels;
@@ -557,7 +624,13 @@ struct SpectralImageDisplay : TransparentWidget {
 
  public:
     explicit SpectralImageDisplay(Spectrogram* module_) :
-        TransparentWidget(), module(module_) { }
+        TransparentWidget(), module(module_),
+        display_coefficients(module_ ? Spectrogram::N_STFT : 0,
+            Fourier::DFTCoefficients(module_ ? Spectrogram::N_FFT / 2 + 1 : 0, 0.f)) {
+        if (module) sync_history(true);
+        axes_cache = new Fourier::CachedDisplay([this](const DrawArgs& args) { draw_axes(args); });
+        addChild(axes_cache);
+    }
 
     ~SpectralImageDisplay() override {
         release_screen();
@@ -679,7 +752,7 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3 * axis_stroke_width, point_y), freq_string, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -687,7 +760,7 @@ struct SpectralImageDisplay : TransparentWidget {
     /// @param args the arguments for the current draw call
     void draw_y_ticks_logarithmic(const DrawArgs& args) {
         // Use the spectrogram image height (number of vertical pixels)
-        const int height = module->get_coefficients()[0].size() / 2;
+        const int height = Spectrogram::N_FFT / 2;
         const float nyquist_rate = module->get_sample_rate() / 2.f;
         // Compute the mapping parameters using the same transformation as draw_spectrogram.
         // These define the portion of the texture that is used for the desired frequency range.
@@ -711,7 +784,7 @@ struct SpectralImageDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3 * axis_stroke_width, point_y, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3 * axis_stroke_width, point_y), freq_string, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -724,39 +797,53 @@ struct SpectralImageDisplay : TransparentWidget {
         // Determine the Nyquist rate from the sample rate.
         const float nyquist_rate = module->get_sample_rate() / 2.f;
         // Determine the dimensions of the spectral image.
-        const int width = module->get_coefficients().size();
-        const int height = module->get_coefficients()[0].size() / 2;
+        const int width = display_coefficients.size();
+        const int height = Spectrogram::N_FFT / 2;
 
-        // Update the pixel buffer based on the spectrogram dimensions.
-        pixels.resize(height * width * 4);
-        for (int y = 0; y < height; y++) {
-            // Compute the gain based on the octave offset.
-            auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
-            gain = Fourier::decibels2amplitude(slope * gain);
-            for (int x = 0; x < width; x++) {
-                float scaled_y = y;
-                if (module->get_frequency_scale() == FrequencyScale::Logarithmic)
-                    scaled_y = height * Fourier::squared(scaled_y / height);
-                auto coeff = gain * Fourier::interpolate_coefficients(module->get_coefficients()[x], scaled_y);
-                auto color = Fourier::ColorMap::color_map(module->color_map, abs(coeff) / height);
-                int index = 4 * (width * (height - 1 - y) + x);
-                pixels[index + 0] = color.r * 255;
-                pixels[index + 1] = color.g * 255;
-                pixels[index + 2] = color.b * 255;
-                pixels[index + 3] = 255;
+        sync_history();
+        const std::array<float, 4> settings{{slope, nyquist_rate,
+            static_cast<float>(module->get_frequency_scale()),
+            static_cast<float>(module->color_map)}};
+        if (settings != image_settings) {
+            image_dirty = true;
+            dirty_columns.fill(true);
+            for (int y = 0; y < height; ++y) {
+                auto gain = log2f((y / static_cast<float>(height)) * nyquist_rate /
+                    reference_frequency + std::numeric_limits<float>::epsilon());
+                row_gain[y] = Fourier::decibels2amplitude(slope * gain);
+                row_position[y] = module->get_frequency_scale() == FrequencyScale::Logarithmic
+                    ? height * Fourier::squared(static_cast<float>(y) / height) : y;
             }
         }
-
         // Image handles belong to the context that created them.
         if (screen_context && screen_context != args.vg) release_screen();
+        if (image_dirty) {
+            pixels.resize(height * width * 4);
+            for (int x = 0; x < width; ++x) {
+                if (!dirty_columns[x]) continue;
+                for (int y = 0; y < height; ++y) {
+                    auto coeff = row_gain[y] * Fourier::interpolate_coefficients(
+                        display_coefficients[x], row_position[y]);
+                    auto color = Fourier::ColorMap::color_map(module->color_map, abs(coeff) / height);
+                    const int index = 4 * (width * (height - 1 - y) + x);
+                    pixels[index + 0] = color.r * 255;
+                    pixels[index + 1] = color.g * 255;
+                    pixels[index + 2] = color.b * 255;
+                    pixels[index + 3] = 255;
+                }
+            }
+        }
         if (screen == 0) {
             screen = nvgCreateImageRGBA(args.vg, width, height, 0, pixels.data());
-            // NanoVG returns zero on failure. Retry on a later frame.
+            // Keep the pending image dirty so failed creation can be retried.
             if (screen == 0) return;
             screen_context = args.vg;
-        } else {
+        } else if (image_dirty) {
             nvgUpdateImage(args.vg, screen, pixels.data());
         }
+        image_settings = settings;
+        image_dirty = false;
+        dirty_columns.fill(false);
 
         // Compute the mask rectangle from the padded region.
         const Rect mask = Rect(
@@ -795,7 +882,7 @@ struct SpectralImageDisplay : TransparentWidget {
 
         // Draw a scan-line to indicate the current hop index.
         nvgBeginPath(args.vg);
-        float scan_x = module->get_hop_index() / static_cast<float>(width);
+        float scan_x = display_hop / static_cast<float>(width);
         nvgMoveTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y);
         nvgLineTo(args.vg, mask.pos.x + scan_x * mask.size.x, mask.pos.y + mask.size.y);
         nvgStrokeWidth(args.vg, axis_stroke_width);
@@ -839,7 +926,7 @@ struct SpectralImageDisplay : TransparentWidget {
 
         if (module->get_frequency_scale() == FrequencyScale::Logarithmic) {
             // 'texHeight' is the height of the spectrogram texture.
-            const int texHeight = module->get_coefficients()[0].size() / 2;
+            const int texHeight = Spectrogram::N_FFT / 2;
             const float nyquist = module->get_sample_rate() / 2.f;
             // Map the low/high frequency to texture coordinates using the square-root mapping.
             // (Flipping vertically: low frequency is at the bottom, high frequency at the top.)
@@ -875,10 +962,10 @@ struct SpectralImageDisplay : TransparentWidget {
 
         // Render the coefficient magnitude.
         // Map normalized coordinates to coefficient indices.
-        int coeff_x = mouse_position.x * (module->get_coefficients().size() - 1);
-        int coeff_y = module->get_coefficients()[0].size() * hover_freq / module->get_sample_rate();
+        int coeff_x = mouse_position.x * (display_coefficients.size() - 1);
+        int coeff_y = Spectrogram::N_FFT * hover_freq / module->get_sample_rate();
         // Retrieve the coefficient, compute its magnitude in dB.
-        float coeff_value = abs(module->get_coefficients()[coeff_x][coeff_y]);
+        float coeff_value = abs(display_coefficients[coeff_x][coeff_y]);
         float db = Fourier::amplitude2decibels(coeff_value) - 60.f;
         // Format and render the decibel value.
         std::ostringstream oss;
@@ -887,31 +974,48 @@ struct SpectralImageDisplay : TransparentWidget {
         nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, oss.str().c_str(), NULL);
     }
 
+    /// @brief Invalidate static artwork when its rendering inputs change.
+    void prepare_axes_cache() {
+        axes_cache->prepare(box.size, {{get_low_frequency(), get_high_frequency(),
+            module ? module->get_sample_rate() : APP->engine->getSampleRate(),
+            static_cast<float>(module ? module->get_frequency_scale() : FrequencyScale::Logarithmic), 0.f}});
+    }
+
+    /// @brief Rasterize the static background and cache frequency-label layout.
+    void draw_axes(const DrawArgs& args) {
+        // Background
+        nvgBeginPath(args.vg);
+        nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
+        nvgFillColor(args.vg, background_color);
+        nvgFill(args.vg);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // Spectrogram plot
+        if (module != nullptr) {
+            // draw ticks for the axes of the plot.
+            switch (module->get_frequency_scale()) {
+            case FrequencyScale::Linear:
+                draw_y_ticks_linear(args);
+                break;
+            case FrequencyScale::Logarithmic:
+                draw_y_ticks_logarithmic(args);
+                break;
+            default:
+                throw std::runtime_error("Invalid frequency scale");
+            }
+        }
+    }
+
     /// @brief Draw the display on the main context.
     /// @param args the arguments for the draw context for this widget
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // draw regardless of brightness settings.
-            // Background
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
-            nvgFillColor(args.vg, background_color);
-            nvgFill(args.vg);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // Spectrogram plot
+            prepare_axes_cache();
+            axes_cache->draw_cached(args);
+            const auto font = APP->window->loadFont(asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf"));
+            if (font) axes_cache->draw_labels(args, font->handle, axis_font_size, axis_font_color);
             if (module != nullptr) {
-                // draw ticks for the axes of the plot.
-                switch (module->get_frequency_scale()) {
-                case FrequencyScale::Linear:
-                    draw_y_ticks_linear(args);
-                    break;
-                case FrequencyScale::Logarithmic:
-                    draw_y_ticks_logarithmic(args);
-                    break;
-                default:
-                    throw std::runtime_error("Invalid frequency scale");
-                }
                 draw_spectrogram(args);
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {

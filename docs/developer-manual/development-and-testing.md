@@ -149,9 +149,23 @@ make test-display-lifecycle
 These checks exercise the actual display with NanoVG and an instrumented
 texture backend. They cover context recreation while frozen, widget deletion,
 unrendered previews, repeated cleanup, texture-creation failure, and ownership
-when switching between live contexts. They do not create an OpenGL window or
-verify rendered pixels. In Rack, also check that Spectre resumes displaying
+when switching between live contexts. They also compare cached image bytes
+with the original full-image calculation, check cache invalidation and history
+wraparound, and stress the mailbox with concurrent publication and reading.
+They do not create an OpenGL window. In Rack, also check that Spectre resumes displaying
 its frozen history after closing and reopening a host-managed editor.
+
+For an optional native OpenGL inspection on a graphical desktop, using a Rack
+tree with its `res/` assets available:
+
+```shell
+make inspect-displays
+```
+
+This briefly creates a native window, renders both displays, recreates the
+window/context, changes scales, and changes zoom. It checks framebuffer handles
+and GL errors and saves `build/test/rack/display-*.ppm` for visual inspection.
+It is not a complete interactive Rack or DAW session.
 
 There is currently no automated UI gate in this repository.
 Record manual checks as manual; do not imply that
@@ -184,6 +198,21 @@ from the operation being measured. Record repeated samples, units, relevant
 latency/throughput statistics, and variability or confidence intervals.
 Report inconclusive measurements honestly. A microbenchmark does not by
 itself establish whole-patch engine or display performance.
+
+### Display Preparation
+
+```shell
+make benchmark-display
+```
+
+This uses the actual Spectre module/display and a headless NanoVG texture
+backend that copies uploaded bytes. It reports seven repetitions of frozen,
+running, forced-rebuild, and engine-only workloads. Graphics workloads use
+120 frames; running supplies 800 engine samples per frame (48 kHz / 60 Hz).
+Engine-only supplies 32768 samples per iteration without drawing. It does not
+measure driver upload latency, GPU rendering, framebuffer speed, or whole-patch
+performance. See the [display caching measurements](../../specs/archive/001-display-caching.md)
+for the baseline comparison, flags, memory tradeoffs, and validation limits.
 
 ## User Manuals And Build Products
 

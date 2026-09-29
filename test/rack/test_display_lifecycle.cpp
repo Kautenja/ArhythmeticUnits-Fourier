@@ -13,100 +13,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+#include <array>
+#include <atomic>
 #include <cmath>
 #include <map>
 #include <memory>
+#include <limits>
+#include <vector>
 #include "../../src/Spectrogram.cpp"
+#include "../../src/SpectrumAnalyzer.cpp"
+#include <thread>
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
 Plugin* plugin_instance = nullptr;
 
-namespace {
-
-/// Real NanoVG context with an instrumented texture backend instead of OpenGL.
-struct TestRenderer {
-    struct Texture { int width; int height; int type; };
-    std::map<int, Texture> textures;
-    int next_id = 1;
-    int created = 0;
-    int updated = 0;
-    int deleted = 0;
-    int invalid_accesses = 0;
-    bool fail_creation = false;
-    NVGcontext* vg = nullptr;
-
-    TestRenderer() {
-        NVGparams params = {};
-        params.userPtr = this;
-        params.renderCreate = [](void*, void*) { return 1; };
-        params.renderCreateTexture = [](void* ptr, int type, int w, int h,
-                                        int, const unsigned char*) {
-            auto& self = *static_cast<TestRenderer*>(ptr);
-            if (type == NVG_TEXTURE_RGBA && self.fail_creation) return 0;
-            const int id = self.next_id++;
-            self.textures.emplace(id, Texture{w, h, type});
-            if (type == NVG_TEXTURE_RGBA) ++self.created;
-            return id;
-        };
-        params.renderDeleteTexture = [](void* ptr, int id) {
-            auto& self = *static_cast<TestRenderer*>(ptr);
-            auto texture = self.textures.find(id);
-            if (texture == self.textures.end()) { ++self.invalid_accesses; return 0; }
-            if (texture->second.type == NVG_TEXTURE_RGBA) ++self.deleted;
-            self.textures.erase(texture);
-            return 1;
-        };
-        params.renderUpdateTexture = [](void* ptr, int id, int, int, int, int,
-                                        const unsigned char*) {
-            auto& self = *static_cast<TestRenderer*>(ptr);
-            if (!self.textures.count(id)) { ++self.invalid_accesses; return 0; }
-            ++self.updated;
-            return 1;
-        };
-        params.renderGetTextureSize = [](void* ptr, int id, int* w, int* h) {
-            auto& self = *static_cast<TestRenderer*>(ptr);
-            auto texture = self.textures.find(id);
-            if (texture == self.textures.end()) { ++self.invalid_accesses; return 0; }
-            *w = texture->second.width;
-            *h = texture->second.height;
-            return 1;
-        };
-        params.renderFill = [](void*, NVGpaint*, NVGcompositeOperationState,
-            NVGscissor*, float, const float*, const NVGpath*, int) {};
-        params.renderStroke = [](void*, NVGpaint*, NVGcompositeOperationState,
-            NVGscissor*, float, float, const NVGpath*, int) {};
-        vg = nvgCreateInternal(&params, nullptr);
-        REQUIRE(vg);
-    }
-
-    ~TestRenderer() { nvgDeleteInternal(vg); }
-
-    void draw(SpectralImageDisplay& display) {
-        rack::widget::Widget::DrawArgs args = {};
-        args.vg = vg;
-        display.draw_spectrogram(args);
-    }
-
-    void destroy_context(SpectralImageDisplay& display) {
-        rack::widget::Widget::ContextDestroyEvent event;
-        event.vg = vg;
-        display.onContextDestroy(event);
-    }
-};
-
-/// Supply the engine required by Spectre without opening a Rack window.
-struct RackContext {
-    rack::Context context;
-    RackContext() {
-        rack::contextSet(&context);
-        context.engine = new rack::engine::Engine;
-        context.engine->setSampleRate(48000.f);
-    }
-    ~RackContext() { rack::contextSet(nullptr); }
-};
-
-}  // namespace
+#include "display_test_support.hpp"
+using DisplayTest::TestRenderer;
+using DisplayTest::RackContext;
 
 TEST_CASE("Spectre recreates its texture after NanoVG context destruction") {
     RackContext context;
@@ -144,7 +68,7 @@ TEST_CASE("Spectre recreates its texture after NanoVG context destruction") {
         CHECK(renderer.created == 1);
         renderer.draw(display);
         CHECK(renderer.created == 1);
-        CHECK(renderer.updated == 1);
+        CHECK(renderer.updated == 0);
         renderer.destroy_context(display);
         CHECK(renderer.deleted == 1);
         renderer.destroy_context(display);
@@ -215,4 +139,221 @@ TEST_CASE("Spectre uses the owning context when switching between live renderers
     CHECK(second.deleted == 1);
     CHECK(first.invalid_accesses == 0);
     CHECK(second.invalid_accesses == 0);
+}
+
+namespace {
+
+/// Original full-image calculation, independent of cache state and dirty columns.
+std::vector<unsigned char> reference_pixels(Spectrogram& module) {
+    const auto& coefficients = module.get_coefficients();
+    const int width = coefficients.size();
+    const int height = coefficients[0].size() / 2;
+    std::vector<unsigned char> result(width * height * 4);
+    for (int y = 0; y < height; ++y) {
+        float gain = log2f((y / static_cast<float>(height)) *
+            (module.get_sample_rate() / 2.f) / 1000.f + std::numeric_limits<float>::epsilon());
+        gain = Fourier::decibels2amplitude(module.get_slope() * gain);
+        for (int x = 0; x < width; ++x) {
+            float position = y;
+            if (module.get_frequency_scale() == FrequencyScale::Logarithmic)
+                position = height * Fourier::squared(position / height);
+            auto coefficient = gain * Fourier::interpolate_coefficients(coefficients[x], position);
+            auto color = Fourier::ColorMap::color_map(module.color_map, abs(coefficient) / height);
+            const int index = 4 * (width * (height - 1 - y) + x);
+            result[index] = color.r * 255;
+            result[index + 1] = color.g * 255;
+            result[index + 2] = color.b * 255;
+            result[index + 3] = 255;
+        }
+    }
+    return result;
+}
+
+void advance_signal(Spectrogram& module, int samples) {
+    module.inputs[Spectrogram::INPUT_SIGNAL].channels = 1;
+    rack::engine::Module::ProcessArgs args = {};
+    args.sampleRate = module.get_sample_rate();
+    args.sampleTime = 1.f / args.sampleRate;
+    for (int i = 0; i < samples; ++i) {
+        module.inputs[Spectrogram::INPUT_SIGNAL].setVoltage(
+            5.f * std::sin(2.f * M_PI * 1000.f * i * args.sampleTime));
+        module.process(args);
+    }
+}
+
+}  // namespace
+
+TEST_CASE("Spectre caches pixels and invalidates every pixel-affecting setting") {
+    RackContext context;
+    Spectrogram module;
+    TestRenderer renderer;
+    SpectralImageDisplay display(&module);
+    display.setSize(Vec(465, 350));
+    advance_signal(module, 8192);
+    renderer.draw(display);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    renderer.draw(display);
+    CHECK(renderer.updated == 0);
+
+    // Pan/crop and resize only transform the existing texture.
+    module.set_low_frequency(200.f);
+    module.set_high_frequency(6000.f);
+    display.setSize(Vec(800, 400));
+    renderer.draw(display);
+    CHECK(renderer.updated == 0);
+
+    module.params[Spectrogram::PARAM_SLOPE].setValue(-3.f);
+    renderer.draw(display);
+    CHECK(renderer.updated == 1);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    module.params[Spectrogram::PARAM_FREQUENCY_SCALE].setValue(static_cast<float>(FrequencyScale::Linear));
+    renderer.draw(display);
+    CHECK(renderer.updated == 2);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    module.color_map = Fourier::ColorMap::Function::Gray;
+    renderer.draw(display);
+    CHECK(renderer.updated == 3);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    context.context.engine->setSampleRate(96000.f);
+    module.onSampleRateChange();
+    renderer.draw(display);
+    CHECK(renderer.updated == 4);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+
+    // Several new columns, and then more than a full history wrap without a draw.
+    advance_signal(module, 4096);
+    renderer.draw(display);
+    CHECK(renderer.updated == 5);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    advance_signal(module, (Spectrogram::N_STFT + 4) * 1024);
+    renderer.draw(display);
+    CHECK(renderer.updated == 6);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+
+    module.onReset();
+    renderer.draw(display);
+    CHECK(renderer.updated == 7);
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
+    renderer.draw(display);
+    CHECK(renderer.updated == 7);
+}
+
+TEST_CASE("Display mailbox retains the latest complete publication without overwriting a reader") {
+    struct Packet { std::array<unsigned, 64> values{}; };
+    Fourier::DisplayMailbox<Packet> mailbox;
+    CHECK(mailbox.consume() == nullptr);
+    mailbox.writable().values.fill(1);
+    mailbox.publish();
+    const auto held = mailbox.consume();
+    REQUIRE(held);
+    for (unsigned i = 2; i < 20; ++i) {
+        mailbox.writable().values.fill(i);
+        mailbox.publish();
+    }
+    CHECK(held->values.front() == 1);
+    CHECK(held->values.back() == 1);
+    REQUIRE(mailbox.consume()->values.front() == 19);
+    CHECK(mailbox.consume() == nullptr);
+
+    std::atomic<bool> done{false};
+    std::thread producer([&]() {
+        for (unsigned i = 20; i <= 100000; ++i) {
+            mailbox.writable().values.fill(i);
+            mailbox.publish();
+        }
+        done.store(true, std::memory_order_release);
+    });
+    unsigned last = 19;
+    bool consistent = true;
+    do {
+        if (const auto packet = mailbox.consume()) {
+            const unsigned value = packet->values.front();
+            consistent = consistent && value >= last;
+            for (auto element : packet->values) consistent = consistent && element == value;
+            last = value;
+        }
+    } while (!done.load(std::memory_order_acquire) || last != 100000);
+    producer.join();
+    CHECK(consistent);
+    CHECK(last == 100000);
+}
+
+template<typename Display, typename Module>
+void check_axes_cache(Display& display, Module& module, int low, int high, int scale) {
+    auto cache = dynamic_cast<Fourier::CachedDisplay*>(display.children.front());
+    REQUIRE(cache);
+    display.setSize(Vec(660, 350));
+    display.prepare_axes_cache();
+    REQUIRE(cache->dirty);
+    cache->setDirty(false);
+    display.prepare_axes_cache();
+    CHECK_FALSE(cache->dirty);
+    module.params[0].setValue(0.5f);
+    display.prepare_axes_cache();
+    CHECK_FALSE(cache->dirty);
+    // Layout is generated on cache rebuild, with no font/window dependency.
+    TestRenderer renderer;
+    rack::widget::Widget::DrawArgs args = {};
+    args.vg = renderer.vg;
+    cache->artwork->draw(args);
+    REQUIRE_FALSE(cache->labels.empty());
+    const auto label_count = cache->labels.size();
+    cache->artwork->draw(args);
+    CHECK(cache->labels.size() == label_count);
+    for (auto param : {low, high, scale}) {
+        module.params[param].setValue(module.params[param].getValue() == 0.f ? 1.f : 0.f);
+        display.prepare_axes_cache();
+        CHECK(cache->dirty);
+        cache->setDirty(false);
+    }
+    display.setSize(Vec(700, 400));
+    display.prepare_axes_cache();
+    CHECK(cache->dirty);
+    cache->setDirty(false);
+    APP->engine->setSampleRate(96000.f);
+    module.onSampleRateChange();
+    display.prepare_axes_cache();
+    CHECK(cache->dirty);
+    cache->setDirty(false);
+    rack::widget::Widget::ContextDestroyEvent destroy;
+    destroy.vg = nullptr;
+    display.onContextDestroy(destroy);
+    CHECK(cache->dirty);
+}
+
+TEST_CASE("Both axis caches invalidate their rendering inputs but ignore signal changes") {
+    RackContext context;
+    SpectrumAnalyzer fourier;
+    Spectrogram spectre;
+    SpectrumAnalyzerDisplay fourier_display(&fourier);
+    SpectralImageDisplay spectre_display(&spectre);
+    check_axes_cache(fourier_display, fourier, SpectrumAnalyzer::PARAM_LOW_FREQUENCY,
+        SpectrumAnalyzer::PARAM_HIGH_FREQUENCY, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
+    check_axes_cache(spectre_display, spectre, Spectrogram::PARAM_LOW_FREQUENCY,
+        Spectrogram::PARAM_HIGH_FREQUENCY, Spectrogram::PARAM_FREQUENCY_SCALE);
+    auto cache = dynamic_cast<Fourier::CachedDisplay*>(fourier_display.children.front());
+    cache->setDirty(false);
+    fourier.params[SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE].setValue(0.f);
+    fourier_display.prepare_axes_cache();
+    CHECK(cache->dirty);
+}
+
+TEST_CASE("Recreating a frozen Spectre widget retains the last published history") {
+    RackContext context;
+    Spectrogram module;
+    advance_signal(module, 8192);
+    TestRenderer renderer;
+    std::vector<unsigned char> original;
+    {
+        SpectralImageDisplay display(&module);
+        display.setSize(Vec(465, 350));
+        renderer.draw(display);
+        original = renderer.last_pixels;
+    }
+    // No processing/publication between widgets: the consumer must retain its snapshot.
+    SpectralImageDisplay recreated(&module);
+    recreated.setSize(Vec(465, 350));
+    renderer.draw(recreated);
+    CHECK(bool(renderer.last_pixels == original));
+    CHECK(bool(renderer.last_pixels == reference_pixels(module)));
 }

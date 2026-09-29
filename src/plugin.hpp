@@ -28,6 +28,7 @@ extern Plugin* plugin_instance;
 #include "./rack_extensions/graphics.hpp"
 #include "./rack_extensions/text_knob.hpp"
 #include "./rack_extensions/settings_history.hpp"
+#include "./rack_extensions/cached_display.hpp"
 
 // Shared module display and analysis settings.
 #include "./structs.hpp"
