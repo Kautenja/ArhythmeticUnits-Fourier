@@ -12,33 +12,24 @@ from pathlib import Path
 import tarfile
 
 from run import digest, summarize
-from contracts import SYNTHESIS_BACKENDS, synthesis_contract
+from contracts import normalize_registry, resolve_contract, validate_config
 
 
-def validate_rows(path, config):
+def validate_rows(path, config, registry=None):
     """Check observation counts and publication age/cadence from raw records."""
     counts = Counter()
     publications = Counter()
     previous = {}
-    backend, mode = config["backend"], config["pass_name"]
-    if backend.startswith(("ols-", "inverse-stream-")) and backend not in SYNTHESIS_BACKENDS:
-        raise ValueError("Unknown synthesis backend")
+    mode = config["pass_name"]
+    contract = resolve_contract(config, registry)
     n, hop, block = config["n"], config["hop"], config["block"]
-    delay = hop-1
-    center_offset, playback_delay = (n-1)/2, -1
-    if backend in SYNTHESIS_BACKENDS:
-        contract = synthesis_contract(config)
-        delay = contract["publication_delay_samples"]
-        center_offset = contract["center_offset_samples"]
-        playback_delay = contract["playback_delay_samples"]
-    elif backend.startswith("legacy-batch"):
-        delay = 0
-    elif backend.startswith("legacy-incremental"):
-        butterflies = n//4 * ((n//2).bit_length()-1)
-        quota = (butterflies+hop-1)//hop
-        delay = (butterflies+quota-1)//quota-1
+    delay = contract["publication_delay_samples"]
+    center_offset = contract["center_offset_samples"]
+    playback_delay = contract["playback_delay_samples"]
     with path.open(newline="") as stream:
         for row in csv.DictReader(stream):
+            if not math.isfinite(float(row["ns"])) or float(row["ns"]) < 0:
+                raise ValueError("Invalid timing observation")
             counts[row["kind"]] += 1
             if row["kind"] != "publication":
                 continue
@@ -52,7 +43,7 @@ def validate_rows(path, config):
                     float(row["callback_visible_age_samples"]))
             if ages != (delay, delay+center_offset, delay+block-1-sample%block):
                 raise ValueError("Publication age mismatch")
-            if backend in SYNTHESIS_BACKENDS and float(row.get("playback_delay_samples", "nan")) != playback_delay:
+            if contract["boundary"] in ("inverse-job", "chain") and float(row.get("playback_delay_samples", "nan")) != playback_delay:
                 raise ValueError("Playback delay mismatch")
             previous[analyzer] = sample
             publications[analyzer] += 1
@@ -60,7 +51,7 @@ def validate_rows(path, config):
     frames = config["callbacks"]
     if mode in ("callback", "throughput"):
         expected[mode] = frames if mode == "callback" else 1
-        if backend != "driver":
+        if contract["boundary"] != "control":
             for analyzer in range(config["count"]):
                 offset = analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0
                 bias = hop-1-delay
@@ -71,7 +62,7 @@ def validate_rows(path, config):
     elif mode in ("complete", "incremental"):
         expected[mode] = frames
     else:
-        real, inverse = backend.startswith("rfft"), backend.startswith("ifft")
+        real, inverse = contract["step_model"] == "radix2-real", contract["step_model"] == "radix2-inverse"
         butterflies = n//4*((n//2).bit_length()-1) if real else n//2*(n.bit_length()-1)
         expected["buffer"] = frames
         expected["butterfly_step" if mode == "steps" else "butterflies"] = frames*(butterflies-int(real) if mode == "steps" else 1)
@@ -83,13 +74,13 @@ def validate_rows(path, config):
         raise ValueError(f"Observation count mismatch: {counts} != {expected}")
 
 
-def validate_synthesis_accuracy(accuracy, config, publications):
+def validate_synthesis_accuracy(accuracy, config, publications, registry=None):
     """Reject missing, truncated, or numerically invalid full-output audits."""
-    contract = synthesis_contract(config)
+    contract = resolve_contract(config, registry)
     playback = (config["callbacks"]*config["block"]*config["count"]
-                if contract["family"] == "overlap-save" else 0)
-    expected = playback + publications*contract["outputs_per_publication"]
-    tolerance = 2e-5 if config["backend"].endswith("float") else 1e-10
+                if contract["boundary"] == "chain" else 0)
+    expected = playback + publications*contract["outputs_per_channel"]
+    tolerance = 2e-5 if contract["precision"] == "float" else 1e-10
     error, scale = accuracy["max_abs_error"], accuracy["max_reference"]
     if (not all(math.isfinite(v) and v >= 0 for v in (error, scale))
             or error > tolerance*max(1, scale)
@@ -99,18 +90,74 @@ def validate_synthesis_accuracy(accuracy, config, publications):
         raise ValueError("Invalid synthesis numerical report")
 
 
+def validate_resources(resource):
+    """Allocation observations are from a separate executable, not timed evidence."""
+    for label, instrumented in (("timing", False), ("allocation", True)):
+        item = resource[label]
+        if item["schema"] != 1 or item["instrumented"] != instrumented or not item["unknown_reason"]:
+            raise ValueError("Invalid resource audit identity")
+        if item["native_allocation_bytes"] is not None or item["stack_scratch_bytes"] is not None:
+            raise ValueError("Unsupported native storage claim")
+        if item["object_bytes"] <= 0 or item["operations"] <= 0:
+            raise ValueError("Empty resource audit")
+        for name in ("setup", "execution", "destruction"):
+            phase = item[name]
+            if not math.isfinite(phase["ns"]) or phase["ns"] < 0:
+                raise ValueError("Invalid resource timing")
+            for key in ("allocations", "allocated_bytes", "live_bytes", "peak_bytes"):
+                value = phase[key]
+                if (instrumented and (type(value) is not int or value < 0)) or (not instrumented and value is not None):
+                    raise ValueError("Invalid allocation observation")
+            if instrumented and phase["peak_bytes"] < phase["live_bytes"]:
+                raise ValueError("Invalid peak storage")
+    if resource["timing"]["object_bytes"] != resource["allocation"]["object_bytes"]:
+        raise ValueError("Resource adapter mismatch")
+
+
 def check(directory):
     metadata = json.loads((directory / "metadata.json").read_text())
-    if metadata["schema"] != 1 or metadata["status"] != "complete":
+    if metadata["schema"] == 1:
+        from legacy_check import check as legacy_check
+        return legacy_check(directory)
+    if metadata["schema"] != 2 or metadata["status"] != "complete":
         raise ValueError("Unsupported or incomplete campaign")
-    for filename, expected in metadata["artifact_sha256"].items():
+    artifacts = metadata["artifact_sha256"]
+    required = {"source.tar.gz", "dependencies.tar.gz", "inventory.json", "build.log",
+                "verification.txt", "linked-libraries.txt", "paper.bin", "paper-audit.bin"}
+    required.update(metadata["resources"].values())
+    required.update(run[key] for run in metadata["runs"] for key in ("raw", "stderr"))
+    if not required <= artifacts.keys():
+        raise ValueError("Missing artifact checksums")
+    for filename, expected in artifacts.items():
         if Path(filename).name != filename or digest(directory/filename) != expected:
             raise ValueError(f"Artifact checksum mismatch: {filename}")
-    with tarfile.open(directory/"source.tar.gz") as archive:
-        for filename, expected in metadata["source_sha256"].items():
-            content = archive.extractfile(filename)
-            if content is None or hashlib.sha256(content.read()).hexdigest() != expected:
-                raise ValueError(f"Archived source checksum mismatch: {filename}")
+    if (artifacts["paper.bin"] != metadata["binary_sha256"]
+            or artifacts["paper-audit.bin"] != metadata["audit_binary_sha256"]):
+        raise ValueError("Executable identity mismatch")
+    for archive_name, field in (("source.tar.gz", "source_sha256"), ("dependencies.tar.gz", "sdk_sha256")):
+        with tarfile.open(directory/archive_name) as archive:
+            for filename, expected in metadata[field].items():
+                content = archive.extractfile(filename)
+                if content is None or hashlib.sha256(content.read()).hexdigest() != expected:
+                    raise ValueError(f"Archived source/dependency checksum mismatch: {filename}")
+            if field == "source_sha256":
+                document = json.load(archive.extractfile("benchmark/paper/backends.json"))
+                registry = normalize_registry(document)
+    if registry != json.loads((directory/"inventory.json").read_text()):
+        raise ValueError("Compiled registry differs from archived source")
+    keys = {str(i) for i in range(len(metadata["configs"]))}
+    if set(metadata["contracts"]) != keys or set(metadata["resources"]) != keys:
+        raise ValueError("Missing workload contracts/resources")
+    config_ids = set()
+    for index, config in enumerate(metadata["configs"]):
+        validate_config(config, registry, measurement=True)
+        identity = json.dumps(config, sort_keys=True)
+        if identity in config_ids:
+            raise ValueError("Duplicate workload")
+        config_ids.add(identity)
+        if metadata["contracts"][str(index)] != resolve_contract(config, registry):
+            raise ValueError("Evidence contract mismatch")
+        validate_resources(json.loads((directory/metadata["resources"][str(index)]).read_text()))
     identities = set()
     for run in metadata["runs"]:
         identity = (run["workload"], run["repeat"])
@@ -118,26 +165,31 @@ def check(directory):
             raise ValueError(f"Duplicate run: {identity}")
         identities.add(identity)
         config = metadata["configs"][run["workload"]]
-        validate_rows(directory/run["raw"], config)
+        contract = resolve_contract(config, registry)
+        validate_rows(directory/run["raw"], config, registry)
         if summarize(directory/run["raw"], config) != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
-        if config["backend"] in SYNTHESIS_BACKENDS:
-            if metadata.get("synthesis_contracts", {}).get(str(run["workload"])) != synthesis_contract(config):
-                raise ValueError("Synthesis contract mismatch")
+        if contract["boundary"] in ("inverse-job", "chain"):
             accuracy = json.loads((directory/run["stderr"]).read_text())
-            validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"])
-        if config["pass_name"] in ("complete", "incremental", "phases", "steps"):
+            validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry)
+        if contract["boundary"] == "transform":
             accuracy = json.loads((directory/run["stderr"]).read_text())
-            values = [accuracy[key] for key in ("max_abs_error", "max_reference", "roundtrip_max_abs_error")]
-            tolerance = 2e-5 if config["backend"].endswith("float") else 1e-10
-            if (not all(math.isfinite(value) and value >= 0 for value in values)
-                    or values[0]/max(1, values[1]) >= tolerance or values[2] >= tolerance):
-                raise ValueError(f"Invalid numerical report: {identity}")
+            validate_transform_accuracy(accuracy, contract)
     expected = {(index, repeat) for index in range(len(metadata["configs"]))
                 for repeat in range(metadata["repeats"])}
     if identities != expected:
         raise ValueError("Missing or unexpected workload/repetition")
     return len(identities)
+
+
+def validate_transform_accuracy(accuracy, contract):
+    values = [accuracy[key] for key in ("max_abs_error", "max_reference", "roundtrip_max_abs_error")]
+    tolerance = 2e-5 if contract["precision"] == "float" else 1e-10
+    if (not all(math.isfinite(value) and value >= 0 for value in values)
+            or values[0]/max(1, values[1]) >= tolerance or values[2] >= tolerance):
+        raise ValueError("Invalid transform numerical report")
+    if contract["step_count"] is not None and accuracy["steps"] != contract["step_count"]:
+        raise ValueError("Transform work count mismatch")
 
 
 if __name__ == "__main__":

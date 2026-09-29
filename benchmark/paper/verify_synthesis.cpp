@@ -41,6 +41,17 @@ int main() {
         verify_synthesis<double>();
         fixtures<float>();
         fixtures<double>();
+        // A direct-sum oracle must reject scale, layout and missing-output errors.
+        std::vector<Reference::Complex> expected = {Reference::Complex(1, 2), Reference::Complex(-3, 4)};
+        std::vector<std::complex<double>> actual(expected.begin(), expected.end());
+        Reference::compare<double>(actual, expected);
+        std::swap(actual[0], actual[1]);
+        rejects([&]() { Reference::compare<double>(actual, expected); });
+        actual.assign(expected.begin(), expected.end());
+        actual[0] *= 128.;
+        rejects([&]() { Reference::compare<double>(actual, expected); });
+        actual.pop_back();
+        rejects([&]() { Reference::compare<double>(actual, expected); });
         Config c{};
         c.n = 128; c.hop = 32; c.backend = "inverse-stream-batch-float";
         InverseStream<float> inverse(c);

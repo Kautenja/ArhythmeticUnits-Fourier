@@ -197,21 +197,21 @@ to every candidate without duplicating them in each checklist.
 
 #### Implementation And Integration
 
-- [ ] Extend the existing adapter interface with explicit capability and
+- [x] Extend the existing adapter interface with explicit capability and
     latency contracts; keep dependencies optional and reject unavailable
     requested backends. Preserve ordinary plugin and standalone test builds.
-- [ ] Provide shared independent numerical fixtures and tolerances for the
+- [x] Provide shared independent numerical fixtures and tolerances for the
     transform, analyzer, inverse-job, and complete-chain boundaries. Check
     startup, settings changes, output completeness, and time origins.
 
 #### Benchmark Implementation
 
-- [ ] Update C++ dispatch, Python workload validation, and artifact checking
+- [x] Update C++ dispatch, Python workload validation, and artifact checking
     together. Replace backend-name assumptions where external/hybrid contracts
     require it; opaque library calls have no radix-2 step-count claim.
-- [ ] Capture linked implementation identity, plans, setup/destruction,
+- [x] Capture linked implementation identity, plans, setup/destruction,
     persistent/scratch storage, allocation behavior, and supported workloads.
-- [ ] Add regressions rejecting wrong scaling/layout, missing outputs, wrong
+- [x] Add regressions rejecting wrong scaling/layout, missing outputs, wrong
     publication age, unsupported configurations, altered dependencies,
     duplicate/missing runs, and invalid timing values.
 
@@ -638,6 +638,54 @@ Validation: local links/anchors, referenced paths and command definitions,
 FR numbering and paired checklists, and `git diff --check` passed. No DSP
 tests, Rack build/session, or measurement campaign was run for this
 documentation-only change.
+
+### Shared Adapter And Evidence Contracts Completion
+
+September 29, 2026: FR-2 is complete. The canonical
+[`backends.json`](../benchmark/paper/backends.json) registry feeds Python and a
+generated C++ descriptor table. It declares 28 implemented backends and three
+explicitly unavailable external families. Dispatch, capability validation,
+resolved latency/output contracts, and schema-2 artifact checks use these
+fields. Opaque calls do not inherit radix-2 step counts. Schema-1 artifacts
+retain their original checker for compatibility.
+
+Shared independent fixtures cover all-bin complex/real forward and complex
+inverse transforms, analyzer startup and live window changes, analytical
+inverse jobs, and direct time-domain identity/FIR output. Separate resource
+probes record ordinary setup/destruction timings and instrumented C++
+allocation counts, retained requested bytes, and observed peak growth.
+Native allocators, allocator overhead, and stack scratch are explicitly
+unknown; each provider must inspect those paths during integration. These
+one-adapter probes are not comparative performance results. Campaigns retain
+both binaries, the compiled registry, resolved contracts, resource reports,
+loader identities, and SDK dependency bytes, with build/campaign mutation
+checks and offline archive validation.
+
+Validation performed:
+
+-   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: 14 tests
+    passed, including standalone C++11 synthesis/reference checks, malformed
+    and unavailable capabilities, opaque transforms, incorrect scale/layout,
+    missing output/coverage, wrong publication/playback age, changed dependency
+    evidence, duplicate/missing runs, and non-finite/negative measurements.
+-   `make benchmark-paper-build` and the expanded executable `--verify`:
+    passed. All-bin direct-DFT fixtures and independent analyzer magnitudes
+    supplement the 48 matched scalar configurations and synthesis fixtures.
+-   `python3 benchmark/paper/run.py .build/paper-fr2-verified --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 benchmark/paper/check.py .build/paper-fr2-verified`: 129 runs
+    and 129 pairs of resource reports passed. Each resolved workload agreed
+    between C++ and Python. Artifacts are retained in that ignored directory.
+-   `make test/dsp/test_spectrum_analysis`: 1,934,764 assertions in seven cases
+    passed through the standalone build path. `make -j2`: plugin build passed;
+    existing SDK deprecation/literal warnings remain. No interactive Rack
+    session was run; no production source behavior changed.
+-   `make -C docs/whitepaper check`, local documentation path checks, and
+    `git diff --check`: passed. Historical paper results remain unchanged.
+
+Next is FR-3, the ordered Rack/PFFFT adapters for forward, inverse, analyzer,
+and complete-chain workloads. External integrations and publication campaigns
+remain open; the overall spec remains in progress. Short smoke observations
+establish tooling correctness, not a speedup or real-time deadline guarantee.
 
 ### Initial Review
 

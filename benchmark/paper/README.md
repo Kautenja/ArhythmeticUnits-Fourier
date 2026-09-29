@@ -57,6 +57,76 @@ actual order. `--seed`, `--repeats`, `--hops`, `--frames`, `--step-frames`, and
 `--warm-hops` are explicit experimental settings, not automatic convergence
 criteria. The short validation commands are not publication evidence.
 
+## Shared Adapter Contracts
+
+[`backends.json`](backends.json) is the canonical capability registry. Python
+reads it directly; the optional benchmark build generates a C++ header from
+it. Ordinary plugin and standalone DSP builds do not need that generator or
+external FFT dependencies. Inspect available and planned backends with:
+
+```shell
+python3 benchmark/paper/run.py --inventory
+DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --inventory
+```
+
+Each descriptor declares provider, precision, channel count, transform/output
+layout, normalization, supported sizes and settings, schedule, plan policy,
+and dependency scope. Unavailable PFFFT, FFTW, and vDSP placeholders fail before
+a campaign is created; they are not substitutes for actual adapters. Add an
+implementation and its correctness checks before marking a backend available.
+
+The runner rejects unsupported or duplicate workloads before building. For
+each workload it compares the executable's `--describe` result with Python's
+resolved contract. Contracts distinguish input-frame endpoints, inverse
+spectrum releases, and buffered transforms; they record output counts,
+publication age, frame-center offset, playback delay, and plan policy. Only
+explicit radix-2 implementations expose step counts. Opaque calls support
+complete-transform measurement without invented butterfly or step counts.
+Adapter dispatch and artifact validation use descriptor fields, not names.
+
+The shared [`references.hpp`](references.hpp) supplies natural-order direct
+DFT references, precision tolerances, and independent coherent-gain windowed
+magnitudes. Preflight checks all bins of silence, shifted impulse, DC, Nyquist,
+off-bin tone, and dense complex transform fixtures. Analyzer checks cover
+zero-padded startup and alternating Hann/Blackman-Harris windows at a
+non-dividing hop. Existing matched-control checks additionally cover smoothing
+and live settings. Analytical inverse and direct time-domain filtering
+references remain in [`synthesis.hpp`](synthesis.hpp). These fixtures supplement
+the per-run numerical reports; they do not establish general error bounds.
+
+## Setup And Storage Evidence
+
+`benchmark-paper-build` produces an ordinary timing executable and a separate
+`paper-audit` executable that intercepts C++ `new`/`delete`. Each workload gets
+one untimed-by-the-campaign resource probe in each executable. Resource probes
+measure one adapter, irrespective of the campaign's instance count, load,
+alignment, or cache-pressure factor. A streaming probe runs from construction
+for `2*N + 2*H` samples, including startup, output validation, and live settings
+when requested; a transform probe executes two complete buffered transforms.
+These observations are not callback/throughput results or repeated setup
+performance estimates.
+
+`resources-NNNN.json` separates ordinary setup/execution/destruction timings
+from instrumented allocation observations. Setup retained heap bytes include
+the adapter object, plans, buffers, and benchmark fixture storage; object size
+is also reported separately and must not be added twice. Execution peak growth
+over setup reports observed additional heap demand, not a complete scratch
+size. Counts cover requested C++ allocation bytes, not allocator overhead,
+RSS, native `malloc`/aligned allocators, or stack scratch. Native allocation
+and stack fields remain `null` with a reason. Each future provider must audit
+its own native allocation path before making a no-allocation or total-storage
+claim. Residual bytes after destruction can reflect retained host allocations or
+frees outside the interception scope; they are not automatically leaks.
+Instrumented timings must not be used for performance comparisons.
+
+Schema-2 campaigns retain both executable bytes, the compiled inventory,
+resolved contracts, resource reports, loader identities, and an archive of Rack
+headers/build rules/library bytes. The runner detects source or dependency
+changes during the build and campaign. The checker compares archived dependency
+bytes with their recorded hashes and resolves contracts from the archived
+registry. System libraries are identified through loader output and OS metadata;
+their bytes are not archived.
+
 ## Workload Matrix
 
 | Family | Factors |
@@ -249,9 +319,9 @@ and `center_age_samples` equals it; no input-window midpoint is invented.
 For overlap-save, the endpoint is the newest input in the valid output block,
 and center age adds (H-1)/2, not (N-1)/2. The additive CSV column
 `playback_delay_samples` records H-1+d for overlap-save publications and -1 for
-families without audio delivery. `synthesis_contracts` in metadata identifies
+families without audio delivery. `contracts` in schema-2 metadata identifies
 these origins, output counts, operation, and normalization. The validator
-checks these contracts and accepts older non-synthesis campaign CSVs.
+checks these contracts; schema-1 campaigns retain their original validator.
 
 CSV columns `sample` and `samples` count engine samples for streaming timing,
 published sample indices for audit rows, and transform work indices/counts for
@@ -303,9 +373,9 @@ Each campaign retains:
     marked explicitly; supply the actual hardware in notes when necessary.
 -   `build.log` with exact optimization, architecture and floating-point flags.
     All adapters use the same SDK flags, including any unsafe math options.
--   An archive and hashes of the measured working source, a binary hash, and
-    hashes of SDK headers, build rules and the linked Rack library. The SDK
-    itself must be retained separately to reproduce its ABI and implementation.
+-   An archive and hashes of the measured working source, both executables,
+    and SDK headers, build rules, and linked Rack library bytes. Loader output
+    identifies system libraries separately from archived project dependencies.
 -   `verification.txt` for the matched-frame checks. Failures leave an incomplete
     directory; only a fully successful campaign is marked complete.
 

@@ -7,6 +7,7 @@
 #include <complex>
 #include <limits>
 #include "protocol.hpp"
+#include "references.hpp"
 #include "../../src/dsp/fft.hpp"
 
 namespace Paper {
@@ -18,7 +19,7 @@ struct FrameSchedule {
     bool batch, complete = false;
     FrameSchedule(const Config& c, size_t units) : hop(c.hop), work(units),
         base(units/c.hop), remainder(units%c.hop),
-        batch(c.backend.find("-batch-") != std::string::npos) {}
+        batch(std::string(backend_descriptor(c.backend).schedule) == "immediate") {}
     size_t quota() {
         complete = false;
         if (batch) return phase == 0 ? work : 0;
@@ -106,7 +107,7 @@ struct FrequencyChain {
     explicit FrequencyChain(const Config& c) : forward(c.n), inverse(c.n),
         ring(c.n), frame(c.n), transfer(c.n), pending(c.hop), playing(c.hop),
         schedule(c, forward.get_total_steps()+c.n+1+inverse.get_total_steps()+c.hop),
-        playback(c.hop), identity(c.backend.find("-identity-") != std::string::npos) {
+        playback(c.hop), identity(std::string(backend_descriptor(c.backend).operation) == "identity") {
         require(c.hop <= c.n-2, "Overlap-save requires H <= N-2 for the three-tap FIR");
         for (size_t k = 0; k < c.n; ++k) {
             const long double angle = -2*std::acos(-1.L)*k/c.n;
@@ -167,7 +168,7 @@ struct SynthesisAccuracy {
         maximum_error = std::max(maximum_error, error);
         maximum_reference = std::max(maximum_reference, scale);
         ++checked;
-        require(error <= (sizeof(T) == 4 ? 2e-5 : 1e-10)*std::max(1., scale),
+        require(error <= Reference::tolerance<T>()*std::max(1., scale),
             "Independent synthesis output differs");
     }
     void print() const {
@@ -217,24 +218,22 @@ struct SynthesisAudit {
 
 /// @brief Validate supported names/options before dispatch or storage preparation.
 inline bool synthesis_backend(const std::string& backend) {
-    for (const std::string family : {"inverse-stream", "ols-identity", "ols-fir"})
-        for (const std::string mode : {"batch", "incremental"})
-            for (const std::string precision : {"float", "double"})
-                if (backend == family+"-"+mode+"-"+precision) return true;
-    return false;
+    const std::string kind(backend_descriptor(backend).kind);
+    return kind == "inverse-job" || kind == "chain";
 }
 
 template<typename T>
 void synthesis_stream(const Config& c) {
     require(!c.smooth && c.state != "live", "Synthesis has no analyzer smoothing or live window controls");
     SynthesisAccuracy accuracy;
-    if (c.backend.find("inverse-stream-") == 0)
+    if (std::string(backend_descriptor(c.backend).kind) == "inverse-job")
         stream<InverseStream<T>>(c, SynthesisAudit{accuracy}, 0);
     else {
         require(c.hop <= c.n-2, "Overlap-save requires H <= N-2");
-        const size_t delay = c.backend.find("-batch-") != std::string::npos ? 0 : c.hop-1;
+        const size_t delay = std::string(backend_descriptor(c.backend).schedule) == "immediate" ? 0 : c.hop-1;
         stream<FrequencyChain<T>>(c, SynthesisAudit{accuracy}, (c.hop-1)/2., c.hop-1+delay);
     }
+    if (c.resources) return;
     require(accuracy.checked && accuracy.publications, "Missing synthesis numerical audit");
     accuracy.print();
 }

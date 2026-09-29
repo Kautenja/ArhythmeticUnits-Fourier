@@ -14,10 +14,11 @@ import platform
 import random
 import shlex
 import statistics
+import shutil
 import subprocess
 import tarfile
 
-from contracts import SYNTHESIS_BACKENDS, synthesis_contract
+from contracts import REGISTRY, SYNTHESIS_BACKENDS, resolve_contract, validate_config
 
 ROOT = Path(__file__).resolve().parents[2]
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
@@ -160,7 +161,7 @@ def save(path, value):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("output", type=Path, help="New campaign directory; never overwritten")
+    parser.add_argument("output", type=Path, nargs="?", help="New campaign directory; never overwritten")
     parser.add_argument("--profile", choices=("smoke", "paper", "synthesis"), default="smoke")
     parser.add_argument("--config", type=Path, help="JSON array of complete or partial workload objects")
     parser.add_argument("--repeats", type=int, default=7)
@@ -173,7 +174,13 @@ def main():
     parser.add_argument("--cxx", default="c++")
     parser.add_argument("--notes", default="", help="Power mode, affinity, host activity, session context")
     parser.add_argument("--list", action="store_true", help="Print resolved workloads without building/running")
+    parser.add_argument("--inventory", action="store_true", help="List capabilities, including unavailable adapters")
     args = parser.parse_args()
+    if args.inventory:
+        print(json.dumps(REGISTRY, indent=2, sort_keys=True))
+        return
+    if args.output is None:
+        parser.error("An output directory is required")
     if min(args.repeats, args.hops, args.frames, args.step_frames) < 1 or args.warm_hops < 0:
         parser.error("Counts must be positive and warmup nonnegative")
     if args.hops < 2:
@@ -184,15 +191,20 @@ def main():
     for config in configs:
         if config.keys() - set(BASE):
             parser.error("Unknown workload keys: " + str(config.keys() - set(BASE)))
-        if config["backend"].startswith(("inverse-stream-", "ols-")):
-            try:
-                synthesis_contract(config)
-            except ValueError as error:
-                parser.error(str(error))
+        try:
+            validate_config(config)
+        except ValueError as error:
+            parser.error(str(error))
         config["warm_hops"] = args.warm_hops
         config["callbacks"] = (math.ceil(args.hops*config["hop"]/config["block"])
                                if config["pass_name"] in ("callback", "throughput") else
                                args.step_frames if config["pass_name"] == "steps" else args.frames)
+        try:
+            validate_config(config, measurement=True)
+        except ValueError as error:
+            parser.error(str(error))
+    if len({json.dumps(c, sort_keys=True) for c in configs}) != len(configs):
+        parser.error("Duplicate workload configuration")
     if not configs:
         parser.error("Empty workload matrix")
     if args.list:
@@ -204,7 +216,7 @@ def main():
     output.mkdir(parents=True, exist_ok=False)
     rack = args.rack_dir.resolve()
     build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
-    metadata = dict(schema=1, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
+    metadata = dict(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
                     revision=capture(["git", "rev-parse", "HEAD"]),
                     git_status=capture(["git", "status", "--porcelain"]),
                     platform=platform.platform(), machine=platform.machine(), processor=platform.processor(),
@@ -212,9 +224,8 @@ def main():
                     compiler=capture(shlex.split(args.cxx)+["--version"]), build_command=build,
                     rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
                     protocol="v1", configs=configs, runs=[])
-    metadata["synthesis_contracts"] = {
-        str(index): synthesis_contract(config) for index, config in enumerate(configs)
-        if config["backend"] in SYNTHESIS_BACKENDS}
+    metadata["contracts"] = {str(i): resolve_contract(c) for i, c in enumerate(configs)}
+    metadata["resources"] = {}
     if platform.system() == "Darwin":
         try:
             metadata["cpu_model"] = capture(["sysctl", "-n", "machdep.cpu.brand_string"])
@@ -223,21 +234,38 @@ def main():
     elif Path("/proc/cpuinfo").exists():
         metadata["cpuinfo"] = Path("/proc/cpuinfo").read_text()
     save(output/"metadata.json", metadata)
-    with (output/"build.log").open("w") as log:
-        subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
-    metadata["binary_sha256"] = digest(BINARY)
     # Archive working sources, including uncommitted benchmark development.
     sources = sorted({p for base in (ROOT/"src", ROOT/"benchmark") for p in base.rglob("*")
                       if p.is_file() and "__pycache__" not in p.parts} |
                      {ROOT/"Makefile", ROOT/"plugin.json", *ROOT.glob("mk/*.mk")})
+    # SDK headers/build rules and linked library affect generated code/behavior.
+    sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*") if p.is_file()} |
+                 {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()})
+    build_inputs = {p: digest(p) for p in sources+sdk}
+    with (output/"build.log").open("w") as log:
+        subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
+    if any(digest(p) != expected for p, expected in build_inputs.items()):
+        raise ValueError("Source or dependency changed during build")
+    audit_binary = BINARY.with_name("paper-audit" + BINARY.suffix)
+    shutil.copy2(BINARY, output/"paper.bin")
+    shutil.copy2(audit_binary, output/"paper-audit.bin")
+    metadata["binary_sha256"] = digest(BINARY)
+    metadata["audit_binary_sha256"] = digest(audit_binary)
     metadata["source_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in sources}
     with tarfile.open(output/"source.tar.gz", "w:gz") as archive:
         for path in sources:
             archive.add(path, arcname=str(path.relative_to(ROOT)))
-    # SDK headers/build rules and linked library affect generated code/behavior.
-    sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*") if p.is_file()} |
-                 {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()})
     metadata["sdk_sha256"] = {str(p.relative_to(rack)): digest(p) for p in sdk}
+    with tarfile.open(output/"dependencies.tar.gz", "w:gz", dereference=True) as archive:
+        for path in sdk:
+            archive.add(path, arcname=str(path.relative_to(rack)), recursive=False)
+    metadata["dependency_scope"] = "Rack headers, build rules and libRack bytes; system libraries identified by loader output and OS version"
+    loader = (["otool", "-L", str(BINARY)] if platform.system() == "Darwin" else
+              ["objdump", "-p", str(BINARY)] if os.name == "nt" else ["ldd", str(BINARY)])
+    try:
+        (output/"linked-libraries.txt").write_text(capture(loader)+"\n")
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError("Cannot identify linked implementations") from error
     try:
         metadata["rack_revision"] = capture(["git", "rev-parse", "HEAD"], rack)
         metadata["rack_status"] = capture(["git", "status", "--porcelain", "--untracked-files=no"], rack)
@@ -247,6 +275,22 @@ def main():
     with (output/"verification.txt").open("w") as verification:
         subprocess.run([str(BINARY), "--verify"], cwd=ROOT, env=env,
                        stdout=verification, stderr=subprocess.STDOUT, check=True)
+    compiled_registry = json.loads(subprocess.check_output([str(BINARY), "--inventory"], env=env, text=True))
+    if compiled_registry != REGISTRY:
+        raise ValueError("Compiled backend registry differs from runner")
+    save(output/"inventory.json", compiled_registry)
+    for index, config in enumerate(configs):
+        arguments = command(config)[1:]
+        contract = json.loads(subprocess.check_output([str(BINARY), "--describe"]+arguments, env=env, text=True))
+        if contract != metadata["contracts"][str(index)]:
+            raise ValueError("C++ and Python evidence contracts differ")
+        resource = {}
+        for label, executable in (("timing", BINARY), ("allocation", audit_binary)):
+            resource[label] = json.loads(subprocess.check_output(
+                [str(executable), "--resources"]+arguments, env=env, text=True))
+        filename = f"resources-{index:04d}.json"
+        save(output/filename, resource)
+        metadata["resources"][str(index)] = filename
     jobs = [(repeat, index) for repeat in range(args.repeats) for index in range(len(configs))]
     random.Random(args.seed).shuffle(jobs)
     save(output/"metadata.json", metadata)
@@ -263,11 +307,23 @@ def main():
                                      started_utc=started, raw=raw.name, stderr=errors.name,
                                      summary=summarize(raw, config)))
         save(output/"metadata.json", metadata)
+    if (digest(BINARY) != metadata["binary_sha256"]
+            or digest(audit_binary) != metadata["audit_binary_sha256"]
+            or any(digest(p) != metadata["source_sha256"][str(p.relative_to(ROOT))] for p in sources)
+            or any(digest(p) != metadata["sdk_sha256"][str(p.relative_to(rack))] for p in sdk)):
+        raise ValueError("Source, executable or dependencies changed during campaign")
     metadata["status"] = "complete"
     metadata["finished_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
     metadata["artifact_sha256"] = {p.name: digest(p) for p in output.iterdir()
                                   if p.is_file() and p.name != "metadata.json"}
     save(output/"metadata.json", metadata)
+    from check import check
+    try:
+        check(output)
+    except Exception:
+        metadata["status"] = "invalid"
+        save(output/"metadata.json", metadata)
+        raise
 
 
 if __name__ == "__main__":

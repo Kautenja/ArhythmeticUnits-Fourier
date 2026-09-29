@@ -7,6 +7,7 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from generate_registry import generate
 
 
 class SynthesisTests(unittest.TestCase):
@@ -14,9 +15,10 @@ class SynthesisTests(unittest.TestCase):
         source = Path(__file__).with_name("verify_synthesis.cpp")
         with tempfile.TemporaryDirectory(prefix="fourier-synthesis-") as directory:
             binary = Path(directory)/"verify"
+            generate(Path(directory)/"registry.generated.hpp")
             command = shlex.split(os.environ.get("CXX", "c++"))
             build = subprocess.run(command + ["-std=c++11", "-O2", "-Wall", "-Wextra",
-                                              "-pedantic", str(source), "-o", str(binary)],
+                                              "-pedantic", "-I"+directory, str(source), "-o", str(binary)],
                                    capture_output=True, text=True, timeout=120)
             self.assertEqual(build.returncode, 0, build.stdout+build.stderr)
             result = subprocess.run([str(binary)], capture_output=True,

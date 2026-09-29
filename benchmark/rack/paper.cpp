@@ -87,7 +87,7 @@ struct Legacy {
     explicit Legacy(const Config& c) : config(c), fft(c.n),
         window(Fourier::Window::Function::Hann, c.n, false, true),
         ring(c.n, T(0)), frame(c.n), output(c.n/2+1, T(0)), smooth(c.smooth),
-        immediate(c.backend.find("batch") != std::string::npos) {}
+        immediate(std::string(backend_descriptor(c.backend).schedule) == "immediate") {}
     size_t delay() const {
         if (immediate) return 0;
         const size_t steps = fft.get_total_steps();
@@ -155,10 +155,10 @@ void verify_controls() {
                 for (const std::string state : {"steady", "live"}) {
                     Config c;
                     c.n = n; c.hop = hop; c.rate = 48000; c.smooth = smooth; c.state = state;
-                    c.backend = "legacy-batch";
+                    c.backend = "legacy-batch-float";
                     Core<T> core(c);
                     Legacy<T> batch(c);
-                    c.backend = "legacy-incremental";
+                    c.backend = "legacy-incremental-float";
                     Legacy<T> incremental(c);
                     for (size_t i = 0; i < ((n+hop-1)/hop+4)*hop; ++i) {
                         const float value = input[i%input.size()];
@@ -262,6 +262,52 @@ void buffer_transform(Transform& fft, const std::vector<T>&,
     fft.buffer(complex.data());
 }
 
+/// @brief All-bin fixtures shared with future canonical-layout adapters.
+template<typename T, typename Transform>
+void verify_transform(bool real, bool inverse) {
+    Reference::transforms<T>([&](const std::vector<std::complex<T>>& input) {
+        Transform fft(input.size());
+        std::vector<T> values;
+        for (auto value : input) values.push_back(value.real());
+        const std::vector<float> unity(input.size(), 1.f);
+        buffer_transform(fft, values, input, unity);
+        fft.compute();
+        return fft.coefficients;
+    }, real, inverse);
+}
+
+/// @brief Independent magnitudes, startup and live window changes; no FFT oracle.
+template<typename T>
+void verify_analyzer() {
+    Config c{};
+    c.n = 128; c.hop = 37; c.rate = 48000;
+    Core<T> core(c);
+    const auto input = signal();
+    bool blackman_harris = false;
+    size_t stores = 0;
+    for (size_t sample = 0; sample < 12*c.hop; ++sample) {
+        if (sample%c.hop == 0) {
+            blackman_harris = (sample/c.hop)%2;
+            core.settings.window = blackman_harris ? Fourier::Window::Function::BlackmanHarris
+                                                  : Fourier::Window::Function::Hann;
+            require(core.analysis.configure(core.settings), "Reference settings rejected");
+            stores = 0;
+        }
+        const bool published = core.analysis.process(T(input[sample%input.size()]), [&](size_t k, T value) {
+            require(k == stores++, "Missing or reordered analyzer output");
+            core.output[k] = value;
+        });
+        require(published == (sample%c.hop == c.hop-1), "Independent analyzer cadence");
+        if (!published) continue;
+        require(stores == c.n/2+1, "Incomplete analyzer output");
+        const auto expected = Reference::magnitudes(input, sample-(c.hop-1), c.n, blackman_harris);
+        // Window coefficients are float in both production precisions.
+        for (size_t k = 0; k < expected.size(); ++k)
+            require(std::abs(core.output[k]-expected[k]) <= 2e-5L*std::max(1.L, expected[k]),
+                "Independent analyzer magnitude differs");
+    }
+}
+
 /// @brief Time a phase without a type-erased call inside the interval.
 struct PhaseTimer {
     std::vector<Row>& rows;
@@ -288,6 +334,15 @@ void transform(const Config& c, bool real, bool inverse) {
         complex[i] = {T(input[i]), T(input[(i+17)%input.size()])};
     }
     Fourier::Window::CachedWindow<float> window(Fourier::Window::Function::Hann, c.n, false, true);
+    if (c.resources) {
+        PaperResources::inspect<Transform>([&]() { return new Transform(c.n); }, [&](Transform& item) {
+            for (size_t i = 0; i < 2; ++i) {
+                buffer_transform(item, values, complex, window.get_samples());
+                item.compute(); observe(item.coefficients.data());
+            }
+        }, 2);
+        return;
+    }
     Transform fft(c.n);
     auto buffer = [&]() { buffer_transform(fft, values, complex, window.get_samples()); };
     const size_t steps = fft.get_total_steps();
@@ -404,13 +459,31 @@ int main(int argc, char** argv) {
     using namespace Paper;
     try {
         if (argc == 2 && std::string(argv[1]) == "--verify") {
+            verify_transform<float, Fourier::OnTheFlyFFT<float>>(false, false);
+            verify_transform<double, Fourier::OnTheFlyFFT<double>>(false, false);
+            verify_transform<float, Fourier::OnTheFlyRFFT<float>>(true, false);
+            verify_transform<double, Fourier::OnTheFlyRFFT<double>>(true, false);
+            verify_transform<float, Fourier::OnTheFlyIFFT<float>>(false, true);
+            verify_transform<double, Fourier::OnTheFlyIFFT<double>>(false, true);
+            verify_analyzer<float>();
+            verify_analyzer<double>();
             verify_controls<float>();
             verify_controls<double>();
             verify_synthesis<float>();
             verify_synthesis<double>();
-            std::cout << "Matched analysis frames verified for 48 configurations and two controls; "
+            std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
                 << "inverse jobs and overlap-save identity/FIR verified in both precisions\n";
             return 0;
+        }
+        if (argc == 2 && std::string(argv[1]) == "--inventory") {
+            std::cout << registry_json << '\n'; return 0;
+        }
+        bool describe = false, resources = false;
+        if (argc == 18) {
+            describe = std::string(argv[1]) == "--describe";
+            resources = std::string(argv[1]) == "--resources";
+            require(describe || resources, "Unknown command");
+            --argc; ++argv;
         }
         require(argc == 17, "Use benchmark/paper/run.py; expected 16 protocol arguments");
         Config c;
@@ -431,42 +504,35 @@ int main(int argc, char** argv) {
             "Workload outside protocol bounds");
         require(c.alignment == "aligned" || c.alignment == "staggered", "Invalid alignment");
         require(c.state == "steady" || c.state == "startup" || c.state == "live", "Invalid state");
-        require(c.backend == "fourier" || c.backend == "spectre" || c.voices == 1,
-            "Voice summation is only a module workload");
+        validate_backend(c);
+        if (describe) { std::cout << contract_json(c) << '\n'; return 0; }
+        c.resources = resources;
+        const auto& descriptor = backend_descriptor(c.backend);
+        const std::string kind(descriptor.kind), precision(descriptor.precision);
         Paper::Context context(c.rate);
-        if (synthesis_backend(c.backend)) {
-            require(c.pass == "callback" || c.pass == "throughput", "Invalid synthesis streaming pass");
-            require(c.callbacks*c.block >= 2*c.hop, "Measure at least two complete hops");
-            require(c.state != "startup" || c.alignment == "aligned", "Startup must be aligned");
-            if (c.backend.find("-float") != std::string::npos) synthesis_stream<float>(c);
+        if (kind == "inverse-job" || kind == "chain") {
+            if (precision == "float") synthesis_stream<float>(c);
             else synthesis_stream<double>(c);
-        } else if (c.backend.compare(0, 5, "core-") == 0 || c.backend == "fourier" || c.backend == "spectre"
-            || c.backend.compare(0, 7, "legacy-") == 0 || c.backend == "driver") {
-            require(c.pass == "callback" || c.pass == "throughput", "Invalid streaming pass");
-            require(c.callbacks*c.block >= 2*c.hop, "Measure at least two complete hops");
-            require(c.state != "startup" || c.alignment == "aligned", "Startup must be aligned");
-            if (c.backend == "driver") stream<Driver>(c);
-            else if (c.backend == "legacy-batch-float" || c.backend == "legacy-incremental-float") stream<Legacy<float>>(c);
-            else if (c.backend == "legacy-batch-double" || c.backend == "legacy-incremental-double") stream<Legacy<double>>(c);
-            else if (c.backend == "core-float") stream<Core<float>>(c);
-            else if (c.backend == "core-double") stream<Core<double>>(c);
-            else if (c.backend == "core-simd4") stream<Core<simd::float_4>>(c);
-            else if (c.backend == "fourier") stream<Host<SpectrumAnalyzer>>(c);
-            else if (c.backend == "spectre") stream<Host<Spectrogram>>(c);
-            else require(false, "Unknown core backend");
-        } else {
-            require(c.pass == "phases" || c.pass == "steps" || c.pass == "complete"
-                || c.pass == "incremental", "Invalid transform pass");
-            require(c.count == 1 && !c.load && !c.cache_mib && !c.smooth && c.state == "steady"
-                && c.alignment == "aligned" && c.voices == 1, "Unused transform options must be neutral");
-            if (c.backend == "fft-float") transform<float, Fourier::OnTheFlyFFT<float>>(c, false, false);
-            else if (c.backend == "fft-double") transform<double, Fourier::OnTheFlyFFT<double>>(c, false, false);
-            else if (c.backend == "rfft-float") transform<float, Fourier::OnTheFlyRFFT<float>>(c, true, false);
-            else if (c.backend == "rfft-double") transform<double, Fourier::OnTheFlyRFFT<double>>(c, true, false);
-            else if (c.backend == "ifft-float") transform<float, Fourier::OnTheFlyIFFT<float>>(c, false, true);
-            else if (c.backend == "ifft-double") transform<double, Fourier::OnTheFlyIFFT<double>>(c, false, true);
-            else require(false, "Unknown transform backend");
-        }
+        } else if (kind == "driver") stream<Driver>(c);
+        else if (kind == "legacy") {
+            if (precision == "float") stream<Legacy<float>>(c);
+            else stream<Legacy<double>>(c);
+        } else if (kind == "core") {
+            if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
+            else if (precision == "float") stream<Core<float>>(c);
+            else stream<Core<double>>(c);
+        } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
+        else if (kind == "spectre") stream<Host<Spectrogram>>(c);
+        else if (kind == "fft") {
+            if (precision == "float") transform<float, Fourier::OnTheFlyFFT<float>>(c, false, false);
+            else transform<double, Fourier::OnTheFlyFFT<double>>(c, false, false);
+        } else if (kind == "rfft") {
+            if (precision == "float") transform<float, Fourier::OnTheFlyRFFT<float>>(c, true, false);
+            else transform<double, Fourier::OnTheFlyRFFT<double>>(c, true, false);
+        } else if (kind == "ifft") {
+            if (precision == "float") transform<float, Fourier::OnTheFlyIFFT<float>>(c, false, true);
+            else transform<double, Fourier::OnTheFlyIFFT<double>>(c, false, true);
+        } else require(false, "Adapter implementation missing");
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

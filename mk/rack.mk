@@ -117,13 +117,29 @@ $(PANEL_INSPECT_BINARY): .build/test/rack/inspect_panels.cpp.o
 
 # Raw paper observations, separate from Catch2's batched mean estimator.
 .PHONY: benchmark-paper-build
-benchmark-paper-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX)
+benchmark-paper-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX) .build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX)
 benchmark-rack-build: benchmark-paper-build
 
 .build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper.cpp.o
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
 
 -include .build/benchmark/rack/paper.cpp.d
+
+.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json benchmark/paper/generate_registry.py benchmark/paper/contracts.py
+	python3 benchmark/paper/generate_registry.py $@
+
+.build/benchmark/rack/paper.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -I.build/benchmark -c -o $@ $<
+
+.build/benchmark/rack/paper-audit.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk .build/rack-config
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
+
+.build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper-audit.cpp.o
+	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
+
+-include .build/benchmark/rack/paper-audit.cpp.d
 
 # Rebuild when the compiler, SDK path, or effective flags change. Stamps
 # never enter a link command; only the objects depend on them.

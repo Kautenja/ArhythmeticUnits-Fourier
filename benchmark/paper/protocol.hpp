@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 #include "../../src/dsp/dc_blocker.hpp"
+#include "backend.hpp"
+#include "resources.hpp"
 
 namespace Paper {
 using Clock = std::chrono::steady_clock;
@@ -34,6 +36,7 @@ struct Config {
     size_t n, hop, block, count, load, voices, callbacks, warm_hops, cache_mib;
     float rate;
     bool smooth;
+    bool resources = false;
 };
 
 /// @brief Common float input bytes across precisions, lanes and backend families.
@@ -91,8 +94,18 @@ struct NoAudit {
 template<typename Adapter, typename Audit = NoAudit>
 void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         double playback_delay = -1) {
-    if (center_offset < 0) center_offset = (c.n-1)/2.;
+    const auto contract = backend_contract(c);
+    if (center_offset < 0) center_offset = contract.center;
     const auto input = signal();
+    if (c.resources) {
+        const size_t samples = 2*c.n+2*c.hop;
+        PaperResources::inspect<Adapter>([&]() { return new Adapter(c); }, [&](Adapter& adapter) {
+            for (size_t i = 0; i < samples; ++i) adapter.process(input[i%input.size()]);
+            adapter.barrier();
+            adapter.check();
+        }, samples);
+        return;
+    }
     const size_t total = c.callbacks*c.block;
     std::vector<Row> rows;
     rows.reserve(c.callbacks + total/c.hop*c.count + 2048);
@@ -147,7 +160,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         }
         for (const auto& adapter : bank) adapter->check();
     }
-    if (c.backend == "driver") { print(rows); return; }
+    if (std::string(backend_descriptor(c.backend).boundary) == "control") { print(rows); return; }
     // Replay separately so per-sample timing contains no instrumentation for
     // publication statistics or consumer mailbox traffic.
     {
@@ -162,6 +175,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
                 if (!bank[a]->published()) continue;
                 const size_t offset = c.alignment == "staggered" ? a*c.hop/c.count : 0;
                 const size_t delay = bank[a]->delay();
+                require(delay == contract.delay, "Adapter delay differs from registered contract");
                 require((s+offset)%c.hop == delay, "Publication phase differs from contract");
                 if (publications[a]) require(s-previous[a] == c.hop, "Publication cadence changed");
                 previous[a] = s;
