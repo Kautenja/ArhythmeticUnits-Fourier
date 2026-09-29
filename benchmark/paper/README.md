@@ -5,8 +5,9 @@ complements the Catch2 throughput benchmarks with individual observations,
 matched frame controls, and a repeatable protocol for future FFT backends.
 It does not update the manuscript's historical results or claim a speedup.
 
-The [external comparison plan](comparisons.md) records the selected FFTW,
-Rack/PFFFT, and Apple Accelerate/vDSP baselines, implementation status,
+The [external comparison spec](../../specs/004-external-fft-comparison.md)
+records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
+implementation status,
 acceptance checks, and intended publication tables and figures. Those external
 adapters are planned; the commands below currently run first-party backends.
 
