@@ -62,3 +62,56 @@ jobs:
           g++ --version
           scons --version
           scons test
+
+  rack:
+    name: Rack plugin and headless suites (Linux x64)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      RACK_SDK_VERSION: '2.6.3'
+      RACK_SDK_SHA256: 9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out source and Catch2
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Install Rack build and runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            g++ make jq curl unzip libglu1-mesa-dev libx11-dev \
+            libasound2t64 libjack-jackd2-0 libpulse0
+
+      - name: Download and verify Rack SDK
+        run: |
+          sdk_archive="$RUNNER_TEMP/Rack-SDK.zip"
+          curl --fail --location --retry 3 \
+            "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-lin-x64.zip" \
+            --output "$sdk_archive"
+          printf '%s  %s\n' "$RACK_SDK_SHA256" "$sdk_archive" | sha256sum --check
+          unzip -q "$sdk_archive" -d "$RUNNER_TEMP"
+          RACK_DIR="$RUNNER_TEMP/Rack-SDK"
+          test -f "$RACK_DIR/plugin.mk"
+          test -f "$RACK_DIR/libRack.so"
+          test -f dep/Catch2/single_include/catch2/catch.hpp
+          echo "RACK_DIR=$RACK_DIR" >> "$GITHUB_ENV"
+
+      - name: Build Rack plugin
+        run: |
+          make -j2 all
+          test -s plugin.so
+
+      - name: Run all five headless Rack suites
+        # Match SCons' Catch2 2.13.3 workaround for modern glibc.
+        run: |
+          make -j2 EXTRA_CXXFLAGS='-DCATCH_CONFIG_NO_POSIX_SIGNALS -pthread' \
+            test-dc-blocker-simd \
+            test-serialization \
+            test-display-lifecycle \
+            test-spectrum-points \
+            test-module-amplitudes

@@ -80,30 +80,42 @@ make test-dc-blocker-simd
 
 The SIMD suite compares independent scalar filters with all four Rack SIMD
 lanes under different signals and settings, including reconfiguration and
-reset. It is separate from `scons test` and the standalone DSP CI workflow.
+reset. It is separate from `scons test` and runs in CI's Rack job.
 
 ## Continuous Integration
 
 The [DSP tests workflow](../../.github/workflows/dsp-tests.yml) runs
 `scons test` on pull requests and pushes to `main`, including merges. Pushes
 to other branches do not trigger a separate run. It checks out dependencies
-recursively and verifies the Catch2 header is present. Its three jobs use
+recursively and verifies the Catch2 header is present. Its three DSP jobs use
 Ubuntu 24.04 with GCC, macOS 14 with Apple Clang, and Windows 2022 with
 MSYS2 UCRT64 GCC. Windows uses MSYS2's SCons and Python to preserve POSIX
 paths and GNU build tools. Each job runs the same `scons test` command.
 
+A separate Ubuntu 24.04 x64 job downloads the official Rack 2.6.3 SDK,
+verifies its pinned SHA-256 checksum, and builds the plugin with `make -j2 all`.
+It then runs all five headless Rack targets: `test-dc-blocker-simd`,
+`test-serialization`, `test-display-lifecycle`, `test-spectrum-points`, and
+`test-module-amplitudes`. The SDK lives under the runner's temporary directory;
+`RACK_DIR` selects it for both the plugin and tests. System OpenGL, X11, and
+audio libraries satisfy the Rack library's runtime dependencies even though
+the tests do not open a window or audio device.
+
 On Linux, SCons disables Catch2 2.13.3's optional POSIX signal handler
 because it requires a constant `MINSIGSTKSZ`, which modern glibc no longer
-provides. Assertions and process failures still fail the job; only Catch2's
-extra signal diagnostics are unavailable.
+provides. The Rack test job passes the same define through `EXTRA_CXXFLAGS`,
+along with `-pthread` for the concurrent display tests. Assertions and process
+failures still fail the job; only Catch2's extra signal diagnostics are
+unavailable.
 
 New updates cancel older runs for the same pull request or branch, and
-each job has a 15-minute timeout to limit usage. A failure on one platform
-does not cancel the other platforms, so their results remain available.
+DSP jobs have a 15-minute timeout and the Rack job has a 20-minute timeout to
+limit usage. A failure on one platform does not cancel the other platforms
+or the independent Rack job, so their results remain available.
 
-This workflow covers the standalone suites only. Rack plugin builds,
-serialization integration tests, benchmarks, and manual UI checks remain
-separate validation steps.
+Rack CI currently covers Linux x64 only. Plugin builds and Rack integration
+tests on macOS and Windows, benchmarks, and manual UI checks remain separate
+validation steps. The headless tests do not replace an interactive Rack session.
 
 ## Rack Plugin Build
 
