@@ -2,6 +2,7 @@
 import os
 import fnmatch
 import re
+import shlex
 import sys
 
 # Instrumented tests never reuse ordinary objects or production flags.
@@ -78,7 +79,7 @@ TESTING_ENV = Environment(
 BENCHMARK_ENV = Environment(
     ENV=os.environ,
     CPPDEFINES=CATCH_DEFINES,
-    CXX='g++',
+    CXX=ARGUMENTS.get('CXX', 'g++'),
     CPPFLAGS=['-Wno-unused-value'],
     CXXFLAGS=PROD_FLAGS,
     LINKFLAGS=PROD_FLAGS,
@@ -156,15 +157,23 @@ Alias('test-mailbox', MAILBOX_TEST_ALIASES)
 # ----------------------------------------------------------------------------
 
 
-# create a list to store all the benchmark target aliases in
+# Rack benchmarks require the SDK and are built separately by Make.
 BENCHMARK_ALIASES = []
-for benchmark in find_source_files('benchmark', 'build_benchmark'):
-    BENCHMARK_PROGRAM = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_SRC)
-    BENCHMARK_ALIASES.append(Alias(benchmark.replace('build_', ''), [BENCHMARK_PROGRAM], BENCHMARK_PROGRAM[0].path))
-    AlwaysBuild(BENCHMARK_ALIASES[-1])
+BENCHMARK_PROGRAMS = []
+BENCHMARK_ARGS = ' '.join(shlex.quote(arg) for arg in
+                          shlex.split(ARGUMENTS.get('BENCHMARK_ARGS', '')))
+for benchmark in find_source_files('benchmark/dsp', 'build_benchmark/dsp'):
+    program = BENCHMARK_ENV.Program(benchmark.replace('.cpp', ''), [benchmark] + BENCHMARK_SRC)
+    alias = BENCHMARK_ENV.Alias(benchmark.replace('build_', ''), [program],
+                               program[0].path + ' ' + BENCHMARK_ARGS)
+    AlwaysBuild(alias)
+    # Allow parallel compilation without timing two suites concurrently.
+    SideEffect('build_benchmark/timing-lock', alias)
+    BENCHMARK_PROGRAMS.append(program)
+    BENCHMARK_ALIASES.append(alias)
 
-# create an alias to run all test suites
-Alias("benchmark", BENCHMARK_ALIASES)
+Alias('benchmark-build', BENCHMARK_PROGRAMS)
+Alias('benchmark', BENCHMARK_ALIASES)
 
 
 # ----------------------------------------------------------------------------

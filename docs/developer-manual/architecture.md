@@ -20,8 +20,9 @@ changing DSP, Rack modules, or displays.
 -   `src/rack_extensions/` contains Rack graphics and control helpers.
 -   `test/dsp/` mirrors the flat DSP header layout. `test/functions.hpp` and
     `test/ieee754.hpp` provide test helpers.
--   `benchmark/dsp/` holds the benchmark harness; see the testing article
-    before treating it as performance evidence.
+-   `benchmark/dsp/` holds standalone DSP benchmarks; `benchmark/rack/`
+    measures headless module processing and display preparation. See the
+    testing article for workloads and interpretation.
 -   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
 -   `manual/Fourier/` and `manual/Spectre/` contain LaTeX user manuals and
     illustrations. Developer guidance lives here in `docs/developer-manual/`.
@@ -126,6 +127,8 @@ selected Rack tree's `plugin.mk`. Nested `.cpp` files are not automatically
 included by that wildcard.
 
 `SConstruct` builds standalone DSP tests and benchmarks and discovers
-`.cpp` files recursively under `src/dsp`, `test`, and `benchmark`. It does
-not build the Rack modules or exercise their SIMD instantiations and UI.
+`.cpp` files recursively under `src/dsp`, `test`, and `benchmark/dsp`.
+Rack benchmark and test sources are excluded and built separately by Make.
+SCons does not build the Rack modules or exercise their SIMD instantiations
+and UI.
 See [Development And Testing](development-and-testing.md) for commands.

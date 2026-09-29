@@ -341,23 +341,100 @@ version, sample rate, relevant settings, and observed result.
 
 ## Benchmarks
 
-The existing command and focused alias are:
+The standalone Catch2 v2 benchmarks cover every computational DSP header.
+They build with C++11 and `-O3`, independently of Rack. Run from the repository
+root with the same dependencies as the standalone tests:
 
 ```shell
+scons -j4 benchmark-build
 scons benchmark
 scons benchmark/dsp/benchmark_fft.cpp
 ```
 
-Currently `benchmark/dsp/benchmark_fft.cpp` enables Catch2 benchmarking
-but contains an empty `TEST_CASE`. A successful run supplies no performance
-measurement. Add a meaningful workload before using it to evaluate changes.
+`benchmark-build` only compiles; `benchmark` and the `.cpp` aliases always run.
+SCons excludes `benchmark/rack/`, which requires the SDK and Make. A command-line
+compiler override, such as `scons CXX=clang++ benchmark-build`, applies to the
+benchmarks too. Use the same override for the subsequent run.
 
-For an optimization, compare baseline and candidate with the same compiler,
-flags, host, signal, FFT size, hop length, and channel count. Separate setup
-from the operation being measured. Record repeated samples, units, relevant
-latency/throughput statistics, and variability or confidence intervals.
-Report inconclusive measurements honestly. A microbenchmark does not by
-itself establish whole-patch engine or display performance.
+| Suite Under `benchmark/dsp/` | Timed Work Per Iteration |
+| --- | --- |
+| `benchmark_fft.cpp` | One complex FFT, real FFT, or inverse FFT at N=128, 2048, or 16384, using float and double; complete and H=256 incremental schedules; RFFT with and without octave smoothing; separate float plan construction |
+| `benchmark_dft.cpp` | One caller-buffer DFT (Boxcar/Hann) or IDFT at N=32 or 128, float and double |
+| `benchmark_spectrum_analysis.cpp` | One production analysis hop at N=128, 2048, or 16384 and H=257 or 1024, float and double; smoothing off/on; separate steady and live window/band cache rebuild workloads |
+| `benchmark_window.cpp` | 2048 periodic coefficients for every selectable and parameterized window, float and double; cached multiplication and alternating cache replacement at N=128, 2048, and 16384 |
+| `benchmark_processors.cpp` | 1024 DC-filter samples (float/double), circular-buffer insert/read operations, or trigger ticks; separate contiguous frame copy |
+| `benchmark_math.cpp` | 1024 numeric, complex, voltage, interpolation, pitch, formatting, or color-map operations |
+
+Compile-time constants, enum names, trivial accessors, and invalid-input/error
+paths are not separate performance targets. These are representative workloads,
+not a benchmark coverage percentage or a replacement for correctness tests.
+
+Inputs combine two tones, DC, and a fixed-seed noise sequence. Generation and
+storage preparation stay outside timing, except explicitly labeled plan
+construction and string formatting, which include allocation. Transforms time
+input buffering and all output work; incremental transforms restart every
+iteration. Window/band rebuilds alternate settings every iteration so calibration
+and repeated samples cannot turn into cache hits. Streaming filters and spectrum
+analysis warm up before timing and retain state between iterations. Output
+callbacks write all spectrum bins. Compiler barriers make block inputs and
+outputs observable without adding a volatile operation to each sample. Block
+measurements include traversal and output stores, not just scalar arithmetic.
+
+Catch2 reports repeated-sample means, standard deviations, and bootstrap
+confidence intervals (100 samples and 100000 resamples by default). Times are
+**per benchmark iteration**: divide block time by its labeled sample/operation
+count for amortized time per item, or spectrum hop time by H for time per engine
+sample. These averages do not measure maximum per-sample latency or establish
+hard real-time bounds. Plan construction includes destruction. Legacy smoothing
+includes a fresh RFFT each iteration, avoiding repeated smoothing of old output.
+
+For a quick executable smoke check, lower the sampling cost explicitly:
+
+```shell
+scons benchmark BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
+```
+
+For focused runs, listing workloads, or machine-readable Catch2 XML:
+
+```shell
+./build_benchmark/dsp/benchmark_fft --list-test-names-only
+./build_benchmark/dsp/benchmark_fft "[fft]" --reporter xml --out /tmp/fourier-fft.xml
+```
+
+Build first, then time serially on an otherwise idle host. SCons serializes
+benchmark suites even with `-j`, but concurrent compilation or unrelated
+processes can still distort measurements. Do not run Rack and standalone
+benchmarks concurrently. For an optimization, compare baseline and candidate
+with the same compiler, flags, host, signal, FFT size, hop length, and channel
+count. Record the commit, OS/CPU, compiler version, build command/flags, benchmark
+options, repeated results, and uncertainty. A smoke run or a single comparison
+is not evidence of a speedup. A microbenchmark does not establish whole-patch
+engine or display performance.
+
+### Rack DSP Processing
+
+With the normal Rack build dependencies, run from the repository root:
+
+```shell
+make build/benchmark/rack/dsp
+make benchmark-dsp
+make benchmark-dsp BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
+```
+
+These targets honor `RACK_DIR` and use the SDK's optimization, architecture,
+and floating-point flags, including flags that differ from standalone SCons.
+`benchmark/rack/dsp.cpp` drives the actual modules at 48 kHz. Each iteration
+processes 4096 engine samples with precomputed voltages, connected mono or
+sixteen-voice inputs, AC coupling, Hann windows, and smoothing off or one-third
+octave plus 100 ms time smoothing. Fourier covers all four SIMD ports at
+N=128, 2048, and 16384 with H=256. Spectre uses N=2048 and H=1024.
+
+Timing includes port writes, polyphonic summation, double-precision DC filters,
+scalar/SIMD analysis, Fourier coordinate mapping, and producer mailbox
+publication. Construction and warmup are excluded. There is no concurrent
+display consumer, rendering, audio device, or host scheduling in this workload.
+The headless output sanity assertions verify that processing publishes spectra;
+the existing numerical regression suites remain the correctness oracle.
 
 ### Display Preparation
 

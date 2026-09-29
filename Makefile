@@ -65,6 +65,25 @@ build/benchmark/rack/display: build/benchmark/rack/display.cpp.o
 build/benchmark/rack/display.cpp.o: CXXFLAGS += $(DISPLAY_BENCHMARK_FLAGS)
 -include build/benchmark/rack/display.cpp.d
 
+# DSP through real Rack modules, using SDK optimization and floating-point flags.
+BENCHMARK_ARGS ?=
+RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2/single_include/catch2
+ifdef ARCH_LIN
+RACK_BENCHMARK_FLAGS += -DCATCH_CONFIG_NO_POSIX_SIGNALS
+endif
+.PHONY: benchmark-dsp
+benchmark-dsp: build/benchmark/rack/dsp
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< $(BENCHMARK_ARGS)
+
+build/benchmark/rack/dsp: build/benchmark/rack/dsp.cpp.o
+	$(CXX) $(RACK_BENCHMARK_FLAGS) -o $@ $< -L$(RACK_DIR) -lRack
+
+build/benchmark/rack/dsp.cpp.o: benchmark/rack/dsp.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
+
+-include build/benchmark/rack/dsp.cpp.d
+
 # Optional native OpenGL inspection; requires a graphical desktop session.
 ifdef ARCH_MAC
 DISPLAY_GL_LIBS = -framework OpenGL
