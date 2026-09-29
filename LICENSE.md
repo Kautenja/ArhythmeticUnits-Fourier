@@ -9,12 +9,15 @@ The **visual design of the modules** is copyright © 2025 Arhythmetic Units and
 licensed under
 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 Commercial use and derivative works **ARE NOT** allowed. This includes all
-graphics in the `design/`, `res/`, `docs/manual-fourier/`, and
-`docs/manual-spectre/` folders.
+graphics in the `res/`, `docs/manual-fourier/`, and `docs/manual-spectre/`
+folders, and the visual artwork represented by
+`src/rack_extensions/panel_artwork.hpp` and `src/rack_extensions/panel.hpp`.
 
 The **Arhythmetic Units logo and icon** are copyright © 2025 Arhythmetic Units
 and licensed under
 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/).
 Commercial use and derivative works **ARE NOT** allowed. This includes all
-graphics in the `design/`, `res/`, `docs/manual-fourier/`, and
-`docs/manual-spectre/` folders.
+graphics in the `res/`, `docs/manual-fourier/`, and `docs/manual-spectre/`
+folders, and the branding represented by `src/rack_extensions/panel_artwork.hpp`.
+Moving the artwork into drawing code does not change these visual-design terms;
+the source code itself remains under the GPL terms above.

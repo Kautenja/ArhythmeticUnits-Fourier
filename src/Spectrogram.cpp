@@ -23,6 +23,7 @@
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
+#include "rack_extensions/panel.hpp"
 #include "rack_extensions/display_mailbox.hpp"
 #include "dsp/color_map.hpp"
 #include "dsp/constants.hpp"
@@ -922,21 +923,18 @@ struct SpectralImageDisplay : TransparentWidget {
 struct SpectrogramWidget : ModuleWidget {
     explicit SpectrogramWidget(Spectrogram* module) : ModuleWidget() {
         setModule(module);
-        setPanel(createPanel(
-            asset::plugin(plugin_instance, "res/Spectrogram-Light.svg"),
-            asset::plugin(plugin_instance, "res/Spectrogram-Dark.svg")
-        ));
+        setPanel(new Fourier::Panel(Fourier::PanelKind::SPECTRE));
         // Spectrogram display
         SpectralImageDisplay* display = new SpectralImageDisplay(module);
-        display->setPosition(Vec(45, 15));
-        display->setSize(Vec(465, 350));
+        display->setPosition(Fourier::PanelLayout::display_position());
+        display->setSize(Fourier::PanelLayout::display_size(Fourier::PanelKind::SPECTRE));
         addChild(display);
         // Inputs
-        addInput(createInput<ThemedPJ301MPort>(Vec(11, 30), module, Spectrogram::INPUT_SIGNAL));
-        addParam(createParam<Trimpot>(Vec(13, 66), module, Spectrogram::PARAM_INPUT_GAIN));
+        addInput(createInput<ThemedPJ301MPort>(Fourier::PanelLayout::input(), module, Spectrogram::INPUT_SIGNAL));
+        addParam(createParam<Trimpot>(Fourier::PanelLayout::gain(), module, Spectrogram::PARAM_INPUT_GAIN));
         // Buttons.
-        addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, Spectrogram::PARAM_RUN));
-        addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, Spectrogram::LIGHT_RUN));
+        addParam(createParamCentered<PB61303>(Fourier::PanelLayout::run(), module, Spectrogram::PARAM_RUN));
+        addChild(createLightCentered<PB61303Light<WhiteLight>>(Fourier::PanelLayout::run(), module, Spectrogram::LIGHT_RUN));
         // Screen controls.
         // Window function control with custom angles to match discrete range.
         auto window_function_param = createParam<TextKnob>(Vec(50 + 0 * 66, 330), module, Spectrogram::PARAM_WINDOW_FUNCTION);

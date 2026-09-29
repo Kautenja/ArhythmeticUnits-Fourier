@@ -144,7 +144,10 @@ changing DSP, Rack modules, or displays.
 -   `benchmark/dsp/` holds standalone DSP benchmarks; `benchmark/rack/`
     measures headless module processing and display preparation. See the
     testing section for workloads and interpretation.
--   `res/` contains shipped graphics. `design/` holds editable Sketch sources.
+-   `src/rack_extensions/panel.hpp` draws both panel formats and shares their
+    geometry with the module controls. `panel_artwork.hpp` preserves the original
+    branding and lettering as native vector paths. `res/` contains the font used
+    by dynamic display text; panel rendering needs no SVG or Sketch files.
 -   `docs/manual-fourier/` and `docs/manual-spectre/` contain LaTeX user manuals
     and illustrations. Contributor guidance lives in this file; style guides
     live in `docs/style-guides/`.
@@ -561,6 +564,38 @@ This briefly creates a native window, renders both displays, recreates the
 window/context, changes scales, and changes zoom. It checks framebuffer handles
 and GL errors and saves `build/test/rack/display-*.ppm` for visual inspection.
 It is not a complete interactive Rack or DAW session.
+
+To inspect the complete panels and controls with the same desktop prerequisites:
+
+```shell
+make inspect-panels
+```
+
+This renders both real module widgets with test signals and both null-module
+browser previews. Each set covers light and dark themes, 75-percent zoom,
+one-pixel density, native pixel density, and graphics-context recreation.
+It verifies module dimensions, settled panel framebuffers, and GL errors, and
+saves `build/test/rack/panel-{live,preview}-{0,1,2,3,4}.ppm`. Scenarios 0 and 4
+show the light panel before and after context recreation; 1 is dark, 2 is zoomed
+out, and 3 is dark at one-pixel density. On a standard-density desktop, native
+and one-pixel density are the same. The inspector does not open an audio device
+or exercise mouse interaction or patch loading.
+
+For a visual comparison against an older panel export, the executable accepts
+an optional final directory containing that version's four panel SVGs. For
+example, with those files already saved in `build/panel-reference/`:
+
+```shell
+DYLD_LIBRARY_PATH="$PWD/../.." LD_LIBRARY_PATH="$PWD/../.." \
+    build/test/rack/inspect_panels "$PWD/../.." "$PWD" \
+    "$PWD/build/test/rack/reference" "$PWD/build/panel-reference"
+```
+
+This example uses the default Rack source-tree layout; substitute the SDK path
+for each `../..` reference when applicable. Reference exports are optional local
+comparison inputs, not shipped resources or build dependencies. Keep generated
+screenshots in the ignored build directory. Panel dimensions and Rack IDs must
+stay compatible with existing patches when changing the shared geometry.
 
 Run the headless Fourier spectrum-coordinate regressions:
 

@@ -35,7 +35,7 @@ struct TextKnob : app::Knob {
 
     /// @brief Initialize a new text knob.
     TextKnob() {
-        // Set the expected size of the widget from Sketch
+        // Set the standard text-control footprint in Rack pixels.
         setSize(Vec(60, 30));
         // Set the range of the knob (mocks a Rogan knob)
         minAngle = 0.f * M_PI;

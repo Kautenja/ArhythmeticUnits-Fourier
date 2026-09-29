@@ -21,6 +21,7 @@
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
+#include "rack_extensions/panel.hpp"
 #include "dsp/constants.hpp"
 #include "dsp/dc_blocker.hpp"
 #include "dsp/eurorack.hpp"
@@ -1066,22 +1067,19 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @param module The back-end module to interact with. Can be a nullptr.
     explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ModuleWidget() {
         setModule(module);
-        setPanel(createPanel(
-            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Light.svg"),
-            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Dark.svg")
-        ));
+        setPanel(new Fourier::Panel(Fourier::PanelKind::FOURIER));
         // Input signal ports and gain controls.
         for (std::size_t i = 0; i < SpectrumAnalyzer::NUM_CHANNELS; i++) {
-            addInput(createInput<ThemedPJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
-            addParam(createParam<Trimpot>(Vec(13, 66 + 75 * i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));
+            addInput(createInput<ThemedPJ301MPort>(Fourier::PanelLayout::input(i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
+            addParam(createParam<Trimpot>(Fourier::PanelLayout::gain(i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));
         }
         // Buttons.
-        addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzer::PARAM_RUN));
-        addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzer::LIGHT_RUN));
+        addParam(createParamCentered<PB61303>(Fourier::PanelLayout::run(), module, SpectrumAnalyzer::PARAM_RUN));
+        addChild(createLightCentered<PB61303Light<WhiteLight>>(Fourier::PanelLayout::run(), module, SpectrumAnalyzer::LIGHT_RUN));
         // Screen.
         SpectrumAnalyzerDisplay* display = new SpectrumAnalyzerDisplay(module);
-        display->setPosition(Vec(45, 15));
-        display->setSize(Vec(660, 350));
+        display->setPosition(Fourier::PanelLayout::display_position());
+        display->setSize(Fourier::PanelLayout::display_size(Fourier::PanelKind::FOURIER));
         addChild(display);
         // Screen controls.
         // Window function control with custom angles to match discrete range.

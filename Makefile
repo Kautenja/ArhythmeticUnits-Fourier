@@ -115,6 +115,16 @@ build/test/rack/inspect_displays: build/test/rack/inspect_displays.cpp.o
 
 -include build/test/rack/inspect_displays.cpp.d
 
+.PHONY: inspect-panels
+PANEL_INSPECT_BINARY := build/test/rack/inspect_panels$(if $(ARCH_WIN),.exe)
+inspect-panels: $(PANEL_INSPECT_BINARY)
+	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< "$(abspath $(RACK_DIR))" "$(CURDIR)" "$(abspath build/test/rack/panel)"
+
+$(PANEL_INSPECT_BINARY): build/test/rack/inspect_panels.cpp.o
+	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(DISPLAY_GL_LIBS)
+
+-include build/test/rack/inspect_panels.cpp.d
+
 # Raw paper observations, separate from Catch2's batched mean estimator.
 .PHONY: benchmark-paper-build
 benchmark-paper-build: build/benchmark/rack/paper
