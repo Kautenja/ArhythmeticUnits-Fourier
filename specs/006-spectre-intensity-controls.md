@@ -35,13 +35,13 @@ at default endpoints. This spec is independent of
 
 ### FR-1: Panel And Interaction
 
-- [x] Use a rounded black color screen at `(6, 106)`, size `63 x 194`,
+- [x] Use a rounded black color screen at `(12, 106)`, size `51 x 194`,
     within a widened left control strip. Preserve the 35 HP module size.
     Move Spectre's plot to `(75, 15)` with size `435 x 350` and evenly
     space its seven bottom controls. Fourier's geometry stays unchanged.
 - [x] Center input, a larger gain knob, color screen, and Run at x=37.5.
     Input and gain centers are about 41 pixels (13.9 mm) apart. Provide
-    22-by-20-pixel handle hit targets on opposite sides of a 108-pixel bar.
+    19-by-20-pixel handle hit targets on opposite sides of a 108-pixel bar.
     This improves physical-style clearance; it is not a hardware prototype.
 - [x] Put palette and intensity-scale readouts with dropdown arrows at the
     top of the screen. Left-click opens each list directly. Remove the
@@ -360,3 +360,24 @@ visually inspected. `git diff --check` and relative spec link checks passed.
 This polish is included in the user-requested commit. The prior full live-session acceptance
 limitation still applies; the supplied recording verifies the user's current
 UI observations, not every outstanding manual check.
+
+### Narrower Color Screen
+
+Reduced the screen from 63 to 51 pixels wide (19 percent), centered at the
+same x=37.5 position. Reduced dropdown padding, centered a 13-pixel gradient,
+and fitted 19-by-20-pixel handle hit targets within the narrower surface.
+Height, Run clearance, font size, vertical dragging, and plot geometry are
+unchanged. The manual panel image follows the new width.
+
+`make -j4 all` passed the macOS ARM64 Rack build. `make inspect-panels`
+passed all 72 native cases, including row hover, dropdown actions/undo,
+and handle drags. Inspected both themes, both modes, extreme labels,
+100/75/50 percent zoom and null previews; no clipping or overlap was found.
+Review image: `.build/test/rack/narrow-control-review.png`. DSP and state
+behavior did not change; no standalone DSP tests were rerun for this layout
+adjustment. The existing live-session acceptance limitation remains.
+
+`make -C docs/manual-spectre` rebuilt the manual with the narrower panel
+image; the rendered cover was visually checked. Concurrent manual edits
+were preserved. `git diff --check` passed, and `make install` installed the
+updated plugin for the next Rack restart. This width adjustment is included in the user-requested commit.

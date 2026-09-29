@@ -1062,7 +1062,7 @@ struct SpectreIntensityHandle : ParamWidget {
         const float value = quantity ? quantity->getValue() :
             (linear() ? (ceiling() ? 1.f : 0.f) : (ceiling() ? 0.f : -90.f));
         const auto origin = Fourier::PanelLayout::intensity_control().pos;
-        box = Rect(origin.plus(Vec(ceiling() ? 39.f : 2.f, position(value, linear()) - 10.f)), Vec(22.f, 20.f));
+        box = Rect(origin.plus(Vec(ceiling() ? 32.f : 0.f, position(value, linear()) - 10.f)), Vec(19.f, 20.f));
         visible = module ? enabled() : !linear();
         ParamWidget::step();
     }
@@ -1102,9 +1102,9 @@ struct SpectreIntensityHandle : ParamWidget {
 
     void draw(const DrawArgs& args) override {
         nvgBeginPath(args.vg);
-        nvgMoveTo(args.vg, ceiling() ? 0.f : 22.f, 10.f);
-        nvgLineTo(args.vg, ceiling() ? 16.f : 6.f, 4.f);
-        nvgLineTo(args.vg, ceiling() ? 16.f : 6.f, 16.f);
+        nvgMoveTo(args.vg, ceiling() ? 0.f : 19.f, 10.f);
+        nvgLineTo(args.vg, ceiling() ? 16.f : 3.f, 4.f);
+        nvgLineTo(args.vg, ceiling() ? 16.f : 3.f, 16.f);
         nvgClosePath(args.vg);
         nvgFillColor(args.vg, nvgRGB(235, 235, 235));
         nvgFill(args.vg);
@@ -1190,7 +1190,7 @@ struct SpectreIntensityLegend : OpaqueWidget {
             const float position = Spectrogram::Intensity::position(value, floor, ceiling, linear());
             const auto color = Fourier::ColorMap::color_map(palette, position);
             nvgBeginPath(vg);
-            nvgRect(vg, 24.f, Fourier::PanelLayout::intensity_bar_top() + row, 15.f, 1.f);
+            nvgRect(vg, 19.f, Fourier::PanelLayout::intensity_bar_top() + row, 13.f, 1.f);
             nvgFillColor(vg, nvgRGBf(color.r, color.g, color.b));
             nvgFill(vg);
         }
@@ -1202,8 +1202,8 @@ struct SpectreIntensityLegend : OpaqueWidget {
         nvgFontSize(vg, 9.f);
         nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgFillColor(vg, nvgRGB(230, 230, 230));
-        nvgText(vg, 31.5f, 48.f, (text[0] + text[2]).c_str(), nullptr);
-        nvgText(vg, 31.5f, 182.f, (text[1] + text[2]).c_str(), nullptr);
+        nvgText(vg, box.size.x / 2.f, 48.f, (text[0] + text[2]).c_str(), nullptr);
+        nvgText(vg, box.size.x / 2.f, 182.f, (text[1] + text[2]).c_str(), nullptr);
         // Rack display choices align labels to a common left inset and reserve
         // a fixed right gutter. Keep this plugin's green-on-black treatment.
         nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);

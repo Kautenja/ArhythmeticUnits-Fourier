@@ -44,14 +44,14 @@ struct PanelLayout {
     static rack::math::Vec spectre_gain() { return rack::math::Vec(37.5f, 80.f); }
     /// @brief Spectre-only vertical color range and its integrated legend.
     static rack::math::Rect intensity_control() {
-        return rack::math::Rect(rack::math::Vec(6.f, 106.f), rack::math::Vec(63.f, 194.f));
+        return rack::math::Rect(rack::math::Vec(12.f, 106.f), rack::math::Vec(51.f, 194.f));
     }
     /// @brief Shared bar dimensions keep handle motion and palette pixels aligned.
     static float intensity_bar_top() { return 60.f; }
     static float intensity_bar_height() { return 108.f; }
     /// @brief Separate dropdown rows, inset consistently from the black screen.
     static rack::math::Rect intensity_choice(int row) {
-        return rack::math::Rect(rack::math::Vec(6.f, 5.f + 18.f * row), rack::math::Vec(51.f, 18.f));
+        return rack::math::Rect(rack::math::Vec(3.f, 5.f + 18.f * row), rack::math::Vec(45.f, 18.f));
     }
     /// @brief Shared center of the Run button and its light.
     static rack::math::Vec run(PanelKind kind = PanelKind::FOURIER) {
