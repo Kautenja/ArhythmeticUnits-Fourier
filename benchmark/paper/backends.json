@@ -1050,6 +1050,73 @@
       "plan": "rack-pffft-ordered-exact-size-single-thread",
       "dependency": "linked Rack/PFFFT; source and binary identities retained",
       "available": true
+    },
+    {
+      "id": "core-independent4-float",
+      "precision": "float",
+      "kind": "analysis4",
+      "channels": 4
+    },
+    {
+      "id": "core-independent4-simd",
+      "channels": 4,
+      "kind": "analysis4"
+    },
+    {
+      "id": "pffft-analysis4-float",
+      "provider": "pffft",
+      "kind": "analysis4",
+      "boundary": "analysis",
+      "precision": "float",
+      "schedule": "immediate",
+      "operation": "analysis",
+      "layout": "positive-magnitudes",
+      "normalization": "coherent-gain-corrected-unnormalized-forward",
+      "step_model": "opaque",
+      "live": true,
+      "smoothing": true,
+      "plan": "rack-pffft-ordered-exact-size-single-thread",
+      "dependency": "linked Rack/PFFFT; source and binary identities retained",
+      "available": true,
+      "channels": 4
+    },
+    {
+      "id": "fftw-analysis4-float",
+      "provider": "fftw",
+      "kind": "analysis4",
+      "boundary": "analysis",
+      "precision": "float",
+      "schedule": "immediate",
+      "operation": "analysis",
+      "layout": "positive-magnitudes",
+      "normalization": "coherent-gain-corrected-unnormalized-forward",
+      "step_model": "opaque",
+      "live": true,
+      "smoothing": true,
+      "plan": "FFTW_MEASURE-single-thread-no-imported-wisdom",
+      "dependency": "fftw",
+      "available": false,
+      "build_feature": "fftw",
+      "channels": 4
+    },
+    {
+      "id": "vdsp-analysis4-float",
+      "provider": "vdsp",
+      "kind": "analysis4",
+      "boundary": "analysis",
+      "precision": "float",
+      "schedule": "immediate",
+      "operation": "analysis",
+      "layout": "positive-magnitudes",
+      "normalization": "coherent-gain-corrected-unnormalized-forward",
+      "step_model": "opaque",
+      "live": true,
+      "smoothing": true,
+      "plan": "vDSP-exact-size-radix2-reusable-setup",
+      "dependency": "vdsp",
+      "available": false,
+      "build_feature": "vdsp",
+      "channels": 4
     }
   ]
 }

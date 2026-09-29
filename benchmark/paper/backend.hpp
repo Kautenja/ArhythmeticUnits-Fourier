@@ -29,6 +29,8 @@ void validate_backend(const Config& c) {
         && (!d.fixed_hop || c.hop == d.fixed_hop));
     check(c.voices <= d.max_voices && (!c.smooth || d.smoothing) && (c.state != "live" || d.live));
     const std::string kind(d.kind), boundary(d.boundary), model(d.step_model);
+    check(c.callback_offset < c.hop && (c.state != "startup" || c.callback_offset == 0));
+    if (boundary == "transform") check(c.callback_offset == 0);
     if (boundary == "chain") check(c.hop <= c.n-2);
     if (boundary == "transform") {
         check(c.pass == "complete" || ((model == "radix2-real" || model == "radix2-complex" || model == "radix2-inverse") &&

@@ -70,6 +70,10 @@ def validate_config(config, registry=None, measurement=False):
         if type(config[key]) is not int or not low <= config[key] <= high:
             raise ValueError(f"Invalid {key} for {d['id']}")
     n, hop = config["n"], config["hop"]
+    offset = config.get("callback_offset", 0)
+    if (type(offset) is not int or not 0 <= offset < hop
+            or (offset and (config["state"] == "startup" or d["boundary"] == "transform"))):
+        raise ValueError("Unsupported callback origin offset")
     if ((d["power_of_two"] and n & (n-1)) or n % d["size_multiple"]
             or (d["fixed_n"] and n != d["fixed_n"])
             or (d["fixed_hop"] and hop != d["fixed_hop"])):

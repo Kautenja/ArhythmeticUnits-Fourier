@@ -60,6 +60,103 @@ actual order. `--seed`, `--repeats`, `--hops`, `--frames`, `--step-frames`, and
 `--warm-hops` are explicit experimental settings, not automatic convergence
 criteria. The short validation commands are not publication evidence.
 
+## External Campaigns And Reports
+
+FR-10 supplies generated, tracked manifests for
+[smoke](configs/external-smoke.json), [pilot](configs/external-pilot.json),
+and [focused extensions](configs/external-extensions.json). Their explicit
+variants resolve these workload counts before process repetitions:
+
+| Variant | Required Providers | Smoke | Pilot | Extensions |
+| --- | --- | ---: | ---: | ---: |
+| `rack` | Fourier, Rack/PFFFT | 156 | 270 | 537 |
+| `portable` | Above plus FFTW | 206 | 339 | 706 |
+| `macos` | Above plus Apple vDSP | 256 | 408 | 875 |
+
+These are configuration inventories, not measured results. A variant excludes
+only its declared providers; missing requested libraries fail. `macos` also
+requires Darwin. The portable variants describe supported interfaces, not
+verified builds on every architecture. Deferred contenders are absent.
+Inspect the exact workloads, resolved contracts, precision/family counts,
+independent channel counts, and declared omissions from the repository root:
+
+```shell
+python3 benchmark/paper/campaigns.py --check
+python3 benchmark/paper/run.py --config benchmark/paper/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
+```
+
+Use `rack` without feature flags, or `portable` with `--fftw-prefix`, on hosts
+without vDSP. The FFTW prefix must first be prepared as described below.
+Edit the generator in `campaigns.py` and run it to update tracked manifests.
+The extensions cover four sizes, double, independent four-channel banks,
+non-divisible hops, rate, load, cache pressure, startup/live changes, callback
+size, analyzer count/alignment, and callback-origin offsets. They do not form
+an unrestricted Cartesian product. Final matrix reductions require a recorded
+rationale after the pilot.
+
+Run only a short implementation smoke check at this stage:
+
+```shell
+python3 benchmark/paper/run.py .build/paper-fr10-smoke --config benchmark/paper/configs/external-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --host-id apple-silicon-validation --session-id fr10-smoke
+python3 benchmark/paper/check.py .build/paper-fr10-smoke
+```
+
+Manifest pilot/extensions runs default to phase `pilot`; legacy arrays and
+smoke manifests default to `smoke`. `--phase confirmation` labels a frozen
+final configuration. Non-smoke execution requires explicit `--host-id` and
+`--session-id`; smoke manifests cannot be relabeled as publication evidence.
+Use a stable host identity and distinct labels for actual independent
+sessions. Record power, thermal state, host activity and ordering context in
+`--notes`. Labels alone cannot prove independence. The matrix inventory and
+input configuration hash are archived with every campaign. Publication
+measurements, including the pilot, remain FR-11 work.
+
+Generate checked evidence tables and scientific SVG/PNG figures in a separate,
+new directory. Matplotlib is an optional reporting dependency, isolated from
+the plugin and benchmark executable:
+
+```shell
+python3 -m venv .build/paper-report-env
+.build/paper-report-env/bin/python -m pip install -r benchmark/paper/report-requirements.txt
+.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr10-smoke --output .build/paper-fr10-report --phase smoke
+.build/paper-report-env/bin/python -m unittest discover -s benchmark/paper -p 'test_*.py'
+```
+
+`--no-plots` generates tables/JSON with standard Python alone. The optional
+plot fixture checks byte-identical SVG/PNG output in one plotting environment;
+font/runtime differences across environments are not a reproducibility claim.
+`results.csv` contains workload, cost, channel, age, storage and error fields;
+`implementations.csv` joins native setup/storage/numerical evidence with source
+and dependency provenance. `evidence.json` retains every process summary,
+timer control, raw-data hash, numerical report and figure membership.
+`report.md` explains interpretation and `manifest.json` hashes generated files.
+The generator itself is hashed. Unknown native memory stays unknown.
+
+Report generation validates input artifacts first, rejects mixed evidence
+phases and duplicate workloads within a session, and separates host/source/
+dependency/build identities, precision, family, operation and channel contract.
+It requires three labeled sessions per workload for confirmation reports.
+Costs average processes within sessions, then weight sessions equally;
+vertical ranges show observed session means, not confidence intervals.
+Callback CDFs remain per-process; quantiles, maxima, observation counts and
+windows remain in JSON. Curves use a deterministic grid of at most 4096
+points, while raw observations remain archived. Cost/age panels distinguish
+spectrum-center age, inverse publication delay and chain sample delivery.
+Callback-end visibility is retained separately. Simulated budget exceedances
+are not device underruns, and observed maxima are not WCET bounds.
+
+The independent bank adapters `core-independent4-float`,
+`core-independent4-simd`, and `{pffft,fftw,vdsp}-analysis4-float` feed exactly
+four distinct deterministic channel streams to four scalar instances or one
+SIMD instance. Fixtures are precomputed outside resource/timing probes. Every
+published bin of every channel is checked against independent recomputation,
+including smoothing/live changes. `count` counts banks, so `count=4` means 16
+independent channels. Resource probes describe one bank. The older
+`core-simd4` scaled-lane control remains separate from these comparisons.
+Existing scalar core/legacy analysis retains its preflight checks; reports
+explicitly mark its absent per-run numerical summary instead of inventing an
+error value. All of this code remains under `benchmark/`.
+
 ## Shared Adapter Contracts
 
 [`backends.json`](backends.json) is the canonical capability registry. Python
@@ -321,9 +418,12 @@ python3 benchmark/paper/run.py .build/paper-focused --config .build/paper-worklo
 `pass_name` is `callback` or `throughput` for streaming adapters and `complete`,
 `incremental`, `phases`, or `steps` for transforms. Other overrides are `count`,
 `alignment` (`aligned`/`staggered`), `load`, `smooth` (0/1), `voices`, `rate`,
-`state` (`steady`/`startup`/`live`), and `cache_mib`. Spectre accepts only its
+`state` (`steady`/`startup`/`live`), `cache_mib`, and `callback_offset`. Spectre accepts only its
 actual N=2048/H=1024. Fourier rejects requested hops that panel conversion
-changes. Startup is aligned; other states permit offsets of floor(aH/count).
+changes. Startup requires aligned analyzers and zero callback offset. Other
+states permit a common offset in [0,H), plus floor(aH/count) for staggered
+analyzers. Protocol v2 appends that common offset to the executable arguments;
+v1 and archived configurations without it retain zero-offset semantics.
 Counts, capacities, and CLI values are validated before measurement.
 
 ## Inverse And End-To-End Baselines

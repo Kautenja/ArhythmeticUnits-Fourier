@@ -34,7 +34,7 @@ def validate_rows(path, config, registry=None):
             if row["kind"] != "publication":
                 continue
             analyzer, sample = int(row["analyzer"]), int(row["sample"])
-            offset = analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0
+            offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
             if not 0 <= analyzer < config["count"] or not 0 <= sample < config["callbacks"]*block:
                 raise ValueError("Publication index outside workload")
             if (sample+offset)%hop != delay or (analyzer in previous and sample-previous[analyzer] != hop):
@@ -53,7 +53,7 @@ def validate_rows(path, config, registry=None):
         expected[mode] = frames if mode == "callback" else 1
         if contract["boundary"] != "control":
             for analyzer in range(config["count"]):
-                offset = analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0
+                offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
                 bias = hop-1-delay
                 count = (frames*block+offset+bias)//hop-(offset+bias)//hop
                 if publications[analyzer] != count:
@@ -79,7 +79,7 @@ def validate_synthesis_accuracy(accuracy, config, publications, registry=None):
     contract = resolve_contract(config, registry)
     playback = (config["callbacks"]*config["block"]*config["count"]
                 if contract["boundary"] == "chain" else 0)
-    expected = playback + publications*contract["outputs_per_channel"]
+    expected = playback + publications*contract["outputs_per_channel"]*contract["channels"]
     tolerance = (3e-4 if contract["boundary"] == "analysis" else 2e-5) if contract["precision"] == "float" else 1e-10
     error, scale = accuracy["max_abs_error"], accuracy["max_reference"]
     if (not all(math.isfinite(v) and v >= 0 for v in (error, scale))
@@ -115,6 +115,18 @@ def validate_resources(resource):
 
 
 def validate_provider_info(info, descriptor):
+    if descriptor["kind"] == "analysis4":
+        simd = descriptor["id"] == "core-independent4-simd"
+        native = info.get("native_instances", [])
+        if (info.get("input_contract") != "independent-four-v1"
+                or info.get("scalar_instances") != (0 if simd else 4) or len(native) != (0 if simd else 4)):
+            raise ValueError("Missing independent four-channel evidence")
+        if descriptor["provider"] != "fourier":
+            for child in native:
+                validate_provider_info(child, dict(descriptor, kind="external", channels=1))
+        elif any(child is not None for child in native):
+            raise ValueError("Unexpected first-party native provider")
+        return
     expected = {"pffft": "rack-pffft", "fftw": "fftw", "vdsp": "Apple Accelerate/vDSP"}
     if not isinstance(info, dict) or info.get("provider") != expected[descriptor["provider"]]:
         raise ValueError("Missing or wrong native provider identity")
@@ -196,6 +208,17 @@ def check(directory):
                 registry = normalize_registry(document, metadata.get("build_features", ()))
     if registry != json.loads((directory/"inventory.json").read_text()):
         raise ValueError("Compiled registry differs from archived source")
+    if "matrix_inventory" in metadata:
+        from campaigns import inventory
+        if inventory(metadata["configs"], registry) != metadata["matrix_inventory"]:
+            raise ValueError("Resolved matrix inventory mismatch")
+        if metadata.get("phase") not in ("smoke", "pilot", "confirmation"):
+            raise ValueError("Missing evidence phase")
+        if not metadata.get("host_id") or not metadata.get("session_id"):
+            raise ValueError("Missing measurement host/session")
+        manifest = metadata.get("campaign_manifest")
+        if manifest and manifest["phase"] == "smoke" and metadata["phase"] != "smoke":
+            raise ValueError("Smoke matrix mislabeled as publication evidence")
     keys = {str(i) for i in range(len(metadata["configs"]))}
     if set(metadata["contracts"]) != keys or set(metadata["resources"]) != keys:
         raise ValueError("Missing workload contracts/resources")
@@ -214,7 +237,7 @@ def check(directory):
             raise ValueError("Evidence contract mismatch")
         resource = json.loads((directory/metadata["resources"][str(index)]).read_text())
         validate_resources(resource)
-        if registry[config["backend"]]["kind"] in ("external", "scheduled-analysis"):
+        if registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4"):
             for label in ("timing", "allocation"):
                 validate_provider_info(resource[label]["provider_info"], registry[config["backend"]])
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
@@ -230,7 +253,7 @@ def check(directory):
         validate_rows(directory/run["raw"], config, registry)
         if summarize(directory/run["raw"], config) != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
-        external = registry[config["backend"]]["kind"] in ("external", "scheduled-analysis")
+        external = registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4")
         if external:
             report = json.loads((directory/run["stderr"]).read_text())
             if len(report["provider_instances"]) != config["count"]:

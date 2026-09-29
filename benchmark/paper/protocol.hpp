@@ -37,6 +37,7 @@ struct Config {
     float rate;
     bool smooth;
     bool resources = false;
+    size_t callback_offset = 0;
 };
 
 /// @brief Common float input bytes across precisions, lanes and backend families.
@@ -120,7 +121,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     auto prepare = [&](std::vector<std::unique_ptr<Adapter>>& bank, std::vector<size_t>& cursors) {
         for (size_t a = 0; a < c.count; ++a) {
             bank.emplace_back(new Adapter(c));
-            const size_t offset = c.alignment == "staggered" ? a*c.hop/c.count : 0;
+            const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
             const size_t warm = c.state == "startup" ? 0 :
                 ((c.n+c.hop-1)/c.hop + c.warm_hops)*c.hop;
             cursors.push_back(warm+offset);
@@ -183,7 +184,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
                 bank[a]->process(input[cursors[a]++%input.size()]);
                 audit(*bank[a], input, cursors[a]-1);
                 if (!bank[a]->published()) continue;
-                const size_t offset = c.alignment == "staggered" ? a*c.hop/c.count : 0;
+                const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
                 const size_t delay = bank[a]->delay();
                 require(delay == contract.delay, "Adapter delay differs from registered contract");
                 require((s+offset)%c.hop == delay, "Publication phase differs from contract");
@@ -198,7 +199,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             }
         }
         for (size_t a = 0; a < bank.size(); ++a) {
-            const size_t offset = c.alignment == "staggered" ? a*c.hop/c.count : 0;
+            const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
             const size_t bias = c.hop-1-bank[a]->delay();
             require(publications[a] == (total+offset+bias)/c.hop-(offset+bias)/c.hop, "Missing publications");
             bank[a]->check();

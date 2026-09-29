@@ -56,7 +56,7 @@ struct Core {
         settings.alpha = c.smooth ? 0.8f : 0.f;
         require(analysis.configure(settings), "Core settings rejected");
     }
-    void process(float input) {
+    void process_value(T input) {
         if (live && analysis.is_frame_start()) {
             // Rebuild both caches every frame, retaining the requested cadence.
             settings.window = frames++%2 ? Fourier::Window::Function::Hann
@@ -64,12 +64,13 @@ struct Core {
             settings.octave = frames%2 ? 0.f : 1.f/3.f;
             analysis.configure(settings);
         }
-        complete = analysis.process(lanes<T>(input), [this](size_t bin, T magnitude) {
+        complete = analysis.process(input, [this](size_t bin, T magnitude) {
             output[bin] = magnitude;
         });
     }
+    void process(float input) { process_value(lanes<T>(input)); }
     size_t delay() const { return settings.hop-1; }
-    bool published() { return complete; }
+    bool published() const { return complete; }
     void barrier() const { observe(output.data()); }
     void check() const {
         double total = 0;
@@ -464,6 +465,8 @@ size_t integer(const char* value) {
 }
 }  // namespace Paper
 
+#include "../paper/channels.hpp"
+
 int main(int argc, char** argv) {
     using namespace Paper;
     try {
@@ -482,6 +485,7 @@ int main(int argc, char** argv) {
             verify_synthesis<double>();
             verify_external<float, PffftBackend>("pffft", "float");
             verify_hybrid<PffftBackend>();
+            verify_channels();
 #ifdef PAPER_HAVE_VDSP
             verify_external<float, VdspBackend<float>>("vdsp", "float");
             verify_external<double, VdspBackend<double>>("vdsp", "double");
@@ -498,14 +502,14 @@ int main(int argc, char** argv) {
             std::cout << registry_json << '\n'; return 0;
         }
         bool describe = false, resources = false, provider_info = false;
-        if (argc == 18) {
+        if (argc > 2 && std::string(argv[1]).substr(0, 2) == "--") {
             describe = std::string(argv[1]) == "--describe";
             resources = std::string(argv[1]) == "--resources";
             provider_info = std::string(argv[1]) == "--provider-info";
             require(describe || resources || provider_info, "Unknown command");
             --argc; ++argv;
         }
-        require(argc == 17, "Use benchmark/paper/run.py; expected 16 protocol arguments");
+        require(argc == 17 || argc == 18, "Use benchmark/paper/run.py; expected v1 or v2 protocol arguments");
         Config c;
         c.backend = argv[1]; c.pass = argv[2]; c.n = integer(argv[3]); c.hop = integer(argv[4]);
         c.block = integer(argv[5]); c.count = integer(argv[6]); c.alignment = argv[7];
@@ -515,7 +519,9 @@ int main(int argc, char** argv) {
         c.smooth = smooth; c.voices = integer(argv[10]);
         c.callbacks = integer(argv[11]); c.warm_hops = integer(argv[12]); c.rate = integer(argv[13]);
         c.state = argv[14]; c.cache_mib = integer(argv[15]);
-        require(std::string(argv[16]) == "v1", "Unknown protocol version");
+        require((argc == 17 && std::string(argv[16]) == "v1")
+            || (argc == 18 && std::string(argv[17]) == "v2"), "Unknown protocol version");
+        c.callback_offset = argc == 18 ? integer(argv[16]) : 0;
         require(c.n >= 128 && c.n <= 16384 && !(c.n & (c.n-1)) && c.hop && c.hop <= 65536,
             "Invalid FFT length or hop");
         require(c.block && c.block <= 65536 && c.count && c.count <= 64 && c.callbacks
@@ -529,9 +535,18 @@ int main(int argc, char** argv) {
         c.resources = resources;
         const auto& descriptor = backend_descriptor(c.backend);
         const std::string kind(descriptor.kind), precision(descriptor.precision);
-        require(!provider_info || kind == "external" || kind == "scheduled-analysis", "Provider metadata is only available for external adapters");
+        require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
         Paper::Context context(c.rate);
-        if (kind == "scheduled-analysis") hybrid_dispatch<float, PffftBackend>(c, provider_info);
+        if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
+        else if (c.backend == "core-independent4-float") channel_stream<ScalarChannels<Core<float>>>(c, provider_info);
+        else if (c.backend == "pffft-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, PffftBackend>>>(c, provider_info);
+#ifdef PAPER_HAVE_FFTW
+        else if (c.backend == "fftw-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, FftwBackend<float>>>>(c, provider_info);
+#endif
+#ifdef PAPER_HAVE_VDSP
+        else if (c.backend == "vdsp-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, VdspBackend<float>>>>(c, provider_info);
+#endif
+        else if (kind == "scheduled-analysis") hybrid_dispatch<float, PffftBackend>(c, provider_info);
         else if (std::string(descriptor.provider) == "pffft") external_dispatch<float, PffftBackend>(c, provider_info);
 #ifdef PAPER_HAVE_FFTW
         else if (std::string(descriptor.provider) == "fftw") {

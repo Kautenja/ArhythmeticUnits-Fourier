@@ -18,7 +18,8 @@ semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
-FR-10's final campaign/report tooling remains the next required stage.
+FR-10's campaign/report tooling is implemented and smoke-validated. FR-11's
+prepared-host pilot is the next required stage.
 Implementation smoke checks do not constitute publication comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
@@ -464,15 +465,15 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 
 ### FR-10: Campaign And Report Tooling
 
-- [ ] Add tracked `external-smoke.json` and `external-pilot.json` configurations
+- [x] Add tracked `external-smoke.json` and `external-pilot.json` configurations
     with explicit supported backends per host. Resolve and report workload
     counts, matched controls, independent channel counts, and family constraints.
-- [ ] Implement the focused extension sweeps described below, including the
+- [x] Implement the focused extension sweeps described below, including the
     hybrid, four-channel SIMD comparison, and supported double workloads.
-- [ ] Supply deterministic table/figure generation with fixture-based checks
+- [x] Supply deterministic table/figure generation with fixture-based checks
     for numerical, provenance, storage, workload, latency, and uncertainty
     outputs. Smoke data must remain clearly labeled and outside paper results.
-- [ ] Record exact reproduction commands and supply the tooling evidence for
+- [x] Record exact reproduction commands and supply the tooling evidence for
     the readiness gate below. Final counts/durations remain pilot decisions.
 
 ### FR-11: Final Metric Gathering
@@ -574,7 +575,7 @@ Before FR-11 starts, FR-1 through FR-6 and FR-10 must be complete, and each
 optional FR must either pass both steps or have a recorded deferral. FR-7
 through FR-9 now satisfy this decision requirement through the
 [recorded deferrals](#optional-contender-decision); they are not implemented.
-FR-10 remains required before measurement. Require independent correctness
+FR-10 now supplies the campaign/report tooling evidence below. Require independent correctness
 checks, supported-host builds, verified smoke artifacts, resolved workload
 inventories, explicit dependency/setup/storage/latency
 contracts, and tested report generation. No speedup or final metric is needed
@@ -644,11 +645,11 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
     numerical and matched analysis/inverse/complete-chain checks on supported
     hosts; unavailable cases are explicit. Required output normalization is
     included in cost.
-- [ ] FR-2 and FR-10: Dependency/setup/storage/publication contracts and exact
+- [x] FR-2 and FR-10: Dependency/setup/storage/publication contracts and exact
     reproduction commands are documented. Archived artifacts identify measured
     sources, libraries, flags, workloads, and numerical checks without relying
     on HEAD.
-- [ ] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
+- [x] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
     outputs, wrong publication age, unsupported configurations, altered
     dependencies, duplicate/missing runs, and invalid timing values.
 - [ ] FR-11: A retained pilot justifies the final matrix, repetitions, session
@@ -716,24 +717,20 @@ workloads; the synthesis factor profile contains 216 streaming workloads.
 Its controls require no analyzer settings and reject live-window/smoothing
 options. Resolve feasible H/N combinations per family before measurement.
 
-The implementation must add tracked `external-smoke.json` and
-`external-pilot.json` under `benchmark/paper/configs/`, with explicit supported
-backends per host. Those files do not exist yet. Once supplied, these are the
-required implementation smoke and inventory commands; output directories must
-be new. Listing the pilot resolves workloads without measuring them:
+FR-10 supplies tracked smoke, pilot, and extension manifests under
+`benchmark/paper/configs/`. The
+[protocol README](../benchmark/paper/README.md#external-campaigns-and-reports)
+provides current variant-specific commands, dependency prerequisites and
+resolved counts. Listing the pilot does not measure it. For the full macOS
+variant, with the documented FFTW prefix already prepared:
 
 ```shell
-python3 benchmark/paper/run.py .build/paper-external-smoke --config benchmark/paper/configs/external-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py .build/paper-external-smoke
-python3 benchmark/paper/run.py .build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json --list
+python3 benchmark/paper/run.py --config benchmark/paper/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
 ```
 
-Only in FR-11, after the readiness gate and host preparation, run the pilot:
-
-```shell
-python3 benchmark/paper/run.py .build/paper-external-pilot --config benchmark/paper/configs/external-pilot.json
-python3 benchmark/paper/check.py .build/paper-external-pilot
-```
+Only in FR-11, after the readiness gate and host preparation, run the pilot
+using explicit host/session identities, observation lengths, and host notes.
+Its retained evidence determines the frozen confirmation settings.
 
 Document dependency installation/build commands when versions and integration
 are selected, and record actual host notes with each campaign. Before the final
@@ -1076,6 +1073,83 @@ speedup, tail-latency ranking, or device deadline claim. External adapters,
 the hybrid comparison, statistically justified campaigns, and publication
 figures remain open. No production DSP algorithm or plugin behavior was
 changed for this baseline work.
+
+## FR-10 Implementation Evidence
+
+September 29, 2026: Campaign and reporting tooling is implemented under
+`benchmark/`, with no production DSP, module, UI, or plugin dependency changes.
+The [protocol commands](../benchmark/paper/README.md#external-campaigns-and-reports)
+define reproduction, host variants, evidence phases, and statistical limits.
+
+-   Generated smoke/pilot/extensions manifests resolve 156/270/537 workloads
+    for `rack`, 206/339/706 for `portable`, and 256/408/875 for `macos`, before
+    repetition. These are inventories, not publication measurements. Missing
+    requested optional libraries fail; provider omissions are explicit.
+-   Extension paths include the hybrid, four independent channels, supported
+    double workloads, callback-origin offsets, non-divisible hops, sample rate,
+    callback size, load, cache, startup/live changes, and analyzer alignment.
+    The new SIMD and scalar banks consume identical independent channel bytes
+    and validate every published channel/bin against independent references.
+    Existing scaled-lane controls retain their separate meaning.
+-   The v2 invocation carries a common callback offset independently of analyzer
+    staggering. v1 and archived configurations retain zero-offset semantics.
+    Startup and isolated transforms reject incompatible offsets.
+-   Reports validate archived artifacts before creating workload/cost/age/error/
+    storage tables, implementation/provenance tables, cost-versus-N figures,
+    per-process callback CDFs, and family-specific cost/age panels. They retain
+    raw-data hashes, timing summaries, native plans, numerical evidence, counts,
+    observation windows, and generator/output hashes.
+-   Host/source/dependency/build strata, precisions, operations and independent
+    channel contracts remain separate. Session means receive equal weight;
+    observed session ranges are descriptive, not confidence intervals.
+    Confirmation reports require at least three labeled sessions per workload;
+    duplicate workloads in one session and mixed evidence phases fail.
+-   Native allocation unknowns remain unknown. Existing scalar core/legacy
+    analysis has preflight numerical coverage rather than per-run error reports;
+    those report cells explicitly remain unavailable. New independent banks
+    and external analysis retain all-output numerical replay evidence.
+
+Validation performed on Apple Silicon/macOS:
+
+-   `.build/paper-report-env/bin/python -m unittest discover -s benchmark/paper
+    -p 'test_*.py'`: all 34 tests passed, including host variants, missing-feature
+    rejection, equal-channel counts, offset cadence, provenance separation,
+    session weighting, phase rejection, and byte-identical fixture figures.
+    The four report tests passed again after final reporting refinements.
+-   `python3 benchmark/paper/campaigns.py --check`: passed. The README's
+    `--describe-matrix` command resolves 408 pilot workloads; the same command
+    with `external-extensions.json` resolves 875. These commands only list work.
+-   The exact 256-workload smoke command in the protocol README passed,
+    including the forced optional-provider benchmark builds and native
+    preflight. Artifacts are retained in `.build/paper-fr10-smoke` with 109
+    analysis, 38 inverse-job, 76 complete-chain, and 33 transform runs.
+    Numerical replay records 1464 publications and 364111 checked output values,
+    including 20352 playback samples. First-party transform selected-bin checks
+    have their own reports and are additional to these replay counts.
+-   `python3 benchmark/paper/check.py .build/paper-fr10-smoke`: verified all 256
+    runs, archived sources/dependencies, summaries, contracts, resources and
+    hashes. The same command on `.build/paper-fr6-hybrid-final` verified its 120
+    historical v1 runs without rewriting that archive.
+-   `.build/paper-report-env/bin/python benchmark/paper/report.py
+    .build/paper-fr10-smoke --output .build/paper-fr10-report-final --phase smoke`:
+    generated 256 evidence rows and 75 SVG/PNG figure pairs. Representative
+    analysis, independent-channel, inverse, complete-chain and cost-versus-N
+    panels were visually inspected. Data and plots prominently remain SMOKE;
+    none were copied into manuscript results. The report records its final
+    generator hash and plotting environment independently of campaign sources.
+-   `make check-build`: all five build-isolation tests passed. `make -j2` built
+    the Rack plugin. `make -C docs/whitepaper check` passed the historical
+    artifact, citation, numerical-table and plot checks. Documentation links
+    and `git diff --check` passed. No interactive Rack session was performed.
+
+Existing SDK deprecation warnings and FFTW's macOS deployment-target linker
+warnings remain. Optional plotting dependencies emit upstream pyparsing
+warnings but tests and figure generation pass. Native execution was checked
+on this ARM64 macOS host only; other host variants were resolved and validated
+as configurations, not measured or rebuilt on other hardware.
+No pilot, confirmation measurement, cross-architecture result, or paper ranking
+is produced by this stage. FR-11 must select durations/repetitions from its
+retained pilot and run on prepared hosts. FR-12 integrates final evidence.
 
 [rack-fft]: https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp
 [fftw-real]: https://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html

@@ -20,13 +20,14 @@ import tarfile
 
 from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, validate_config
 from dependencies import fftw_inputs
+from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
 
 ROOT = Path(__file__).resolve().parents[2]
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
                  ".build/benchmark/rack/paper")
 BASE = dict(backend="core-float", pass_name="callback", n=2048, hop=1024,
             block=64, count=1, alignment="aligned", load=0, smooth=0, voices=1,
-            rate=48000, state="steady", cache_mib=0)
+            rate=48000, state="steady", cache_mib=0, callback_offset=0)
 
 
 def workload(**changes):
@@ -110,7 +111,7 @@ def synthesis_matrix(smoke):
 def command(config):
     keys = ("backend", "pass_name", "n", "hop", "block", "count", "alignment", "load",
             "smooth", "voices", "callbacks", "warm_hops", "rate", "state", "cache_mib")
-    return [str(BINARY)] + [str(config[key]) for key in keys] + ["v1"]
+    return [str(BINARY)] + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
 
 
 def digest(path):
@@ -178,6 +179,11 @@ def main():
     parser.add_argument("--inventory", action="store_true", help="List capabilities, including unavailable adapters")
     parser.add_argument("--fftw-prefix", type=Path, help="Enable optional serial float/double FFTW static libraries")
     parser.add_argument("--enable-vdsp", action="store_true", help="Enable macOS Accelerate/vDSP research adapters")
+    parser.add_argument("--variant", help="Explicit host variant for a campaign manifest: rack, portable, macos")
+    parser.add_argument("--describe-matrix", action="store_true", help="Resolved counts, channel contracts and configurations")
+    parser.add_argument("--phase", choices=("smoke", "pilot", "confirmation"), help="Evidence classification; defaults to smoke")
+    parser.add_argument("--session-id", default="", help="Independent measurement session label; required outside smoke")
+    parser.add_argument("--host-id", default="", help="Physical measurement host label; required outside smoke")
     args = parser.parse_args()
     features, external_inputs = [], {}
     if args.fftw_prefix:
@@ -195,15 +201,30 @@ def main():
     if args.inventory:
         print(json.dumps(registry, indent=2, sort_keys=True))
         return
-    if args.output is None:
+    if args.output is None and not (args.list or args.describe_matrix):
         parser.error("An output directory is required")
     if min(args.repeats, args.hops, args.frames, args.step_frames) < 1 or args.warm_hops < 0:
         parser.error("Counts must be positive and warmup nonnegative")
     if args.hops < 2:
         parser.error("At least two measured hops are required")
     configs = matrix(args.profile)
+    manifest = None
     if args.config:
-        configs = [workload(**item) for item in json.loads(args.config.read_text())]
+        document = json.loads(args.config.read_text())
+        if isinstance(document, dict):
+            try:
+                configs, manifest = resolve_campaign(document, args.variant, registry, platform.system(), BASE)
+            except (ValueError, KeyError) as error:
+                parser.error(str(error))
+        else:
+            if args.variant:
+                parser.error("--variant requires a campaign manifest")
+            configs = [workload(**item) for item in document]
+    phase = args.phase or ("pilot" if manifest and manifest["phase"] != "smoke" else "smoke")
+    if manifest and manifest["phase"] == "smoke" and phase != "smoke":
+        parser.error("Smoke configurations cannot become publication evidence")
+    if not (args.list or args.describe_matrix) and phase != "smoke" and not (args.session_id and args.host_id):
+        parser.error("Pilot/confirmation requires explicit --host-id and --session-id")
     for config in configs:
         if config.keys() - set(BASE):
             parser.error("Unknown workload keys: " + str(config.keys() - set(BASE)))
@@ -223,8 +244,9 @@ def main():
         parser.error("Duplicate workload configuration")
     if not configs:
         parser.error("Empty workload matrix")
-    if args.list:
-        print(json.dumps(configs, indent=2))
+    if args.list or args.describe_matrix:
+        result = dict(campaign=manifest, phase=phase, inventory=campaign_inventory(configs, registry), configs=configs) if args.describe_matrix else configs
+        print(json.dumps(result, indent=2))
         return
     output = args.output.resolve()
     if any(base == output or base in output.parents for base in (ROOT/"src", ROOT/"benchmark", ROOT/".git")):
@@ -242,8 +264,14 @@ def main():
                     python=platform.python_version(), cpu_count=os.cpu_count(),
                     compiler=capture(shlex.split(args.cxx)+["--version"]), build_command=build,
                     rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
-                    protocol="v1", configs=configs, runs=[], build_features=features,
+                    protocol="v2", configs=configs, runs=[], build_features=features,
                     external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
+    metadata["phase"] = phase
+    metadata["session_id"] = args.session_id or "smoke"
+    metadata["host_id"] = args.host_id or "unlabeled-smoke-host"
+    metadata["campaign_manifest"] = manifest
+    metadata["matrix_inventory"] = campaign_inventory(configs, registry)
+    metadata["config_file_sha256"] = digest(args.config) if args.config else None
     metadata["contracts"] = {str(i): resolve_contract(c, registry) for i, c in enumerate(configs)}
     metadata["resources"] = {}
     if args.enable_vdsp:

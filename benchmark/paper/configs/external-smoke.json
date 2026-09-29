@@ -1,0 +1,1688 @@
+{
+  "schema": 1,
+  "phase": "smoke",
+  "variants": {
+    "rack": {
+      "systems": [
+        "Darwin",
+        "Linux",
+        "Windows"
+      ],
+      "features": [],
+      "providers": [
+        "fourier",
+        "pffft"
+      ]
+    },
+    "portable": {
+      "systems": [
+        "Darwin",
+        "Linux",
+        "Windows"
+      ],
+      "features": [
+        "fftw"
+      ],
+      "providers": [
+        "fourier",
+        "pffft",
+        "fftw"
+      ]
+    },
+    "macos": {
+      "systems": [
+        "Darwin"
+      ],
+      "features": [
+        "fftw",
+        "vdsp"
+      ],
+      "providers": [
+        "fourier",
+        "pffft",
+        "fftw",
+        "vdsp"
+      ]
+    }
+  },
+  "workloads": [
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "rfft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "ifft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-fft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-rfft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-ifft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-fft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-rfft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-ifft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-fft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-rfft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-ifft-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "core-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "legacy-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "legacy-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-analysis-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-analysis-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "inverse-stream-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "inverse-stream-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-inverse-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-inverse-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-identity-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-identity-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-ols-identity-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-ols-identity-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-fir-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "ols-fir-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "fftw-ols-fir-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "callback",
+      "backend": "vdsp-ols-fir-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "core-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "legacy-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "legacy-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-analysis-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-analysis-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "inverse-stream-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "inverse-stream-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-inverse-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-inverse-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-identity-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-identity-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-ols-identity-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-ols-identity-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-fir-batch-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "ols-fir-incremental-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "fftw-ols-fir-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "throughput",
+      "backend": "vdsp-ols-fir-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "rfft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "ifft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-fft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-rfft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-ifft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-fft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-rfft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-ifft-double"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "callback_offset": 17,
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "startup",
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "count": 4,
+      "alignment": "staggered",
+      "load": 8,
+      "cache_mib": 1,
+      "callback_offset": 9,
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "core-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 128,
+      "hop": 37,
+      "state": "live",
+      "smooth": 1,
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "core-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "core-independent4-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "core-independent4-simd"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "pffft-analysis4-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "fftw-analysis4-float"
+    },
+    {
+      "n": 2048,
+      "hop": 257,
+      "smooth": 1,
+      "backend": "vdsp-analysis4-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "core-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "legacy-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "legacy-incremental-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "fftw-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "vdsp-analysis-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-scheduled-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-hybrid-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "inverse-stream-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "inverse-stream-incremental-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-inverse-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "fftw-inverse-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "vdsp-inverse-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "ols-identity-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "ols-identity-incremental-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-ols-identity-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "fftw-ols-identity-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "vdsp-ols-identity-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "ols-fir-batch-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "ols-fir-incremental-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "pffft-ols-fir-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "fftw-ols-fir-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "backend": "vdsp-ols-fir-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "rfft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "ifft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-fft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-rfft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "pffft-ifft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-fft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-rfft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "fftw-ifft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-fft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-rfft-float"
+    },
+    {
+      "n": 2048,
+      "hop": 37,
+      "pass_name": "complete",
+      "backend": "vdsp-ifft-float"
+    }
+  ]
+}
