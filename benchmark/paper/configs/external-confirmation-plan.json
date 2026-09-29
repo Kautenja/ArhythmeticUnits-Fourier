@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "host": "m1-pro-16gb-local",
+  "scope": "same-day M1 Pro/macOS; no cross-architecture or device-deadline claims",
+  "sessions": 3,
+  "process_repeats": 3,
+  "frames": 1024,
+  "warm_hops": 64,
+  "session_quiet_seconds": 180,
+  "session_orders": [
+    [
+      "primary",
+      "extensions",
+      "short-hop",
+      "single-sample"
+    ],
+    [
+      "short-hop",
+      "single-sample",
+      "primary",
+      "extensions"
+    ],
+    [
+      "extensions",
+      "primary",
+      "single-sample",
+      "short-hop"
+    ]
+  ],
+  "groups": {
+    "primary": {
+      "config": "benchmark/paper/configs/external-confirmation-primary.json",
+      "sha256": "b02a5096c6ec17d2923f27304c9d2a6d69ec5b3493db90d2b2a287dd03073b0d",
+      "workloads": 408,
+      "hops": 2048
+    },
+    "extensions": {
+      "config": "benchmark/paper/configs/external-confirmation-extensions.json",
+      "sha256": "4d245597100079a2e4b68391112de474b84b70ee3bab2ec5368344a3235b0a66",
+      "workloads": 719,
+      "hops": 512
+    },
+    "short-hop": {
+      "config": "benchmark/paper/configs/external-confirmation-short-hop.json",
+      "sha256": "4bf7b00415e2243c768e6a92cde886c796e5caf4d6c6042b0e3f82dadd088afe",
+      "workloads": 110,
+      "hops": 4096
+    },
+    "single-sample": {
+      "config": "benchmark/paper/configs/external-confirmation-single-sample.json",
+      "sha256": "9b19c9ed74cc39ab0adf5c9e3b2e83bf3ede96e2000790d9b18286f668d6fa66",
+      "workloads": 46,
+      "hops": 64
+    }
+  }
+}

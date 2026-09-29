@@ -18,9 +18,12 @@ semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
-FR-10's campaign/report tooling is implemented and smoke-validated. FR-11 has
-started; its initial numerical acceptance issue, provisional coverage, and
-versioned policy correction are recorded under
+FR-10's campaign/report tooling is implemented and smoke-validated. FR-11 is
+complete: all 11547 confirmation processes passed across three prepared M1 Pro
+sessions, with validated tables, figures, and matched attribution under
+[confirmation evidence](#fr-11-confirmation-evidence). FR-12 manuscript
+integration remains outstanding. The initial numerical acceptance issue,
+provisional coverage, and versioned policy correction remain recorded under
 [pilot evidence](#fr-11-pilot-evidence).
 Implementation smoke checks do not constitute publication comparison evidence.
 
@@ -483,13 +486,13 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 - [x] After the readiness gate passes, prepare otherwise idle measurement
     hosts and record power/thermal conditions, host activity, toolchain,
     dependency identity, and session/order policy. Build before timed passes.
-- [ ] Run and retain the focused pilot below for all included candidates and
+- [x] Run and retain the focused pilot below for all included candidates and
     controls. Use variability, timer resolution, and tail-event counts to
     justify the final matrix, repetitions, session count, and duration.
-- [ ] Freeze the confirmation configurations and exact commands, then run
+- [x] Freeze the confirmation configurations and exact commands, then run
     serially across independent sessions with all artifact checks passing.
     Preserve cases favoring batch and report missing hardware explicitly.
-- [ ] Collect the required cost, tail, storage, error, completion/publication,
+- [x] Collect the required cost, tail, storage, error, completion/publication,
     and sample-delivery metrics. Generate validated reports without conflating
     workload families, time origins, or simulated deadlines with device data.
 
@@ -654,13 +657,13 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 - [x] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
     outputs, wrong publication age, unsupported configurations, altered
     dependencies, duplicate/missing runs, and invalid timing values.
-- [ ] FR-11: A retained pilot justifies the final matrix, repetitions, session
+- [x] FR-11: A retained pilot justifies the final matrix, repetitions, session
     count, and observation duration. A frozen confirmation campaign follows the
     pilot; cases favoring batch processing remain in the reported matrix.
-- [ ] FR-6 and FR-11: The hybrid comparison separates the practical value of
+- [x] FR-6 and FR-11: The hybrid comparison separates the practical value of
     suspending the FFT from scheduling the surrounding work, with remaining
     confounds stated.
-- [ ] FR-10 and FR-11: Generated outputs include an
+- [x] FR-10 and FR-11: Generated outputs include an
     implementation/provenance/error/storage table; matched workload/cost/age
     table; transform and full-analysis cost versus N; callback tail
     distributions; and cost versus spectrum-age plots. Inverse and
@@ -1380,6 +1383,276 @@ extensions, independent-session variability, frozen confirmation settings and
 confirmation campaigns remain. The restored pilot is not pooled with older
 sources/policies and is not substituted for confirmation. No benchmark remains
 running at the end of this work.
+
+## FR-11 Confirmation Freeze
+
+September 29, 2026: committed numerical-policy resolution as `ef7beca`.
+The complete 875-workload extension pilot then passed all 2625 runs and
+artifact checks in `.build/paper-fr11-extension-pilot`. Its preparation
+snapshot is `.build/paper-fr11-host/pre-extensions.json`: M1 Pro/16 GiB,
+macOS 26.6.2, AC power at 100%, Low Power Mode off, no recorded thermal or
+performance warnings. No CPU affinity or real-time scheduling is imposed;
+macOS scheduling, core selection, frequency and ordinary services remain
+possible timing confounds. Warning snapshots are not temperature traces.
+
+The restored primary pilot's median/p90/worst within-session max/min process
+mean-cost ratios were 1.01072/1.05975/4.18315; the extension pilot's were
+1.01307/1.05992/3.69148. Large outliers remain in the data. Their presence
+supports longer windows, randomized order, three process repeats and separate
+measurement sessions, rather than trimming results or reporting tight error
+bars. Timer p99 was 42 ns throughout both pilots; quantization matters for
+very short calls and is never mechanically subtracted.
+
+The frozen [plan](../benchmark/paper/configs/external-confirmation-plan.json)
+retains all 408 primary and all 875 extension workloads, partitioned solely by
+observation-length requirements. Its four configuration hashes are fixed before
+confirmation. Each of three sessions uses three process repeats, 64 warmup
+hops, 1024 isolated-transform frames, and these measured streaming lengths:
+
+| Group | Workloads | Hops | Callback Observations Per Process | Interpretation |
+| --- | ---: | ---: | --- | --- |
+| Primary | 408 | 2048 | 8192/32768/131072 for B=256/64/16 | Same 2097152-sample window across primary block sizes; descriptive p99 and observed maxima |
+| Standard extensions | 719 | 512 | 8192 at H=1024; 2056 at H=257 | Cost/age/accuracy sensitivities; smaller tail sample where stated |
+| Short-hop extensions | 110 | 4096 | 2368 at H=37, B=64 | Raises pilot's 74 callbacks to an interpretable empirical distribution; no precise rare-tail claim |
+| Single-sample extensions | 46 | 64 | 65536 at H=1024, B=1 | Ample per-sample observations without excessive raw-data volume; only 64 frame jobs per process |
+
+Throughput passes use the same engine-sample windows as their callback peers
+within a group. Callback rounding remains explicit in each resolved config.
+The single-sample group has fewer FFT job releases despite many callback
+observations; p99 cannot characterize its sparse FFT bursts. Preserve maxima
+and full distributions but make no p99.9, WCET, device-underrun, or precise
+rare-event claims. Compare maxima only with observation-window qualifications.
+The frozen settings improve empirical coverage; they do not prove convergence.
+
+All 1283 configurations are unique and passed runner inventory validation.
+There are 3849 process runs per session and 11547 in the full confirmation.
+No workload or unfavorable provider is omitted. The primary and extension
+pilots remain separate evidence because confirmation introduces frozen-config
+source bytes and longer windows.
+
+Each session is a separately prepared measurement block, not a relabeled
+process repeat. Before each block, wait at least 180 seconds without building,
+testing or benchmarking, then record power, thermal-warning and process/load
+snapshots. Run four campaigns serially with fresh forced builds, numerical
+preflight and resource probes before timing. Rotate group order as recorded
+in the plan, and use independent seeded process shuffles. Session s (1-based),
+group index g in its recorded order (0-based), uses seed `20261000+100*s+g`.
+Host identity is `m1-pro-16gb-local`; session labels are
+`fr11-confirmation-01`, `-02`, and `-03`.
+
+All sessions are on the same laptop and day, without reboot or independent
+machine/day replication. Temporal separation, independent preparation and
+randomization reduce shared transient effects but do not prove statistical
+independence. Report observed session ranges, not inferential confidence
+intervals. No x86-64 hardware is available here, so cross-architecture claims
+are explicitly out of scope. This host limitation does not justify fabricated
+portable measurements.
+
+For each group, substitute its frozen config, hop count, session label and
+seed into this command from the repository root (metadata retains full notes):
+
+```shell
+caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-confirmation-SS-GROUP --config benchmark/paper/configs/external-confirmation-GROUP.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase confirmation --host-id m1-pro-16gb-local --session-id fr11-confirmation-SS --repeats 3 --hops GROUP_HOPS --frames 1024 --step-frames 2 --warm-hops 64 --seed SESSION_GROUP_SEED --notes 'Actual preparation, activity, power and session context'
+```
+
+The full command list, invocations, timestamps and preparation snapshots are
+retained under `.build/paper-fr11-confirmation-control`. Sources, configs and
+dependencies remain unchanged throughout confirmation; owning-spec progress
+updates are outside the benchmark source archive. Only after all campaigns
+pass their checks will confirmation tables, scientific figures and matched
+hybrid attribution be generated for FR-12.
+
+## FR-11 Confirmation Evidence
+
+September 29, 2026: all 12 frozen campaigns completed and passed the runner's
+full artifact checker. All 1283 configurations have three process repeats in
+each of three separately prepared sessions: 11547 confirmation processes,
+with no failed campaign, excluded workload, replacement measurement, timer
+subtraction, or outlier removal. Primary and extension pilots remain separate.
+
+| Session | Campaign Start (UTC) | Last Archive Check Complete (UTC) | Process Runs | Preparation |
+| --- | --- | --- | ---: | --- |
+| `fr11-confirmation-01` | 14:22:16 | 15:01:38 | 3849 | More than 180 s since the completed extension pilot; snapshot at 14:22:03 |
+| `fr11-confirmation-02` | 15:05:42 | 15:45:06 | 3849 | Recorded quiet interval 220.35 s |
+| `fr11-confirmation-03` | 15:49:12 | 16:28:37 | 3849 | Recorded quiet interval 216.99 s |
+
+All pre/post snapshots record AC power at 100%, Low Power Mode off, and no
+recorded thermal/performance warning. These are point observations, not
+continuous temperature or frequency measurements. Load averages, ordinary
+process activity, power settings, exact invocations, and start/end timestamps
+are retained in `.build/paper-fr11-confirmation-control`. Default macOS
+scheduling/core selection and ordinary services remain confounds.
+
+Across the 1283 workloads, the median/p90/worst ratio of largest to smallest
+session mean cost was 1.0122/1.0688/3.7010 (p90 uses the retained sorted
+empirical order statistic). Typical variation was modest, but several severe
+outliers materially affect means and rankings. Their cause is not identified
+by these snapshots. They remain in every report; neither means nor observed
+maxima should be presented without the process/session evidence.
+
+Every campaign has the same source/dependency/build-policy provenance. The
+measured revision is `ef7beca` plus the five frozen configuration files linked
+above; full archived source hashes, not the revision alone, identify the
+experiment. Twelve fresh timing builds and twelve audit builds each have their
+own retained binary identity. This accounts for the actual rebuilt artifacts
+without assuming identical binary bytes or claiming controlled address layout.
+The campaigns are `.build/paper-fr11-confirmation-SS-GROUP`, where `SS` is
+`01`, `02`, or `03` and `GROUP` is `primary`, `extensions`, `short-hop`, or
+`single-sample`. Do not pool them with the earlier pilots.
+
+### Numerical And Timer Evidence
+
+All independent preflights and per-run checks passed. There are 9765 per-run
+numerical reports; 1782 transform runs retain preflight-only coverage, explicitly
+identified in the generated evidence. Of the per-run reports, 2970 contain
+float analysis norms and 288 contain double analysis norms. Maximum observed
+analysis relative L2/Linf errors were 6.881e-7/1.576e-6 for float and
+5.943e-15/6.018e-15 for double. The 131184 old pointwise threshold violations
+remain diagnostic evidence; normwise acceptance does not promise uniform
+accuracy in weak bins. These counts include repeated measurements of the
+same deterministic signals and are not independent error events.
+
+Timer p99 remained 42 ns. It is retained alongside every process and is not
+subtracted from measured costs. A callback p99, an observed maximum, and a
+simulated budget exceedance are distinct descriptive statistics; none is a
+WCET guarantee or a measured device underrun.
+
+### Matched Scheduling Attribution
+
+The retained attribution analysis contains 50 matched six-backend workloads
+and 200 comparisons, each with all three sessions and three process repeats.
+It uses FR-6's `hybrid_report.assemble` to retain original process-level pairs,
+contracts, and storage evidence. Across-session cost ratios divide the two
+matched session means, then report their mean and observed range. Tail ratios
+use the median of each session's three process p99 values. No callback is an
+independent statistical replicate. Cross-workload summaries below describe
+this finite matrix, not a population or inferential confidence interval.
+
+For the 18 primary callback workloads (three N, three B, smoothing off/on),
+the mean-of-session cost-ratio median and workload range are:
+
+| Numerator / Denominator | Median Cost Ratio | Workload Range | Lower Cost In All Three Sessions |
+| --- | ---: | --- | ---: |
+| Hybrid / matched scheduled PFFFT batch | 0.8661 | 0.7721--1.1159 | 16/18 |
+| Hybrid / ordinary PFFFT batch | 2.0824 | 1.4653--2.9331 | 0/18 |
+| Hybrid / core analyzer | 0.5946 | 0.5407--0.7221 | 18/18 |
+
+Hybrid/scheduled-batch p99 ratios were below one in all three sessions for all
+18 workloads; their across-workload median was 0.1690 and range
+0.1229--0.3469. Hybrid/ordinary-batch p99 ratios had median 0.5316, range
+0.3634--1.1121, and were below one in every session for 16/18 workloads.
+Hybrid/core p99 ratios had median 1.1292, range 0.6140--3.9104, and were below
+one in every session for only 6/18 workloads. Thus lower average hybrid cost
+than the core does not imply lower callback tails. Short-hop callback results
+also retain a hybrid/scheduled-batch mean cost ratio above one (1.1217).
+The extension and throughput tables retain all other supported cases.
+
+The matched scheduled PFFFT pair shares arithmetic, caches, storage, and task
+dispatch; it measures quota execution and work placement. Ordinary PFFFT batch
+uses different bulk loops and shorter retained storage. The core uses different
+arithmetic/layout and maximum-size plans. Its comparison with the hybrid does
+not isolate scheduling overhead or prove a universally superior FFT algorithm.
+
+### Representative Inverse And Complete-Chain Results
+
+These examples fix N=4096, H=1024, B=64, 48 kHz, float, one analyzer, steady
+state, no background load, and smoothing off. Cost is the mean of the three
+session means in ns/engine sample. P99 ranges are the observed range across
+session medians of three per-process p99 values, in microseconds. Full tables
+retain each process, session variation, and the other N/B/extension settings.
+
+| Workload / Backend | Cost | Session P99 Range (us) | Completion Delay (samples) | Delivery Delay (samples) |
+| --- | ---: | --- | ---: | ---: |
+| Analysis / core | 52.816 | 4.834--4.834 | 1023 | N/A |
+| Analysis / ordinary PFFFT | 14.772 | 9.500--9.667 | 0 | N/A |
+| Analysis / matched scheduled PFFFT batch | 36.364 | 32.000--32.042 | 0 | N/A |
+| Analysis / PFFFT hybrid | 31.258 | 5.416--5.458 | 1023 | N/A |
+| Inverse / first-party batch | 78.502 | 77.792--78.333 | 0 | N/A |
+| Inverse / first-party incremental | 72.473 | 10.166--10.542 | 1023 | N/A |
+| Inverse / PFFFT | 12.574 | 8.208--8.208 | 0 | N/A |
+| FIR chain / first-party batch | 151.474 | 149.875--150.709 | 0 | 1023 |
+| FIR chain / first-party incremental | 151.966 | 17.000--17.375 | 1023 | 2046 |
+| FIR chain / PFFFT | 25.580 | 20.709--20.750 | 0 | 1023 |
+
+Completion is measured from the family-specific frame endpoint/job release;
+chain delivery includes the stated buffering contract. Analyzer spectrum-center
+age additionally includes (N-1)/2 samples. These origins are not interchangeable.
+The inverse example favors native PFFFT batch on cost, p99, and completion delay
+relative to the first-party incremental inverse. The FIR example buys a modest
+p99 reduction relative to native batch at substantially higher average cost and
+1023 additional samples of output delay. It sharply reduces p99 relative to the first-party
+batch control while providing essentially the same average cost. These are
+representative tradeoffs, not an assertion that every matrix case has the same
+ordering. All unfavorable results and remaining algorithm/storage confounds
+must survive FR-12 integration.
+
+### Reproduction And Retained Outputs
+
+Run from the repository root with the existing Matplotlib environment after
+all 12 campaign archives have passed. The report command validates raw
+artifacts again and rejects missing sessions, mixed source/dependency strata,
+or duplicate workloads. Output directories must be new; use a different
+output path when regenerating rather than overwriting retained evidence.
+
+```shell
+.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-confirmation-[0-9][0-9]-* --output .build/paper-fr11-confirmation-report --phase confirmation
+python3 .build/paper-fr11-confirmation-control/summarize.py
+```
+
+The general report retains `results.csv`, `implementations.csv`, `evidence.json`,
+`report.md`, a SHA-256 manifest, and SVG/PNG scientific figures. The attribution
+report at `.build/paper-fr11-attribution-report` retains CSV/JSON/Markdown
+comparisons, the original per-session FR-6 attribution groups, representative
+primary examples, the campaign analysis script, and a hash manifest. The
+control directory retains the exact resolved report invocation, preparation
+snapshots, all 12 commands, completion statistics, and session-variation data.
+
+The combined report passed with 1283 rows, nine processes and three sessions
+per row, and one compatible provenance stratum (`52037559c4e674ce`). Initial
+visual review found that long observations compressed the callback curves on
+a linear x-axis. A post-measurement presentation change in `report.py` uses a
+symlog x-axis, with a 1 ns linear region to retain quantized zeros. This is a
+display scale, not a timing-resolution claim. Both versions use the same
+retained deterministic ECDF grid (up to 4096 points per process, including
+endpoints); statistics use the full raw observations. The archived measured sources,
+raw data, observations, acceptance budgets, statistics, and exclusions are
+unchanged.
+
+The preferred final report is
+`.build/paper-fr11-confirmation-report-readable`. It was rendered from the
+already checked original evidence with this retained command, avoiding a
+second measurement campaign or unnecessary raw-data recomputation:
+
+```shell
+.build/paper-report-env/bin/python .build/paper-fr11-confirmation-control/render_readable.py
+.build/paper-report-env/bin/python -m unittest discover -s benchmark/paper -p test_report.py
+```
+
+All 288 SVG/PNG pairs were produced. The tables and cost-versus-length figures
+were verified byte-identical to the original report, and all 582 final artifact
+hashes passed. The render provenance records the input evidence/manifest and
+both generator hashes. All four report tests passed, including deterministic
+figure generation. Representative visual review covered the N=4096 analysis,
+inverse, FIR-chain, independent four-channel and double-analysis panels, plus
+real-transform and full-analysis cost-versus-N plots. Titles, units, legends,
+family-specific age axes, session ranges, and retained outliers were checked.
+The inventory, validation receipt and control records have their own manifest.
+
+Final documentation checks passed all 17 local links, frozen configuration
+hashes/counts, and `git diff --check`. The post-measurement edit changes only
+report presentation; the existing four report regressions were the relevant
+additional tests. No new Rack plugin build or manual Rack session was run for
+this benchmark/report-only stage. FR-11 is COMPLETE; the owning spec remains
+IN PROGRESS until FR-12 passes manuscript integration and review.
+
+Raw campaigns and generated outputs are local ignored research artifacts;
+they have not been published or added as large generated files to Git.
+FR-12 must select and integrate final figures/tables, pin the archived source
+identity, and preserve/package the evidence for the manuscript's eventual
+public reproducibility path. ARM64/x86-64 replication, actual audio-device
+measurements, independent-day/host replication, and the deferred FR-7--FR-9
+methods remain outside the present empirical claims. No Rack module behavior,
+module dependency, or shipped DSP source changed during FR-11 confirmation.
 
 [rack-fft]: https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp
 [fftw-real]: https://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html

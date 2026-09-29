@@ -241,7 +241,11 @@ def figures(data, output):
             v = r["variation"]
             axes[1].plot(age, v["mean_of_session_means"], ".", color=color, label=name)
             axes[1].vlines(age, v["observed_session_min"], v["observed_session_max"], color=color)
-        axes[0].set(xlabel="Callback duration (ns)", ylabel="Empirical CDF per process", ylim=(0, 1.02))
+        # Keep rare long observations visible without compressing the bulk of
+        # the distribution. Symlog also retains timer-quantized zero durations;
+        # the 1 ns linear region is a display scale, not a resolution claim.
+        axes[0].set_xscale("symlog", linthresh=1)
+        axes[0].set(xlabel="Callback duration (ns; symlog scale)", ylabel="Empirical CDF per process", ylim=(0, 1.02))
         axes[1].set(xlabel="Delivery delay (samples)" if members[0]["contract"]["boundary"] == "chain" else ("Spectrum-center age (samples)" if members[0]["contract"]["boundary"] == "analysis"
                       else "Publication delay (samples)"), ylabel="ns/engine-sample")
         for ax in axes:
