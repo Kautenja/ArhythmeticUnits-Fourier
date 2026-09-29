@@ -37,7 +37,7 @@ escape or BibTeX pass is required.
 -   [data/README.md](data/README.md): Recorded campaign and interpretation.
 -   [data/](data/): Archived raw observations and derived statistics.
 -   [../CITATION.cff](../CITATION.cff) and
-    [../CITATION.bib](../CITATION.bib): Report and software citation metadata.
+    [../CITATION.bib](../CITATION.bib): The shared report citation for this work.
 
 Run the artifact consistency check from the repository root:
 
@@ -74,8 +74,11 @@ when reusing a result.
 
 The current document is manuscript version 1, dated September 28, 2026. It
 has not been deposited on arXiv, assigned a DOI, or peer reviewed. Repository
-citation metadata points to this manuscript and keeps the software release
-identity separate. It does not itself ensure Google Scholar indexing.
+citation metadata uses this manuscript as the single citation for the paper
+and software. The [code on GitHub](https://github.com/Kautenja/ArhythmeticUnits-Fourier)
+is its supporting artifact: link to it and identify the version or commit
+used for reproducibility, without adding a separate software citation.
+Citation metadata does not itself ensure Google Scholar indexing.
 
 To prepare the source archive, run from the repository root:
 

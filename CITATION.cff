@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use Fourier or its scheduling analysis, please cite the technical report below and identify the software version used."
+message: "If you use Fourier or its scheduling analysis, please cite the technical report below. Link to the GitHub code artifact and identify the software version or commit used; no separate software citation is needed."
 type: software
 title: "Fourier: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
 abstract: >-
@@ -36,4 +36,4 @@ preferred-citation:
   month: 9
   version: "1"
   url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/whitepaper"
-  notes: "Technical report manuscript; not yet deposited on arXiv. Cite the software version separately when needed for reproducibility."
+  notes: "Manuscript version 1; not yet deposited on arXiv"

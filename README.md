@@ -95,9 +95,10 @@ its scheduling and latency model, prior work, and reproducible experiments.
 The self-contained [LaTeX source](whitepaper/fourier.tex) builds with
 `make -C whitepaper`.
 
-If you use this work, please cite the report. GitHub's **Cite this repository**
-button uses the preferred report citation in [CITATION.cff][citation-cff].
-[CITATION.bib](CITATION.bib) supplies both report and software entries.
+Use one citation for this work: the technical report. GitHub's **Cite this
+repository** button uses the preferred report citation in
+[CITATION.cff][citation-cff], and [CITATION.bib](CITATION.bib) supplies the same
+report entry.
 
 ```bibtex
 @techreport{kauten2026fourier,
@@ -112,11 +113,12 @@ button uses the preferred report citation in [CITATION.cff][citation-cff].
 }
 ```
 
-For reproducibility, also identify the software version or commit you used.
-The software entry in `CITATION.bib` describes release 2.1.2; the report's
-experiment metadata records its evaluated source revision separately. The
-source-code license is GPL-3.0-or-later; see [LICENSE.md](LICENSE.md) for the
-separate visual-asset terms.
+The [code on GitHub](https://github.com/Kautenja/ArhythmeticUnits-Fourier) is
+the report's supporting software artifact; no separate software citation is
+needed. For reproducibility, link to the code and identify the software
+version or commit you used. The report's experiment metadata records its
+evaluated source revision. The source-code license is GPL-3.0-or-later; see
+[LICENSE.md](LICENSE.md) for the separate visual-asset terms.
 
 The report is currently a repository manuscript. Its citation will be updated
 with a persistent identifier after a public deposit; no arXiv identifier or
