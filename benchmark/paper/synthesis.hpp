@@ -8,6 +8,7 @@
 #include <limits>
 #include "protocol.hpp"
 #include "references.hpp"
+#include "analysis_accuracy.hpp"
 #include "../../src/dsp/fft.hpp"
 
 namespace Paper {
@@ -167,6 +168,7 @@ struct FrequencyChain {
 
 /// @brief Independent numerical audit, executed only outside timed intervals.
 struct SynthesisAccuracy {
+    AnalysisAccuracy analysis;
     double maximum_error = 0, maximum_reference = 0;
     size_t checked = 0, publications = 0, playback_checked = 0;
     template<typename T>
@@ -187,7 +189,9 @@ struct SynthesisAccuracy {
             << ",\"checked_samples\":" << checked << ",\"publications\":" << publications
             << ",\"playback_checked_samples\":" << playback_checked << ",\"provider_instances\":[";
         for (size_t i = 0; i < instances.size(); ++i) { if (i) std::cerr << ','; std::cerr << instances[i]; }
-        std::cerr << "]}\n";
+        std::cerr << ']';
+        if (analysis.vectors) std::cerr << ",\"analysis\":" << analysis.json();
+        std::cerr << "}\n";
     }
 };
 

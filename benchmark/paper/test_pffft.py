@@ -39,6 +39,29 @@ class PffftTests(unittest.TestCase):
             self.assertEqual(complex_plan["source_derived_stack_scratch_payload_bytes"], 2*128*4)
             self.assertIsNone(real["native_plan_bytes"])
 
+    def test_long_analysis_streams(self):
+        root = Path(__file__).resolve().parents[2]
+        rack = Path(os.environ.get("RACK_DIR", str(root/"../.."))).resolve()
+        if not (rack/"include/dsp/fft.hpp").is_file():
+            self.skipTest("Rack SDK is unavailable")
+        from generate_registry import generate
+        with tempfile.TemporaryDirectory(prefix="fourier-analysis-") as temp:
+            generate(Path(temp)/"registry.generated.hpp")
+            binary = Path(temp)/("verify.exe" if sys.platform == "win32" else "verify")
+            command = shlex.split(os.environ.get("CXX", "c++"))
+            subprocess.run(command+["-std=c++11", "-O3", "-funsafe-math-optimizations", "-I"+temp,
+                "-I"+str(rack/"include"), "-I"+str(rack/"dep/include"),
+                str(Path(__file__).with_name("verify_analysis_streams.cpp")), "-L"+str(rack), "-lRack", "-o", str(binary)],
+                check=True, capture_output=True, text=True, timeout=120)
+            env = dict(os.environ)
+            for variable in ("DYLD_LIBRARY_PATH", "LD_LIBRARY_PATH", "PATH"):
+                env[variable] = str(rack)+os.pathsep+env.get(variable, "")
+            result = subprocess.run([str(binary)], env=env, check=True, capture_output=True, text=True, timeout=120)
+            rows = [json.loads(line) for line in result.stdout.splitlines()]
+            self.assertEqual(len(rows), 18)
+            self.assertTrue(all("legacy_pointwise_failures" in r["accuracy"] for r in rows))
+            self.assertTrue(any(r["accuracy"]["zero_vectors"] for r in rows))
+
 
 if __name__ == "__main__":
     unittest.main()

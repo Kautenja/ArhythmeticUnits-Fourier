@@ -74,7 +74,48 @@ def validate_rows(path, config, registry=None):
         raise ValueError(f"Observation count mismatch: {counts} != {expected}")
 
 
-def validate_synthesis_accuracy(accuracy, config, publications, registry=None):
+def validate_analysis_accuracy(accuracy, config, publications, contract, required_policy=None):
+    data = accuracy.get("analysis")
+    if data is None:
+        if required_policy:
+            raise ValueError("Missing required analysis numerical policy")
+        return  # Historical campaigns keep their original policy.
+    if data.get("policy") != "spectrum-norms-v1" or required_policy not in (None, "spectrum-norms-v1"):
+        raise ValueError("Unknown analysis numerical policy")
+    tolerance = 3e-4 if contract["precision"] == "float" else 1e-10
+    old_limit = 3e-4 if contract["precision"] == "float" else 1e-10
+    vectors = publications*contract["channels"]
+    if (data.get("tolerance") != tolerance or data.get("vectors") != vectors
+            or data.get("values") != accuracy["checked_samples"]):
+        raise ValueError("Analysis policy/count mismatch")
+    for key, maximum in (("vectors", vectors), ("values", accuracy["checked_samples"]),
+                         ("zero_vectors", vectors), ("legacy_pointwise_failures", accuracy["checked_samples"])):
+        if type(data[key]) is not int or not 0 <= data[key] <= maximum:
+            raise ValueError("Invalid analysis diagnostic count")
+    for key in ("max_relative_l2", "max_relative_linf", "max_legacy_scaled_error"):
+        if not math.isfinite(data[key]) or data[key] < 0:
+            raise ValueError("Invalid analysis norm/pointwise metric")
+    if max(data["max_relative_l2"], data["max_relative_linf"]) > tolerance:
+        raise ValueError("Analysis spectrum norm tolerance exceeded")
+    if bool(data["legacy_pointwise_failures"]) != (data["max_legacy_scaled_error"] > old_limit):
+        raise ValueError("Missing pointwise diagnostic failures")
+    error, scale = accuracy["max_abs_error"], accuracy["max_reference"]
+    if ((scale == 0 and error != 0) or error > data["max_relative_linf"]*scale*(1+1e-12)
+            or (error == 0) != (data["max_relative_l2"] == 0)
+            or (data["zero_vectors"] == vectors) != (scale == 0)):
+        raise ValueError("Inconsistent analysis norm/absolute error")
+    worst = data["worst_pointwise"]
+    for key, high in (("bin", config["n"]//2), ("channel", contract["channels"]-1), ("endpoint", None)):
+        if type(worst[key]) is not int or worst[key] < 0 or (high is not None and worst[key] > high):
+            raise ValueError("Invalid pointwise diagnostic location")
+    if not all(math.isfinite(worst[k]) for k in ("actual", "reference")):
+        raise ValueError("Non-finite pointwise diagnostic")
+    measured = abs(worst["actual"]-worst["reference"])/max(1, abs(worst["reference"]))
+    if not math.isclose(measured, data["max_legacy_scaled_error"], rel_tol=1e-12, abs_tol=0):
+        raise ValueError("Pointwise diagnostic mismatch")
+
+
+def validate_synthesis_accuracy(accuracy, config, publications, registry=None, required_policy=None):
     """Reject missing, truncated, or numerically invalid full-output audits."""
     contract = resolve_contract(config, registry)
     playback = (config["callbacks"]*config["block"]*config["count"]
@@ -88,6 +129,8 @@ def validate_synthesis_accuracy(accuracy, config, publications, registry=None):
             or accuracy["playback_checked_samples"] != playback
             or accuracy["publications"] != publications or not publications):
         raise ValueError("Invalid synthesis numerical report")
+    if contract["boundary"] == "analysis":
+        validate_analysis_accuracy(accuracy, config, publications, contract, required_policy)
 
 
 def validate_resources(resource):
@@ -208,6 +251,9 @@ def check(directory):
                 registry = normalize_registry(document, metadata.get("build_features", ()))
     if registry != json.loads((directory/"inventory.json").read_text()):
         raise ValueError("Compiled registry differs from archived source")
+    if ("benchmark/paper/analysis_accuracy.hpp" in metadata["source_sha256"]
+            and metadata.get("analysis_accuracy_policy") != "spectrum-norms-v1"):
+        raise ValueError("Missing analysis policy for archived implementation")
     if "matrix_inventory" in metadata:
         from campaigns import inventory
         if inventory(metadata["configs"], registry) != metadata["matrix_inventory"]:
@@ -266,7 +312,8 @@ def check(directory):
                 raise ValueError("Missing external transform bins")
         if contract["boundary"] in ("inverse-job", "chain") or (external and contract["boundary"] == "analysis"):
             accuracy = json.loads((directory/run["stderr"]).read_text())
-            validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry)
+            validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry,
+                                        metadata.get("analysis_accuracy_policy"))
         if contract["boundary"] == "transform":
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_transform_accuracy(accuracy, contract)

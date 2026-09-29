@@ -19,8 +19,9 @@ FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
 FR-10's campaign/report tooling is implemented and smoke-validated. FR-11 has
-started; its numerical acceptance issue and provisional coverage are recorded
-under [pilot evidence](#fr-11-pilot-evidence).
+started; its initial numerical acceptance issue, provisional coverage, and
+versioned policy correction are recorded under
+[pilot evidence](#fr-11-pilot-evidence).
 Implementation smoke checks do not constitute publication comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
@@ -1280,6 +1281,105 @@ separate sessions, and freeze confirmation lengths/repetitions. Three
 independent sessions remain the minimum coverage floor; process repeats here
 cannot satisfy it. FR-11 remains IN PROGRESS and no confirmation run has been
 started.
+
+## Numerical Policy Resolution
+
+September 29, 2026: committed the preceding pilot/reference progress as
+`1c96df6`, then resolved the acceptance-policy mismatch with a versioned,
+benchmark-only spectrum-level contract. The old pilot failures and provisional
+exclusions above describe the earlier policy and remain preserved.
+
+The [numerical acceptance document](../benchmark/paper/numerical-accuracy.md)
+derives the distinction between pointwise and vector-relative error, cites
+benchFFT's primary methodology, specifies exact equations and scope, and
+provides native reproduction commands. Per published channel, both relative
+L2 and Linf errors must satisfy the existing analysis tolerance (`3e-4` float,
+`1e-10` double). Quiet signals have no absolute unit floor, and an exactly zero
+reference requires exactly zero output. Different frames/channels never share
+a denominator. This deliberately replaces the old pointwise acceptance
+contract; it does not claim a per-bin relative-error guarantee.
+
+The pipeline's analysis tolerance, rather than the tighter isolated FFT
+budget, is appropriate because prefix sums, bands and EMA also introduce
+roundoff. An exploratory check with the isolated float budget exposed this
+distinction on smoothed startup/strong-weak fixtures. No new tolerance was
+fitted to the pilot's failing bins; the previously specified analysis budgets
+are retained. These are engineering limits, not proven error bounds.
+
+The old pointwise threshold is still evaluated for every bin, and its failure
+counts, largest scaled error and worst endpoint/channel/bin/actual/reference
+values remain in numerical reports. Generated CSV tables expose the norm
+maxima and pointwise counts. New campaign metadata and archived source
+identity require the new policy diagnostics; older archives retain their
+original validation meaning. Synthesis, isolated-transform, cadence,
+normalization, output-count and native-layout checks remain unchanged.
+
+Validation before restoring the full pilot:
+
+-   The 36-test Python suite passed, including new rejection cases for wrong
+    gain/layout, missing weak tones, NaN, nonzero silence, deletion of quiet
+    signals and cross-frame/channel masking. Checker mutations reject missing
+    or altered policy, tolerance, norms, counts and pointwise diagnostics.
+-   All 90 native long-stream/dynamic-range cases passed with PFFFT, FFTW and
+    vDSP, including both supported precisions, N=128/2048/4096/16384,
+    smoothing off/on, amplitudes 1 and 1e-6, and silence after strong/weak tones
+    plus seeded noise. Selected large oracle bins were independently checked
+    with direct sums. `.build/paper-numerical-policy/streams.jsonl` retains
+    the individual case reports; this is an untimed correctness experiment.
+-   Those native cases checked 17771874 float values in 2658 spectra and
+    11847916 double values in 1772 spectra. Worst relative L2/Linf errors were
+    1.56271e-4/2.17885e-4 for float and 6.06915e-15/5.35462e-15 for double.
+    The float diagnostic retained 516664 old pointwise violations across all
+    these repeated, adversarial checks. Passing the norm gate does not erase
+    that limitation; no uniform weak-bin accuracy is inferred.
+
+No production DSP, Rack module, provider algorithm, packing, precision, or
+measured pipeline arithmetic changed. Corrected campaign binaries and sources
+are retained separately from all earlier pilots.
+
+### Restored Full Pilot Validation
+
+The 15-workload `.build/paper-numerical-policy-channels` smoke campaign passed
+all artifact checks. It covers every independent four-channel backend at
+N=16384, H=257, with smoothing off/on and live cache changes. This establishes
+that the new policy also works at the SIMD/bank seam; its timings are smoke
+evidence only. The negative-policy fixture was additionally rerun under
+`-O3 -funsafe-math-optimizations`, matching the native benchmark math policy.
+
+The full macOS pilot was then restored without exclusions and rerun serially:
+
+```shell
+caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-pilot-03 --config benchmark/paper/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-03 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929
+.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-pilot-03 --output .build/paper-fr11-pilot-03-report --phase pilot
+```
+
+The actual invocation also supplied detailed `--notes`, retained in metadata,
+covering the policy correction, native checks, host identity, prior power/
+thermal snapshots, active Codex/OS services, and session limitations. All 1224
+runs across all 408 workloads completed. Forced native benchmark builds,
+preflight, numerical/cadence/resource checks, source/dependency archives and
+report validation passed. The report contains 408 evidence rows and 68 SVG/PNG
+figure pairs; all 140 generated artifact hashes passed. A restored unsmoothed
+N=16384 comparison panel was visually inspected.
+
+Audited external/scheduled analysis in the restored pilot had maximum relative
+L2/Linf errors of about 2.343e-7/2.382e-7. All 96 old pointwise violations remain
+in the report tables: 24 for each of PFFFT immediate, PFFFT scheduled batch,
+PFFFT hybrid and vDSP, and zero for FFTW. These are counts across repeated
+replays, not independent numerical events. Quiet-bin accuracy is still a
+reported limitation, rather than a failure silently removed from the evidence.
+
+The current checker also verified all 1128 historical provisional-pilot runs
+under their original policy. Manuscript artifact checks, local documentation
+links and `git diff --check` passed. No new Rack plugin build or interactive
+Rack session was needed for these benchmark-only changes.
+
+The numerical acceptance issue is resolved for the supported measured matrix,
+and all provisional exclusions are lifted. FR-11 remains IN PROGRESS: focused
+extensions, independent-session variability, frozen confirmation settings and
+confirmation campaigns remain. The restored pilot is not pooled with older
+sources/policies and is not substituted for confirmation. No benchmark remains
+running at the end of this work.
 
 [rack-fft]: https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp
 [fftw-real]: https://www.fftw.org/fftw3_doc/Real_002ddata-DFTs.html

@@ -266,6 +266,7 @@ def main():
                     rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
                     protocol="v2", configs=configs, runs=[], build_features=features,
                     external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
+    metadata["analysis_accuracy_policy"] = "spectrum-norms-v1"
     metadata["phase"] = phase
     metadata["session_id"] = args.session_id or "smoke"
     metadata["host_id"] = args.host_id or "unlabeled-smoke-host"

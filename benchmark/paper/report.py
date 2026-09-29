@@ -22,6 +22,7 @@ LIMITS = ("Costs retain traversal, conversion, required stores and configured ba
           "Session labels are supplied by the operator; labels alone do not prove independence. "
           "C++ live heap includes the object; native allocation and stack may remain unknown. "
           "Different arithmetic, plans, storage and publication ages remain explicit confounds. "
+          "Normwise analysis acceptance does not guarantee every weak bin; legacy pointwise violations remain diagnostic. "
           "Independent four-channel banks are compared only with the same input contract. "
           "Double uses common float input/window bytes. Unmeasured overlap-reuse methods are outside the ranking.")
 
@@ -131,7 +132,7 @@ def tables(data, output):
     columns = ["stratum", "backend", "boundary", "operation", "precision", "n", "hop", "block", "channels",
                "mode", "state", "callback_offset", "cost_unit", "mean_session_cost", "session_min", "session_max",
                "sessions", "processes", "publication_delay_samples", "center_offset_samples", "playback_delay_samples",
-               "cpp_live_heap_bytes_min", "cpp_live_heap_bytes_max", "native_memory", "max_abs_error", "numerical_status", "callback_visible_age_min", "callback_visible_age_max"]
+               "cpp_live_heap_bytes_min", "cpp_live_heap_bytes_max", "native_memory", "max_abs_error", "max_relative_l2", "max_relative_linf", "legacy_pointwise_failures", "numerical_status", "callback_visible_age_min", "callback_visible_age_max"]
     lines = ["# External FFT Evidence Report", "", "Evidence phase: **"+data["phase"].upper()+"**.", "",
              "SMOKE data validates tooling only and must not enter manuscript results." if data["phase"] == "smoke"
              else "Pilot informs design; only frozen confirmation campaigns support final results.", "", LIMITS, "",
@@ -144,6 +145,7 @@ def tables(data, output):
             c, contract, v = r["config"], r["contract"], r["variation"]
             heaps = [x["measurements"]["allocation"]["setup"]["live_bytes"] for x in r["resources"]]
             errors = [p["accuracy"]["max_abs_error"] for p in r["processes"] if p["accuracy"]]
+            norms = [p["accuracy"]["analysis"] for p in r["processes"] if p["accuracy"] and "analysis" in p["accuracy"]]
             status = sorted({p["numerical_status"] for p in r["processes"]})
             visible = [age for p in r["processes"] for age in (p["callback_visible_age_range"] or [])]
             unit = r["processes"][0]["cost_unit"]
@@ -151,7 +153,10 @@ def tables(data, output):
                 c["n"], c["hop"], c["block"], r["independent_channels"], c["pass_name"], c["state"], c.get("callback_offset", 0),
                 unit, v["mean_of_session_means"], v["observed_session_min"], v["observed_session_max"], v["sessions"], v["processes"],
                 contract["publication_delay_samples"], contract["center_offset_samples"], contract["playback_delay_samples"],
-                min(heaps), max(heaps), "provider-specific or unknown; see evidence.json", max(errors) if errors else "unavailable", "; ".join(status),
+                min(heaps), max(heaps), "provider-specific or unknown; see evidence.json", max(errors) if errors else "unavailable",
+                max(x["max_relative_l2"] for x in norms) if norms else "unavailable",
+                max(x["max_relative_linf"] for x in norms) if norms else "unavailable",
+                sum(x["legacy_pointwise_failures"] for x in norms) if norms else "unavailable", "; ".join(status),
                 min(visible) if visible else "unavailable", max(visible) if visible else "unavailable"])
             lines.append(f"| {c['backend']} | {contract['boundary']} / {contract['operation']} | {c['n']} / {c['hop']} | "
                          f"{r['independent_channels']} | {v['mean_of_session_means']:.3f} {unit} | "

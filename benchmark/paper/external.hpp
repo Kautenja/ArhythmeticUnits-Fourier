@@ -221,15 +221,10 @@ struct ExternalAudit {
         reference->advance(input, sample-adapter.delay());
         require(adapter.output.size() == reference->expected.size(), "Missing external analysis output");
         ++accuracy.publications;
-        for (size_t k = 0; k < adapter.output.size(); ++k) {
-            const double error = std::abs(double(adapter.output[k])-double(reference->expected[k]));
-            const double scale = std::abs(double(reference->expected[k]));
-            require(std::isfinite(error) && error <= (sizeof(T) == 4 ? 3e-4 : 1e-10)*std::max(1., scale),
-                "Independent external analyzer differs");
-            accuracy.maximum_error = std::max(accuracy.maximum_error, error);
-            accuracy.maximum_reference = std::max(accuracy.maximum_reference, scale);
-            ++accuracy.checked;
-        }
+        accuracy.analysis.compare(reference->expected, [&](size_t k) { return adapter.output[k]; }, sample-adapter.delay());
+        accuracy.maximum_error = accuracy.analysis.maximum_error;
+        accuracy.maximum_reference = accuracy.analysis.maximum_reference;
+        accuracy.checked += reference->expected.size();
     }
 };
 

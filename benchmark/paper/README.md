@@ -594,16 +594,13 @@ maxima, full distributions, and per-repetition variation. None is a WCET bound.
 
 ## Verification And Artifacts
 
-Large-size external analysis replay uses a binary64 complex FFT oracle on the
-matched, already rounded frame bytes; small sizes retain direct DFT sums.
-The measured float adapters and pointwise tolerances are unchanged. FR-11's
-first long pilot exposed binary32 oracle error near weak bins; a direct-DFT
-regression now covers that case. The higher-precision oracle also exposes
-pointwise tolerance failures for unsmoothed N=16384 PFFFT/vDSP analysis. The
-[owning spec](../../specs/004-external-fft-comparison.md#fr-11-pilot-evidence)
-records the incomplete pilot and provisional matched workload exclusions.
-These exclusions do not constitute a completed publication comparison.
-
+Large-size external analysis replay uses a binary64 FFT oracle on matched,
+already rounded frame bytes; small sizes retain direct DFT sums. The versioned
+[numerical acceptance policy](numerical-accuracy.md) checks each spectrum's
+relative L2 and Linf errors against the existing analysis budgets, preserving
+all former pointwise violations as diagnostics. Measured adapters are unchanged.
+FR-11's initial reference/policy failures and their resolution remain recorded
+in the [owning spec](../../specs/004-external-fft-comparison.md#fr-11-pilot-evidence).
 
 Before a campaign, the executable checks matched scalar frame outputs and
 publication delays across 48 scalar configurations against both controls

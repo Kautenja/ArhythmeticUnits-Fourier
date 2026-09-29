@@ -88,14 +88,10 @@ struct ChannelAudit {
             if (!bank[j]) bank[j].reset(new AnalysisReference<float>(config));
             bank[j]->advance(channel_signals()[j], sample-a.delay());
             require(a.bins() == bank[j]->expected.size(), "Missing four-channel bins");
-            for (size_t k = 0; k < a.bins(); ++k) {
-                const double expected = bank[j]->expected[k];
-                const double error = std::abs(double(a.value(j, k))-expected);
-                require(std::isfinite(error) && error <= 3e-4*std::max(1., std::abs(expected)), "Independent channel differs");
-                accuracy.maximum_error = std::max(accuracy.maximum_error, error);
-                accuracy.maximum_reference = std::max(accuracy.maximum_reference, std::abs(expected));
-                ++accuracy.checked;
-            }
+            accuracy.analysis.compare(bank[j]->expected, [&](size_t k) { return a.value(j, k); }, sample-a.delay(), j);
+            accuracy.maximum_error = accuracy.analysis.maximum_error;
+            accuracy.maximum_reference = accuracy.analysis.maximum_reference;
+            accuracy.checked += a.bins();
         }
     }
 };
