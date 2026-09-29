@@ -65,24 +65,31 @@ build/benchmark/rack/display: build/benchmark/rack/display.cpp.o
 build/benchmark/rack/display.cpp.o: CXXFLAGS += $(DISPLAY_BENCHMARK_FLAGS)
 -include build/benchmark/rack/display.cpp.d
 
-# DSP through real Rack modules, using SDK optimization and floating-point flags.
+# Catch2 Rack benchmarks use SDK optimization and floating-point flags.
 BENCHMARK_ARGS ?=
 RACK_BENCHMARK_FLAGS = $(CXXFLAGS) -pthread -Idep/Catch2/single_include/catch2
 ifdef ARCH_LIN
 RACK_BENCHMARK_FLAGS += -DCATCH_CONFIG_NO_POSIX_SIGNALS
 endif
-.PHONY: benchmark-dsp
+RACK_BENCHMARK_NAMES := dsp coordinates graphics
+RACK_BENCHMARK_BINARIES := $(addprefix build/benchmark/rack/,$(RACK_BENCHMARK_NAMES))
+.PHONY: benchmark-dsp benchmark-coordinates benchmark-graphics benchmark-rack-build
+benchmark-rack-build: $(RACK_BENCHMARK_BINARIES)
 benchmark-dsp: build/benchmark/rack/dsp
+benchmark-coordinates: build/benchmark/rack/coordinates
+benchmark-graphics: build/benchmark/rack/graphics
+
+benchmark-dsp benchmark-coordinates benchmark-graphics:
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< $(BENCHMARK_ARGS)
 
-build/benchmark/rack/dsp: build/benchmark/rack/dsp.cpp.o
+$(RACK_BENCHMARK_BINARIES): build/benchmark/rack/%: build/benchmark/rack/%.cpp.o
 	$(CXX) $(RACK_BENCHMARK_FLAGS) -o $@ $< -L$(RACK_DIR) -lRack
 
-build/benchmark/rack/dsp.cpp.o: benchmark/rack/dsp.cpp
+$(addsuffix .cpp.o,$(RACK_BENCHMARK_BINARIES)): build/benchmark/rack/%.cpp.o: benchmark/rack/%.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(RACK_BENCHMARK_FLAGS) -c -o $@ $<
 
--include build/benchmark/rack/dsp.cpp.d
+-include $(addsuffix .cpp.d,$(RACK_BENCHMARK_BINARIES))
 
 # Optional native OpenGL inspection; requires a graphical desktop session.
 ifdef ARCH_MAC

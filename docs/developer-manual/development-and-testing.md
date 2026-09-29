@@ -436,6 +436,65 @@ display consumer, rendering, audio device, or host scheduling in this workload.
 The headless output sanity assertions verify that processing publishes spectra;
 the existing numerical regression suites remain the correctness oracle.
 
+### Rack Coordinates And Graphics
+
+Build the Catch2 Rack benchmark executables, then run each target serially
+from the repository root with the normal Rack dependencies:
+
+```shell
+make -j3 benchmark-rack-build
+make benchmark-coordinates
+make benchmark-graphics
+```
+
+Both run targets honor `RACK_DIR` and `BENCHMARK_ARGS` just like
+`benchmark-dsp`. For example, smoke-check graphics or select only curve work:
+
+```shell
+make benchmark-graphics BENCHMARK_ARGS="--benchmark-samples 10 --benchmark-resamples 1000 --benchmark-warmup-time 10"
+make benchmark-graphics BENCHMARK_ARGS="[curves]"
+```
+
+`benchmark/rack/coordinates.cpp` isolates `SpectrumCoordinates::map` from
+FFT processing. Each iteration maps a complete four-lane frame at N=128,
+2048, or 16384. It covers both frequency scales and all three magnitude
+scales, with either full-band/zero-slope or 100-10000 Hz/4.5 dB-per-octave
+settings at 48 kHz. The deterministic magnitudes differ by lane. Timings
+include input traversal and coordinate output stores.
+
+`benchmark/rack/graphics.cpp` uses the real module display methods with a
+headless NanoVG backend. Frame boundaries use pixel ratio one; geometry
+callbacks count tessellated vertices and texture callbacks copy uploaded
+bytes into host memory. Each iteration measures one of these workloads:
+
+| Workload | Included Work |
+| --- | --- |
+| Fourier curves | Four traces at N=128, 2048, or 16384 in a 660-by-350 display; full/cropped frequency ranges, straight/Bezier paths, stroke/filled modes; point remapping, clipping, Catmull-Rom conversion, and NanoVG tessellation |
+| Axis artwork | One rebuild of either module's actual cached artwork callback, including background/grid paths, label formatting, and label layout; both frequency scales and all Fourier magnitude scales |
+| Spectre unchanged | Polling retained column mailboxes and drawing the existing image/scan line, with no upload |
+| Spectre crop/resize | Alternating bounds and display size, reusing identical cached pixels with no upload |
+| Spectre recolor | Alternating slope on every iteration to force a full image rebuild/upload, for all seven color maps and both frequency scales |
+| Spectre reopen | Constructing a display, importing all retained mailbox history, creating its first image, and destroying the display and image; includes allocations and deallocations |
+
+Curve fixtures are precomputed normalized plot points with peaks and cropped
+frequencies outside the visible rectangle. They intentionally isolate drawing
+from spectrum mapping. Axis rebuilds invoke the cache's artwork callback so
+label storage is cleared on every iteration, as in production. Path storage
+is warmed before curve/axis measurements. Spectre's complete history is filled
+through real engine processing before timing; no audio processing occurs in
+these graphics timings. Its usual display size is 465 by 350, and its image
+is always `N_STFT` by `N_FFT/2`, independent of display size.
+
+Assertions check that curves reach the backend, label counts stay bounded,
+every recolor iteration uploads, unchanged/cropped views do not upload, and
+reopening preserves the rendered pixels and releases each image. These are
+CPU measurements: they exclude GL framebuffer allocation/compositing, actual
+font glyph rendering, GPU rasterization, driver transfer latency, display
+synchronization, and concurrent producer/consumer contention. Rare menu and
+serialization actions are not separate performance targets. Use the existing
+Rack regression tests and interactive checks for correctness, and record the
+same comparison metadata and uncertainty as for DSP benchmarks.
+
 ### Display Preparation
 
 ```shell
