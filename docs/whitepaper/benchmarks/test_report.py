@@ -8,7 +8,9 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
+from check import check
 from report import ages, callback_tails, collect, report, comparison_key, tables, variation
 from run import save
 import test_contracts
@@ -28,6 +30,40 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(result["observed_session_min"], 2)
         self.assertEqual(result["observed_session_max"], 10)
         self.assertIsNone(result["confidence_interval"])
+
+    def test_checked_reporting_parses_and_hashes_raw_once(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign = self.fixture(root/"campaign")
+            raw = campaign/"raw.csv"
+            counts = dict(text=0, binary=0)
+            original = Path.open
+            def counted(path, *args, **kwargs):
+                if path == raw:
+                    mode = args[0] if args else kwargs.get("mode", "r")
+                    counts["binary" if "b" in mode else "text"] += 1
+                return original(path, *args, **kwargs)
+            with patch.object(Path, "open", counted):
+                data = collect([campaign], "smoke")
+            self.assertEqual(counts, dict(text=1, binary=1))
+            process = data["records"][0]["processes"][0]
+            self.assertEqual(process["ecdf"], [[100., .5], [100., 1.]])
+            self.assertEqual(process["observation_count"], 2)
+
+    def test_invalid_run_does_not_export_completed_observations_or_report(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            campaign = self.fixture(root/"campaign")
+            metadata = json.loads((campaign/"metadata.json").read_text())
+            metadata["runs"][0]["summary"]["groups"]["callback"]["mean_ns"] += 1
+            save(campaign/"metadata.json", metadata)
+            exported = {}
+            with self.assertRaises(ValueError):
+                check(campaign, report_data=exported)
+            self.assertEqual(exported, {})
+            with self.assertRaises(ValueError):
+                report([campaign], root/"out", "smoke", False)
+            self.assertFalse((root/"out").exists())
 
     def test_tail_summary_weights_sessions_and_retains_rare_maximum(self):
         processes = [dict(session=session, timing=dict(p99_ns=p99, observed_max_ns=maximum))

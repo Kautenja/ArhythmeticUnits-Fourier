@@ -3,76 +3,17 @@
 # Copyright 2026 Arhythmetic Units
 # SPDX-License-Identifier: GPL-3.0-or-later
 import argparse
-import csv
 import math
-from collections import Counter
 import hashlib
 import json
 from pathlib import Path
 import tarfile
 
-from run import digest, summarize
+from run import digest
+from observations import read_observations, validate_rows
 from contracts import normalize_registry, resolve_contract, validate_config
 from runtime import validate_profile
 
-
-def validate_rows(path, config, registry=None):
-    """Check observation counts and publication age/cadence from raw records."""
-    counts = Counter()
-    publications = Counter()
-    previous = {}
-    mode = config["pass_name"]
-    contract = resolve_contract(config, registry)
-    n, hop, block = config["n"], config["hop"], config["block"]
-    delay = contract["publication_delay_samples"]
-    center_offset = contract["center_offset_samples"]
-    playback_delay = contract["playback_delay_samples"]
-    with path.open(newline="") as stream:
-        for row in csv.DictReader(stream):
-            if not math.isfinite(float(row["ns"])) or float(row["ns"]) < 0:
-                raise ValueError("Invalid timing observation")
-            counts[row["kind"]] += 1
-            if row["kind"] != "publication":
-                continue
-            analyzer, sample = int(row["analyzer"]), int(row["sample"])
-            offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
-            if not 0 <= analyzer < config["count"] or not 0 <= sample < config["callbacks"]*block:
-                raise ValueError("Publication index outside workload")
-            if (sample+offset)%hop != delay or (analyzer in previous and sample-previous[analyzer] != hop):
-                raise ValueError("Publication cadence mismatch")
-            ages = (float(row["endpoint_age_samples"]), float(row["center_age_samples"]),
-                    float(row["callback_visible_age_samples"]))
-            if ages != (delay, delay+center_offset, delay+block-1-sample%block):
-                raise ValueError("Publication age mismatch")
-            if contract["boundary"] in ("inverse-job", "chain") and float(row.get("playback_delay_samples", "nan")) != playback_delay:
-                raise ValueError("Playback delay mismatch")
-            previous[analyzer] = sample
-            publications[analyzer] += 1
-    expected = Counter(timer=1024)
-    frames = config["callbacks"]
-    if mode in ("callback", "throughput"):
-        expected[mode] = frames if mode == "callback" else 1
-        if contract["boundary"] != "control":
-            for analyzer in range(config["count"]):
-                offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
-                bias = hop-1-delay
-                count = (frames*block+offset+bias)//hop-(offset+bias)//hop
-                if publications[analyzer] != count:
-                    raise ValueError("Missing publication records")
-                expected["publication"] += count
-    elif mode in ("complete", "incremental"):
-        expected[mode] = frames
-    else:
-        real, inverse = contract["step_model"] == "radix2-real", contract["step_model"] == "radix2-inverse"
-        butterflies = n//4*((n//2).bit_length()-1) if real else n//2*(n.bit_length()-1)
-        expected["buffer"] = frames
-        expected["butterfly_step" if mode == "steps" else "butterflies"] = frames*(butterflies-int(real) if mode == "steps" else 1)
-        if real:
-            expected["reconstruct_step" if mode == "steps" else "last_butterfly_and_reconstruction"] = frames
-        if inverse:
-            expected["normalize_step" if mode == "steps" else "normalization"] = frames*(n if mode == "steps" else 1)
-    if counts != expected:
-        raise ValueError(f"Observation count mismatch: {counts} != {expected}")
 
 
 def validate_analysis_accuracy(accuracy, config, publications, contract, required_policy=None):
@@ -232,7 +173,8 @@ def runtime_artifacts(metadata, required):
     return names
 
 
-def check(directory):
+def check(directory, report_data=None):
+    """Validate evidence, optionally retaining compact per-file report inputs."""
     metadata = json.loads((directory / "metadata.json").read_text())
     if metadata["schema"] == 1:
         from legacy_check import check as legacy_check
@@ -331,8 +273,9 @@ def check(directory):
         identities.add(identity)
         config = metadata["configs"][run["workload"]]
         contract = resolve_contract(config, registry)
-        validate_rows(directory/run["raw"], config, registry)
-        if summarize(directory/run["raw"], config) != run["summary"]:
+        summary, details = read_observations(directory/run["raw"], config, registry,
+                                             report=report_data is not None)
+        if summary != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
         external = registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4")
         if external:
@@ -350,6 +293,8 @@ def check(directory):
         if contract["boundary"] == "transform":
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_transform_accuracy(accuracy, contract)
+        if report_data is not None:
+            report_data[run["raw"]] = details
     expected = {(index, repeat) for index in range(len(metadata["configs"]))
                 for repeat in range(metadata["repeats"])}
     if identities != expected:

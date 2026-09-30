@@ -890,6 +890,61 @@ Validation on macOS ARM64:
 No full campaign, paper result replacement, plugin build or manual Rack
 session was performed for this benchmark-only change.
 
+#### Shared Observation Processing
+
+September 29, 2026: consolidated the runner's summaries, the checker's row
+validation and the reporter's plot inputs in `observations.py`. Checked
+reporting now parses each raw CSV once instead of three times and sorts each
+timing group once. It reuses the artifact hash already verified by the checker.
+Only compact report data persists between files. Source/archive hashes,
+publication/count checks, numerical checks, original-order floating-point
+totals, statistical definitions and raw files are preserved. Existing CLI
+commands are unchanged; no cache, dependency or new user step was introduced.
+Schema-1 archives retain their historical validation path.
+
+Compared against `7b14983` on macOS ARM64 with Python 3.14.2, using five
+alternating before/after pairs per operation. The selected real CSVs contain
+153600 observations in 6515471 bytes: 131072 callbacks at N=16384/B=16,
+8192 publications across 16 analyzers, and 1024 PFFFT real transforms at
+N=16384. The complete retained `paper-numerical-policy-channels` archive has
+15 workloads/processes and 15684 CSV rows; its checks include provenance and
+archive verification.
+
+| Operation | Old Median ms (Observed Range) | New Median ms (Observed Range) | Median Time Reduction |
+| --- | ---: | ---: | ---: |
+| Selected CSVs: validation and summaries | 526.16 (522.09-530.87) | 284.41 (281.96-286.77) | 45.95% |
+| Selected CSVs: above plus report inputs | 743.64 (740.95-748.83) | 290.44 (289.74-294.22) | 60.94% |
+| Complete small archive: check | 257.04 (254.75-266.95) | 234.13 (233.12-234.81) | 8.91% |
+| Complete small archive: report data collection | 279.85 (278.07-281.83) | 237.97 (236.44-238.16) | 14.97% |
+
+All old/new summaries, report inputs and complete collected report data matched
+exactly as canonical JSON in every pair. Imports, configuration reads and
+result serialization were outside measured operations. No tests, builds or
+other benchmarks ran concurrently. These local tooling timings do not measure
+FFT performance, figure rendering or full-campaign savings; the ranges are
+observations, not confidence intervals.
+
+A separate five-pair summary-only comparison measured 278.073 ms before and
+274.975 ms after: effectively unchanged, with identical outputs. The gains
+come from eliminating repeated work in checking/reporting. Generated
+`results.csv`, `process-timings.csv`, `implementations.csv` and `report.md`
+also matched byte-for-byte between the old and new tooling.
+
+The exact selections, source snapshots/hashes, all 40 timing observations and
+comparison outputs are retained in `.build/csv-audit/` as `selection.json`,
+`manifest.json`, `measurements.json`, `measurements-summary.json`, and the
+old/new result files. The retained
+`measure.py` and `worker.py` repeat the same comparison against frozen source
+snapshots without rerunning DSP workloads.
+
+Validation: all 56 tests passed with
+`MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`.
+New regressions cover exact historical summaries, original-order floating
+totals, nearest-rank quantiles, corrupt rows/counts/cadence, one checksum read
+plus one CSV parse per report input, and rejection of invalid evidence before
+report export. No C++/DSP or Rack changes were made. FR-13 and replacement
+measurements remain open.
+
 #### Validation, Handoff And Completion
 
 - [ ] Verify the documented path from a fresh checkout or equivalent isolated

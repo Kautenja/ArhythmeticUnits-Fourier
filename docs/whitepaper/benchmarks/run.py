@@ -3,7 +3,6 @@
 # Copyright 2026 Arhythmetic Units
 # SPDX-License-Identifier: GPL-3.0-or-later
 import argparse
-import csv
 import datetime as dt
 import hashlib
 import json
@@ -13,7 +12,6 @@ from pathlib import Path
 import platform
 import random
 import shlex
-import statistics
 import shutil
 import subprocess
 import tarfile
@@ -22,6 +20,7 @@ from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, valid
 from dependencies import fftw_inputs
 from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
 from runtime import RuntimeProfile, format_runtime, validate_profile
+from observations import quantile, summarize
 
 ROOT = Path(__file__).resolve().parents[3]
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
@@ -122,40 +121,6 @@ def digest(path):
 def capture(args, cwd=ROOT):
     return subprocess.check_output(args, cwd=cwd, text=True, stderr=subprocess.STDOUT).strip()
 
-
-def quantile(values, fraction):
-    """Nearest-rank quantile; retain raw rows rather than treating it as a bound."""
-    return sorted(values)[max(0, math.ceil(len(values)*fraction)-1)]
-
-
-def summarize(path, config):
-    groups = {}
-    publications = 0
-    with path.open(newline="") as stream:
-        for row in csv.DictReader(stream):
-            if row["kind"] == "publication":
-                publications += 1
-                continue
-            groups.setdefault(row["kind"], []).append(float(row["ns"]))
-    result = {"publication_audit_rows": publications, "groups": {}}
-    for kind, values in groups.items():
-        if not values or not all(math.isfinite(v) and v >= 0 for v in values):
-            raise ValueError(f"Invalid measurements in {path}")
-        summary = dict(observations=len(values), total_ns=sum(values), mean_ns=statistics.mean(values),
-                       p50_ns=quantile(values, .5), p95_ns=quantile(values, .95),
-                       p99_ns=quantile(values, .99), observed_max_ns=max(values))
-        if kind in ("callback", "throughput"):
-            samples = config["callbacks"]*config["block"]
-            budget_ns = 1e9*config["block"]/config["rate"]
-            summary.update(ns_per_engine_sample=sum(values)/samples,
-                           simulated_compute_utilization=sum(values)/(1e9*samples/config["rate"]))
-            if kind == "callback":
-                summary.update(budget_ns=budget_ns,
-                               observed_compute_budget_exceedances=sum(v > budget_ns for v in values))
-        result["groups"][kind] = summary
-    if "timer" not in groups or len(groups) < 2:
-        raise ValueError(f"Missing timing rows in {path}")
-    return result
 
 
 def save(path, value):

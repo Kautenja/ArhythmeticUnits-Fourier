@@ -28,6 +28,10 @@ The C++ measurement suite and its source map live in
 [`benchmark/paper`](../../../benchmark/paper/README.md). This directory owns
 `run.py` (campaign orchestration and raw archives), `check.py` (artifact
 validation), and `report.py` / `hybrid_report.py` (derived statistics and plots).
+`observations.py` shares CSV validation, summary statistics and compact plot
+data. Checking and reporting parse each CSV once and sort each timing group
+once; reports reuse the verified artifact hash. Integrity checks, original-order
+floating-point totals, raw files and command-line usage are preserved.
 `configs/` contains workload selections; `backends.json` describes capabilities.
 The registry generators and optional `build_fftw.py` support benchmark builds.
 Python tests here compile numerical verifiers from `test/paper/` as needed.

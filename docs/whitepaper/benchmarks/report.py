@@ -14,7 +14,7 @@ from pathlib import Path
 import statistics
 
 from check import check
-from run import digest, quantile
+from run import digest
 
 LIMITS = ("Costs retain traversal, conversion, required stores and configured background load. "
           "No timer subtraction. Callback quantiles and maxima describe each process, not WCET or device underruns. "
@@ -71,7 +71,8 @@ def ages(contract, rate):
 def collect(directories, phase):
     records, sources, seen = {}, [], set()
     for directory in sorted(directories, key=lambda p: str(p.resolve())):
-        check(directory)
+        report_data = {}
+        check(directory, report_data=report_data)
         metadata = json.loads((directory/"metadata.json").read_text())
         if metadata.get("phase") != phase:
             raise ValueError("Report phase must match every campaign; smoke/pilot/confirmation cannot be mixed")
@@ -112,29 +113,15 @@ def collect(directories, phase):
                 cost = timing["ns_per_engine_sample"] if mode in ("callback", "throughput") else timing["mean_ns"]
                 errors = (directory/run["stderr"]).read_text().strip()
                 accuracy = json.loads(errors) if errors.startswith("{") else None
-                values, visible, playback = [], [], []
-                with (directory/run["raw"]).open() as stream:
-                    for row in csv.DictReader(stream):
-                        if row["kind"] == mode:
-                            values.append(float(row["ns"]))
-                        if row["kind"] == "publication":
-                            visible.append(float(row["callback_visible_age_samples"]))
-                            playback.append(float(row["playback_delay_samples"]))
-                values.sort()
-                # Retain endpoints and a deterministic ECDF grid; do not pool processes.
-                indices = sorted({i*(len(values)-1)//min(4095, max(1, len(values)-1))
-                                  for i in range(min(4096, len(values)))})
                 record["processes"].append(dict(session=session, repeat=run["repeat"], cost=cost,
                     cost_unit="ns/engine-sample" if mode in ("callback", "throughput") else "ns/transform",
                     cost_per_channel=cost/record["independent_channels"], timing=timing, timer=groups["timer"],
-                    observation_count=len(values), observation_window_samples=config["callbacks"]*config["block"]
+                    observation_window_samples=config["callbacks"]*config["block"]
                         if mode in ("callback", "throughput") else None,
                     publication_audit_rows=run["summary"]["publication_audit_rows"],
-                    ecdf=[[values[i], (i+1)/len(values)] for i in indices],
-                    callback_visible_age_range=[min(visible), max(visible)] if visible else None,
-                    playback_delay_range=[min(playback), max(playback)] if playback else None,
                     accuracy=accuracy, numerical_status="per-run numerical report; see reference coverage" if accuracy else "preflight only; no per-run numerical report",
-                    raw=str((directory/run["raw"]).resolve()), raw_sha256=digest(directory/run["raw"])))
+                    raw=str((directory/run["raw"]).resolve()),
+                    raw_sha256=metadata["artifact_sha256"][run["raw"]], **report_data.pop(run["raw"])))
     result = []
     for key, record in sorted(records.items()):
         record["variation"] = variation(record["processes"])
