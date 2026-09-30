@@ -1,8 +1,7 @@
 # Reference Verification
 
-The bibliography in [fourier.tex](fourier.tex) was checked and expanded on
-September 29, 2026 against the primary sources below.
-This is a focused literature review
+This record tracks primary-source checks for [bibliography.tex](bibliography.tex),
+including the September 29, 2026 gap audit. It is a focused literature review
 covering the implementation's mathematical basis, directly related scheduling
 work, overlap-reuse alternatives, and host integration. It is not an
 exhaustive bibliometric survey.
@@ -16,6 +15,7 @@ exhaustive bibliometric survey.
 | `lo1998` | [Publisher abstract](https://www.sciencedirect.com/science/article/abs/pii/S0165168498001522) | Split-radix computation during acquisition |
 | `lo1999` | [University repository](https://ir.lib.nycu.edu.tw/items/bc91194b-a045-493b-869c-d02a40c5ef94), [original paper](https://ir.lib.nycu.edu.tw/bitstream/11536/31665/1/000082760300005.pdf) | Online spectral analysis and time distribution |
 | `lomoving1999` | [Publisher abstract](https://www.sciencedirect.com/science/article/abs/pii/S0165168499000985) | Combined scheduling and overlap reuse |
+| `borss2009` | [DAFx proceedings paper](https://www.dafx.de/paper-archive/2009/papers/paper_48.pdf), [archive record](https://www.dafx.de/paper-archive/details/TUYATRAM6blZcG8lR_NbmQ) | Sections 3.1-3.2, paper pp. 4-5: distributing partition work across cycles and staggering filters; motivates relative-phase checks, not an analyzer performance claim |
 | `hurchalla2010` | [AES abstract and paper record](https://secure.aes.org/forum/pubs/conventions/?elib=15679) | Processor/memory load distribution across input blocks in one thread for low-latency convolution; abstract only, paper 8257, 129th convention |
 | `battenberg2011` | [Author-hosted full paper](https://ericbattenberg.com/pdf/partconvDAFx2011.pdf), [author publication page](https://ericbattenberg.com/publication/partconv/) | Section 4 distributes forward transforms, spectral multiplication, and inverse transforms across callbacks; section 6 compares performance and implementation effort |
 | `wefers2015` | [University record](https://publications.rwth-aachen.de/record/466561), [full dissertation](https://publications.rwth-aachen.de/record/466561/files/466561.pdf) | Section 6.8, especially printed pp. 182-183: manual preemption and short-transform subdivision; motivates a granularity comparison, not a performance ranking for this analyzer |
@@ -33,10 +33,14 @@ exhaustive bibliometric survey.
 | `pffft` | [VCV-maintained PFFFT repository](https://github.com/VCVRack/pffft), [Rack FFT wrapper](https://github.com/VCVRack/Rack/blob/v2/include/dsp/fft.hpp) | Practical Rack baseline; real-transform wrapper and ordered/unordered output; software citation, with the actual measured revision and SIMD configuration to be pinned per campaign |
 | `vdsp` | [Apple vDSP Programming Guide](https://developer.apple.com/library/archive/documentation/Performance/Conceptual/vDSP_Programming_Guide/UsingFourierTransforms/UsingFourierTransforms.html), [FFT setup API](https://developer.apple.com/documentation/accelerate/vdsp_create_fftsetup) | Platform baseline for macOS; reusable setup, real-transform packing and scaling; official API documentation rather than a research paper |
 | `vanderbyl2016` | [Publisher abstract and section summaries](https://www.sciencedirect.com/science/article/abs/pii/S1051200416000142), [DOI](https://doi.org/10.1016/j.dsp.2016.01.008) | Floating- and fixed-point error across sliding DFT structures; motivates proposed numerical checks without reproducing uninspected rankings |
+| `skare2024` | [DAFx proceedings paper](https://www.dafx.de/paper-archive/2024/papers/DAFx24_paper_56.pdf) | Sections 2.2 and 2.8, printed pp. 453-455: throughput versus buffer-processing tails and batch versus periodic invocation; actual DAW contention remains future work in that study |
+| `balasubramaniam2026` | [DAFx proceedings paper](https://www.dafx.de/paper-archive/2026/papers/DAFx26_paper_16.pdf) | Sections 3.4-3.5 and 5.1, printed pp. 130-131 and 134: isolated versus controlled host-load measurements, distinct timing/underrun outcomes, and virtual-driver limitations; methodology only |
 | `mytkowicz2009` | [Authors' publication page](https://sape.inf.usi.ch/publications/asplos09.html), [full paper](https://cs.uwaterloo.ca/~brecht/courses/Perf-Eval-Shared/readings/producing-wrong-data-asplos-2009.pdf) | Sections 1-3 and 7: layout/environment measurement bias and setup randomization; limits of the existing alternating-order experiment and guidance for future evaluation |
 | `kalibera2013` | [University author record](https://kar.kent.ac.uk/33611/), [corrected author manuscript](https://kar.kent.ac.uk/33611/45/p63-kaliber.pdf) | Sections 4, 8, and 9: repetition levels, pilot experiments, and effect-size intervals; proposed future methodology, not a claim about the archived campaigns |
 | `wilhelm2008` | [University-hosted published paper](https://www.es.mdh.se/pdf_publications/1258.pdf), [DOI](https://doi.org/10.1145/1347375.1347389) | Section 1 and Figure 1: observed extrema, actual worst-case execution time, and safe bounds; processor-state complications |
 | `rack` | [Official plugin API guide](https://vcvrack.com/manual/PluginGuide) | Engine and SIMD context; actual behavior also checked in repository code |
+
+## Source Access And Metadata
 
 Some publisher pages require browser verification or a subscription. For
 Hurchalla and Liu et al., the comparison is deliberately limited to the
@@ -48,48 +52,113 @@ manuscript abstract; the repository's migrated PDF endpoint did not provide
 readable full text during this revision. Its guarantees are attributed to
 the proposed networks, not to all sliding DFT implementations.
 
-The revision replaces the 2015 sliding-DFT exposition with Lyons and Howard's
-peer-reviewed treatment, while retaining the original 2003 reference.
-The two benchmarking references motivate explicit limits and a future study;
-no new experiment was run or existing observation reinterpreted as evidence
-of cross-platform robustness.
-
-The subsequent expansion adds Park and Ko, Rafii, and Wefers. Park and Ko's
-author-uploaded text is marked as a March 2015 draft; the bibliography uses
+Park and Ko's author-uploaded text is marked as a March 2015 draft; the
+bibliography uses
 the journal publication's 2014 date. Rafii's published article is November
 2018, despite the IEEE society summary being dated January 2019. Wefers's
 dissertation was defended in 2014 and published in 2015. The proposed
-overlap-reuse and work-granularity experiments are this report's future work;
-none of these sources supplies measurements of Fourier's implementation.
-
-The September 29 additions use Prusa and Holighaus for an application-level
-threading comparison and Wilhelm et al. for timing-bound terminology. The
-report distinguishes engine publication from screen updates, and work-count
-bounds from execution-time guarantees. Neither addition supplies new
-measurements or a performance ranking for Fourier.
-
-The further additions cover depth-first FFT traversal (Bécoulet and Verguet),
-feedforward overlap reuse (Garrido), partial-overlap Hann analysis
-(Eleftheriadis et al.), and numerical-error methodology (van der Byl and Inggs).
+overlap-reuse and work-granularity experiments are this report's future work.
 Bécoulet and Verguet's inspected preprint is dated 2020; the bibliography uses
 the 2021 journal publication. The van der Byl and Inggs discussion is limited
 to the indexed publisher abstract and section summaries; the full article was
 not accessible. The suggested suspension, matched-window, and long-stream
-accuracy experiments are this report's proposals, not measurements reported
-by those sources or completed experiments in this repository.
+accuracy experiments are this report's proposals.
+
+The three latest additions were checked against full official proceedings
+PDFs. Borß's paper uses local page numbers; no proceedings-wide range or DOI
+was verified. Skare's PDF title is "General-Purpose GPU Audio Benchmark
+Framework," although the archive uses an abbreviated title. The 2026 PDF
+credits Balasubramaniam, Ramachandran, and Timoney; its archive landing page
+omits Ramachandran. The bibliography follows the PDF. That study uses a single
+Apple M3 and BlackHole virtual driver; it does not establish physical-interface
+performance or rank our FFT backends.
 
 PFFFT and Apple Accelerate/vDSP are named execution targets alongside FFTW.
 The [external comparison plan](benchmarks/comparisons.md) tracks
-adapter readiness, workload matching, and intended tables and figures.
+adapter status, workload matching, and eligibility of measurement campaigns.
 The local Rack wrapper was also inspected; it calls PFFFT's real transform
 and exposes both output orders. This establishes availability in the inspected
-SDK, not a completed benchmark adapter or timing result. No external library's
-published speed claims are imported into this report.
+SDK, not timing evidence. Adapter and measurement status must be read from the
+current code and owning plan, rather than inferred from this bibliography.
+No external library's published speed claims are imported into this report.
+
+## Search Scope And Selection
+
+This pass combined searches for time-distributed/resumable FFTs, cooperative
+convolution, sliding/hopping STFTs, real-time spectral visualization, and audio
+callback benchmarking with citation checks around the closest existing work.
+It covered the DAFx archive through 2026, AES records, and primary author,
+university, and publisher sources in the wider DSP literature. Search results
+were screened for a specific claim the paper needs, not a target citation count
+or a venue's share of the bibliography. This is a focused gap audit, not a
+systematic review or evidence that no other relevant work exists.
+
+The existing 28 references already cover the main mathematical and scheduling
+alternatives. Three additions fill distinct gaps: earlier plugin load
+distribution, audio-specific benchmark invocation, and controlled host
+contention. The first belongs in related work; the latter two support the
+proposed evaluation where their methods are relevant. Generic background claims
+and the paper's own derivations do not need citation clusters.
+
+Nearby work screened out of the manuscript includes:
+
+-   [Donat-Bouillud, Giavitto, and Jacquemard (DAFx19)](https://www.dafx.de/paper-archive/2019/DAFx2019_paper_51.pdf):
+    changes audio-graph sampling rates to trade quality for cost. Our configured
+    analysis is retained; existing scheduling and timing references suffice.
+-   [Russo (DAFx09)](https://www.dafx.de/paper-archive/2009/papers/paper_43.pdf):
+    interactive sliding-DFT tools add little to the existing recursive-transform
+    references and Prusa/Holighaus visualization comparison.
+-   [Bradford, ffitch, and Dobson (DAFx08)](https://www.dafx.de/paper-archive/2008/papers/dafx08_63.pdf):
+    constant-Q sliding analysis would matter if the representation changed.
+    Fourier currently smooths fixed-window FFT magnitudes.
+-   [Skare (DAFx20)](https://www.dafx.de/paper-archive/2020/proceedings/papers/DAFx2020_paper_73.pdf):
+    GPU execution patterns are less directly useful than the 2024 measurement
+    paper for a CPU scheduling study.
+
+## Implementation And Evidence Boundary
+
+The comparison was checked against repository revision `92306d3`, especially
+[SpectrumAnalysis](../../src/dsp/spectrum_analysis.hpp), the
+[Fourier](../../src/SpectrumAnalyzer.cpp) and
+[Spectre](../../src/Spectrogram.cpp) integration, and the
+[display mailbox](../../src/rack_extensions/display_mailbox.hpp).
+The code is authoritative: it schedules a selected window through weighted
+preparation, butterflies, reconstruction and output, and publishes only after
+the exact hop completes. It neither reuses transforms across frames nor runs
+analysis on a worker. Intermediate published snapshots may be superseded before
+the display consumes them.
+This supports a specific scheduling/ownership contribution, not invention of
+time distribution or complete-chain scheduling.
 
 The report's proofs, timing observations, and implementation-specific
 findings come from the inspected source and the accompanying experiments.
 They are not borrowed performance claims from the cited papers. Equations
 for the real transform are derived from the stated DFT convention.
+Historical campaigns remain historical. This literature pass runs no new
+benchmark and does not promote superseded external comparisons into current
+evidence; the replacement gates belong to
+[Spec 004](../../specs/004-external-fft-comparison.md).
+
+## Venue Implications
+
+These are fit judgments based on the research question and inspected venue
+scope, not acceptance predictions. The cited calls are scope/format precedents;
+they are not a claim that submissions remain open or that the next edition
+uses identical rules.
+
+| Venue | Fit For This Work | Submission Emphasis |
+| --- | --- | --- |
+| [DAFx](https://dafx26.mit.edu/call-for-papers/) | Strongest direct fit: signal analysis and audio software design, with close scheduling, visualization, and benchmarking precedents already cited | Complete-analysis scheduling; callback tails versus total cost and spectrum age; reproducible software and host evidence |
+| [AES full paper](https://aes.org/wp-content/uploads/2025/11/JAES_V73_11_PG793_CfP_Convention_v2.pdf) | Strong engineering alternative; the inspected Category 1 route reviews complete manuscripts | Practical operating limits, implementation, and measured integration; distinguish this route from abstract-reviewed submissions |
+| [SMC](https://smc26.mbz.hr/en/submissions/call-for-papers) | Plausible for its signal-processing and musical-software scope | Show how the implementation serves musical workflows; avoid claiming a user benefit without evaluation |
+| [WASPAA](https://waspaa.com/wordpress/wp-content/uploads/2025/02/WASPAA-2025-CfP-4.pdf) / [EUSIPCO](https://eusipco2026.org/submissions/) | Broader DSP options if the result transfers beyond this plugin | A compact, generalizable tradeoff supported by matched optimized baselines and host measurements; the inspected formats allow much less space than this report |
+
+DAFx's connection follows from the technical literature, not from adding
+unrelated effects papers. The 2026 neural-audio study supplies a measurement
+precedent, not an ML contribution for Fourier. A conference version should
+lead with the current code and verified evidence, retaining historical
+derivations and extended discussion in this supporting report. More citations
+cannot substitute for the pending numerical, transition, and host evaluation.
 
 ## Publication Guidance
 

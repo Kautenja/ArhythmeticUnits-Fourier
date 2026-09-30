@@ -18,34 +18,33 @@ computation than the present implementation, which selects a complete
 window before processing it. The successor retains that window in a larger
 ring while packing it incrementally.
 
-Hurchalla describes a time-distributed FFT for low-latency convolution that
-balances processor and memory load across incoming input blocks while remaining
-within one thread~\cite{hurchalla2010}. Its stated objective is low-latency
-convolution with large partitions. Here the output is a spectrum of an already
-selected window, and latency is measured from that window's newest sample to
-publication. These application-specific latency objectives should not be
-equated. This comparison uses Hurchalla's published abstract; the detailed
-convolution schedule discussed next is documented by Battenberg and
-Avi\v{z}ienis.
+Convolution research directly addresses the distinction between aggregate
+cost and processing bursts. Bor\ss{} distributes long-partition work across
+processing cycles, allowing less spectral-product work in cycles containing
+transforms, and staggers four filter schedules to smooth their combined
+load~\cite{borss2009}. This provides an earlier plugin-level precedent for
+load distribution, including the importance of coincident processing bursts.
+Hurchalla distributes FFT processor and memory load across incoming input
+blocks in one thread for low-latency convolution~\cite{hurchalla2010}.
+That input--output latency objective differs from our selected window's
+newest-sample-to-publication delay.
 
 Battenberg and Avi\v{z}ienis compare cooperative and preemptive implementations
-of partitioned convolution~\cite{battenberg2011}. Their Section~4 uses
+of partitioned convolution~\cite{battenberg2011}. They use
 decimation-in-frequency decomposition to distribute forward transforms,
 spectral multiplication, and inverse transforms across callbacks. Thus,
 scheduling operations beyond the FFT itself also has direct precedent.
-Their preemptive implementation outperforms the alternatives in their evaluated
-scenarios, while the cooperative implementation fits the host-plugin execution
-model they describe. They also report greater implementation effort for the
-cooperative approach. Those findings motivate comparison with worker-based
-processing; they do not establish a performance ranking for this analyzer.
+Their preemptive implementation performs best in their evaluated scenarios;
+the cooperative implementation fits their host-plugin execution model but
+requires more implementation effort. This motivates a worker-based comparison
+without establishing a performance ranking for this analyzer.
 The present study instead specifies a windowed spectral-analysis sequence,
 an exact-hop quota, retained-input capacity, cancellation, and output ownership.
 
 Wefers places these techniques in a broader treatment of real-time partitioned
-convolution~\cite{wefers2015}. Section~6.8 discusses manual preemption of
-processing chains and subdivision of FFTs into short transforms. This provides
-context for choosing the granularity of resumable work; it does not establish
-that butterfly-level suspension is optimal for a spectral analyzer.
+convolution, including manual preemption of processing chains and FFT
+subdivision~\cite{wefers2015}. This motivates evaluating the granularity of
+resumable work rather than assuming butterfly-level suspension is optimal.
 
 Liu, Yan, and Zou
 further study time-distributed FFT/IFFT algorithms for online control on
@@ -137,4 +136,3 @@ Table~\ref{tab:position} summarizes the distinctions
 most relevant to interpreting the present design.
 
 \input{tables/related-approaches.tex}
-

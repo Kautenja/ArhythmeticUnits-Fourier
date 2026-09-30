@@ -13,6 +13,8 @@ acceptable publication delay. A sample-based plugin may instead benefit from
 retaining an unfinished transform and performing a small amount of it whenever
 the host processes another sample. This makes scheduling visible at the DSP
 interface without introducing an additional thread.
+The practical question is when spreading complete analysis over a hop reduces
+callback peaks enough to justify its total CPU cost and additional spectrum age.
 
 The implementation studied here belongs to the Arhythmetic Units Fourier plugin
 for VCV Rack. The plugin contains a spectrum analyzer module named Fourier and
@@ -38,4 +40,3 @@ historical implementation and campaign. Section~\ref{sec:one-hop} describes the
 production successor at revision \code{9e43231}, followed by a separate
 pre-integration prototype campaign. Keeping these artifacts distinct prevents
 historical timings from being attributed to the current plugin.
-

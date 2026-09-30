@@ -55,12 +55,29 @@ If the host renders $D$ samples in one device callback, its relevant demand is
 the sum of the associated module work over those $D$ samples, plus other engine
 costs. In the original path, a device callback containing preparation and
 reconstruction can still experience a substantial burst. A future host study
-of either design should vary $D$, frame
-phase, analyzer count, and background patch load rather than extrapolating
-from one scalar-call maximum. It should include concurrent display consumption
-and record callback-duration distributions and deadline misses over a stated
-observation period. These are proposed measurements, not results of the
-campaigns reported here.
+should vary $D$, relative frame phases, analyzer count, and background patch
+load, including concurrent display consumption. Relative phase matters because
+several individually tolerable bursts can coincide; Bor\ss{} uses staggered
+filter schedules to address the analogous convolution problem~\cite{borss2009}.
+
+Skare's audio benchmark framework separates throughput from median, percentile,
+and maximum buffer-processing times, and distinguishes continuous batch
+execution from periodic invocation~\cite{skare2024}. Its periodic simulation
+also differs from variable plugin invocation times within a running DAW.
+Balasubramaniam et al. subsequently evaluate neural audio processing under
+controlled plugin contention, recording plugin timing, session callback
+utilization, driver-reported underruns, and worker inference underruns as
+distinct outcomes~\cite{balasubramaniam2026}. Their virtual audio driver omits
+physical-interface behavior. These studies inform our measurement design;
+their GPU and inference results do not establish FFT-backend rankings.
+
+A Rack evaluation should accordingly distinguish callback-budget exceedances
+from observed audio underruns and report its driver, load, and observation
+period. For a worker analyzer, missed requested publications and spectrum age
+also matter. Superseded display snapshots are a separate outcome: our mailbox
+deliberately permits them when the UI consumes more slowly than the engine
+publishes. These are proposed host measurements, not results of the campaigns
+reported here.
 
 For that future evaluation, Kalibera and Jones provide a method for allocating
 repetitions across builds, executions, and iterations according to the sources
@@ -117,4 +134,3 @@ The timing studies do not evaluate non-power-of-two lengths, inverse
 reconstruction applications, concurrent UI consumption, or calibration accuracy
 of every window/display setting. Production regression tests add invalid-setting
 rejection and concurrent mailbox stress; they are separate from timing evidence.
-

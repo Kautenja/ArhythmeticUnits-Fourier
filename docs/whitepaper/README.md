@@ -60,7 +60,7 @@ to arXiv or a journal.
 -   [tools/manuscript.py](tools/manuscript.py): Shared source expansion for
     consistency checks and the portable source archive.
 -   [sources.md](sources.md): Primary-source verification of references and
-    the scope of the literature review.
+    the scope of the literature review, selection decisions, and venue fit.
 -   [experiments/evaluate.cpp](experiments/evaluate.cpp): Independent DFT
     checks, schedule checks, and a controlled scalar timing comparison.
 -   [experiments/run.py](experiments/run.py): Reproduction driver, source
@@ -232,12 +232,26 @@ Eleftheriadis et al.'s partial-overlap STFT (2023), with van der Byl and Inggs
 (2016) informing the proposed numerical-error evaluation. PFFFT and Apple
 Accelerate/vDSP now join FFTW as explicit targets for external implementation
 comparisons, with a linked plan for the adapters and publication outputs.
-The manuscript remains version 2 and is now 22 pages with 28 cited references.
+That revision retained version 2 at 22 pages with 28 cited references.
 Both LaTeX builds and the artifact check
 pass; the final LaTeX pass has no unresolved references or box warnings.
 All 22 rendered pages were visually inspected, and `git diff --check` passes.
 These additions preserve the campaign data and introduce no new timing,
 DSP, Rack build, or manual Rack validation results.
+
+The selective literature audit adds Borß (2009) on convolution load distribution,
+Skare (2024) on audio benchmark invocation, and Balasubramaniam, Ramachandran,
+and Timoney (2026) on controlled host contention. Comparisons were checked
+against the current code; source-access details, excluded candidates, and venue
+judgments are recorded in [sources.md](sources.md). The manuscript remains
+version 2, with 31 cited references and 24 pages in the current build.
+`make -C docs/whitepaper check` and `make -C docs/whitepaper arxiv` pass.
+The extracted single-file export compiles independently and has identical
+page text to the project PDF. Both final LaTeX passes have no unresolved
+references or box warnings. The rendered pages, new citation destinations,
+primary-paper links, bookmarks, and PDF metadata were reviewed, and
+`git diff --check` passes. No new benchmarks, DSP tests, Rack build, or manual
+Rack session were run for this literature-only change.
 
 ## Historical Verification Of Manuscript Version 1
 
