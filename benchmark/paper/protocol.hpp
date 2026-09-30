@@ -17,6 +17,7 @@
 #include "../../src/dsp/dc_blocker.hpp"
 #include "backend.hpp"
 #include "resources.hpp"
+#include "runtime.hpp"
 
 namespace Paper {
 using Clock = std::chrono::steady_clock;
@@ -78,8 +79,15 @@ inline void print_csv(const std::vector<Row>& rows, std::ostream& out) {
             << ',' << r.visible_age << ',' << r.playback_delay << '\n';
 }
 inline void print(const std::vector<Row>& rows) {
+    Runtime::Scope phase(Runtime::Phase::CsvOutput);
     if (result_sink()) result_sink()(rows);
-    else print_csv(rows, std::cout);
+    else {
+        print_csv(rows, std::cout);
+        if (Runtime::active()) {
+            std::cout.flush();
+            require(bool(std::cout), "Cannot write paper observations");
+        }
+    }
 }
 
 /// @brief Same-thread fixed DSP load; never calibrate load to a target percentage.
@@ -113,6 +121,7 @@ void report_timed_instance(Audit&, const Adapter&, long) {}
 template<typename Adapter, typename Audit = NoAudit>
 void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         double playback_delay = -1) {
+    Runtime::set(Runtime::Phase::Setup);
     const auto contract = backend_contract(c);
     if (center_offset < 0) center_offset = contract.center;
     const auto input = signal();
@@ -129,30 +138,36 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     std::vector<Row> rows;
     rows.reserve(c.callbacks + total/c.hop*c.count + 2048);
     std::vector<unsigned char> cache(c.cache_mib*1024*1024, 1);
-    auto prepare = [&](std::vector<std::unique_ptr<Adapter>>& bank, std::vector<size_t>& cursors) {
+    auto prepare = [&](std::vector<std::unique_ptr<Adapter>>& bank, std::vector<size_t>& cursors, bool replay) {
         for (size_t a = 0; a < c.count; ++a) {
+            Runtime::set(replay ? Runtime::Phase::ReplaySetup : Runtime::Phase::TimedSetup);
             bank.emplace_back(new Adapter(c));
             const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
             const size_t warm = c.state == "startup" ? 0 :
                 ((c.n+c.hop-1)/c.hop + c.warm_hops)*c.hop;
             cursors.push_back(warm+offset);
+            Runtime::set(replay ? Runtime::Phase::ReplayWarmup : Runtime::Phase::TimedWarmup);
             for (size_t s = 0; s < warm+offset; ++s)
                 bank.back()->process(input[s%input.size()]);
             bank.back()->published(); // Establish the initial consumer snapshot.
         }
     };
     // Empty clock readings are retained, never subtracted from short calls.
+    Runtime::set(Runtime::Phase::TimerCalibration);
     for (size_t i = 0; i < 1024; ++i) {
         const auto start = Clock::now();
         observe(input);
         const auto end = Clock::now();
         rows.emplace_back("timer", i, 0, 0, 0, elapsed(start, end));
     }
+    Runtime::set(Runtime::Phase::TimedSetup);
     {
         std::vector<std::unique_ptr<Adapter>> bank;
         std::vector<size_t> cursors;
-        prepare(bank, cursors);
+        prepare(bank, cursors, false);
+        Runtime::set(Runtime::Phase::TimedSetup);
         Background background(c.load);
+        Runtime::set(Runtime::Phase::TimedWarmup);
         if (c.state != "startup")
             for (size_t i = 0; i < c.warm_hops*c.hop; ++i) background.process(input[i%input.size()]);
         auto run = [&](size_t samples) {
@@ -168,6 +183,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         };
         const size_t chunks = c.pass == "throughput" ? 1 : c.callbacks;
         const size_t samples = c.pass == "throughput" ? total : c.block;
+        Runtime::set(Runtime::Phase::Measurement);
         for (size_t i = 0; i < chunks; ++i) {
             // Cache pressure is outside timing, not charged to simulated deadlines.
             for (size_t k = 0; k < cache.size(); k += 64) ++cache[k];
@@ -177,19 +193,25 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             const auto end = Clock::now();
             rows.emplace_back(c.pass, i, 0, i*samples, samples, elapsed(start, end));
         }
+        Runtime::set(Runtime::Phase::PostMeasurementChecks);
         for (const auto& adapter : bank) {
             adapter->check();
             report_timed_instance(audit, *adapter, 0);
         }
+        Runtime::set(Runtime::Phase::TimedTeardown);
     }
+    Runtime::set(Runtime::Phase::Other);
     if (std::string(backend_descriptor(c.backend).boundary) == "control") { print(rows); return; }
     // Replay separately so per-sample timing contains no instrumentation for
     // publication statistics or consumer mailbox traffic.
+    Runtime::set(Runtime::Phase::ReplaySetup);
     {
         std::vector<std::unique_ptr<Adapter>> bank;
         std::vector<size_t> cursors;
-        prepare(bank, cursors);
+        prepare(bank, cursors, true);
+        Runtime::set(Runtime::Phase::ReplaySetup);
         std::vector<size_t> publications(c.count, 0), previous(c.count, 0);
+        Runtime::set(Runtime::Phase::CorrectnessReplay);
         for (size_t s = 0; s < total; ++s) {
             for (size_t a = 0; a < bank.size(); ++a) {
                 bank[a]->process(input[cursors[a]++%input.size()]);
@@ -215,7 +237,9 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             require(publications[a] == (total+offset+bias)/c.hop-(offset+bias)/c.hop, "Missing publications");
             bank[a]->check();
         }
+        Runtime::set(Runtime::Phase::ReplayTeardown);
     }
+    Runtime::set(Runtime::Phase::Other);
     print(rows);
 }
 }  // namespace Paper

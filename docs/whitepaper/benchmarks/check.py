@@ -13,6 +13,7 @@ import tarfile
 
 from run import digest, summarize
 from contracts import normalize_registry, resolve_contract, validate_config
+from runtime import validate_profile
 
 
 def validate_rows(path, config, registry=None):
@@ -211,6 +212,26 @@ def validate_hybrid_info(info, config):
         raise ValueError("Hybrid schedule/storage evidence mismatch")
 
 
+def runtime_artifacts(metadata, required):
+    """Require distinct, authenticated sidecars only for declared telemetry."""
+    if "runtime_profile" not in metadata:
+        if "runtime" in metadata or any("runtime" in run for run in metadata["runs"]):
+            raise ValueError("Runtime telemetry requires a declared profile")
+        return []
+    if metadata["runtime_profile"] != "coarse-wall-v1":
+        raise ValueError("Unsupported runtime profile policy")
+    names = []
+    occupied = required | {"metadata.json"}
+    for run in metadata["runs"]:
+        name = run.get("runtime")
+        if (not isinstance(name, str) or not name or Path(name).name != name
+                or name in (".", "..") or name in occupied):
+            raise ValueError("Missing, invalid or aliased runtime artifact")
+        occupied.add(name)
+        names.append(name)
+    return names
+
+
 def check(directory):
     metadata = json.loads((directory / "metadata.json").read_text())
     if metadata["schema"] == 1:
@@ -225,11 +246,22 @@ def check(directory):
         required.add("external-dependencies.tar.gz")
     required.update(metadata["resources"].values())
     required.update(run[key] for run in metadata["runs"] for key in ("raw", "stderr"))
+    runtime_files = runtime_artifacts(metadata, required)
+    required.update(runtime_files)
     if not required <= artifacts.keys():
         raise ValueError("Missing artifact checksums")
+    for filename in runtime_files:
+        path = directory/filename
+        if path.is_symlink() or not path.is_file():
+            raise ValueError(f"Missing or aliased runtime artifact: {filename}")
     for filename, expected in artifacts.items():
         if Path(filename).name != filename or digest(directory/filename) != expected:
             raise ValueError(f"Artifact checksum mismatch: {filename}")
+    for filename in runtime_files:
+        validate_profile(json.loads((directory/filename).read_text()))
+    # The runner adds this only after its first complete evidence check finishes.
+    if "runtime" in metadata:
+        validate_profile(metadata["runtime"])
     if (artifacts["paper.bin"] != metadata["binary_sha256"]
             or artifacts["paper-audit.bin"] != metadata["audit_binary_sha256"]):
         raise ValueError("Executable identity mismatch")

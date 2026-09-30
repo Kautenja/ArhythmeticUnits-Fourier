@@ -169,7 +169,10 @@ int main(int argc, char** argv) {
         validate_backend(c);
         if (describe) { std::cout << contract_json(c) << '\n'; return 0; }
         c.resources = resources;
+        Runtime::Profile runtime(!resources && !provider_info);
+        Runtime::set(Runtime::Phase::Setup);
         execute(c, provider_info);
+        runtime.finish();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';
         return 1;

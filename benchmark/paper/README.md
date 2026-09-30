@@ -21,6 +21,7 @@ The suite groups adapters by approach and shares matched workload code:
 | `modules.hpp` | Actual headless Fourier/Spectre module cases |
 | `protocol.hpp`, `backend.hpp` | Raw records, streaming loop, workload validation, and contracts |
 | `resources.hpp` | Separate setup, execution, destruction, and allocation probes |
+| `runtime.hpp` | Optional coarse wall-time accounting outside measured intervals |
 | `references.hpp`, `analysis_accuracy.hpp` | Independent numerical references and acceptance policy |
 | `development.hpp`, `development_matrix.hpp` | Native fast/full development runner shared with the Rack benchmarks |
 
@@ -70,6 +71,13 @@ background load, smoothing, voices, measured callbacks, warmup hops, sample
 rate, state, cache MiB, callback offset, and protocol version. Use `--inventory`
 for backend capabilities or prepend `--describe` to inspect a case's contract
 without timing it. FFTW/vDSP/PFFFT cases use the same protocol.
+
+Set `PAPER_RUNTIME_PATH` to a writable JSON filename to record coarse process
+phases for an ordinary measurement command. The campaign runner sets this
+automatically; diagnostics and resource probes ignore it. The sidecar keeps
+stdout CSV and stderr numerical reports unchanged. See the
+[runtime diagnostics](../../docs/whitepaper/benchmarks/README.md#campaign-runtime-diagnostics)
+for phase boundaries and interpretation.
 
 For publication evidence, use the
 [campaign runner](../../docs/whitepaper/benchmarks/README.md#build-and-run) to

@@ -83,6 +83,46 @@ actual order. `--seed`, `--repeats`, `--hops`, `--frames`, `--step-frames`, and
 `--warm-hops` are explicit experimental settings, not automatic convergence
 criteria. The short validation commands are not publication evidence.
 
+### Campaign Runtime Diagnostics
+
+New runs record coarse wall-clock durations automatically and print a summary
+after validation. Inspect the same summary later without rerunning experiments:
+
+```shell
+python3 docs/whitepaper/benchmarks/runtime.py .build/paper-smoke
+```
+
+The runner separates build, archiving, preflight, resource probes, benchmark
+processes, CSV summarization, metadata checkpoints, final integrity checks,
+artifact hashing, and evidence validation. Its disjoint phases and per-job
+events are retained in `metadata.json` under `runtime`, in nanoseconds. The
+total starts after configuration resolution and ends after validation; it
+excludes the final diagnostic save/print and separately invoked report/figure
+generation. `finished_utc` now includes validation. A caught failure or
+interruption retains the elapsed phases with failed runtime and invalid
+campaign status; restart in a new directory. Forced termination cannot save
+the in-memory runtime record.
+
+Each measured process also writes a hashed `workload-*.runtime.json` sidecar.
+These separate construction/planning, warmup, the measurement pass,
+correctness replay, teardown, and CSV serialization. Native durations are
+**inside** the runner's benchmark-process duration; never add the two levels.
+The printed process launch/exit gap includes work outside the native scope,
+such as process startup and sidecar serialization. `other` retains unclassified
+native work, including transform teardown. Unused phases appear as zero.
+For failed campaigns, the unaccounted process duration also includes failed
+jobs that could not produce a complete native sidecar.
+
+All new clocks and progress I/O sit outside individual measured intervals.
+The native `measurement` phase includes outer-loop bookkeeping and deliberate
+cache pressure; it is distinct from the sum of retained raw timing intervals.
+Counts, warmups, provider planning, numerical coverage, and accuracy tolerances
+are unchanged. This accounting identifies possible harness improvements; it
+does not establish an algorithm speedup or replace repeated idle-host timing.
+Short smoke runs disproportionately emphasize builds and startup, so do not
+extrapolate their percentages to a publication campaign. Historical archives
+without runtime diagnostics remain valid.
+
 ## External Campaigns And Reports
 
 FR-10 supplies generated, tracked manifests for

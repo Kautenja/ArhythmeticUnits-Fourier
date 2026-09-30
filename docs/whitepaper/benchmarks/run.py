@@ -21,6 +21,7 @@ import tarfile
 from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, validate_config
 from dependencies import fftw_inputs
 from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
+from runtime import RuntimeProfile, format_runtime, validate_profile
 
 ROOT = Path(__file__).resolve().parents[3]
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
@@ -252,12 +253,32 @@ def main():
     if any(base == output or base in output.parents for base in (ROOT/"src", ROOT/"benchmark", ROOT/".git")):
         parser.error("Write campaigns outside source and Git metadata directories")
     output.mkdir(parents=True, exist_ok=False)
+    runtime, metadata = RuntimeProfile(), {}
+    try:
+        run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
+                     runtime, metadata)
+    except BaseException:
+        # Keep failed phase accounting without presenting partial evidence as complete.
+        metadata["runtime"] = runtime.finish("failed")
+        metadata["status"] = "invalid"
+        save(output/"metadata.json", metadata)
+        raise
+    metadata["runtime"] = runtime.finish("complete")
+    validate_profile(metadata["runtime"])
+    metadata["finished_utc"] = metadata["runtime"]["finished_utc"]
+    save(output/"metadata.json", metadata)
+    print(format_runtime(output, metadata), flush=True)
+
+
+def run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
+                 runtime, metadata):
+    """Retain the existing serial protocol; profile only coarse outer phases."""
     rack = args.rack_dir.resolve()
     build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
     # The recorded feature set must override ambient Make environment settings.
     build.append("PAPER_FFTW_PREFIX="+(str(args.fftw_prefix) if args.fftw_prefix else ""))
     build.append("PAPER_VDSP="+str(int(args.enable_vdsp)))
-    metadata = dict(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
+    metadata.update(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
                     revision=capture(["git", "rev-parse", "HEAD"]),
                     git_status=capture(["git", "status", "--porcelain"]),
                     platform=platform.platform(), machine=platform.machine(), processor=platform.processor(),
@@ -267,6 +288,7 @@ def main():
                     protocol="v2", configs=configs, runs=[], build_features=features,
                     external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
     metadata["analysis_accuracy_policy"] = "spectrum-norms-v1"
+    metadata["runtime_profile"] = "coarse-wall-v1"
     metadata["phase"] = phase
     metadata["session_id"] = args.session_id or "smoke"
     metadata["host_id"] = args.host_id or "unlabeled-smoke-host"
@@ -292,6 +314,7 @@ def main():
     elif Path("/proc/cpuinfo").exists():
         metadata["cpuinfo"] = Path("/proc/cpuinfo").read_text()
     save(output/"metadata.json", metadata)
+    runtime.switch("input_hashes")
     # Archive working sources, including uncommitted benchmark development.
     sources = sorted({p for base in (ROOT/"src", ROOT/"benchmark", ROOT/"test/paper",
                                      ROOT/"docs/whitepaper/benchmarks") for p in base.rglob("*")
@@ -302,8 +325,10 @@ def main():
                  {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
                  {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
     build_inputs = {p: digest(p) for p in sources+sdk+list(external_inputs.values())}
+    runtime.switch("build")
     with (output/"build.log").open("w") as log:
         subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
+    runtime.switch("archive")
     if any(digest(p) != expected for p, expected in build_inputs.items()):
         raise ValueError("Source or dependency changed during build")
     audit_binary = BINARY.with_name("paper-audit" + BINARY.suffix)
@@ -338,6 +363,9 @@ def main():
     except subprocess.CalledProcessError:
         metadata["rack_revision"] = "SDK without Git metadata"
     env = dict(os.environ, DYLD_LIBRARY_PATH=str(rack), LD_LIBRARY_PATH=str(rack))
+    # Resource probes/preflight must not write into an inherited telemetry path.
+    env.pop("PAPER_RUNTIME_PATH", None)
+    runtime.switch("preflight")
     with (output/"verification.txt").open("w") as verification:
         subprocess.run([str(BINARY), "--verify"], cwd=ROOT, env=env,
                        stdout=verification, stderr=subprocess.STDOUT, check=True)
@@ -345,6 +373,7 @@ def main():
     if compiled_registry != registry:
         raise ValueError("Compiled backend registry differs from runner")
     save(output/"inventory.json", compiled_registry)
+    runtime.switch("resource_probes")
     for index, config in enumerate(configs):
         arguments = command(config)[1:]
         contract = json.loads(subprocess.check_output([str(BINARY), "--describe"]+arguments, env=env, text=True))
@@ -359,20 +388,30 @@ def main():
         metadata["resources"][str(index)] = filename
     jobs = [(repeat, index) for repeat in range(args.repeats) for index in range(len(configs))]
     random.Random(args.seed).shuffle(jobs)
+    runtime.switch("metadata_checkpoint")
     save(output/"metadata.json", metadata)
     for ordinal, (repeat, index) in enumerate(jobs):
+        runtime.switch("job_dispatch", workload=index, repeat=repeat)
         config = configs[index]
         stem = f"workload-{index:04d}-repeat-{repeat:02d}"
         raw, errors = output/(stem+".csv"), output/(stem+".stderr")
+        process_runtime = output/(stem+".runtime.json")
         invocation = command(config)
         print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['backend']} {config['pass_name']}", flush=True)
         started = dt.datetime.now(dt.timezone.utc).isoformat()
+        runtime.switch("benchmark_process", workload=index, repeat=repeat)
         with raw.open("w") as stdout, errors.open("w") as stderr:
-            subprocess.run(invocation, cwd=ROOT, env=env, stdout=stdout, stderr=stderr, check=True)
+            subprocess.run(invocation, cwd=ROOT, env=dict(env, PAPER_RUNTIME_PATH=str(process_runtime)),
+                           stdout=stdout, stderr=stderr, check=True)
+        runtime.switch("summarize", workload=index, repeat=repeat)
+        validate_profile(json.loads(process_runtime.read_text()))
         metadata["runs"].append(dict(workload=index, repeat=repeat, command=invocation,
                                      started_utc=started, raw=raw.name, stderr=errors.name,
+                                     runtime=process_runtime.name,
                                      summary=summarize(raw, config)))
+        runtime.switch("metadata_checkpoint", workload=index, repeat=repeat)
         save(output/"metadata.json", metadata)
+    runtime.switch("final_integrity")
     if (digest(BINARY) != metadata["binary_sha256"]
             or digest(audit_binary) != metadata["audit_binary_sha256"]
             or any(digest(p) != metadata["source_sha256"][str(p.relative_to(ROOT))] for p in sources)
@@ -381,9 +420,11 @@ def main():
         raise ValueError("Source, executable or dependencies changed during campaign")
     metadata["status"] = "complete"
     metadata["finished_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    runtime.switch("artifact_hashes")
     metadata["artifact_sha256"] = {p.name: digest(p) for p in output.iterdir()
                                   if p.is_file() and p.name != "metadata.json"}
     save(output/"metadata.json", metadata)
+    runtime.switch("validation")
     from check import check
     try:
         check(output)

@@ -260,6 +260,7 @@ struct ExternalTransform {
 
 template<typename T, typename Backend>
 void external_transform(const Config& c) {
+    Runtime::set(Runtime::Phase::Setup);
     using Job = ExternalTransform<T, Backend>;
     if (c.resources) {
         // Match first-party transform resource scope: plans and owned output;
@@ -288,18 +289,23 @@ void external_transform(const Config& c) {
         }, 2);
         return;
     }
+    Runtime::set(Runtime::Phase::TimedSetup);
     Job job(c);
     std::vector<Row> rows;
     rows.reserve(1024+c.callbacks);
+    Runtime::set(Runtime::Phase::TimerCalibration);
     for (size_t i = 0; i < 1024; ++i) {
         const auto start = Clock::now(); observe(job); const auto end = Clock::now();
         rows.emplace_back("timer", i, 0, 0, 0, elapsed(start, end));
     }
+    Runtime::set(Runtime::Phase::TimedWarmup);
     for (size_t i = 0; i < c.warm_hops; ++i) job.compute();
+    Runtime::set(Runtime::Phase::Measurement);
     for (size_t i = 0; i < c.callbacks; ++i) {
         const auto start = Clock::now(); job.compute(); const auto end = Clock::now();
         rows.emplace_back("complete", i, 0, 0, c.n, elapsed(start, end));
     }
+    Runtime::set(Runtime::Phase::CorrectnessReplay);
     for (const auto value : job.output)
         require(std::isfinite(value.real()) && std::isfinite(value.imag()), "Non-finite external transform output");
     std::vector<std::complex<T>> canonical = job.complex;
@@ -337,6 +343,7 @@ void external_transform(const Config& c) {
         << ",\"max_reference\":" << scale << ",\"roundtrip_max_abs_error\":" << roundtrip
         << ",\"checked_bins\":" << c.n << ",\"direct_bins\":" << probes
         << ",\"provider_instances\":[" << job.fft.info_json() << "]}\n";
+    Runtime::set(Runtime::Phase::Other);
     print(rows);
 }
 

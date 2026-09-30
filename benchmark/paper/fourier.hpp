@@ -229,6 +229,7 @@ struct PhaseTimer {
 /// All total-frame passes include buffer preparation and final output work.
 template<typename T, typename Transform>
 void transform(const Config& c, bool real, bool inverse) {
+    Runtime::set(Runtime::Phase::Setup);
     const auto input = signal();
     std::vector<T> values(c.n);
     std::vector<std::complex<T>> complex(c.n);
@@ -246,6 +247,7 @@ void transform(const Config& c, bool real, bool inverse) {
         }, 2);
         return;
     }
+    Runtime::set(Runtime::Phase::TimedSetup);
     Transform fft(c.n);
     auto buffer = [&]() { buffer_transform(fft, values, complex, window.get_samples()); };
     const size_t steps = fft.get_total_steps();
@@ -257,13 +259,16 @@ void transform(const Config& c, bool real, bool inverse) {
     std::vector<Row> rows;
     rows.reserve(c.callbacks*(c.pass == "steps" ? steps+1 : 4)+1024);
     PhaseTimer timed{rows};
+    Runtime::set(Runtime::Phase::TimerCalibration);
     for (size_t i = 0; i < 1024; ++i) {
         const auto start = Clock::now();
         observe(fft);
         const auto end = Clock::now();
         rows.emplace_back("timer", i, 0, 0, 0, elapsed(start, end));
     }
+    Runtime::set(Runtime::Phase::TimedWarmup);
     for (size_t i = 0; i < c.warm_hops; ++i) { buffer(); fft.compute(); }
+    Runtime::set(Runtime::Phase::Measurement);
     for (size_t frame = 0; frame < c.callbacks; ++frame) {
         if (c.pass == "complete" || c.pass == "incremental") {
             timed(c.pass, frame, 0, steps, [&]() {
@@ -291,6 +296,7 @@ void transform(const Config& c, bool real, bool inverse) {
         }
         require(fft.is_done_computing(), "Transform step count did not complete");
     }
+    Runtime::set(Runtime::Phase::CorrectnessReplay);
     const auto measured = fft.coefficients;
     buffer();
     size_t calls = 0;
@@ -347,6 +353,7 @@ void transform(const Config& c, bool real, bool inverse) {
         << double(maximum_error) << ",\"max_reference\":" << double(maximum_reference)
         << ",\"roundtrip_max_abs_error\":" << double(roundtrip_error)
         << ",\"scheduled_calls\":" << calls << ",\"steps\":" << steps << "}\n";
+    Runtime::set(Runtime::Phase::Other);
     print(rows);
 }
 

@@ -831,6 +831,65 @@ to execute the full pilot/confirmation campaign before completing this FR.
     older evidence automatically; actual retirement remains deferred until
     real replacement evidence qualifies.
 
+#### Runtime Attribution Prerequisite
+
+September 29, 2026: added coarse runtime accounting as the first step toward
+reducing campaign execution time. This completes only the attribution
+prerequisite; FR-13 tooling remains REOPENED, replacement measurements remain
+NOT RUN, and evidence retirement remains DEFERRED.
+
+The runner records disjoint wall-time phases and per-job events, including
+final integrity checks, artifact hashing and evidence validation. Each measured
+process emits a checksummed native sidecar separating setup/planning, warmup,
+measurement, correctness replay and CSV output. Native phases nest within
+process wall time and must not be added to it. Coarse instrumentation stays
+outside individual measured intervals; counts, scheduling, provider planning,
+numerical references, tolerances and raw observation formats are unchanged.
+No production DSP code changed, and no execution-time reduction is claimed.
+
+The [runtime diagnostic command](../docs/whitepaper/benchmarks/README.md#campaign-runtime-diagnostics)
+prints seconds and percentages from retained data. It preserves unclassified
+work and failed-process time explicitly. Old archives need no new fields.
+Failed/interrupted campaigns retain invalid status and elapsed phases rather
+than being presented as completed evidence. The total ends after validation;
+final telemetry serialization and separately invoked report/figure generation
+remain outside this scope.
+
+Validation on macOS ARM64:
+
+-   `make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX="$PWD/.build/deps/fftw"`:
+    passed; existing Rack deprecation and local FFTW deployment-target warnings
+    remain.
+-   `MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+    all 51 tests passed, including native opt-in/failure behavior, invalid or
+    aliased sidecars, checksum failures, legacy archives, disjoint accounting,
+    failed-job reporting and final-validation timing.
+-   `make test-benchmark-dev`: 124 assertions in seven cases passed.
+-   Four real executable comparisons with profiling enabled/disabled retained
+    identical non-timing CSV fields and numerical stderr: live scalar analysis,
+    smoothed PFFFT analysis, individual RFFT steps, and a PFFFT transform.
+-   A 14-workload implementation smoke covered controls, scalar/SIMD analysis,
+    headless modules, PFFFT/FFTW/vDSP, smoothed analysis through N=16384,
+    independent channels, hybrid scheduling, inverse, filtering, and transforms.
+    The retained configuration is `.build/runtime-attribution-smoke-config.json`:
+
+    ```shell
+    python3 docs/whitepaper/benchmarks/run.py .build/runtime-attribution-smoke --config .build/runtime-attribution-smoke-config.json --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --notes 'Runtime-attribution implementation smoke only; not publication timing evidence'
+    python3 docs/whitepaper/benchmarks/check.py .build/runtime-attribution-smoke
+    python3 docs/whitepaper/benchmarks/runtime.py .build/runtime-attribution-smoke
+    ```
+
+    All 14 runs, numerical/publication checks, archived sources, artifact hashes
+    and summaries passed. The small run took 33.118 seconds through validation,
+    including 26.425 seconds building and 0.276 seconds in measured processes;
+    their retained measurement intervals totaled 0.002930 seconds. These are
+    implementation diagnostics, not estimates for the full campaign or paper
+    comparison metrics. Full-scale optimization decisions still require a
+    representative run with this accounting enabled.
+
+No full campaign, paper result replacement, plugin build or manual Rack
+session was performed for this benchmark-only change.
+
 #### Validation, Handoff And Completion
 
 - [ ] Verify the documented path from a fresh checkout or equivalent isolated
