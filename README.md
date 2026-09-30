@@ -57,7 +57,9 @@ harmonics, or the brief burst of energy at the start of a note.
 -   **Watch the history build.** A moving scan line writes new spectra
     across the display, revealing changes in frequency content.
 -   **Choose your colors.** Seven color maps, including Magma, Viridis,
-    and Cividis, let you change how spectral magnitude appears.
+    and Cividis, let you change how spectral magnitude appears. Select
+    Decibels or Linear intensity and adjust Floor and Ceil on the color
+    screen to reveal quiet detail or separate strong peaks.
 -   **Pause and inspect.** Freeze the history and hover for frequency,
     note, tuning offset, and magnitude readouts. Recolor the frozen view
     without capturing it again.
@@ -83,7 +85,9 @@ into the analyzer alongside your existing audio path. Polyphonic cables
 are supported; voices within each input are summed into one spectrum.
 
 Context-menu settings support Rack's **Undo** and **Redo**, including
-AC coupling, Fourier's fill and Bezier options, and Spectre's color map.
+AC coupling and Fourier's fill and Bezier options. Spectre's palette and
+intensity-scale dropdowns are on the color screen and also support Undo
+and Redo.
 
 This README describes the current checkout. VCV Library builds and the
 latest-release PDF manuals can lag behind it; see the [changelog](CHANGELOG.md)
@@ -102,17 +106,27 @@ Both modules ship these five presets:
 | `Harmonics` | Inspect harmonic spacing on a linear frequency axis. |
 | `Transients` | Follow changing spectra without time averaging. |
 
+Spectre also includes `DecibelInspection`: a -90 to +12 dB color range,
+with no smoothing or slope weighting, for inspecting spectral levels.
+
 Spectre's analysis size is fixed; its presets change the view and smoothing.
 Fourier's presets also tune FFT length and hop size.
 
 <details>
 <summary><strong>Preset Settings And Compatibility Notes</strong></summary>
 
-Fourier and Spectre ship the same five preset names, using filenames without
-spaces. Load them from Rack's module preset menu. Each pair uses the same
+Fourier and Spectre share the five presets in the table, using filenames
+without spaces. Load them from Rack's module preset menu. Each pair uses the same
 input gain (0 dB), window, frequency scale and bounds, smoothing, slope,
 and AC coupling. All presets start running; Fourier uses unfilled traces
 and Spectre uses Magma colors.
+
+Spectre's five shared presets retain Linear intensity and their original
+appearance. Its additional `DecibelInspection` preset selects Decibels,
+Floor -90 dB, and Ceil +12 dB, with Flattop windowing, a linear 0-20 kHz
+frequency axis, and AC coupling off. New Spectre instances use Decibels
+with a -90 to 0 dB range; older patches without an intensity mode load in
+Linear to preserve their colors.
 
 | Preset | Purpose And Shared Settings | Fourier FFT / Hop |
 | --- | --- | --- |
