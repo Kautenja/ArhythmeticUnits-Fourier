@@ -10,6 +10,7 @@
 #include <sstream>
 #include <vector>
 #include <rack.hpp>
+#include "../../src/dsp/math.hpp"
 #include "pffft.hpp"
 #ifdef PAPER_HAVE_VDSP
 #include "vdsp.hpp"
@@ -61,7 +62,7 @@ class PffftNative {
         const size_t begin = std::max(size_t(1), at), end = std::min(n/2, at+count);
         for (size_t k = begin; k < end; ++k) {
             const float re = packed.get()[2*k], im = packed.get()[2*k+1];
-            output[k-at] = std::sqrt(re*re+im*im);
+            output[k-at] = Fourier::complex_magnitude(std::complex<float>(re, im));
         }
     }
     std::string info_json() const {
@@ -88,8 +89,8 @@ template<> struct Api<TYPE> : VdspDetail::Api<TYPE> { \
         vDSP_fftm_zrip##SUFFIX(setup, split, 1, n/2, exponent, channels, FFT_FORWARD); \
     } \
     static void magnitude(typename Base::Split* split, TYPE* output, size_t n) { \
-        vDSP_zvabs##SUFFIX(split, 1, output, 1, n); \
-        const TYPE scale = TYPE(.5); vDSP_vsmul##SUFFIX(output, 1, &scale, output, 1, n); \
+        for (size_t i = 0; i < n; ++i) \
+            output[i] = Fourier::complex_magnitude(std::complex<TYPE>(split->realp[i], split->imagp[i])) * TYPE(.5); \
     } \
 };
 PAPER_NATIVE_VDSP(float, )
@@ -184,7 +185,8 @@ class FftwNative {
     void transform() { Api::execute(plan); }
     void magnitudes(size_t channel, size_t at, size_t count, T* result) const {
         const auto* values = output+channel*(n/2+1)+at;
-        for (size_t i = 0; i < count; ++i) result[i] = std::sqrt(values[i][0]*values[i][0]+values[i][1]*values[i][1]);
+        for (size_t i = 0; i < count; ++i)
+            result[i] = Fourier::complex_magnitude(std::complex<T>(values[i][0], values[i][1]));
     }
     std::string info_json() const {
         char* text = Api::plan_text(plan); char* wisdom = Api::wisdom();

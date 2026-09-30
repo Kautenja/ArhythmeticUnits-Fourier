@@ -583,3 +583,20 @@ TEST_CASE("Coordinate cache preserves the original mapping through interrupted c
         }
     }
 }
+
+TEST_CASE("Scaled magnitude retains normal tiny lanes under Rack FPU policy") {
+    const auto saved = rack::system::getFpuFlags();
+    rack::system::resetFpuFlags();
+    for (const float scale : {0.f, 1e-36f, 1e-25f, 1.f, 1e20f}) {
+        const rack::simd::float_4 re(scale, -scale, 0.f, scale);
+        const rack::simd::float_4 im(scale, 0.f, -scale, -scale/2);
+        const auto actual = Fourier::complex_magnitude(std::complex<rack::simd::float_4>(re, im));
+        for (size_t lane = 0; lane < 4; ++lane) {
+            const double expected = std::hypot(double(re[lane]), double(im[lane]));
+            CHECK(std::abs(double(actual[lane])-expected) <= 3e-7*expected);
+            const auto scalar = Fourier::complex_magnitude(std::complex<float>(re[lane], im[lane]));
+            CHECK(std::abs(double(scalar)-expected) <= 3e-7*expected);
+        }
+    }
+    rack::system::setFpuFlags(saved);
+}

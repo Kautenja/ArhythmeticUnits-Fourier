@@ -9,6 +9,18 @@ inline size_t module_length(SpectrumAnalyzer& m) { return m.get_window_length();
 inline size_t module_length(Spectrogram&) { return Spectrogram::N_FFT; }
 inline bool freeze_keeps_processing(SpectrumAnalyzer&) { return true; }
 inline bool freeze_keeps_processing(Spectrogram&) { return false; }
+inline double decay_floor(Spectrogram&, size_t n) {
+    return 64. * n * std::numeric_limits<float>::min();
+}
+inline double decay_floor(SpectrumAnalyzer& m, size_t n) {
+    const double slope = m.get_slope(), bins = n/2+1;
+    const double low = std::pow(10., slope*std::log2(std::numeric_limits<float>::epsilon())/20.);
+    const double high = std::pow(10., slope*std::log2((n/2)/bins*m.get_sample_rate()/2000.
+        + std::numeric_limits<float>::epsilon())/20.);
+    // Inverting a flushed display ordinate magnifies its absolute floor.
+    const double display = 2*std::pow(10., 12./20.)*bins/std::min(low, high);
+    return std::max(64.*n, display)*std::numeric_limits<float>::min();
+}
 inline std::string module_window_name(Fourier::Window::Function f) {
     if (f == Fourier::Window::Function::Hann) return "hann";
     if (f == Fourier::Window::Function::Flattop) return "flattop";
@@ -34,7 +46,11 @@ struct ModuleLifecycleReference {
     SynthesisAccuracy accuracy;
     ModuleGeometry geometry{};
     explicit ModuleLifecycleReference(Host<Module>& h, bool batch = false, bool native_ = false)
-        : host(h), lanes(h.module.inputs.size()), immediate(batch), native(native_) { reset(false); }
+        : host(h), lanes(h.module.inputs.size()), immediate(batch), native(native_) {
+        if (h.config.fixture == "decay")
+            accuracy.analysis.decay_floor = decay_floor(h.module, h.config.n);
+        reset(false);
+    }
     void reset(bool resume = true) {
         if (resume) running = true;
         phase = 0; endpoint_frame = last_capture = -1;

@@ -90,6 +90,22 @@ class EngineHostTests(unittest.TestCase):
                 validate(data, self.registry, allow_fixture=True)
             finally: self.env.pop('PAPER_EXECUTION_REGIME', None)
 
+    def test_long_decay_all_paths_under_rack_fpu(self):
+        original = json.loads((ROOT/'docs/whitepaper/benchmarks/profiles/engine/long-decay-regression.json').read_text())
+        for module, native in (('fourier-default', ''), ('fourier-default', 'vdsp-native4-hybrid-float'),
+                              ('fourier-default', 'fftw-native4-hybrid-float'), ('spectre-default', ''),
+                              ('spectre-default', 'pffft-native-hybrid-float')):
+            if native and native not in self.registry: continue
+            p = copy.deepcopy(original); p['native'] = native; p['workload']['backend'] = module
+            if module.startswith('spectre'): p['workload'].update(hop=1024, active_ports=1)
+            path = self.root/'long-decay.json'; path.write_text(json.dumps(p))
+            result = json.loads(self.invoke('verify', str(path)))
+            audit = result['nodes'][0]['accuracy']['analysis']
+            self.assertEqual(audit['policy'], 'module-decay-ftz-v1')
+            self.assertGreater(audit['tail']['vectors'], 0)
+            self.assertGreater(audit['zero_vectors'], 0)
+            self.assertLessEqual(audit['tail']['max_absolute_error'], audit['tail']['absolute_limit'])
+
     def test_reject_ambiguous_or_unsupported_profiles(self):
         p = self.profile()
         for changes in (dict(threads=2), dict(analyzers=2), dict(consumer_hz=20), dict(blocks=True),

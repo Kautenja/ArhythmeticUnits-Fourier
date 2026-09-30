@@ -346,7 +346,7 @@ benchmark-only Rack-engine integration, and `test/paper/`/`test/rack/` verifiers
       Validate ownership and snapshot correctness untimed. Preallocate storage;
       do not add a second mailbox consumer or synchronize unsafely through the
       module's other fields. Separate headless consumption from actual rendering.
-- [ ] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
+- [x] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
       transitions. Separate lifecycle allocations and host-lock stalls from
       steady sample processing. Include silence decay under recorded FPU modes.
       Verify single-producer ownership during host-serialized reset/publication.
@@ -1103,3 +1103,39 @@ Preserve the old/new identities if arithmetic changes. Do not silently loosen
 the relative norm gate, shorten the decay, disable Rack's FPU policy, or drop
 these cells. Then rerun the complete decay oracles, finish Phase 6's seed and
 integrity policies, and implement Phase 7's user-owned offline launch package.
+
+
+### Decay Blocker Resolution: September 30, 2026
+
+The user authorized investigating and removing the blocker. The core and native
+analysis adapters now calculate scaled complex magnitudes without squaring the
+input scale. The isolated reproducer retains the old Rack result of zero and
+checks the repaired value against binary64 hypot. SIMD/scalar tiny and large
+normal lanes, every native provider's tiny impulse spectrum, and all five full
+million-sample module decay paths have regression coverage.
+
+The original premature underflow was fixed. A distinct later limit remains:
+Rack flushes binary32 subnormals, and Fourier's default 4.5 dB/octave display
+slope magnifies the floor when its ordinate is converted back to FFT units.
+The explicit `module-decay-ftz-v1` stress contract and its derived display/base
+absolute floors are documented in the engine guide. Above the flagged region,
+the original relative tolerance is unchanged; below it every output, absolute
+error, relative diagnostic and coverage count is retained. These tails are not
+relative-accuracy successes. Invalid/nonfinite or excessive absolute errors
+still fail, and ordinary workloads keep `spectrum-norms-v1`. This engineering
+floor is not a formal roundoff bound. Historical failures remain unchanged.
+
+Validation: all five engine fixtures, including the five extended decay replays,
+and all five native fixture tests passed. The spectrum DSP suite passed
+2,180,346 assertions in 13 cases; Rack spectrum-point checks include 40 new
+scalar/SIMD magnitude assertions. Final full-suite/build checks are recorded
+with the next validation result below. No performance measurement was run.
+
+Final repair validation: `python3 -m unittest discover -s
+ docs/whitepaper/benchmarks/tests` passed 117 tests with one optional plotting
+skip. `make test-spectrum-points test/dsp/test_spectrum_analysis
+benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw` passed:
+Rack spectrum-point tests reported 5,085,458 assertions in 10 cases, DSP reported
+2,180,346 assertions in 13 cases, and both benchmark executables built. The
+existing SDK and FFTW deployment-target warnings remain. `git diff --check`
+passed. This closes Phase 4's reopened stress gate; Phase 6/7 preparation follows.

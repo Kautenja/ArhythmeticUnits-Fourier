@@ -5,6 +5,7 @@
 #include <complex>
 #include <iostream>
 #include <rack.hpp>
+#include "../../src/dsp/math.hpp"
 
 int main() {
     // Volatile inputs prevent compile-time folding around Rack's FPU policy.
@@ -13,12 +14,13 @@ int main() {
     rack::system::resetFpuFlags();
     const rack::simd::float_4 value(input);
     const auto magnitude = rack::simd::abs(std::complex<rack::simd::float_4>(value, value));
+    const auto repaired = Fourier::complex_magnitude(std::complex<rack::simd::float_4>(value, value));
     const double reference = std::hypot(double(input), double(input));
     std::cout.precision(17);
     std::cout << "{\"kind\":\"untimed-magnitude-reproducer\",\"input\":" << input
         << ",\"fpu_control\":" << rack::system::getFpuFlags()
-        << ",\"actual\":" << magnitude[0] << ",\"reference\":" << reference << "}\n";
+        << ",\"legacy_actual\":" << magnitude[0] << ",\"repaired_actual\":" << repaired[0] << ",\"reference\":" << reference << "}\n";
     rack::system::setFpuFlags(previous);
-    // Nonzero exit deliberately preserves the unresolved numerical failure.
-    return std::abs(double(magnitude[0])-reference) <= 3e-4*reference ? 0 : 1;
+    // Keep the failing Rack calculation visible while gating the first-party repair.
+    return std::abs(double(repaired[0])-reference) <= 3e-4*reference ? 0 : 1;
 }

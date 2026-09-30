@@ -94,9 +94,26 @@ def validate(document, registry=None, allow_fixture=False):
         count = len(pubs); a = audit['analysis']
         if (audit['publications'] != count or audit['values'] != count*channels*(c['n']//2+1)
                 or a['values'] != audit['values'] or a['vectors'] != count*channels
-                or a['policy'] != 'spectrum-norms-v1' or a['tolerance'] != 3e-4
+                or a['policy'] != ('module-decay-ftz-v1' if c['fixture'] == 'decay' else 'spectrum-norms-v1') or a['tolerance'] != 3e-4
                 or any(not math.isfinite(a[k]) or not 0 <= a[k] <= 3e-4 for k in ('max_relative_l2', 'max_relative_linf'))):
             raise ValueError('Incomplete all-output engine audit')
+        if c['fixture'] == 'decay':
+            tail = a.get('tail', {})
+            floor = 64*c['n']*2**-126
+            if c['backend'].startswith('fourier'):
+                # Initial profile controls: shipped default slope 4.5, comparison slope 0.
+                slope = 4.5 if c['backend'] == 'fourier-default' else 0.
+                bins = c['n']//2+1
+                low = 10**(slope*math.log2(2**-23)/20)
+                high = 10**(slope*math.log2((c['n']//2)/bins*c['rate']/2000+2**-23)/20)
+                floor = max(floor, 2*10**(12/20)*bins/min(low, high)*2**-126)
+            if (not math.isclose(tail.get('absolute_limit', 0), floor, rel_tol=1e-12, abs_tol=0) or type(tail.get('vectors')) is not int
+                    or not 0 <= tail['vectors'] <= a['vectors']
+                    or not 0 <= tail.get('max_absolute_error', math.inf) <= floor
+                    or not 0 <= tail.get('max_reference', math.inf) <= floor/3e-4
+                    or any(not math.isfinite(tail.get(k, math.inf)) or tail[k] < 0
+                           for k in ('max_relative_l2', 'max_relative_linf'))):
+                raise ValueError('Invalid separately flagged FTZ decay diagnostics')
         last = -1
         for pub in pubs:
             if pub['sequence'] <= last or pub['bins'] != c['n']//2+1 or pub['published_at'] < pub['endpoint']:

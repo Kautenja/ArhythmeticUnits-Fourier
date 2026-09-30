@@ -105,3 +105,39 @@ exercise actual engine graphs, default/extreme controls, native complete
 modules, held snapshots through serialized reset, and recording errors. They
 cannot qualify as performance evidence. The real user launcher must supply a
 retained `PAPER_HOST_EXECUTION_PATH`, caffeinate guard and readiness checks.
+
+## Tiny Magnitudes And Silence Decay
+
+The first-party core and all native analysis kernels use scaled finite complex
+magnitudes (`scaled-magnitude-v1` source behavior). They avoid premature square
+underflow for normal float inputs such as `(1e-25, 1e-25)`. No FFT schedule,
+normalization, smoothing or saved patch setting changes. This is a correctness
+repair, not a measured optimization. Historical source and failure identities
+remain in `tests/fixtures/decay/failure-evidence.json`.
+
+Ordinary audits retain `spectrum-norms-v1`. Complete engine module workloads
+with the explicit `decay` fixture use `module-decay-ftz-v1`: the same 0.0003
+relative L2/Linf gate applies above a declared floor divided by that tolerance.
+Below that threshold, every spectrum is retained as a flagged tail diagnostic
+and must have finite values and maximum absolute error no greater than the
+floor. Tail relative errors, absolute errors, first endpoint and vector counts
+are retained separately and cannot support a relative-accuracy claim.
+
+The floor is in unnormalized FFT-magnitude units. Its base is
+`64 * N * FLT_MIN`, a conservative engineering allowance for transform underflow,
+not a proved roundoff bound. Fourier additionally uses the larger of that base
+and `2 * FLT_MIN * 10^(12/20) * (N/2+1) / minimum_initial_slope_gain`, because
+inverting a flushed display ordinate magnifies its error. The minimum gain is
+calculated at the two frequency endpoints from the initial module settings.
+This covers the initial default slope's attenuation of DC; later settings with
+a more severe floor require a separately reviewed contract, not automatic
+relaxation. Spectre stores magnitudes without that display-coordinate division.
+Zero-reference frames in this explicitly flagged region still require the same
+absolute bound. Counts distinguish those frames from ordinary relative checks.
+
+The five million-sample decay replays include every output through final zero
+under Rack's FPU policy. Scalar Spectre's later discrepancy appears as the
+binary32 transform approaches the flush-to-zero floor; the independently wider
+FFT retains contributions the float transform loses. No floor is added to
+ordinary scalar/native correctness audits. The tiny-impulse and SIMD tests
+independently reject the original premature square-underflow defect.

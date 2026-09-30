@@ -29,6 +29,17 @@ int main(int argc, char** argv) {
     using namespace Paper;
     try {
         if (argc == 3) return EngineHost::run(argv[2], std::string(argv[1]) == "verify");
+        // The tail contract is explicit and bounded; it cannot excuse loss of
+        // normal spectra or arbitrary nonzero output after silence.
+        AnalysisAccuracy tail; tail.decay_floor = 1e-33;
+        tail.compare(std::vector<float>{1e-34f}, [](size_t) { return 0.f; }, 0);
+        require(tail.tail_vectors == 1 && tail.vectors == 1, "Missing flagged tail coverage");
+        for (float expected : {0.f, 1e-34f, 1e-20f}) {
+            bool rejected = false;
+            try { tail.compare(std::vector<float>{expected}, [](size_t) { return 2e-33f; }, 1); }
+            catch (const std::runtime_error&) { rejected = true; }
+            require(rejected, "Decay gate accepted an excessive error");
+        }
         EngineHost::Plan p;
         auto& c = p.c;
         c.workload_schema = 3; c.backend = "fourier-default"; c.n = 2048; c.hop = 1440;

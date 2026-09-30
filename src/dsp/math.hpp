@@ -20,9 +20,27 @@
 #include <cmath>      // signbit, log10, abs, pow, log2f, powf, roundf
 #include <algorithm>  // max, min
 #include <complex>    // complex
+#include <limits>
+#include <type_traits>
 
 /// @brief Reusable Fourier DSP and utilities.
 namespace Fourier {
+
+/// @brief Finite complex magnitude without squaring the input scale.
+/// @details Supports scalar and SIMD types through ADL. A normal denominator
+/// keeps zero lanes safe under Rack's flush-to-zero policy. Subnormal inputs
+/// still follow the caller's FPU mode; this does not promise gradual underflow.
+template<typename T>
+inline T complex_magnitude(const std::complex<T>& value) {
+    using Scalar = typename std::conditional<std::is_floating_point<T>::value, T, float>::type;
+    using std::abs;
+    using std::fmax;
+    using std::sqrt;
+    const T a = abs(value.real()), b = abs(value.imag());
+    const T scale = fmax(fmax(a, b), T(std::numeric_limits<Scalar>::min()));
+    const T real = a / scale, imaginary = b / scale;
+    return scale * sqrt(real * real + imaginary * imaginary);
+}
 
 /// @brief Clip the given value within the given limits.
 ///

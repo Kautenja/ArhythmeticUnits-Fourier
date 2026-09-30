@@ -14,6 +14,25 @@ Config configuration(const std::string& backend) {
 }
 
 template<typename Kernel>
+void verify_tiny_native() {
+    using T = typename Kernel::Scalar;
+    const auto saved = rack::system::getFpuFlags(); rack::system::resetFpuFlags();
+    Kernel kernel(128);
+    const T amplitude = sizeof(T) == 4 ? T(1e-25) : T(1e-200);
+    std::vector<T> input(128), window(128, T(1)), result(65);
+    for (size_t c = 0; c < Kernel::channels; ++c) {
+        input[3] = amplitude*T(c+1); kernel.prepare(c, 0, input.data(), window.data(), 128);
+    }
+    kernel.transform();
+    for (size_t c = 0; c < Kernel::channels; ++c) {
+        kernel.magnitudes(c, 0, result.size(), result.data());
+        for (auto value : result) require(std::abs(double(value)/double(amplitude*T(c+1))-1) < 1e-5,
+            "Native magnitude lost a normal tiny impulse spectrum");
+    }
+    rack::system::setFpuFlags(saved);
+}
+
+template<typename Kernel>
 void verify_horizons(const std::string& name) {
     using T = typename Kernel::Scalar;
     for (size_t hop : {1u, 37u, 257u, 65536u}) for (const std::string policy : {"native-horizon-quarter-v1", "native-horizon-half-v1"}) {
@@ -60,6 +79,7 @@ void verify_horizons(const std::string& name) {
 
 template<typename Kernel>
 void verify_native(const std::string& name) {
+    verify_tiny_native<Kernel>();
     verify_horizons<Kernel>(name);
     using T = typename Kernel::Scalar;
     for (size_t hop : {1u, 37u, 257u, 65536u}) {

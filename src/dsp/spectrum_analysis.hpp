@@ -177,8 +177,7 @@ class SpectrumAnalysis {
             value = complex_multiply(value, j<T>());
             value = complex_multiply<T>(a + b - value, T(0.5f));
         }
-        using std::abs;
-        magnitude[k] = abs(value);
+        magnitude[k] = complex_magnitude(value);
         if (settings.octave != 0.f) prefix[k+1] = prefix[k] + magnitude[k];
     }
 
