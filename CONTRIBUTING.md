@@ -164,6 +164,16 @@ display storage remain float (four SIMD lanes in Fourier).
 `SpectrumAnalysis<T>` retains input and distributes windowing/packing,
 butterflies, real-spectrum reconstruction, magnitude prefix sums,
 frequency/time smoothing, and the output callback over one exact hop.
+When frequency smoothing is disabled, prefix sums and band preparation are
+skipped. A zero temporal coefficient stores the current magnitude directly,
+preserving history for subsequent averaging. SIMD dense segments omit the
+multiply for the exactly unity first twiddle; scheduling credit is unchanged.
+
+Fourier caches each bin's frequency coordinate and slope gain in engine-owned
+storage (about 64 KiB per module). Geometry settings invalidate the cache in
+constant time; scheduled output rebuilds at most one entry per emitted bin.
+Interrupted frames cannot expose uninitialized entries. Magnitude scaling
+still runs on each new value, and publication ownership remains unchanged.
 
 For M=N/2, K=M+1, B=(M/2)log2(M), a frame contains W=pM+B+(1+o)K scheduling
 units, where p=4 while rebuilding the window cache and p=1 otherwise. A pair

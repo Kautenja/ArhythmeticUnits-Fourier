@@ -138,6 +138,15 @@ class SpectrumAnalysis {
             const size_t stride = maximum_length / span;
             size_t twiddle = pair * stride;
             count -= end - pair;
+            // The first twiddle is exactly (1,0); do not multiply by it.
+            if (pair == 0) {
+                const auto even = packed[group];
+                const auto odd = packed[group + half];
+                packed[group] = even + odd;
+                packed[group + half] = even - odd;
+                ++pair;
+                twiddle += stride;
+            }
             for (; pair < end; ++pair, twiddle += stride) {
                 const std::complex<T> w(twiddles[twiddle]);
                 const auto even = packed[group + pair];
@@ -170,7 +179,7 @@ class SpectrumAnalysis {
         }
         using std::abs;
         magnitude[k] = abs(value);
-        prefix[k+1] = prefix[k] + magnitude[k];
+        if (settings.octave != 0.f) prefix[k+1] = prefix[k] + magnitude[k];
     }
 
     /// @brief Cache one original octave interval, including Nyquist adjustment.
@@ -187,13 +196,18 @@ class SpectrumAnalysis {
     /// @brief Smooth and emit one bin, preserving the frame's output order.
     template<typename Output>
     void output_bin(size_t k, Output& emit) {
-        if (bands_dirty) prepare_band(k);
-        const size_t low = band_low[k], high = band_high[k];
-        const T value = settings.octave == 0.f ? magnitude[k]
-            : (prefix[high+1] - prefix[low]) / T(high-low+1);
-        using std::abs;
-        const T previous = clear_average ? T(0.f) : abs(average[k]);
-        average[k] = settings.alpha * previous + (1.f-settings.alpha) * value;
+        T value = magnitude[k];
+        if (settings.octave != 0.f) {
+            if (bands_dirty) prepare_band(k);
+            const size_t low = band_low[k], high = band_high[k];
+            value = (prefix[high+1] - prefix[low]) / T(high-low+1);
+        }
+        if (settings.alpha == 0.f) average[k] = value;
+        else {
+            using std::abs;
+            const T previous = clear_average ? T(0.f) : abs(average[k]);
+            average[k] = settings.alpha * previous + (1.f-settings.alpha) * value;
+        }
         emit(k, average[k]);
     }
 

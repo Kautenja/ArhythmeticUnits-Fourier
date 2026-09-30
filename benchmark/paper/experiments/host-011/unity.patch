@@ -1,0 +1,18 @@
+--- a/src/dsp/spectrum_analysis.hpp
++++ b/src/dsp/spectrum_analysis.hpp
+@@ -138,6 +138,15 @@
+             const size_t stride = maximum_length / span;
+             size_t twiddle = pair * stride;
+             count -= end - pair;
++            // The first twiddle is exactly (1,0); do not multiply by it.
++            if (pair == 0) {
++                const auto even = packed[group];
++                const auto odd = packed[group + half];
++                packed[group] = even + odd;
++                packed[group + half] = even - odd;
++                ++pair;
++                twiddle += stride;
++            }
+             for (; pair < end; ++pair, twiddle += stride) {
+                 const std::complex<T> w(twiddles[twiddle]);
+                 const auto even = packed[group + pair];

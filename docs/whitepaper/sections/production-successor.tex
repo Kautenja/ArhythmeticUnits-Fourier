@@ -35,7 +35,7 @@ remainder $a=\floor{W/H}$ and $r=W\bmod H$ are refreshed at configuration,
 reset, and the transition from a rebuilt window to a clean cache.
 Starting the accumulator $e$ at zero, each sample executes $a$ units plus one
 when $e+r\ge H$, then retains $(e+r)\bmod H$:
-\begin{lstlisting}[language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
+\begin{lstlisting}[float=htbp,language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
 // At a frame boundary: latch settings; compute a = W/H, r = W%H.
 // Each active sample call:
 capture_input();
@@ -80,6 +80,11 @@ analysis. This count assumes fixed-width scalar/SIMD arithmetic and the bounded
 module output callbacks; the generic API cannot constrain an arbitrary callback.
 It does not assert equal duration across units or bound OS interruptions.
 
+The current implementation also omits multiplication by the exactly unity
+first twiddle in dense SIMD butterfly segments. This reduces arithmetic
+without changing scheduling credit or the dependency order. It is a standard
+FFT simplification, not a new transform algorithm.
+
 \subsection{Retained samples, plans, and publication time}
 Let the frame endpoint be $t_r=rH$, counting continuously captured samples
 from zero. Frame selection occurs on call $t_r$, and the last scheduling
@@ -113,7 +118,8 @@ invalid. Increasing the supported hop during a sample-rate callback can grow
 the ring and allocate; this is outside the allocation-free sample path.
 
 \subsection{Smoothing and output ownership}
-For magnitudes $a_k=|X[k]|$, reconstruction builds $P_0=0$ and
+When frequency smoothing is enabled, for magnitudes $a_k=|X[k]|$,
+reconstruction builds $P_0=0$ and
 $P_{k+1}=P_k+a_k$. Inclusive smoothing bounds $[\ell_k,h_k]$ then give
 \begin{equation}
  v_k=\frac{P_{h_k+1}-P_{\ell_k}}{h_k-\ell_k+1},\qquad
@@ -122,7 +128,9 @@ $P_{k+1}=P_k+a_k$. Inclusive smoothing bounds $[\ell_k,h_k]$ then give
 The octave interval is defined in Section~\ref{sec:cost}: endpoints are floored
 to bins; if its upper frequency exceeds Nyquist, it is set to Nyquist and the
 lower endpoint is set to that upper frequency divided by $2^\beta$. With
-frequency smoothing off, $v_k=a_k$. The full prefix stage must precede output
+frequency smoothing off, $v_k=a_k$ and prefix/band work is skipped. With
+$\alpha=0$, the implementation stores $y_r[k]=v_k$ directly, retaining that
+history for later averaging. When enabled, the full prefix stage precedes output
 because a low bin's interval may require higher bins. These are magnitude
 means, not power means or constant-Q analysis.
 
@@ -133,6 +141,17 @@ $\Delta t f_s$ to $H$, retaining a sub-sample quantization difference between
 the control and actual interval. The previous $L/H$ completion bias is removed.
 Window coherent-gain factors and module-specific display scaling are preserved;
 this scheduling change does not redefine amplitude units.
+
+Fourier additionally caches the frequency coordinate and slope gain for each
+bin in engine-owned storage. A geometry change invalidates a prefix counter
+in constant time; each scheduled output computes at most one missing entry.
+Only consecutively initialized entries advance that counter, so cancellation
+cannot expose stale entries. Magnitude scaling still evaluates every current
+value. This uses approximately 64\,KiB at $N_{\max}=16384$, with unchanged
+frame timing and no approximation of the coordinate formulas. Reuse reduces
+steady-state work; changing geometry every frame removes that reuse. These
+engineering changes postdate the report's historical timing campaigns and
+must be measured separately rather than attributed to those data.
 
 Each output unit maps a four-channel bin into the Fourier module's curve
 points, or writes one Spectre column magnitude. Only after all units finish
@@ -151,4 +170,3 @@ equations do not apply across such pauses. Host sample-rate changes cancel
 partial analysis; Spectre reset still clears and publishes its history columns.
 These lifecycle costs, UI work, other shared controls, and host scheduling
 prevent a broad claim of hard real-time safety.
-

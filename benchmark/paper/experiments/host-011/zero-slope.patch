@@ -1,0 +1,11 @@
+--- a/src/rack_extensions/spectrum_coordinates.hpp
++++ b/src/rack_extensions/spectrum_coordinates.hpp
+@@ -44,7 +44,7 @@
+     std::array<rack::math::Vec, 4> map(size_t bin, rack::simd::float_4 magnitude) const {
+         const float nyquist = sample_rate / 2.f;
+         float x = bin / static_cast<float>(bins);
+-        const float gain = decibels2amplitude(slope * std::log2(
++        const float gain = slope == 0.f ? 1.f : decibels2amplitude(slope * std::log2(
+             x * nyquist / 1000.f + std::numeric_limits<float>::epsilon()));
+         const float extent = (high_frequency-low_frequency) / nyquist;
+         x = (x-low_frequency/nyquist) / (extent == 0.f ? 1.f : extent);

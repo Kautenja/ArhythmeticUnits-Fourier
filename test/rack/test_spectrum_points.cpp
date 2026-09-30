@@ -522,3 +522,64 @@ TEST_CASE("Fourier sample-rate changes discard pending nonzero input and averagi
                     REQUIRE(previous->points[lane][bin].y == 0.f);
     }
 }
+
+TEST_CASE("Coordinate cache preserves the original mapping through interrupted control changes") {
+    Fourier::CachedSpectrumCoordinates<8193> cache;
+    Fourier::SpectrumCoordinates settings;
+    // Independent pre-cache formula, including silence and the existing K-bin
+    // convention. The oracle must not call either new mapping helper.
+    const auto original = [](const Fourier::SpectrumCoordinates& c, size_t bin,
+            simd::float_4 value) {
+        const float nyquist = c.sample_rate / 2.f;
+        float x = bin / static_cast<float>(c.bins);
+        const float gain = Fourier::decibels2amplitude(c.slope * std::log2(
+            x * nyquist / 1000.f + std::numeric_limits<float>::epsilon()));
+        const float extent = (c.high_frequency-c.low_frequency) / nyquist;
+        x = (x-c.low_frequency/nyquist) / (extent == 0.f ? 1.f : extent);
+        if (c.frequency_scale == FrequencyScale::Logarithmic)
+            x = std::copysign(std::sqrt(std::abs(x)), x);
+        const float maximum = Fourier::decibels2amplitude(12.f) * c.bins;
+        std::array<Vec, 4> result;
+        for (size_t lane = 0; lane < 4; ++lane) {
+            float y = value.s[lane] / maximum * gain;
+            if (c.magnitude_scale != MagnitudeScale::Linear) {
+                const float range = c.magnitude_scale == MagnitudeScale::Logarithmic60dB ? 72.f : 132.f;
+                y = Fourier::amplitude2decibels(y) / range + 1.f;
+            }
+            result[lane] = Vec(x, y);
+        }
+        return result;
+    };
+    for (size_t frame = 0; frame < 36; ++frame) {
+        // Change geometry, leave it unchanged, change only magnitude scale,
+        // and interrupt before the prefix is fully cached.
+        if (frame % 3 == 0) {
+            settings.bins = frame % 2 ? 65 : 8193;
+            settings.sample_rate = frame % 2 ? 44100.f : 96000.f;
+            settings.low_frequency = frame % 2 ? 100.f : 0.f;
+            settings.high_frequency = frame % 4 ? 20000.f : settings.low_frequency;
+            settings.slope = static_cast<float>(int(frame % 9) - 3);
+            settings.frequency_scale = frame % 2 ? FrequencyScale::Linear : FrequencyScale::Logarithmic;
+        }
+        settings.magnitude_scale = static_cast<MagnitudeScale>(frame % 3);
+        cache.configure(settings);
+        const size_t count = frame % 4 ? settings.bins : settings.bins/2;
+        // Read the final entry first: out-of-order access must not mark holes valid.
+        for (size_t i = 0; i <= count; ++i) {
+            const size_t bin = i == 0 ? settings.bins-1 : i-1;
+            const simd::float_4 value(0.f, 1e-20f, float(bin+1), float(settings.bins)*8.f);
+            const auto expected = original(settings, bin, value);
+            const auto actual = cache.map(bin, value);
+            for (size_t lane = 0; lane < 4; ++lane) {
+                // SDK reassociation/reciprocal hoisting can differ by a few ULPs.
+                REQUIRE(actual[lane].x == Catch::Approx(expected[lane].x)
+                    .epsilon(4*std::numeric_limits<float>::epsilon())
+                    .margin(4*std::numeric_limits<float>::epsilon()));
+                if (std::isinf(expected[lane].y)) REQUIRE(actual[lane].y == expected[lane].y);
+                else REQUIRE(actual[lane].y == Catch::Approx(expected[lane].y)
+                    .epsilon(4*std::numeric_limits<float>::epsilon())
+                    .margin(4*std::numeric_limits<float>::epsilon()));
+            }
+        }
+    }
+}

@@ -6,8 +6,8 @@ Count & Stage & Work performed by one unit \\
 \midrule
 $pM$ & Pack & Each pair occupies $p$ units: read two retained samples, prepare/apply window weights and store the permuted pair at the first unit; skip the remaining credit. \\
 $B$ & Transform & Execute one complex butterfly and advance traversal indices. \\
-$K$ & Reconstruct & Recover one bin from DC through Nyquist, take its magnitude, and append one prefix sum. \\
-$oK$ & Output & Each bin occupies $o$ units: prepare/use one smoothing interval, evaluate its mean and EMA, and invoke the output callback at the first unit; skip the remaining credit. \\
+$K$ & Reconstruct & Recover one bin, take its magnitude, and append a prefix sum if frequency smoothing is enabled. \\
+$oK$ & Output & Each bin occupies $o$ units: apply enabled smoothing and invoke the output callback at the first unit; skip the remaining credit. \\
 \bottomrule
 \end{tabular}
 \caption{Production scheduling units. Dirty window preparation has weight four; Fourier's coordinate output has weight two. Other operations have weight one. These are bookkeeping units, not equal-duration operations.}

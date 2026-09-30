@@ -101,6 +101,7 @@ struct SpectrumAnalyzer : Module {
     // output stage extra credit so cache rebuilds do not compress its bursts.
     Fourier::SpectrumAnalysis<simd::float_4, 2> analysis{MAX_FFT, MAX_FFT};
     Fourier::SpectrumCoordinates coordinates;
+    Fourier::CachedSpectrumCoordinates<MAX_FFT / 2 + 1> coordinate_cache;
 
     /// Producer writes scheduled bins; only the UI consumes complete frames.
     Fourier::DisplayMailbox<DisplaySpectrum> display_spectrum;
@@ -507,9 +508,10 @@ struct SpectrumAnalyzer : Module {
             coordinates.slope = get_slope();
             coordinates.frequency_scale = get_frequency_scale();
             coordinates.magnitude_scale = get_magnitude_scale();
+            coordinate_cache.configure(coordinates);
         }
         const bool complete = analysis.process(input, [this](size_t bin, simd::float_4 value) {
-            const auto points = coordinates.map(bin, value);
+            const auto points = coordinate_cache.map(bin, value);
             for (size_t lane = 0; lane < NUM_CHANNELS; ++lane)
                 display_spectrum.writable().points[lane][bin] = points[lane];
         }, is_running);
