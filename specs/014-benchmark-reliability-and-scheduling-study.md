@@ -18,7 +18,7 @@ preparation checks before dependent work; retain decisions and validation
 evidence in this spec. Completion ends at the runnable handoff, without
 requiring benchmark numbers, a performance winner, or manuscript changes.
 
-The current implementation request covers Phases 1 and 2. Their completion
+The current implementation request covers Phases 1--3. Their completion
 evidence is recorded below; unchecked phases remain future work. No measurements
 have been collected by the agent. The user prefers strengthening the full paper before
 choosing a venue and retaining the M1 Pro as the primary test platform. A second
@@ -272,36 +272,38 @@ old checked publication assets still reproduce unchanged.
 
 ## Phase 3: Credible Baselines And Matched Controls
 
-Primary files: `benchmark/paper/{external,vdsp,pffft,fftw,hybrid,fourier,channels}.hpp`.
+Primary files: `benchmark/paper/{native_kernels,native_analysis,native_diagnostics}.hpp`,
+the existing provider/control headers, and the narrow
+`SpectrumAnalysis::process_scheduled` placement seam.
 
-- [ ] Add efficient native analysis as new backends. Use two-span or otherwise
+- [x] Add efficient native analysis as new backends. Use two-span or otherwise
       efficient retained-input access, provider-appropriate window/packing,
       conversion, magnitude, and output kernels. Preserve mathematical scaling
       and audit floating-point differences independently. Inspect generated
       code or retained profiles when choosing variants. Defer claims about
       their actual cost until the user supplies measurements.
-- [ ] For PFFFT, evaluate unordered output only with correct natural-frequency
+- [x] For PFFFT, evaluate unordered output only with correct natural-frequency
       mapping wherever bands or display bins require it. Charge every necessary
       reorder/conversion/store to the declared boundary. Retain the existing
       portable scalar-glue adapters as historical controls.
-- [ ] Add batched independent four-channel native analysis where supported,
+- [x] Add batched independent four-channel native analysis where supported,
       and per-channel/instance staggering. Record frame endpoints per channel;
       distinguish simultaneous spectra from staggered freshness. Equal channel
       counts alone do not establish equivalent output semantics.
-- [ ] Add an efficient hybrid with contiguous stage-segment dispatch and a
+- [x] Add an efficient hybrid with contiguous stage-segment dispatch and a
       matched batch mode sharing its kernels and storage. Retain the old hybrid
       pair so later measurements can test its per-element dispatch overhead.
-- [ ] Add a matched batch/distributed pair using the current core's arithmetic,
+- [x] Add a matched batch/distributed pair using the current core's arithmetic,
       layout, cache policy, and output contract. Existing legacy controls also
       change layout and boundary work, so do not substitute them for this pair.
       Factor only the needed execution seam; avoid a general scheduler framework
       or a copied production implementation that can silently diverge.
-- [ ] Add diagnostic stage-cost measurements and untimed operation traces.
+- [x] Add diagnostic stage-cost measurements and untimed operation traces.
       Prepare instrumentation-overhead controls; primary measurement paths
       retain uninstrumented timing boundaries. Defer running these diagnostics
       to the user, and do not sum stage times as if they reproduce integrated
       cost.
-- [ ] Verify every new backend with all-output references, frame-retention and
+- [x] Verify every new backend with all-output references, frame-retention and
       publication checks, cold/live cache cases, allocation probes, and explicit
       opaque-provider limitations before its first performance pilot.
 
@@ -616,7 +618,7 @@ Those tasks must not run automatically as part of this preparation spec.
 - [x] Phase 1: sleep protection, power/isolation checks, stabilization, pacing,
       and failure behavior verified with untimed checks and fixtures.
 - [x] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
-- [ ] Phase 3: native and matched scheduling controls numerically validated.
+- [x] Phase 3: native and matched scheduling controls numerically validated.
 - [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
 - [ ] Phase 5: experimental variants prepared or explicitly deferred; no
@@ -797,6 +799,111 @@ audits, not Phase 4's full module oracle. There are no new consumer, Rack
 engine, device deadline, or optimized native results. Phase 2's fixture/untimed
 gate is complete; Phases 3--7 and the final no-build offline launcher remain
 pending. The spec remains IN PROGRESS.
+
+### Phase 3 Implementation: September 30, 2026
+
+Committed Phase 2 as `0ce591c` before implementing Phase 3. The
+[native baseline guide](../docs/whitepaper/benchmarks/guides/baselines.md)
+documents 24 additional backend identities and their comparison boundaries:
+
+-   Matched current-core batch/distributed controls in float/double use one
+    production implementation, with identical arithmetic order, storage,
+    dirty-cache policy and output stores. The existing `process()` API retains
+    distributed placement; the experiment selects a separate compile-time
+    `process_scheduled` policy. Bitwise equality holds across the tested
+    cold/live, small/large hop and retained-frame cases. No production
+    optimization has been promoted on the strength of an untimed check.
+-   PFFFT, vDSP and FFTW native batch/hybrid pipelines use retained contiguous
+    input spans, direct native layouts, segment dispatch, cached bands/windows
+    and natural-frequency output. PFFFT unordered execution explicitly charges
+    reorder work and its extra buffer. Existing scalar-glue and per-element
+    hybrid identities remain unchanged. Old/new hybrid cache policy also
+    differs; their comparison must not be called a pure dispatch ablation.
+-   vDSP and FFTW provide true four-channel batched real transforms in both
+    precisions. Independent fixtures and every channel's outputs are checked.
+    Existing instance staggering also applies to the new pipelines; one-channel
+    instances consume offset copies of the common fixture, while native4 keeps
+    simultaneous endpoints within each instance. These freshness/input
+    differences remain explicit rather than treating equal channel counts as
+    a matched comparison. PFFFT has no new batched API here.
+-   Native replay checks every publication and bin, retaining per-instance
+    and per-channel endpoints/counts. Provider layout/batching metadata and
+    the spectrum-norm policy are required during archive checking; reports,
+    exports and bundles retain the new coverage. C++ allocation probes pass
+    during sample processing, including cold/live cases. Native allocator,
+    worker, setup and scratch behavior remains explicitly opaque.
+-   Separate `trace`, `stages` and `overhead` diagnostics retain stage units,
+    sample coordinates, exact configuration and independent numerical replay.
+    The primary pipeline contains no stage timers/trace storage. Trace reads
+    no clock; timed diagnostics require the existing macOS sleep/power guard
+    and a separate execution sidecar. Synthetic-clock identity and malformed
+    stage placement/counts are checked. Instrumented costs exclude some
+    ingestion/scheduler work and must not be summed into an integrated cost.
+-   Fast development includes the matched core/PFFFT pairs and optional
+    native vDSP/FFTW batch cases: 52 workloads with Rack/PFFFT, 60 with vDSP,
+    or 64 with both optional providers. Full development includes all new
+    identities (218 Rack/PFFFT cases, 264 with both providers). Campaign pilot
+    selections and the final offline package remain Phases 6 and 7.
+
+Validation actually run from the repository root:
+
+```shell
+python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
+python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_native.py'
+CXX='clang++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer' python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_native.py'
+make test-benchmark-dev PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
+make test/dsp/test_spectrum_analysis
+make test/dsp/test_spectrum_analysis INSTRUMENT=asan-ubsan
+make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
+make -j2
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --inventory
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile fast --list
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile full --list
+make -C docs/whitepaper check
+python3 docs/whitepaper/tools/comparison_paper.py --check
+git diff --check
+```
+
+Results: 109 Python tests passed with one optional plotting-environment skip.
+The four native tests also passed after the final kernel/diagnostic changes,
+both normally and with ASan/UBSan.
+They cover all ten provider/precision/channel kernel combinations, N up to
+16384, H=1/37/257/65536, explicit signal fixtures, startup/live caches, ring
+retention, all-output references, zero observed C++ processing allocations,
+and matched-core equality. Native development passed 272 assertions in eight
+cases. The core DSP regression passed 2,180,346 assertions in 13 cases both
+normally and with ASan/UBSan. Both benchmark executables and the Rack plugin
+built; full untimed preflight passed with PFFFT, vDSP and FFTW enabled.
+
+A separate inspection matched the compiled inventory and all 24 new v3
+`--describe` contracts against Python. The actual `--diagnostic trace` path
+also passed structural and numerical validation, without a clock; its local
+artifact is `.build/native-trace-phase3.json`. Fake-clock tests checked timed
+diagnostics and their execution sidecar, never actual stage costs. A synthetic
+native campaign passed check/report/export/bundle round trips; missing native
+coverage, altered endpoints/counts and malformed stage records were rejected.
+Whitepaper checks reproduced the historical campaign/source hashes, 2880 timing
+rows, 27 phase rows, 31 references, 32768 schedules and nine editorial assets.
+Documentation links and whitespace checks passed.
+
+Generated-code inspection used Apple Clang 21.0.0 (`clang-2100.1.1.101`) for
+arm64 with C++11, `-O3 -funsafe-math-optimizations`, `-Rpass=loop-vectorize`
+and assembly output. Focused instantiations of `native_window<float/double>`
+and PFFFT native magnitudes emitted four-float/two-double window vectors and
+four-float magnitude vectors, including `fmul.4s`, `fmul.2d` and `fsqrt.4s`.
+The linked binary references vDSP strided window, magnitude and batched-real
+APIs, and includes both FFTW real plan-many entry points. These observations
+justify trying the implementations; they establish no measured speedup.
+
+Limitations: no performance pass, hardware smoke, real stage/overhead timing,
+live sleep/power guard or manual Rack session ran. No paper result changed.
+Existing Rack deprecation and unused window-name-helper warnings remain.
+The installed FFTW archives target macOS 26 while the benchmark link target
+is macOS 11, producing deployment warnings; this host build is verified, but
+older-macOS portability is not. Native execution allocations and provider
+internals remain outside the C++ audit. Phase 3's untimed gate is complete;
+Phases 4--7 remain pending and the spec remains IN PROGRESS.
 
 Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate

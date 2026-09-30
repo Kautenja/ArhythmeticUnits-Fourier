@@ -24,6 +24,7 @@ build launches a benchmark or replaces its results.
 | Location | Purpose |
 | --- | --- |
 | [bench.py](bench.py) | Setup, plan, run, freeze, status, check, report, export and bundle commands |
+| [guides/baselines.md](guides/baselines.md) | Native analysis, matched scheduling pairs, and stage diagnostics |
 | [profiles/](profiles/README.md) | Maintained study profiles and a small explicit-controls example |
 | [guides/workflow.md](guides/workflow.md) | Copyable launch, review, freeze and publication handoff |
 | [guides/extending.md](guides/extending.md) | Add a workload/backend and compare a future revision |

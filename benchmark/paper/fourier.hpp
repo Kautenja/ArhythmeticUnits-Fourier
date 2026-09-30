@@ -35,6 +35,7 @@ struct Core {
         settings.alpha = temporal_alpha(c);
         require(analysis.configure(settings), "Core settings rejected");
     }
+    template<bool Batch = false>
     void process_value(T input) {
         if (live && analysis.is_frame_start()) {
             // Rebuild both caches every frame, retaining the requested cadence.
@@ -43,7 +44,7 @@ struct Core {
             settings.octave = frames%2 ? 0.f : 1.f/3.f;
             analysis.configure(settings);
         }
-        complete = analysis.process(input, [this](size_t bin, T magnitude) {
+        complete = analysis.template process_scheduled<Batch>(input, [this](size_t bin, T magnitude) {
             output[bin] = magnitude;
         });
     }
@@ -59,6 +60,14 @@ struct Core {
         }
         require(!output.empty() && std::isfinite(total), "Core output is empty or non-finite");
     }
+};
+
+/// @brief Same production arithmetic/storage as Core; only placement changes.
+template<typename T, bool Batch>
+struct MatchedCore : Core<T> {
+    explicit MatchedCore(const Config& c) : Core<T>(c) {}
+    void process(float input) { this->template process_value<Batch>(lanes<T>(input)); }
+    size_t delay() const { return Batch ? 0 : this->settings.hop-1; }
 };
 
 /// @brief Own RFFT as fixed-cadence batch/incremental controls, not old modules.

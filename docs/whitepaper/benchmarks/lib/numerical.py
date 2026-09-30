@@ -83,6 +83,10 @@ def coverage_tables(data, output):
             if audit:
                 validate_scalar_audit(accuracy, config, contract, publications)
                 status, coverage_policy = "full", audit["policy"]
+            elif accuracy.get("native_audit"):
+                from native import validate_audit
+                validate_audit(accuracy, config, contract)
+                status, coverage_policy = "full; simultaneous channels per instance", "native-all-channels-v1"
             elif analysis:
                 # These counts were validated by check.py on archive ingestion.
                 # Never confer the new scalar policy on an older native archive.

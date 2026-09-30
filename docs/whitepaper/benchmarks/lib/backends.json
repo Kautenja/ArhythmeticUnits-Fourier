@@ -1117,6 +1117,240 @@
       "available": false,
       "build_feature": "vdsp",
       "channels": 4
+    },
+    {
+      "id": "core-matched-batch-float",
+      "precision": "float",
+      "schedule": "immediate"
+    },
+    {
+      "id": "core-matched-distributed-float",
+      "precision": "float",
+      "schedule": "balanced"
+    },
+    {
+      "id": "core-matched-batch-double",
+      "precision": "double",
+      "schedule": "immediate"
+    },
+    {
+      "id": "core-matched-distributed-double",
+      "precision": "double",
+      "schedule": "balanced"
+    },
+    {
+      "id": "pffft-native-batch-float",
+      "kind": "native-analysis",
+      "provider": "pffft",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "immediate",
+      "plan": "exact-size native real",
+      "dependency": "linked Rack/PFFFT",
+      "build_feature": ""
+    },
+    {
+      "id": "pffft-native-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "pffft",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "balanced",
+      "plan": "exact-size native real",
+      "dependency": "linked Rack/PFFFT",
+      "build_feature": ""
+    },
+    {
+      "id": "vdsp-native-batch-float",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "immediate",
+      "plan": "exact-size native real",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "balanced",
+      "plan": "exact-size native real",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native4-batch-float",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "float",
+      "channels": 4,
+      "schedule": "immediate",
+      "plan": "exact-size native real batch",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native4-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "float",
+      "channels": 4,
+      "schedule": "balanced",
+      "plan": "exact-size native real batch",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native-batch-double",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "double",
+      "channels": 1,
+      "schedule": "immediate",
+      "plan": "exact-size native real",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native-hybrid-double",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "double",
+      "channels": 1,
+      "schedule": "balanced",
+      "plan": "exact-size native real",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native4-batch-double",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "double",
+      "channels": 4,
+      "schedule": "immediate",
+      "plan": "exact-size native real batch",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "vdsp-native4-hybrid-double",
+      "kind": "native-analysis",
+      "provider": "vdsp",
+      "precision": "double",
+      "channels": 4,
+      "schedule": "balanced",
+      "plan": "exact-size native real batch",
+      "dependency": "macOS Accelerate",
+      "build_feature": "vdsp"
+    },
+    {
+      "id": "fftw-native-batch-float",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "immediate",
+      "plan": "exact-size native real",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "float",
+      "channels": 1,
+      "schedule": "balanced",
+      "plan": "exact-size native real",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native4-batch-float",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "float",
+      "channels": 4,
+      "schedule": "immediate",
+      "plan": "exact-size native real batch",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native4-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "float",
+      "channels": 4,
+      "schedule": "balanced",
+      "plan": "exact-size native real batch",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native-batch-double",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "double",
+      "channels": 1,
+      "schedule": "immediate",
+      "plan": "exact-size native real",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native-hybrid-double",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "double",
+      "channels": 1,
+      "schedule": "balanced",
+      "plan": "exact-size native real",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native4-batch-double",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "double",
+      "channels": 4,
+      "schedule": "immediate",
+      "plan": "exact-size native real batch",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "fftw-native4-hybrid-double",
+      "kind": "native-analysis",
+      "provider": "fftw",
+      "precision": "double",
+      "channels": 4,
+      "schedule": "balanced",
+      "plan": "exact-size native real batch",
+      "dependency": "serial FFTW",
+      "build_feature": "fftw"
+    },
+    {
+      "id": "pffft-native-unordered-batch-float",
+      "kind": "native-analysis",
+      "provider": "pffft",
+      "schedule": "immediate",
+      "plan": "exact-size native real unordered plus reorder",
+      "dependency": "linked Rack/PFFFT"
+    },
+    {
+      "id": "pffft-native-unordered-hybrid-float",
+      "kind": "native-analysis",
+      "provider": "pffft",
+      "schedule": "balanced",
+      "plan": "exact-size native real unordered plus reorder",
+      "dependency": "linked Rack/PFFFT"
     }
   ]
 }

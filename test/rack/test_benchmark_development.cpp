@@ -11,11 +11,14 @@ using namespace Paper::Development;
 TEST_CASE("Development matrix keeps tuning and validation distinct", "[benchmark]") {
     Options o;
     const auto fast = matrix(o);
-    bool vdsp = false;
-    for (const auto& d : backend_registry)
+    bool vdsp = false, fftw = false;
+    for (const auto& d : backend_registry) {
         if (std::string(d.id) == "vdsp-analysis-float") vdsp = d.available;
-    REQUIRE(fast.size() == (vdsp ? 40 : 36));
-    for (const std::string backend : {"core-independent4-simd", "fourier", "spectre"})
+        if (std::string(d.id) == "fftw-native-batch-float") fftw = d.available;
+    }
+    REQUIRE(fast.size() == 52+(vdsp ? 8 : 0)+(fftw ? 4 : 0));
+    for (const std::string backend : {"core-independent4-simd", "fourier", "spectre",
+            "core-matched-batch-float", "core-matched-distributed-float", "pffft-native-batch-float", "pffft-native-hybrid-float"})
         REQUIRE(std::any_of(fast.begin(), fast.end(), [&](const Config& c) { return c.backend == backend; }));
     for (const auto& c : fast) {
         REQUIRE(c.n == 2048);

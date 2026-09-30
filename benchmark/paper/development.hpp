@@ -317,8 +317,10 @@ int run(int argc, char** argv, const std::string& executable,
     if (o.list) {
         for (const auto& c : configs) std::cout << identity(c) << '\n';
         if (o.profile == "fast")
-            for (const auto& d : backend_registry) if (std::string(d.id) == "vdsp-analysis-float" && !d.available)
-                std::cout << "Omitted vdsp-analysis-float: " << d.reason << '\n';
+            for (const auto& d : backend_registry)
+                if (!d.available && (std::string(d.id) == "vdsp-analysis-float"
+                    || std::string(d.id) == "vdsp-native-batch-float" || std::string(d.id) == "fftw-native-batch-float"))
+                    std::cout << "Omitted " << d.id << ": " << d.reason << '\n';
         std::cout << configs.size() << " workloads, " << configs.size()*o.repeats << " repetitions\n";
         return 0;
     }

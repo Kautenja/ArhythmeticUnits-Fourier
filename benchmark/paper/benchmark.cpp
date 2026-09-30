@@ -24,6 +24,8 @@
 #endif
 
 #include "transitions.hpp"
+#include "native_analysis.hpp"
+#include "native_diagnostics.hpp"
 
 namespace Paper {
 /// @brief Harness/load control, labeled separately from spectral computation.
@@ -65,26 +67,37 @@ void verify_all() {
     verify_external<float, PffftBackend>("pffft", "float");
     verify_hybrid<PffftBackend>();
     verify_channels();
+    verify_native_preflight<PffftNative<false>>("pffft-native-hybrid-float");
+    verify_native_preflight<PffftNative<true>>("pffft-native-unordered-batch-float");
 #ifdef PAPER_HAVE_VDSP
     verify_external<float, VdspBackend<float>>("vdsp", "float");
     verify_external<double, VdspBackend<double>>("vdsp", "double");
+    verify_native_preflight<VdspNative<float>>("vdsp-native-hybrid-float");
+    verify_native_preflight<VdspNative<double>>("vdsp-native-batch-double");
+    verify_native_preflight<VdspNative<float, 4>>("vdsp-native4-batch-float");
+    verify_native_preflight<VdspNative<double, 4>>("vdsp-native4-hybrid-double");
 #endif
 #ifdef PAPER_HAVE_FFTW
     verify_external<float, FftwBackend<float>>("fftw", "float");
     verify_external<double, FftwBackend<double>>("fftw", "double");
+    verify_native_preflight<FftwNative<float>>("fftw-native-hybrid-float");
+    verify_native_preflight<FftwNative<double>>("fftw-native-batch-double");
+    verify_native_preflight<FftwNative<float, 4>>("fftw-native4-batch-float");
+    verify_native_preflight<FftwNative<double, 4>>("fftw-native4-hybrid-double");
 #endif
     std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
-        << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid, scalar replay and transition lifecycle verified\n";
+        << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid, scalar replay, transition lifecycle and all compiled native kernels verified\n";
 }
 
 /// @brief One workload with unchanged timing and numerical-audit boundaries.
-void execute(const Config& c, bool provider_info = false) {
+void execute(const Config& c, bool provider_info = false, const std::string& diagnostic = "") {
     const auto& descriptor = backend_descriptor(c.backend);
     const std::string kind(descriptor.kind), precision(descriptor.precision);
-    require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
+    require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4" || kind == "native-analysis", "Provider metadata is only available for external adapters");
     Paper::Context context(c.rate);
     std::unique_ptr<Execution::Session> execution;
-    if (!c.resources && !provider_info) execution.reset(new Execution::Session(c.pass));
+    require(diagnostic.empty() || kind == "native-analysis", "Stage diagnostics require a native-segments backend");
+    if (!c.resources && !provider_info && diagnostic.empty()) execution.reset(new Execution::Session(c.pass));
     if (execution && c.workload_schema == 3)
         require(execution->policy.regime == c.execution_regime, "Workload/execution regime mismatch");
     if (!c.transition_suite.empty()) {
@@ -94,6 +107,32 @@ void execute(const Config& c, bool provider_info = false) {
         else if (c.backend == "pffft-hybrid-float") Transition::run<float, Transition::NativeEngine<float, PffftBackend, false>>(c);
         else if (c.backend == "pffft-scheduled-batch-float") Transition::run<float, Transition::NativeEngine<float, PffftBackend, true>>(c);
         else require(false, "Backend has no transition adapter");
+    }
+    else if (kind == "native-analysis") {
+        const std::string provider(descriptor.provider);
+        if (provider == "pffft") {
+            if (c.backend.find("unordered") != std::string::npos) native_dispatch<PffftNative<true>>(c, provider_info, diagnostic);
+            else native_dispatch<PffftNative<false>>(c, provider_info, diagnostic);
+        }
+#ifdef PAPER_HAVE_VDSP
+        else if (provider == "vdsp") {
+            if (descriptor.channels == 4) {
+                if (precision == "float") native_dispatch<VdspNative<float, 4>>(c, provider_info, diagnostic);
+                else native_dispatch<VdspNative<double, 4>>(c, provider_info, diagnostic);
+            } else if (precision == "float") native_dispatch<VdspNative<float>>(c, provider_info, diagnostic);
+            else native_dispatch<VdspNative<double>>(c, provider_info, diagnostic);
+        }
+#endif
+#ifdef PAPER_HAVE_FFTW
+        else if (provider == "fftw") {
+            if (descriptor.channels == 4) {
+                if (precision == "float") native_dispatch<FftwNative<float, 4>>(c, provider_info, diagnostic);
+                else native_dispatch<FftwNative<double, 4>>(c, provider_info, diagnostic);
+            } else if (precision == "float") native_dispatch<FftwNative<float>>(c, provider_info, diagnostic);
+            else native_dispatch<FftwNative<double>>(c, provider_info, diagnostic);
+        }
+#endif
+        else require(false, "Unknown native analysis provider");
     }
     else if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
     else if (c.backend == "core-independent4-float") channel_stream<ScalarChannels<Core<float>>>(c, provider_info);
@@ -126,7 +165,11 @@ void execute(const Config& c, bool provider_info = false) {
         if (precision == "float") scalar_analysis_stream<float, Legacy<float>>(c);
         else scalar_analysis_stream<double, Legacy<double>>(c);
     } else if (kind == "core") {
-        if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
+        if (c.backend.find("core-matched-batch-") == 0) {
+            if (precision == "float") scalar_analysis_stream<float, MatchedCore<float, true>>(c);
+            else scalar_analysis_stream<double, MatchedCore<double, true>>(c);
+        }
+        else if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
         else if (precision == "float") scalar_analysis_stream<float, Core<float>>(c);
         else scalar_analysis_stream<double, Core<double>>(c);
     } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
@@ -151,7 +194,7 @@ int main(int argc, char** argv) {
     using namespace Paper;
     try {
         if (argc > 1 && std::string(argv[1]) == "--development")
-            return Development::run(argc-2, argv+2, argv[0], execute, verify_all, []() {
+            return Development::run(argc-2, argv+2, argv[0], [](const Config& c, bool info) { execute(c, info); }, verify_all, []() {
                 verify_analyzer<float>();
                 verify_analyzer<double>();
                 verify_controls<float>({128, 2048}, {257, 1024});
@@ -160,6 +203,10 @@ int main(int argc, char** argv) {
         if (argc == 2 && std::string(argv[1]) == "--verify") { verify_all(); return 0; }
         if (argc == 2 && std::string(argv[1]) == "--inventory") {
             std::cout << registry_json << '\n'; return 0;
+        }
+        std::string diagnostic;
+        if (argc > 3 && std::string(argv[1]) == "--diagnostic") {
+            diagnostic = argv[2]; argc -= 2; argv += 2;
         }
         bool describe = false, resources = false, provider_info = false;
         if (argc > 2 && std::string(argv[1]).substr(0, 2) == "--" && std::string(argv[1]) != "--transition") {
@@ -203,11 +250,13 @@ int main(int argc, char** argv) {
         require(c.state == "steady" || c.state == "startup" || c.state == "live", "Invalid state");
         validate_backend(c);
         if (!c.transition_suite.empty()) Transition::suite(c);
+        require(diagnostic.empty() || (!describe && !resources && !provider_info && c.transition_suite.empty()),
+            "Stage diagnostics cannot be combined with another command mode");
         if (describe) { std::cout << contract_json(c) << '\n'; return 0; }
         c.resources = resources;
-        Runtime::Profile runtime(!resources && !provider_info);
+        Runtime::Profile runtime(!resources && !provider_info && diagnostic.empty());
         Runtime::set(Runtime::Phase::Setup);
-        execute(c, provider_info);
+        execute(c, provider_info, diagnostic);
         runtime.finish();
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

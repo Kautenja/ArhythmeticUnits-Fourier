@@ -108,7 +108,9 @@ inline std::vector<Config> builtin(const Options& o) {
         "legacy-incremental-float", "pffft-analysis-float",
         "pffft-scheduled-batch-float", "pffft-hybrid-float"};
     if (o.profile == "fast") {
-        for (const std::string name : {"core-independent4-simd", "fourier", "spectre", "vdsp-analysis-float"})
+        for (const std::string name : {"core-independent4-simd", "fourier", "spectre", "vdsp-analysis-float",
+                "core-matched-batch-float", "core-matched-distributed-float", "pffft-native-batch-float",
+                "pffft-native-hybrid-float", "vdsp-native-batch-float", "fftw-native-batch-float"})
             for (const auto& d : backend_registry) if (name == d.id && d.available) primary.push_back(name);
     }
     const std::vector<size_t> sizes = o.profile == "fast" ? std::vector<size_t>{2048}
@@ -135,7 +137,8 @@ inline std::vector<Config> builtin(const Options& o) {
             if (!d.available) continue;
             const std::string boundary(d.boundary), kind(d.kind);
             if (boundary != "transform" && boundary != "inverse-job" && boundary != "chain"
-                    && kind != "analysis4" && kind != "core4" && boundary != "module"
+                    && kind != "analysis4" && kind != "core4" && kind != "native-analysis" && boundary != "module"
+                    && std::string(d.id).find("core-matched-") != 0
                     && std::string(d.id) != "core-double") continue;
             Config c = base(); c.backend = d.id;
             if (boundary == "transform") c.pass = "complete";

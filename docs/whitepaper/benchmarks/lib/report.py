@@ -106,7 +106,7 @@ def collect(directories, phase):
             record = records.setdefault(key, dict(stratum=stratum, host=host, config=config,
                 descriptor=descriptor, contract=contract, processes=[], resources=[],
                 independent_channels=config["count"]*(config["active_ports"] if config.get("workload_schema") == 3 else contract["channels"]),
-                input_contract=contract.get("input_contract", "independent-four-v1" if descriptor["kind"] == "analysis4" else "common-float-v1")))
+                input_contract=contract.get("input_contract", "independent-four-v1" if descriptor["channels"] == 4 and descriptor["kind"] in ("analysis4", "native-analysis") else "common-float-v1")))
             record["resources"].append(dict(session=session, measurements=resource))
             for run in sorted((r for r in metadata["runs"] if r["workload"] == index), key=lambda r: r["repeat"]):
                 groups = run["summary"]["groups"]

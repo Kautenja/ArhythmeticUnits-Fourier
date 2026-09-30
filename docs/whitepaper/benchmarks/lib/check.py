@@ -103,6 +103,9 @@ def validate_resources(resource):
 
 
 def validate_provider_info(info, descriptor, config=None):
+    if descriptor["kind"] == "native-analysis":
+        from native import validate_info
+        validate_info(info, descriptor, config)
     if descriptor["kind"] == "analysis4":
         simd = descriptor["id"] == "core-independent4-simd"
         native = info.get("native_instances", [])
@@ -328,7 +331,7 @@ def check(directory, report_data=None):
         if config.get("transition_suite"):
             for label in ("timing", "allocation"):
                 validate_transition_resources(resource[label]["provider_info"], config, registry)
-        elif registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4"):
+        elif registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4", "native-analysis"):
             for label in ("timing", "allocation"):
                 validate_provider_info(resource[label]["provider_info"], registry[config["backend"]], config)
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
@@ -350,7 +353,7 @@ def check(directory, report_data=None):
                              metadata["execution_policy"], config, summary, directory/run["raw"],
                              metadata["sleep_protection"].get("pid", 0))
         descriptor = registry[config["backend"]]
-        external = descriptor["kind"] in ("external", "scheduled-analysis", "analysis4")
+        external = descriptor["kind"] in ("external", "scheduled-analysis", "analysis4", "native-analysis")
         scalar = (scalar_policy is not None and descriptor["kind"] in ("core", "legacy")
                   and descriptor["channels"] == 1)
         transition = bool(config.get("transition_suite"))
@@ -376,6 +379,10 @@ def check(directory, report_data=None):
         if contract["boundary"] == "transform":
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_transform_accuracy(accuracy, contract)
+        if descriptor["kind"] == "native-analysis":
+            from native import validate_audit
+            validate_audit(report, config, contract)
+            validate_analysis_accuracy(report, config, summary["publication_audit_rows"], contract, "spectrum-norms-v1")
         if report_data is not None:
             if config.get("workload_schema") == 3:
                 from metrics import read as scheduling_metrics

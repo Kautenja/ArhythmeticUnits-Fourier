@@ -38,16 +38,16 @@ macOS measurements; directly launching an unprotected timing pass fails.
 
 | Profile | Workload Selection | Default Observation Policy |
 | --- | --- | --- |
-| `fast` | 36 workloads, or 40 with vDSP: six scalar float analyzers, independent SIMD, Fourier, Spectre, and optional native vDSP at N=2048/H=1024/B=64; smoothing off/on, callback and throughput | Three shared-process repetitions, 32 measured hops, eight warmup hops |
+| `fast` | 52 workloads, 60 with vDSP, or 64 with vDSP and FFTW: historical analyzers, matched core/native pairs, independent SIMD, Fourier, and Spectre at N=2048/H=1024/B=64; smoothing off/on, callback and throughput | Three shared-process repetitions, 32 measured hops, eight warmup hops |
 | `full` | Broader scalar sweep with N=128/512/8192/16384, H=37/257/509, live/startup states, staggered banks/load, independent scalar/SIMD channels, representative modules, inverse/filtering paths, and compiled transform providers | Three shared-process repetitions, 128 measured hops or transform frames, 32 warmup hops |
 
 The six primary analyzers are the production core, legacy batch/incremental,
 ordinary PFFFT batch, and the matched scheduled PFFFT batch/hybrid pair. Fast
-mode now also covers the existing vDSP adapter when enabled; `--list` states
-its omission otherwise. Efficient replacement native adapters remain Phase 3
-work. Fast is a focused development selection, not a ranking across these
+mode also covers the matched current-core pair, new PFFFT native batch/hybrid,
+and optional vDSP/FFTW native batch adapters; `--list` states missing providers.
+See [native baselines and matched controls](baselines.md) for their boundaries. Fast is a focused development selection, not a ranking across these
 different channel/module boundaries. The
-full profile contains 210 workloads with Rack/PFFFT alone and 240 with both
+full profile contains 218 workloads with Rack/PFFFT alone and 264 with both
 optional FFTW and vDSP enabled. Its additional sizes and hops provide checks
 outside the fixed tuning set; once used for tuning they are no longer unseen
 validation cases. Keep additional configurations or another host for final
@@ -172,8 +172,10 @@ Keep canonical transform, complete analysis, and module costs in separate
 tables. Canonical external transforms include copying, layout conversion and
 normalization; real-transform workloads may reconstruct all N bins. They are
 not native-library-only execution measurements. Compare scalar and SIMD using
-the recorded independent channel counts. Only the matched scheduled PFFFT pair
-isolates work placement with shared arithmetic and storage.
+the recorded independent channel counts. The matched core pair and each native batch/hybrid pair share kernels and
+storage; the original scheduled PFFFT pair remains available. Cross-provider
+comparisons change kernels and layout as well as scheduling. Native vector
+segments can introduce rounding differences even within a matched pair.
 
 Optimize for the joint tradeoff between throughput, callback tails, publication
 delay, memory, and accuracy. After freezing a candidate, use the

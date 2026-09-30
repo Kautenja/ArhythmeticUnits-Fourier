@@ -289,6 +289,15 @@ class SpectrumAnalysis {
     /// @param capture false retains the input history while continuing analysis.
     template<typename Output>
     bool process(const T& value, Output emit, bool capture = true) {
+        return process_scheduled<false>(value, emit, capture);
+    }
+
+    /// @brief Compile-time placement seam for matched scheduling experiments.
+    /// @tparam Batch Complete at the frame endpoint instead of across the hop.
+    /// @details Use one policy throughout an instance's lifetime. The ordinary
+    /// process() API keeps distributed placement with no runtime policy branch.
+    template<bool Batch, typename Output>
+    bool process_scheduled(const T& value, Output emit, bool capture = true) {
         if (capture) {
             input[head] = value;
             head = (head + 1) % input.size();
@@ -301,9 +310,14 @@ class SpectrumAnalysis {
             span = 2;
             prefix[0] = T(0.f);
         }
-        size_t quota = quota_base;
-        quota_error += quota_remainder;
-        if (quota_error >= settings.hop) { quota_error -= settings.hop; ++quota; }
+        // The opt-in batch seam serves matched benchmark controls. It changes
+        // only work placement: retain the same storage, kernels, arithmetic
+        // order and sparse/dense choice as the ordinary distributed frame.
+        size_t quota = Batch ? (phase == 0 ? work_per_frame() : 0) : quota_base;
+        if (!Batch) {
+            quota_error += quota_remainder;
+            if (quota_error >= settings.hop) { quota_error -= settings.hop; ++quota; }
+        }
         const size_t lengths[] = {preparation_units, butterflies,
             size()/2+1, OutputWeight*(size()/2+1)};
         // Retain the simple loop when calls do at most two units. Segment
@@ -369,8 +383,9 @@ class SpectrumAnalysis {
                 if (cursor == lengths[stage]) { cursor = 0; ++stage; }
             }
         }
-        if (++phase != settings.hop) return false;
-        phase = 0;
+        const bool complete = Batch ? phase == 0 : phase == settings.hop-1;
+        if (++phase == settings.hop) phase = 0;
+        if (!complete) return false;
         if (window_dirty) {
             window_dirty = false;
             update_schedule();

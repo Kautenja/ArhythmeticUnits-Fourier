@@ -16,7 +16,10 @@ The suite groups adapters by approach and shares matched workload code:
 | `fftw.hpp`, `pffft.hpp`, `vdsp.hpp` | One canonical transform adapter per external library |
 | `external.hpp` | Shared transform, analysis, inverse-job, and filtering cases for external adapters |
 | `synthesis.hpp` | First-party inverse jobs and overlap-save filtering controls |
-| `hybrid.hpp` | Matched PFFFT batch/hybrid scheduling and attribution controls |
+| `hybrid.hpp` | Original per-element PFFFT batch/hybrid controls |
+| `native_kernels.hpp` | Direct native layouts, PFFFT reorder control, vDSP/FFTW batched plans |
+| `native_analysis.hpp` | Shared segment-based batch/hybrid pipeline and all-channel endpoint audits |
+| `native_diagnostics.hpp` | Separate untimed traces, stage timers, and empty-timer controls |
 | `channels.hpp` | Independent four-channel scalar/SIMD comparisons |
 | `modules.hpp` | Actual headless Fourier/Spectre module cases |
 | `protocol.hpp`, `backend.hpp` | Raw records, streaming loop, workload validation, and contracts |
@@ -54,7 +57,7 @@ path for `../..`; on Windows, use the `.exe` suffix and put that directory on
 For numerical verification without a timing campaign:
 
 ```shell
-python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
 DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify
 ```
 
@@ -98,6 +101,11 @@ scripts derive tables and plots separately. No benchmark command updates the
 paper or its archived results automatically.
 
 ## Comparison Boundaries
+
+The [native baseline guide](../../docs/whitepaper/benchmarks/guides/baselines.md)
+describes the additional identities, matched controls, channel semantics,
+allocation limits, and separate diagnostics. Existing adapters keep their names
+and implementations; new identities make later measurements distinguishable.
 
 Keep isolated transforms, complete core analysis, and headless module
 processing in separate comparisons. The modules include input handling and

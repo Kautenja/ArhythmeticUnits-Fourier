@@ -182,7 +182,7 @@ struct SynthesisAccuracy {
             "Independent synthesis output differs");
     }
     void print(const char* reference = "analytical complex inverse or direct time-domain FIR",
-            const std::vector<std::string>& instances = {}) const {
+            const std::vector<std::string>& instances = {}, const std::string& extra_json = "") const {
         std::cerr.precision(17);
         std::cerr << "{\"reference\":\"" << reference << "\","
             << "\"max_abs_error\":" << maximum_error << ",\"max_reference\":" << maximum_reference
@@ -191,7 +191,7 @@ struct SynthesisAccuracy {
         for (size_t i = 0; i < instances.size(); ++i) { if (i) std::cerr << ','; std::cerr << instances[i]; }
         std::cerr << ']';
         if (analysis.vectors) std::cerr << ",\"analysis\":" << analysis.json();
-        std::cerr << "}\n";
+        std::cerr << extra_json << "}\n";
     }
 };
 

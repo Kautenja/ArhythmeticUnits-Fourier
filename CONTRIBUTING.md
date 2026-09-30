@@ -751,7 +751,8 @@ make benchmark-fast BENCHMARK_DEV_ARGS="--backend core-float --pass throughput"
 make benchmark-full
 ```
 
-The fast profile runs 24 fixed workloads with three repetitions in one process.
+The fast profile runs 52 fixed workloads, 60 with vDSP, or 64 with vDSP and
+FFTW, with three repetitions in one process.
 The full development profile adds sizes, hops, live settings, startup, channel
 banks, transforms, and compiled external providers. Both reuse the paper's C++
 adapters, timing loops, and numerical/cadence checks. Builds are incremental;

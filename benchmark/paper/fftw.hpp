@@ -30,6 +30,9 @@ template<> struct Api<TYPE> { \
     static Plan real(int n, TYPE* in, Complex* out, unsigned flags) { \
         return PREFIX##_plan_dft_r2c_1d(n, in, out, flags); \
     } \
+    static Plan many(int n, int channels, TYPE* in, Complex* out) { \
+        return PREFIX##_plan_many_dft_r2c(1, &n, channels, in, nullptr, 1, n, out, nullptr, 1, n/2+1, FFTW_MEASURE); \
+    } \
     static Plan complex(int n, Complex* in, Complex* out, int sign, unsigned flags) { \
         return PREFIX##_plan_dft_1d(n, in, out, sign, flags); \
     } \
