@@ -2,24 +2,45 @@
 
 ## 2.2.0 (2026-09-30)
 
+### Added
+
+-   Add Spectre Decibels and Linear intensity modes with adjustable Floor
+    and Ceil endpoints, a color-range legend, and panel dropdowns for the
+    palette and intensity scale. Frozen history can be recolored without
+    recording again.
+-   Add Spectre's `DecibelInspection` preset and separate Raw and Color
+    level readouts in Decibels mode.
+-   Expand both user manuals with quick starts, practical examples,
+    troubleshooting, and annotated panel drawings.
+
+### Changed
+
+-   Start new Spectre instances in Decibels mode with a -90 to 0 dB range.
+    Older patches without an intensity mode and the five original presets
+    retain Linear mode and their existing colors. Palette and intensity
+    selection now live on the color screen and support Undo and Redo.
+-   Distribute spectrum analysis and per-bin output work over one exact
+    hop in Fourier and Spectre, including windowing, reconstruction,
+    smoothing, curve preparation, and snapshot writing. Refresh cadence
+    may be slower than the former early-completion schedule.
+-   Preallocate processing storage; FFT length, window, and smoothing changes
+    rebuild caches incrementally and latch at frame boundaries. Preserve
+    saved controls and magnitude conventions.
+-   Publish Fourier curves through synchronized snapshots and remove Spectre's
+    duplicate engine history. Reset/sample-rate changes discard partial frames.
+
+### Fixed
+
 -   Prevent AC-coupled DC offsets caused by accumulated float rounding in
     short repeating signals; both modules now retain double-precision filter
     state.
--   Distribute complete spectrum analysis and per-bin output work over one
-    exact hop in Fourier and Spectre, including windowing, reconstruction,
-    smoothing, curve preparation, and snapshot writing.
--   Preallocate processing storage; FFT length, window, and smoothing changes
-    rebuild caches incrementally and latch at frame boundaries.
--   Publish Fourier curves through synchronized snapshots and remove Spectre's
-    duplicate engine history. Reset/sample-rate changes discard partial frames.
--   Preserve saved controls and magnitude conventions. Exact hop cadence may
-    refresh less often than the former early-completion schedule.
+-   Hide display cursor overlays outside the plot rectangles.
 
 ## 2.1.2 (2025-04-14)
 
 -   Wrote manual for Spectre
 
-## 2.1.1 (2025-03-TODO)
+## 2.1.1 (2025-03-13)
 
 -   Fix `Math::freq_to_string` to cover edge cases along unit bounds
 -   Update `SpectrumAnalyzer` and `Spectrogram` to use `Math::freq_to_string`
