@@ -136,6 +136,23 @@ under `docs/whitepaper/`.
       source, SDK/provider identities, power mode, timer resolution, requested
       and effective thread policy, and per-thread FPU state. Unsupported policy
       requests fail or are explicitly unavailable; they never silently succeed.
+- [ ] Require `/usr/bin/caffeinate -is` around every macOS benchmark launch,
+      including development, smoke, pilot, confirmation, and Rack-host timing.
+      Hold its assertions from before stabilization through the last measured
+      child process; the wrapped runner must wait for all measurement children.
+      `-i` prevents idle system sleep; `-s` prevents system sleep on AC power.
+      Record the wrapper command, process lifetime, and assertion evidence
+      before the stabilization gate and after measurement, outside timed loops.
+      Missing or prematurely ended protection fails the run's integrity check;
+      retain its observations and failure record without promoting it to valid
+      confirmation evidence.
+- [ ] Run the primary M1 Pro study on AC power with Low Power Mode disabled.
+      Verify and record power source and effective power settings separately
+      from sleep assertions; flag any change during the session. `caffeinate`
+      does not disable Low Power Mode, fix CPU frequency, or prevent thermal
+      throttling. Fail readiness when required settings cannot be established;
+      do not silently change system settings or infer stable performance from
+      an active sleep assertion.
 - [ ] Put build, archive/hash work, full preflight, inventory verification,
       and resource probes before a recorded stabilization gate. No rebuild or
       resource probe may occur between that gate and measurement. Execute
@@ -169,13 +186,14 @@ under `docs/whitepaper/`.
       slow runs. A predeclared flag policy supports sensitivity analysis, not
       retrospective deletion or unsupported E-core/preemption attribution.
 - [ ] Add runner tests proving preparation precedes settling, measured binary
-      identity cannot change, unsupported policies are visible, and failed or
-      partial runs cannot become valid confirmation evidence. Test pacing
-      arithmetic/overruns with deterministic clock fixtures separately from
-      hardware smoke execution.
+      identity cannot change, required sleep assertions cover the campaign,
+      unsupported policies are visible, and failed or partial runs cannot
+      become valid confirmation evidence. Test pacing arithmetic/overruns with
+      deterministic clock fixtures separately from hardware smoke execution.
 
-Gate: a short unpaced and paced smoke can be reproduced with explicit timing
-boundaries, no hidden work after stabilization, and complete failure records.
+Gate: a short unpaced and paced smoke can be reproduced with verified sleep
+protection and power settings, explicit timing boundaries, no hidden work
+after stabilization, and complete failure records.
 No publication rerun starts before this gate.
 
 ## Phase 2: Workload Controls, Metrics, And Audits
@@ -477,13 +495,24 @@ public CLI after those profiles and Phase 1's internal stabilization gate
 are implemented. Each profile declares its fixture/measurement phase; a smoke
 profile must never be relabeled as a pilot or confirmation.
 
+All macOS timing launches below use the system `caffeinate` utility. Apply the
+same wrapper to development/Catch2 and Rack-host benchmark commands used in
+this study. Run on AC power with Low Power Mode off, keep the lid open, and
+allow the wrapped runner to complete before closing its terminal. During
+preparation, retain `pmset -g batt`, `pmset -g custom`, and `pmset -g assertions`
+output, plus `pmset -g` for effective settings, to establish power source,
+settings, and the wrapper's active assertions. Capture initial snapshots before
+the stabilization gate; repeat after timing while the wrapped runner is still
+active. Keep probes outside measured loops. Follow Phase 1's lifetime and
+power-change checks.
+
 ```shell
 python3 docs/whitepaper/benchmarks/bench.py setup --variant macos --build
 python3 docs/whitepaper/benchmarks/bench.py plan --profile docs/whitepaper/benchmarks/profiles/reliability-smoke.json --variant macos --output .build/spec014-smoke-plan.json
-python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-smoke.json --variant macos --output .build/spec014-smoke
+/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-smoke.json --variant macos --output .build/spec014-smoke
 python3 docs/whitepaper/benchmarks/bench.py check .build/spec014-smoke
-python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-01 --host m1-pro-16gb-local --session spec014-pilot-01
-python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-02 --host m1-pro-16gb-local --session spec014-pilot-02
+/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-01 --host m1-pro-16gb-local --session spec014-pilot-01
+/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-02 --host m1-pro-16gb-local --session spec014-pilot-02
 python3 docs/whitepaper/benchmarks/bench.py check .build/spec014-pilot-01 .build/spec014-pilot-02
 python3 docs/whitepaper/benchmarks/bench.py estimate .build/spec014-pilot-01 .build/spec014-pilot-02
 python3 docs/whitepaper/benchmarks/bench.py report .build/spec014-pilot-01 .build/spec014-pilot-02 --phase pilot --output .build/spec014-pilot-report
@@ -496,7 +525,7 @@ identifies that decision and is not a replacement for the recorded evidence.
 
 ```shell
 python3 docs/whitepaper/benchmarks/bench.py freeze .build/spec014-pilot-01 .build/spec014-pilot-02 --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-baselines-freeze.json --rationale 'Spec 014 Phase 6 decision and checked pilot report record thresholds, durations, repetitions, session ordering, and retained cells.'
-python3 docs/whitepaper/benchmarks/bench.py run --freeze .build/spec014-baselines-freeze.json --variant macos --output .build/spec014-confirm-01 --host m1-pro-16gb-local --session spec014-confirm-01
+/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --freeze .build/spec014-baselines-freeze.json --variant macos --output .build/spec014-confirm-01 --host m1-pro-16gb-local --session spec014-confirm-01
 ```
 
 Repeat that launch on separate days with `confirm-02` and `confirm-03` output
@@ -527,7 +556,8 @@ latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' -interaction=nonstopmod
 
 ### Completion Checklist
 
-- [ ] Phase 1: preparation, stabilization, pacing, and diagnostic boundaries verified.
+- [ ] Phase 1: sleep protection, power settings, preparation, stabilization,
+      pacing, and diagnostic boundaries verified.
 - [ ] Phase 2: explicit workloads, new metrics, backward compatibility, and
       audits verified.
 - [ ] Phase 3: efficient native and matched scheduling controls numerically validated.
@@ -546,6 +576,15 @@ Spec-author validation passed `make -C docs/whitepaper check`, repository-link
 checks, shell syntax checks, and argument parsing of all 18 benchmark CLI
 examples without executing the planned campaigns. Reviewed the specification
 against existing source, recorded observations, and contributor guidance.
+
+September 30, 2026: added mandatory macOS `caffeinate -is` protection, AC-power
+and Low Power Mode requirements, assertion-lifetime checks, and wrapped launch
+examples. Verified option semantics against the installed `caffeinate(8)` and
+`pmset(1)` manuals. Repository links, shell syntax, all 18 benchmark CLI examples
+(including four wrapped launches), and `git diff --check` passed. No benchmark
+campaign or machine power-setting change was performed for this documentation
+update.
+
 Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate
 completion diary or mark the research complete merely because planning passed.
