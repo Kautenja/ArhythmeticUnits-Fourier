@@ -3,6 +3,7 @@
 # Copyright 2026 Arhythmetic Units
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
+import datetime as dt
 from pathlib import Path
 from run import digest, save
 from report import identity
@@ -44,12 +45,42 @@ def evidence(path, phase=None):
     return m
 
 
-def freeze(pilots, configs, options, variant, rationale, output):
+def require_real_evidence(metadata):
+    if (metadata.get('fixture') or metadata.get('revision') == 'fixture'
+            or metadata.get('study_freeze', {}).get('fixture')
+            or metadata.get('host_id', '').startswith('fixture')):
+        raise ValueError('Synthetic fixtures cannot qualify as real study evidence')
+
+
+def validate_seed_policy(policy, options):
+    from study_plan import session_seeds
+    if (not isinstance(policy, dict) or set(policy) != {'schema', 'kind', 'sessions'}
+            or policy['schema'] != 1 or policy['kind'] != 'predeclared-session-seeds-v1'
+            or len(session_seeds(policy['sessions'])) < 3 or options['repeats'] < 5):
+        raise ValueError('Session seed policy requires three labels and five fresh processes per cell')
+    return policy
+
+
+def seed_for_session(frozen, session):
+    policy = frozen.get('session_seed_policy')
+    if policy is None: return frozen['options']['seed']
+    validate_seed_policy(policy, frozen['options'])
+    if session not in policy['sessions']: raise ValueError('Session is absent from the frozen seed policy')
+    return policy['sessions'][session]
+
+
+def freeze(pilots, configs, options, variant, rationale, output, *, fixture=False, session_seed_policy=None):
     if not rationale.strip():
         raise ValueError(
             "Freeze requires a pilot interpretation and inclusion rationale"
         )
     metadata = [evidence(p, "pilot") for p in pilots]
+    if not metadata: raise ValueError('Freeze requires pilot evidence')
+    if not fixture:
+        for m in metadata: require_real_evidence(m)
+    if session_seed_policy is not None:
+        validate_seed_policy(session_seed_policy, options)
+        if len(metadata) < 2: raise ValueError('Session policy requires two independent pilots')
     identities = [{k: m.get(k) for k in IDENTITY} for m in metadata]
     if any(i != identities[0] for i in identities):
         raise ValueError("Pilot source/dependency/compiler identities differ")
@@ -86,6 +117,8 @@ def freeze(pilots, configs, options, variant, rationale, output):
             for p, m in zip(pilots, metadata)
         ],
     )
+    if fixture: value['fixture'] = True
+    if session_seed_policy is not None: value['session_seed_policy'] = session_seed_policy
     if metadata[0].get("execution_policy") is not None:
         value["execution_policy"] = metadata[0]["execution_policy"]
     value["freeze_id"] = identity(value)
@@ -108,16 +141,20 @@ def read_freeze(path):
         or not f.get("rationale")
     ):
         raise ValueError("Missing freeze policy/session floor/rationale")
+    if f.get('session_seed_policy') is not None: validate_seed_policy(f['session_seed_policy'], f['options'])
     return f
 
 
 def enforce(f, metadata):
+    if not f.get('fixture'): require_real_evidence(metadata)
+    elif not (metadata.get('fixture') or metadata.get('revision') == 'fixture'):
+        raise ValueError('A fixture freeze cannot govern real measurement')
     if metadata.get("execution_policy") != f.get("execution_policy"):
         raise ValueError("Execution policy changed since the pilot freeze")
     if (
         metadata["configs"] != f["configs"]
         or metadata["repeats"] != f["options"]["repeats"]
-        or metadata["seed"] != f["options"]["seed"]
+        or metadata["seed"] != seed_for_session(f, metadata["session_id"])
     ):
         raise ValueError("Run differs from frozen workload/order/repetitions")
     if {k: metadata.get(k) for k in IDENTITY} != f["provenance"]:
@@ -126,8 +163,10 @@ def enforce(f, metadata):
         )
 
 
-def confirmations(paths):
+def confirmations(paths, *, allow_fixture=False):
     records = [evidence(p, "confirmation") for p in paths]
+    if not allow_fixture:
+        for m in records: require_real_evidence(m)
     freezes = []
     for m in records:
         f = m.get("study_freeze")
@@ -151,6 +190,9 @@ def confirmations(paths):
         raise ValueError(
             "Confirmation requires at least three separately labeled actual sessions"
         )
+    if records[0]['study_freeze'].get('session_seed_policy'):
+        days = {dt.datetime.fromisoformat(m['started_utc']).date() for m in records}
+        if len(days) < 3: raise ValueError('Confirmation requires three separate calendar days')
     return records
 
 

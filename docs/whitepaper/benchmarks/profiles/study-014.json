@@ -735,7 +735,7 @@
       ]
     }
   ],
-  "readiness": "blocked",
-  "blocking_issue": "Long complete-module decay fails spectrum-norms-v1 under Rack FPU mode; see owning spec and profiles/engine/long-decay-regression.json.",
-  "group_overlap": "Repeated baseline cells in Granularity are predeclared bridge observations; retain their group/process identities rather than treating them as distinct workloads."
+  "readiness": "implementation-ready",
+  "group_overlap": "Repeated baseline cells in Granularity are predeclared bridge observations; retain their group/process identities rather than treating them as distinct workloads.",
+  "numerical_stress_policy": "module-decay-ftz-v1 retains every tail vector with an explicit absolute floor and separate relative diagnostics; ordinary spectra retain spectrum-norms-v1"
 }

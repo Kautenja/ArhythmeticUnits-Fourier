@@ -424,19 +424,19 @@ Prepare the following focused groups rather than a full Cartesian product:
 | Host | Phase 4 thread/count/block/load/consumer cases | Does reducing bursts improve available host capacity? |
 | Stress | Non-divisible hops, cold/live caches, silence decay, lifecycle events | Which limits or regressions constrain the recommendation? |
 
-- [ ] Write hypotheses, primary outcomes, initial observation lengths, process
+- [x] Write hypotheses, primary outcomes, initial observation lengths, process
       repetitions, allowed session order seeds, flagging policy, aggregation,
       and stopping rules into explicit versioned profiles. Prepare candidate
       practical thresholds in absolute time, miss-rate or sustainable fixed-load
       terms, together with spectrum-age/cost budgets. These are study-design
       inputs, not conclusions about expected performance.
-- [ ] Prepare commands for at least two separately prepared user-run pilot
+- [x] Prepare commands for at least two separately prepared user-run pilot
       sessions covering all required groups. Resolve implementation errors
       using correctness tests before handoff. Preserve all attempts; pilots
       will later inform drift, multimodality, resolution, phase coverage,
       duration, and storage decisions. No pilot run is required to close this
       preparation spec.
-- [ ] Preserve the pilot-backed confirmation boundary. The initial package
+- [x] Preserve the pilot-backed confirmation boundary. The initial package
       collects pilots; it must not fabricate a confirmation freeze without
       measurements or automatically promote pilot observations. After the user
       returns pilots, a separate analysis task can propose a freeze and supply
@@ -444,19 +444,19 @@ Prepare the following focused groups rather than a full Cartesian product:
       sessions on separate days and five fresh processes per primary cell per
       session, subject to the later pilot review. That decision and those runs
       are outside this spec's completion requirements.
-- [ ] Extend freeze validation to support a predeclared, recorded session-seed
+- [x] Extend freeze validation to support a predeclared, recorded session-seed
       policy while preserving workload membership and measurement semantics.
       Test it against synthetic pilot records. The existing fixed-seed freeze
       must not be bypassed, and fixture data must never qualify as real evidence.
-- [ ] Make observation lengths configurable and retain effective hop counts,
+- [x] Make observation lengths configurable and retain effective hop counts,
       duration, quantile ranks, and process/session variation. Test summaries
       and inadequate-sample reporting using fixtures; hundreds of hops do not
       establish a precise rare-event probability.
-- [ ] Enforce serial measurement of unchanged prepared artifacts. Changes to
+- [x] Enforce serial measurement of unchanged prepared artifacts. Changes to
       source, dependencies, profiles, or instrumentation invalidate the relevant
       preparation and any later freeze. Implement clear errors and new-output
       requirements instead of silently rebuilding or relabeling observations.
-- [ ] Preserve every planned cell and slow observation. Implement completeness
+- [x] Preserve every planned cell and slow observation. Implement completeness
       and integrity checks that distinguish a failed run from a disturbed but
       valid observation. No best-run selection, winner-based early stopping,
       silent omissions, or performance-driven automatic retries.
@@ -1139,3 +1139,40 @@ Rack spectrum-point tests reported 5,085,458 assertions in 10 cases, DSP reporte
 2,180,346 assertions in 13 cases, and both benchmark executables built. The
 existing SDK and FFTW deployment-target warnings remain. `git diff --check`
 passed. This closes Phase 4's reopened stress gate; Phase 6/7 preparation follows.
+
+
+### Phase 6 Implementation: September 30, 2026
+
+The versioned pilot profile and resolver now declare 194 cells / 388 fresh
+processes per session, two distinct order seeds, all seven groups, fixed stopping
+and retention rules, practical design thresholds, and observation-rank warnings.
+The resolved plan ID is
+`55c4bfa25b65f0923f9cb039b3e49da8a5365c4d5521751a69688cee02aad983`.
+Its readiness is `implementation-ready`; Phase 7 must bind it to actual prepared
+artifacts before launch. The two intended entry commands remain
+`make benchmark-study-run SESSION=pilot-01` and `SESSION=pilot-02`.
+
+`prepared.py` seals source membership, source/dependency and artifact bytes,
+resolved plan and host/workspace identity. Mutation, missing/additional files,
+changed host, malformed/synthetic manifests and stale inputs fail explicitly.
+Phase 7 connects these tested checks to the existing serial runner. Job order
+is fixed independently of observations; incomplete cells remain failures, never
+implicitly omitted or retried. Existing raw summaries retain process identities
+and slow observations; design summaries additionally record effective hops,
+simulated seconds, quantile ranks and inadequate-tail flags.
+
+Freeze validation supports `predeclared-session-seeds-v1` while keeping old
+fixed-seed manifests strict. The new policy requires two pilot records, at least
+three declared confirmation sessions and five processes per cell; confirmation
+selection requires three separate calendar days. Synthetic fixtures require an
+explicit test-only freeze marker, cannot launch a measurement freeze, and fail
+real confirmation/publication evidence gates. No real freeze was generated.
+The retirement-mechanics test explicitly mocks that evidence boundary; separate
+failure tests exercise the unmocked synthetic rejection.
+
+Validation passed: four study planning/policy tests, eight workflow tests and
+seven scheduling-metric tests, all using synthetic records. `git diff --check`
+passed. Planning arithmetic is 959.147 nominal paced audio seconds plus 388
+seconds of process settling and 180 seconds of session settling; this excludes
+planning, warmup, replay, I/O, overruns and teardown and is not a measured runtime.
+No pilot was run. The offline launch implementation is the next phase.

@@ -91,7 +91,7 @@ class WorkflowTests(unittest.TestCase):
                 options,
                 "rack",
                 "Synthetic fixture rationale",
-                root / "freeze.json",
+                root / "freeze.json", fixture=True,
             )
             self.assertEqual(read_freeze(root / "freeze.json"), frozen)
             enforce(frozen, m)
@@ -125,16 +125,16 @@ class WorkflowTests(unittest.TestCase):
                 c["study_freeze"] = frozen
                 save(path / "metadata.json", c)
                 paths.append(path)
-            self.assertEqual(len(confirmations(paths)), 3)
+            self.assertEqual(len(confirmations(paths, allow_fixture=True)), 3)
             with self.assertRaises(ValueError):
-                confirmations(paths[:2])
+                confirmations(paths[:2], allow_fixture=True)
             with self.assertRaises(ValueError):
-                confirmations([paths[0], paths[0], paths[1]])
+                confirmations([paths[0], paths[0], paths[1]], allow_fixture=True)
             c = json.loads((paths[-1] / "metadata.json").read_text())
             c["phase"] = "smoke"
             save(paths[-1] / "metadata.json", c)
             with self.assertRaises(ValueError):
-                confirmations(paths)
+                confirmations(paths, allow_fixture=True)
 
     def test_fixture_export_freshness_and_production_rejection(self):
         with tempfile.TemporaryDirectory() as t:
@@ -269,7 +269,9 @@ class WorkflowTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 inventory_plan([root / "replacement"], root / "forbidden.json", root)
 
-    def test_eligible_retirement_requires_independent_bundle_and_receipt(self):
+    # Isolate retirement mechanics; separate tests reject all synthetic evidence.
+    @patch('study.require_real_evidence')
+    def test_eligible_retirement_requires_independent_bundle_and_receipt(self, real_gate):
         with tempfile.TemporaryDirectory() as t:
             root = Path(t)
             pilot = root / "pilot"

@@ -13,7 +13,7 @@ from run import BASE
 class StudyPlanTests(unittest.TestCase):
     def test_required_groups_providers_and_fixed_membership(self):
         plan = resolve(); description = summary(plan)
-        self.assertEqual(description['readiness'], 'blocked')
+        self.assertEqual(description['readiness'], 'implementation-ready')
         self.assertEqual(description['processes_per_session'], 388)
         self.assertEqual(description['workloads'], dict(Baselines=24, Granularity=39, Scaling=16,
                                                        Modules=9, Stress=12, Host=83, Lifecycle=11))

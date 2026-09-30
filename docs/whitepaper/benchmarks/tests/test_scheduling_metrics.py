@@ -175,7 +175,7 @@ class SchedulingMetricsTests(unittest.TestCase):
             metadata = campaign(path); metadata["phase"] = "pilot"
             save(path/"metadata.json", metadata)
             frozen = freeze([path], metadata["configs"], dict(repeats=1, seed=7), "rack",
-                            "Synthetic freeze integrity fixture only", root/"freeze.json")
+                            "Synthetic freeze integrity fixture only", root/"freeze.json", fixture=True)
             enforce(frozen, metadata)
             for field in ("window", "octave", "temporal_mode", "temporal_value", "fixture", "fixture_seed",
                           "decay_samples", "active_ports", "voices", "execution_regime", "experimental_policy"):

@@ -110,7 +110,9 @@ def run_study(args):
             )
         if frozen["variant"] != args.variant:
             raise ValueError("Variant differs from freeze")
-        configs, options, phase = frozen["configs"], frozen["options"], "confirmation"
+        from study import seed_for_session
+        if frozen.get('fixture'): raise ValueError('Cannot launch a synthetic freeze')
+        configs, options, phase = frozen['configs'], dict(frozen['options'], seed=seed_for_session(frozen, args.session)), 'confirmation'
     else:
         configs, manifest, options, _ = selection(args)
         phase = manifest["phase"]
@@ -302,6 +304,7 @@ def main(argv=None):
     p = commands.add_parser(
         "freeze", help="Freeze pilot-backed workloads and recording policy"
     )
+    p.add_argument("--session-seeds", type=Path, help="JSON mapping of predeclared confirmation session labels to distinct seeds")
     profile(p)
     p.add_argument("pilots", nargs="+", type=Path)
     p.add_argument("--rationale", required=True)
@@ -411,7 +414,9 @@ def main(argv=None):
         elif c == "freeze":
             configs, _, options, _ = selection(args)
             value = freeze(
-                args.pilots, configs, options, args.variant, args.rationale, args.output
+                args.pilots, configs, options, args.variant, args.rationale, args.output,
+                session_seed_policy=(dict(schema=1, kind='predeclared-session-seeds-v1',
+                                          sessions=json.loads(args.session_seeds.read_text())) if args.session_seeds else None)
             )
             print(
                 "Frozen:",

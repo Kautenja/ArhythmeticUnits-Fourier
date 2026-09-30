@@ -193,8 +193,9 @@ def main():
         parser.error("At least two measured hops are required")
     frozen = None
     if args.freeze:
-        from study import read_freeze
+        from study import read_freeze, seed_for_session
         frozen = read_freeze(args.freeze)
+        if frozen.get('fixture'): parser.error('Cannot launch a synthetic freeze')
         if args.phase != "confirmation":
             parser.error("Frozen runs require --phase confirmation")
     configs = matrix(args.profile)
@@ -240,7 +241,7 @@ def main():
         print(json.dumps(result, indent=2))
         return
     if frozen:
-        if configs != frozen["configs"] or args.repeats != frozen["options"]["repeats"] or args.seed != frozen["options"]["seed"]:
+        if configs != frozen["configs"] or args.repeats != frozen["options"]["repeats"] or args.seed != seed_for_session(frozen, args.session_id):
             parser.error("Command differs from frozen configuration")
     output = args.output.resolve()
     if any(base == output or base in output.parents for base in (ROOT/"src", ROOT/"benchmark", ROOT/".git")):
