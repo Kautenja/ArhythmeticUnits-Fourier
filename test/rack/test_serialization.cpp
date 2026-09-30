@@ -34,7 +34,7 @@ struct RackContext {
         context.engine->setSampleRate(48000.f);
         context.history = new rack::history::State;
         plugin.slug = "ArhythmeticUnits-Fourier";
-        plugin.version = "2.1.2";
+        plugin.version = "2.2.0";
         plugin.addModel(modelSpectrumAnalyzer);
         plugin.addModel(modelSpectrogram);
         rack::plugin::plugins.push_back(&plugin);

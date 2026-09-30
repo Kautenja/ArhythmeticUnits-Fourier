@@ -1,7 +1,7 @@
 {
   "plugin": "ArhythmeticUnits-Fourier",
   "model": "Spectrogram",
-  "version": "2.1.2",
+  "version": "2.2.0",
   "params": [
     {
       "value": 1.0,

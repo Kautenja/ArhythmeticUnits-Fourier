@@ -211,7 +211,7 @@ To reference a manual itself, use its dedicated BibTeX `@manual` entry:
 -   [Fourier manual citation](docs/manual-fourier/CITATION.bib)
 -   [Spectre manual citation](docs/manual-spectre/CITATION.bib)
 
-These entries identify the author, manual title, version 2.1.2, release month,
+These entries identify the author, manual title, version 2.2.0, release month,
 and version-specific PDF URL. Cite the version you consulted; update the
 metadata and URL if you use another release. Mathematical background and
 algorithm references are collected in the [technical report][report];

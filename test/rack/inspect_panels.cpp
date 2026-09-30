@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     rack::plugin::Plugin plugin;
     plugin.path = argv[2];
     plugin.slug = "ArhythmeticUnits-Fourier";
-    plugin.version = "2.1.2";
+    plugin.version = "2.2.0";
     plugin.addModel(modelSpectrogram);
     plugin.addModel(modelSpectrumAnalyzer);
     rack::plugin::plugins.push_back(&plugin);

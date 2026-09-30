@@ -11,8 +11,8 @@ authors:
   - family-names: Kauten
     given-names: Christian
 repository-code: "https://github.com/Kautenja/ArhythmeticUnits-Fourier"
-version: "2.1.2"
-date-released: "2025-04-14"
+version: "2.2.0"
+date-released: "2026-09-30"
 license: GPL-3.0-or-later
 keywords:
   - digital signal processing

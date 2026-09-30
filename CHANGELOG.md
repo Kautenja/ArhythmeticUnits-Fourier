@@ -1,6 +1,6 @@
 # Change Log
 
-## Unreleased
+## 2.2.0 (2026-09-30)
 
 -   Prevent AC-coupled DC offsets caused by accumulated float rounding in
     short repeating signals; both modules now retain double-precision filter
