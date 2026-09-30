@@ -1,95 +1,192 @@
-\section{Evaluation Design}
+\section{Experimental Method}
 \label{sec:evaluation}
-The implemented comparison protocol separates work placement, practical
-implementation cost, and output correctness. It evaluates aggregate cost,
-callback durations, storage, and publication age together: reducing a burst
-can require more total work or an older spectrum. The final production
-workload matrix, measurement hosts, repetition counts, and comparative results
-remain pending. The historical campaigns reported separately below and in the
-appendices document earlier implementations, rather than this protocol's
-confirmation results.
+The confirmation study evaluates work placement, practical implementation cost,
+and numerical correctness separately. Its unit of comparison is a fully
+specified workload: operation, precision, transform length, hop, callback size
+and origin, independent channels and instances, settings, state, load, and cache
+policy. Transform, analysis, inverse-job, and filtering boundaries are never
+pooled into a backend ranking.
 
-\subsection{Comparisons and matched workloads}
-Table~\ref{tab:controls} distinguishes controlled scheduling comparisons from
-comparisons between implementations. The native hybrid retains an indivisible
-PFFFT call while scheduling its surrounding preparation and output stages.
-It tests how much work can be distributed without suspending the FFT itself.
-Comparing it with the production core also changes transform layout, fused
-operations, plan capacity, storage, and band-index arithmetic. That comparison
-therefore measures a practical tradeoff, not an isolated dispatch overhead.
+\subsection{Implementations and included work}
+Table~\ref{tab:controls} distinguishes scheduling controls from comparisons
+between implementations. The native hybrid retains an indivisible PFFFT call
+while scheduling its surrounding preparation and output stages. The scheduled
+batch control executes that same task sequence at the frame endpoint; the
+balanced hybrid distributes it over the hop. Comparing either with the
+production analyzer also changes transform layout, fusion, plan capacity,
+storage, and band-index arithmetic. It measures a practical tradeoff, not
+an isolated cost of suspension.
 
 \input{tables/comparison-controls.tex}
 
-Matched scalar analysis workloads use common float input bytes containing DC, two
-tones, and deterministic noise; double-precision adapters promote those same
-bytes. They select the same frame endpoints and produce $K=N/2+1$ magnitudes.
-Stationary settings use coherent-gain-normalized periodic Hann windows, with
-smoothing disabled or one-third-octave averaging and temporal coefficient
-$\alpha=0.8$. Live-cache workloads alternate Hann/Blackman--Harris windows and
-frequency-smoothing settings at frame boundaries. Startup, parameter transitions,
-and independent four-channel workloads retain separate identities.
+Scalar analysis uses common float input bytes containing DC, two tones, and
+deterministic noise; double adapters promote those same bytes. Matched adapters
+select the same frame endpoints and produce $K=N/2+1$ magnitudes. Stationary
+settings use coherent-gain-normalized periodic Hann windows, either without
+smoothing or with one-third-octave averaging and temporal coefficient
+$\alpha=0.8$. Live-cache cases alternate Hann/Blackman--Harris windows and
+frequency-smoothing settings. Startup, independent four-channel cases, and
+explicit parameter transitions retain separate identities.
 
-Timing includes input retention, windowing, transformation, required output
-conversion, smoothing, and output stores. Fixture generation, plan/storage
-construction, and warmup are excluded; startup omits warmup but still excludes
-construction. Headless module measurements additionally include module input
-handling, controls, display-coordinate preparation, and publication. They have
-no display consumer, graphics loop, Rack engine worker, or audio device, and
-remain separate from magnitude-only core comparisons.
+Window coefficients and control parameters are stored in float even for
+double analysis; input/window multiplication and transform arithmetic use
+the selected scalar precision. The reference consumes these same rounded
+windowed samples, so numerical acceptance does not certify the window
+generator or display calibration. Core and legacy smoothing compute interval
+endpoints with binary32 arithmetic, while the native analysis and hybrid
+adapters use binary64 arithmetic before flooring to bin indices. A boundary
+can therefore select a different bin despite identical nominal octave width.
+Each is checked against its declared interval convention. Cross-family
+comparisons match the analysis task rather than asserting bitwise-identical
+smoothing outputs; the scheduled-batch/hybrid pair shares its exact convention.
 
-\subsection{Timing and publication age}
+Analysis timing includes capture, retained input, windowing, transformation,
+required output conversion, smoothing, and output stores. Inverse-job timing
+includes input buffering, normalized inverse evaluation, and all output stores.
+The chain includes retention, forward transformation, spectral multiplication,
+inverse transformation, overlap-save extraction, and sample delivery
+(Section~\ref{sec:inverse-chain}). Fixture generation, construction, planning,
+and warmup are excluded. Startup omits warmup but still excludes construction.
+Isolated transforms include their adapter's required buffering and conversions;
+they are not advertised as bare provider-kernel calls. The comparison campaign
+contains no running Rack audio engine or display consumer.
+
+\subsection{Host, compilation, and preparation}
+All measurements used one Apple M1 Pro laptop (10 CPU cores, 16 GiB memory),
+macOS 26.6.2 ARM64, and Apple Clang 21.0.0. The first-party driver used
+\code{-O3}, \code{-funsafe-math-optimizations}, and
+\code{-march=armv8-a+fp+simd}; numerical acceptance applies to that executable,
+not to every compiler transformation or architecture. The measured first-party
+source is revision \code{12ac3236e332} plus the recorded runner-only metadata
+fix; its exact archive is identified in Appendix~\ref{app:reproducibility}.
+No production DSP changed during the campaign.
+
+External adapters use Rack's PFFFT revision \code{74d7261be17c}, FFTW 3.3.10
+with NEON support, and Apple Accelerate/vDSP~\cite{pffft,frigo2005,vdsp}.
+FFTW uses fresh single-threaded \code{MEASURE} plans with no imported wisdom;
+per-process plan text and build provenance are retained. Plan construction
+is measured separately from execution. Library-specific native scratch and
+plan storage are not fully captured by the C++ allocation audit. Missing
+native allocation counts are unknown, not zero. vDSP is tied to the recorded
+system framework; these observations do not compare operating systems.
+
+The host was on AC power with Low Power Mode disabled. Each of three
+confirmation sessions followed a separately documented preparation and at
+least 180 seconds without benchmarks, builds, tests, or reporting. Groups ran
+serially in rotated order, with deterministic randomized workload order within
+groups. These sessions are temporal blocks on the same laptop and night;
+they are not independent machines or days. Ordinary macOS services and Codex
+remained possible confounds. No core affinity, real-time priority, frequency
+isolation, or continuous temperature trace was available. Pre/post warning
+snapshots do not establish constant temperature.
+
+\subsection{Workload coverage and repetition}
+Two pilots, comprising \PaperCmpPilots{} successful processes, preceded frozen confirmation.
+A failed preliminary launch was rejected by the provenance gate before any
+measurement and is retained separately. The confirmation design partitions
+\PaperCmpWorkloads{} distinct nominal workloads, counting timing passes separately,
+into five groups, with three fresh process
+repeats per workload in each session: \PaperCmpProcesses{} successful confirmation processes.
+Only 16 exactly duplicate transition configurations shared by the pilot plans
+were removed; no contender or unfavorable case was dropped on timing grounds.
+
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}lrrl@{}}
+\toprule
+Group & Workloads & Measured hops & Callback observations/process \\
+\midrule
+Primary & \PaperCmpPrimaryWorkloads & 2048 & 8192 / 32768 / 131072 \\
+Standard extensions & \PaperCmpExtensionsWorkloads & 512 & 2056 / 8192 \\
+Short hop & \PaperCmpShortHopWorkloads & 4096 & 2368 \\
+Single-sample callback & \PaperCmpSingleSampleWorkloads & 64 & 65536 \\
+Transitions & \PaperCmpTransitionsWorkloads & 64 & 37 / 1024 \\
+\bottomrule
+\end{tabular}
+\caption{Frozen confirmation groups. Callback counts depend on each group's
+hop and block size; they are observations, not independent repeats. Isolated
+transforms use 1024 frames instead of the streaming hop count. Stationary
+streaming cases use $\ceil{N/H}+64$ warmup hops plus the requested phase offset;
+transition cases start without warmup.}
+\label{tab:campaign-design}
+\end{table}
+
+The primary grid spans $N\in\{2048,4096,16384\}$ and callback sizes
+$D\in\{16,64,256\}$ for streaming cases, at 48 kHz. Extensions investigate
+channel count, supported double precision, frame phase, background DSP,
+sample rate, startup/live-cache state, cache disturbance, short hops,
+single-sample callbacks, and configuration transitions. The retained frozen
+manifests enumerate exact combinations; this is a structured workload set,
+not the Cartesian product of every factor. Unsupported precision/provider
+combinations are absent rather than silently replaced.
+
+\subsection{Timing, age, and aggregation}
 A continuous throughput pass estimates aggregate cost; a separate pass records
 each synchronous simulated callback. A monotonic clock measures elapsed wall
 time, including preemption. Empty timer intervals are retained without
 subtraction, and observation storage and CSV serialization remain outside
 timing. Streaming cost is nanoseconds per engine sample for all configured
-instances and included background DSP; isolated transform cost is nanoseconds
-per transform. Callback p99 and observed maximum are reported in microseconds,
-alongside block size, sample rate, observation counts, and simulated audio span.
-
-For a callback of $D$ samples, its nominal interval is $D/f_s$ seconds.
-Exceeding that interval in this synchronous harness is a compute-budget
-exceedance, not a measured audio underrun. Sparse FFT bursts may escape p99;
-maxima and per-process distributions are retained. An observed maximum is not
-a worst-case execution-time bound~\cite{wilhelm2008}.
+instances and included background DSP; isolated cost is nanoseconds per
+transform. Callback p99 and observed maximum are reported in microseconds.
+A callback of $D$ samples has nominal interval $D/f_s$ seconds. Exceeding it
+is a simulated compute-budget exceedance, not a measured audio underrun.
+Sub-tick observations cannot resolve individual operation costs. Sparse FFT
+bursts can escape p99, and a maximum is neither a stable tail quantile nor a
+worst-case execution-time bound~\cite{wilhelm2008}.
 
 An untimed replay checks actual publication indices against each adapter's
-frame contract. Spectrum-center age adds $(N-1)/2$ samples to the delay from
-frame endpoint to publication. Core publication adds $H-1$ samples; immediate
-batch publication adds zero. Callback-end visibility adds the remaining samples
-in that block. Inverse jobs instead use release-to-publication delay, and
-filtering chains use input-to-delivery delay. These algorithmic quantities
-exclude screen repaint delay and smoothing response; replay does not measure
-timing-dependent consumer contention.
+contract. Spectrum-center age adds $(N-1)/2$ samples to endpoint-to-publication
+delay. The production analyzer adds $H-1$ samples; immediate batch analysis
+adds zero. Callback-end visibility adds the remainder of the block. Inverse
+jobs use release-to-publication delay; chains use input-to-delivery delay.
+These quantities exclude repaint delay and smoothing response; replay does
+not measure timing-dependent consumer contention.
 
-\subsection{Correctness and evidence gates}
-Independent replay checks every published bin of each audited analysis
-instance, with explicit expected and observed publication/output counts.
-The reference uses a binary64 FFT for large frames and direct DFT sums for
-small frames, on the same rounded windowed input, followed by independent
-band sums and temporal averaging. Binary64 is not an arbitrary-precision
-oracle. For actual and reference processed magnitude vectors $a,r$, both
-$\|a-r\|_2/\|r\|_2$ and $\|a-r\|_\infty/\|r\|_\infty$ must not exceed
-$3\times10^{-4}$ for float or $10^{-10}$ for double. Each denominator belongs
-to that frame and channel; zero reference requires exactly zero output.
-Non-finite values fail. These are engineering acceptance budgets, not
-per-bin relative-error guarantees; weak-bin diagnostics are preserved.
+Costs average processes within sessions, then weight the three session means
+equally. Callback p99 uses nearest-rank process quantiles, medians within
+sessions, and the median of session medians. Tables retain observed session
+ranges and maxima where indicated. These ranges are descriptive: callbacks
+are not pooled as independent replicates, and no inferential confidence
+interval, tail convergence, or precise rare-event probability is claimed.
+Three prepared sessions do not remove setup, planning, or layout
+bias~\cite{kalibera2013,mytkowicz2009}.
 
-Pilots determine observation duration and repetition counts before confirmation.
-The freeze records workloads, sources, dependencies, compiler settings, seeds,
-and numerical policies. Confirmation reporting requires at least three
-separately prepared sessions per workload; fresh processes within a session
-are repeated measurements, not independent host sessions. Costs average
-processes within sessions, then weight session means equally. Callback p99
-uses nearest-rank process quantiles, medians within sessions, and the median
-of session medians. Session ranges are descriptive, with no pooled callbacks
-or inferential confidence intervals. Replication does not eliminate setup or
-layout bias~\cite{kalibera2013,mytkowicz2009}.
+\subsection{Numerical coverage and evidence checks}
+Scalar analysis replay checks every published bin of every audited instance,
+including expected and observed publication/output counts. The independent
+four-channel cases also check every published bin of each lane, for both the
+SIMD analyzer and four scalar native/first-party analyzers, using four distinct
+input fixtures. The reference uses direct DFT sums for $N\le256$ and an
+independently structured binary64 FFT for larger frames on the same rounded
+windowed input, followed by direct band sums and temporal averaging. Binary64
+is not an arbitrary-precision oracle. For processed
+magnitude vectors $a,r$, both $\|a-r\|_2/\|r\|_2$ and
+$\|a-r\|_\infty/\|r\|_\infty$ must not exceed $3\times10^{-4}$ for float
+or $10^{-10}$ for double. Each denominator belongs to that frame and channel;
+a zero reference requires exactly zero output. Non-finite values fail.
+These are engineering budgets, not per-bin relative-error guarantees; weak-bin
+diagnostics remain available.
 
-Checked archives retain raw observations, numerical coverage, commands,
-host/session notes, source and dependency identities, and artifact hashes.
-Different hosts, build settings, or measured source/dependency identities
-form separate reporting strata.
-Setup and storage probes remain distinct from timed execution; unavailable
-native-library storage stays explicitly unknown. Only validated confirmation
-evidence is eligible for export into the paper's comparative tables.
+Periodic inverse and chain audits use the analytical inverse and direct
+time-domain references in Section~\ref{sec:inverse-chain}, including checks of
+continuous chain delivery. Their pointwise budgets differ from the analysis
+norm budgets. Isolated transforms additionally check 17 spread-out direct-DFT
+outputs at the measured lengths and opposite-transform recovery; native
+adapters also compare all outputs against the first-party transform. These
+checks do not give every transform boundary the analysis audit's all-bin
+independent-FFT reference. The campaign's independent four-channel measurements
+have all-bin numerical audits; separate generic SIMD and module preflights are
+not substitutes for those measurements. Missing norms on inverse/chain or
+isolated-transform rows mean a different audit, not zero error.
+Transition replay verifies the
+request, applied state, first affected publication, and subsequent outputs
+under the recorded event schedule, rather than inserting them into the
+stationary rankings.
+
+Every group passed source/dependency, numerical-coverage, and session checks.
+Portable bundles rederived all eight report tables in each group exactly,
+allowing only documented path relocation. Setup/storage probes remain outside
+timed execution. The compact committed tables and the publication generator
+support checking the manuscript without rerunning timings; regenerating the
+statistics from individual observations additionally requires the retained
+local raw bundles (Appendix~\ref{app:reproducibility}).

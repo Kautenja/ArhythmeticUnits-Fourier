@@ -1,23 +1,25 @@
 \begin{abstract}
-A spectral analyzer can be inexpensive in aggregate yet impose concentrated
-work on an audio engine. This paper studies cooperative scheduling of a
-complete windowed-analysis pipeline on the engine thread. The design orders
-input packing, windowing, FFT butterflies, positive-bin reconstruction,
-magnitude smoothing, and output preparation into bounded operations. A balanced
-integer quota distributes their scheduling credits over one hop, and a complete
-spectrum is published at the hop boundary. We specify the resulting work-count
-bound, sample-index age, retained-input capacity, and output ownership contract.
-A scalar and four-channel SIMD implementation supports live configuration
-without whole-frame boundary passes in the sample path. The evaluation design
-separates controlled changes in work placement from comparisons with optimized
-FFT implementations, considering aggregate cost, callback-duration tails,
-storage, and publication age together. Archived scalar and prototype campaigns
-provide historical design evidence; final production comparisons remain to be
-integrated. The contribution is an implementation and evaluation study within
-established time-distributed FFT research. Bounded operations and exact
-publication cadence establish a scheduling contract, while their practical
-value depends on measured costs and acceptable spectrum age; they do not
-establish a hard execution-time bound.
+Spectral analysis can be inexpensive on average yet concentrate enough work in
+one audio callback to interfere with other processing. This report studies
+cooperative execution of a complete windowed-analysis pipeline on the engine
+thread. A dependency-ordered sequence covers packing, windowing, FFT
+butterflies, positive-bin reconstruction, smoothing, and output preparation.
+A balanced integer quota bounds scheduling credits per sample and publishes
+a complete spectrum at an exact hop; we derive input-retention, sample-age,
+and ownership requirements. A scalar and four-channel SIMD implementation is
+evaluated against matched scheduling controls and FFTW, PFFFT, and vDSP on an
+Apple M1 Pro. The confirmation campaign covers \PaperCmpWorkloads{} workloads with three
+process repeats in each of three prepared same-host sessions, including
+inverse jobs and complete overlap-save chains. For representative scalar
+unsmoothed analysis at $N=4096$, $H=1024$, 48\,kHz, and 64-sample callbacks,
+the production analyzer's simulated callback p99 is \PaperCmpCoreTail\,$\mu$s versus
+\PaperCmpVdspTail\,$\mu$s for immediate vDSP, while aggregate cost rises from
+\PaperCmpVdspCost\ to \PaperCmpCoreCost\,ns/sample and publication is delayed
+by \PaperCmpDelayMs\,ms. Inverse and filtering controls retain bulk operations
+and do not inherit the analyzer's bounded-operation contract. Results support
+a conditional cost--burst--age tradeoff, not a universal speedup or an audio
+deadline guarantee. The contribution is a reproducible implementation study
+within established time-distributed FFT research.
 \end{abstract}
-\noindent\textbf{Keywords:} fast Fourier transform; short-time Fourier transform;
-cooperative scheduling; real-time audio; spectral analysis; VCV Rack.
+\noindent\textbf{Keywords:} fast Fourier transform; cooperative scheduling;
+real-time audio; spectral analysis; inverse transform; overlap-save filtering.

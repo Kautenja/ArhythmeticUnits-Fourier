@@ -41,8 +41,11 @@ Their preemptive implementation performs best in their evaluated scenarios;
 the cooperative implementation fits their host-plugin execution model but
 requires more implementation effort. This motivates a worker-based comparison
 without establishing a performance ranking for this analyzer.
-The present study instead specifies a windowed spectral-analysis sequence,
-an exact-hop quota, retained-input capacity, cancellation, and output ownership.
+The present study specifies a windowed spectral-analysis sequence, an exact-hop
+quota, retained-input capacity, cancellation, and output ownership. Its complete
+chain experiments use single-block overlap-save with identity and a short FIR
+as correctness fixtures; they do not evaluate the long-filter partitioning
+problem addressed by these convolution systems.
 
 Wefers places these techniques in a broader treatment of real-time partitioned
 convolution, including manual preemption of processing chains and FFT
@@ -121,21 +124,29 @@ bounded suspension units and their cost would need to be established separately.
 
 Optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
-time~\cite{frigo2005}. Our timing baseline deliberately holds the arithmetic
-implementation fixed to study work placement. It is not a comparison against
-the fastest available FFT.
+time~\cite{frigo2005}. The present evaluation separates two questions. Matched
+first-party batch/resumable controls hold arithmetic substantially fixed to
+study work placement. External-library adapters measure the practical cost of
+using a different transform kernel, including the layout conversion and output
+processing required at each declared workload boundary. FFTW uses fresh,
+single-threaded \code{FFTW\_MEASURE} plans without imported wisdom; plan
+identities are retained because planning is part of the experimental condition.
 
 PFFFT is a particularly relevant practical alternative: Rack exposes its real
 transform through \code{dsp::RealFFT}~\cite{pffft}. The wrapper offers ordered
 and unordered output, so a spectral-analysis comparison must include the work
-needed to obtain the required bins. A benchmark should identify the actual
-Rack/PFFFT revision and enabled SIMD path rather than treating different forks
-as interchangeable. Apple Accelerate's vDSP provides a platform-specific
-baseline for the Apple Silicon host used in our campaigns~\cite{vdsp}.
-Its reusable setup, packed real-transform layout, and scaling conventions
-must be accounted for when matching outputs. These are software/API references;
-the present campaigns contain no measurements of either implementation.
-Table~\ref{tab:position} summarizes the distinctions
-most relevant to interpreting the present design.
+needed to obtain the required bins. The campaign records the linked Rack/PFFFT
+source and binary identities and vector path; different forks and builds are
+not assumed interchangeable. A further control retains an opaque PFFFT call
+inside incrementally scheduled preparation and output work, testing how much
+burst reduction requires suspending the transform itself. Apple Accelerate's
+vDSP provides a platform-specific baseline for the Apple Silicon
+host~\cite{vdsp}. Its reusable setup, packed real-transform layout, and scaling
+conventions are included in the adapter contract. Both libraries are measured
+in the replacement campaign, with numerical auditing and provenance retained.
+Their citations document the software interfaces, while all comparative
+timings in this report come from the accompanying experiment.
+Table~\ref{tab:position} summarizes the design distinctions without imposing
+a universal performance ranking.
 
 \input{tables/related-approaches.tex}

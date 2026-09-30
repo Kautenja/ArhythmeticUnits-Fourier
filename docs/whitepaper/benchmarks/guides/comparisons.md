@@ -6,8 +6,9 @@ It preserves the contender shortlist, research questions, adapter requirements,
 measurement contracts and implementation evidence. Replacement measurements,
 portable evidence and retained historical dependencies are recorded in
 [spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
-and its [results handoff](../../data/comparison-012/README.md). The user narrowed
-that follow-up to results; analysis and manuscript writing remain later work.
+and its [results handoff](../../data/comparison-012/README.md).
+[Spec 013](../../../../specs/archive/013-comparison-paper.md) records the subsequent
+manuscript analysis and publication checks.
 
 Rack/PFFFT, optional FFTW3 and Apple Accelerate/vDSP, and the matched PFFFT
 hybrid are implemented as benchmark-only adapters. KISS FFT (FR-7), Garrido
@@ -25,5 +26,5 @@ and dependencies until the replacement and retirement gate permits removal.
 Neither tooling completion nor the new results alone permits deleting them.
 
 Use the existing [publication protocol](protocol.md) for current build commands
-and measurement semantics. The manuscript's archived results remain unchanged
-until validated comparison campaigns are deliberately integrated.
+and measurement semantics. The manuscript integrates selected confirmation results with checked numerical
+assets, while preserving the historical campaigns separately in its appendices.

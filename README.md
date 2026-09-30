@@ -170,7 +170,7 @@ supplies the same report entry.
   year        = {2026},
   month       = sep,
   type        = {Technical report},
-  note        = {Manuscript version 2; not yet deposited on arXiv},
+  note        = {Manuscript version 3; not yet deposited on arXiv},
   url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper},
 }
 ```

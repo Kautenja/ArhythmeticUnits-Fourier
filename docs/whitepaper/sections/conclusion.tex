@@ -1,15 +1,16 @@
 \section{Conclusion}
-Complete spectral analysis can be organized as bounded, dependency-ordered
-operations with an exact publication hop. The resulting contract specifies
-work-credit accounting, retained-input capacity, cancellation, and ownership
-of completed spectra, while preserving the selected frame. Its scope extends
-beyond suspending FFT butterflies to the surrounding preparation and output
-stages that can otherwise concentrate work at frame boundaries.
+A complete windowed analyzer can be expressed as bounded,
+dependency-ordered operations and advanced over an exact publication hop.
+The resulting contract accounts for work credits, retained input,
+cancellation, and ownership of complete spectra. It addresses the surrounding
+preparation and output stages that remain concentrated when only FFT
+butterflies are resumable.
 
-That contract makes the performance question measurable; it does not answer
-it by itself. Historical controls motivate the design, and the comparison
-protocol separates changes in work placement from practical differences
-between implementations. Final production evidence is needed to determine
-where reductions in callback-duration tails justify additional total cost,
-state, and spectrum age. No universal speedup or hard execution-time guarantee
-follows from the scheduling bound.
+The confirmation study establishes a practical tradeoff on the measured M1 Pro
+host: cooperative analysis can reduce callback p99 at the expense of total
+cost and spectrum age. Matched controls distinguish that placement effect
+from the benefits of optimized kernels, and the native PFFFT hybrid provides
+an intermediate option. Periodic inverse jobs and overlap-save chains retain
+bulk stages and include cases favoring native batch processing; their results
+do not inherit the complete analyzer's bound. The value of suspension is
+therefore conditional on the full processing path and the caller's priorities.

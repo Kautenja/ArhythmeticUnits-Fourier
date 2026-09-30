@@ -10,9 +10,9 @@ The main text follows the problem, closest prior work, frozen-frame signal
 model, legacy motivation, and complete one-hop design before the experimental
 methods and results. It retains the dependency order, total work and quota
 equations, exact publication bound, publication ages, retained-input capacity,
-and output ownership contract. The main evaluation design defines comparison
-contracts and evidence requirements. Historical methods and results remain in
-the appendices, separate from pending production confirmation.
+and output ownership contract. The main evaluation describes the completed confirmation study, including
+inverse jobs and overlap-save filtering controls. Historical methods and results
+remain in the appendices, separate from the current production comparisons.
 
 References precede a page break into the appendices, making the main narrative
 boundary visible in the PDF. The main text summarizes the supporting arguments

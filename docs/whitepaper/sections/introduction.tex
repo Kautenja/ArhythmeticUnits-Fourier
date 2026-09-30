@@ -37,12 +37,20 @@ rather than whether suspension is universally preferable.
 
 The implementation is the shared analyzer in the Fourier spectrum analyzer
 and Spectre spectrogram modules for VCV Rack. Fourier processes four independent
-channels in SIMD lanes; Spectre uses scalar samples. The design described here
-matches production revision \code{785446a5b2f9}, including weighted preparation
-and output credits. Each timing campaign identifies its own measured sources;
-that implementation description does not transfer historical timings to the
-current code. Section~\ref{sec:evaluation} defines the production comparison
-protocol. Section~\ref{sec:historical-evidence} summarizes the available
-historical evidence, with full methods and results in the appendices. Final
-production comparisons remain pending, so performance rankings and operating
-recommendations are not conclusions of this revision.
+channels in SIMD lanes; Spectre uses scalar samples. The contribution has three
+parts: an explicit work, cadence, retention, and ownership contract for complete
+analysis; a reproducible comparison that separates scheduling controls from
+optimized-library alternatives; and evidence locating both the benefits and
+costs of that design on one ARM64 host. The study also evaluates periodic
+inverse jobs and complete frequency-domain filtering controls, whose remaining
+bulk stages make the limits of butterfly-only scheduling observable.
+
+Section~\ref{sec:one-hop} specifies the production analysis design, and
+Section~\ref{sec:inverse-chain} defines the inverse and filtering experiments.
+Sections~\ref{sec:evaluation} and~\ref{sec:comparison-results} give the method
+and confirmation results. The historical campaigns remain separately identified
+in Section~\ref{sec:historical-evidence} and the appendices. The measured sources
+are archived explicitly; historical timings are not attributed to the current
+weighted scheduler. The results favor cooperative analysis when reducing
+concentrated callback work is worth additional aggregate cost and spectrum
+age, while preserving cases where optimized batch execution is preferable.

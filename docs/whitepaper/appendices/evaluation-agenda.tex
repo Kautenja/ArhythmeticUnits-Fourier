@@ -1,141 +1,70 @@
-\section{Evaluation Agenda and Extended Discussion}
+\section{Further Evaluation}
 \label{app:evaluation-agenda}
-This appendix retains the proposed comparisons and measurement considerations
-supporting the engineering discussion. These proposals do not add results to
-the historical campaigns reported in this manuscript.
+The confirmation study supplies optimized-library baselines, repeated sessions,
+inverse jobs, filtering chains, and selected state/load extensions. Its main
+remaining questions concern different execution models, stronger replication,
+and actual host integration, rather than another measurement of the same grid.
 
-A resumable FFT is most attractive when a caller can tolerate delayed analysis,
-wants explicit control of work on its existing thread, and needs complete
-spectra at a modest frame rate. Whether it is preferable to an optimized batch
-FFT depends on the actual callback budget and host scheduling model. If a
-batch transform already fits comfortably, the extra state and cadence policy
-may provide little practical benefit. For a small set of frequently updated
-bins, a sliding formulation can be a more appropriate starting point. For
-large analysis tasks, a worker may offer a better throughput/latency tradeoff
-when the host permits it, consistent with the alternatives examined by
-Battenberg and Avi\v{z}ienis~\cite{battenberg2011}. A comparison should include
-an optimized batch FFT on the engine thread and, where supported, a worker
-implementation, with equivalent input windows, output processing, and requested
-cadence. It should report actual publication delay as well as engine cost.
+\paragraph{Asynchronous and overlap-reusing alternatives.}
+A worker can remove analysis from the engine thread when asynchronous delivery
+is acceptable, as considered by Battenberg and
+Avi\v{z}ienis~\cite{battenberg2011}. A matched experiment should include capture,
+queueing, missed publications, consumer contention, and actual spectrum age.
+For heavily overlapping windows or a small requested bin set, hopping,
+windowed sliding, and feedforward methods deserve separate comparisons
+\cite{garrido2016,park2014,rafii2018,eleftheriadis2023}. Equivalent windowing,
+normalization, smoothing, and output processing are essential. A periodic Hann
+window permits an exact short window kernel; approximate truncated kernels
+would require a separately stated accuracy target. None of the present FFT
+backend results ranks these alternatives.
 
-The first external-backend comparison should include FFTW, Rack's PFFFT, and
-vDSP on macOS~\cite{frigo2005,pffft,vdsp}. Plans and working buffers should be
-prepared outside timed execution, with setup cost reported separately. An
-isolated real-transform comparison and a matched complete-analysis comparison
-answer different questions; both should include required data conversion and
-label the included work. Proposed tables should report backend configuration,
-numerical error, storage, aggregate cost, callback-duration tails, and spectrum
-age. Figures should show how cost varies with transform length and how callback
-duration trades against publication delay. These are planned comparisons, not
-evidence that suspension outperforms an optimized batch transform.
+\paragraph{Numerical stress and applications.}
+Van der Byl and Inggs distinguish stability from useful numerical accuracy in
+sliding structures~\cite{vanderbyl2016}. Long streams with weak tones beside
+strong ones, silence after a strong signal, and phase-sensitive processing
+would extend the current deterministic fixtures. The binary64 references here
+are not exact arithmetic. Non-power-of-two lengths, more windows, and
+application-specific error budgets remain untested. The overlap-save identity
+and three-tap FIR establish processing semantics; realistic long impulse
+responses and frequency-dependent effects would be needed before recommending
+FFT filtering for an application. A complete bounded-stage inverse pipeline
+would also have to distribute the bulk initialization identified in
+Section~\ref{sec:inverse-chain}.
 
-For a visualizer, publication is only one stage of end-to-end latency.
-The delay decomposition of Pr\r{u}\v{s}a and Holighaus~\cite{prusa2016}
-motivates measuring display consumption and repaint timing separately from
-analysis completion. Our exact-hop publication cadence does not guarantee
-equally spaced screen updates or bound the age of the spectrum when displayed;
-the archived timing campaigns do not measure that path.
+\paragraph{Device and display behavior.}
+For a visualizer, producer publication is only one component of perceived
+latency. The decomposition of Pr\r{u}\v{s}a and Holighaus~\cite{prusa2016}
+motivates measuring consumption and repaint separately. The mailbox permits
+superseded snapshots when the display is slower than production. A Rack study
+should measure the real callback schedule, driver-reported underruns,
+concurrent displays, and patch load. Callback phase and analyzer count matter
+because individually tolerable bursts can coincide, as staggered convolution
+schedules also illustrate~\cite{borss2009}.
 
-A complementary experiment should compare hopping, windowed sliding, and
-feedforward methods~\cite{garrido2016,park2014,rafii2018,eleftheriadis2023}
-across transform lengths, supported hops, and requested
-bin counts. It should retain equivalent windowing, normalization, smoothing,
-and output processing, and report storage, memory traffic, aggregate cost, publication delay,
-and block-duration tails. A periodic-Hann baseline would permit an exact short
-window kernel; truncated kernels should be evaluated separately. Real-input
-variants should be included where available.
+Skare separates continuous throughput from periodic callback measurements and
+emphasizes their difference from plugin invocation within a
+DAW~\cite{skare2024}. Balasubramaniam et al. distinguish plugin timing, session
+callback utilization, driver underruns, and worker inference underruns under
+controlled contention~\cite{balasubramaniam2026}. Their virtual driver does
+not include physical-interface behavior. These methods inform the next host
+experiment; their GPU and inference results are not FFT-backend evidence.
+The present synchronous harness measures computation, not audio reliability.
 
-Van der Byl and Inggs examine error in several sliding DFT structures under
-floating- and fixed-point arithmetic~\cite{vanderbyl2016}. Their study motivates
-treating numerical accuracy as a separate criterion from stability. Our proposed
-evaluation would compare long streams against independently recomputed transforms
-in single and double precision, including weak tones beside strong ones and
-silence following a strong signal. It should track complex-bin and magnitude
-error over time, and phase error where the reference magnitude is appreciable.
-These workloads are our proposed methodology, not a reproduction of that study
-or results of the archived campaigns.
+\paragraph{Replication and granularity.}
+The three temporal blocks provide observed variation on one host. Additional
+days, builds, architectures, compilers, and operating systems should be chosen
+before making general platform claims. Kalibera and Jones provide a framework
+for allocating repetitions across sources of variation~\cite{kalibera2013};
+layout and environment bias also require attention~\cite{mytkowicz2009}.
+Longer sessions would help characterize infrequent stalls but would still not
+supply a safe worst-case bound~\cite{wilhelm2008}.
 
-Sample-call costs should also not be confused with device-buffer deadlines.
-If the host renders $D$ samples in one device callback, its relevant demand is
-the sum of the associated module work over those $D$ samples, plus other engine
-costs. In the original path, a device callback containing preparation and
-reconstruction can still experience a substantial burst. A future host study
-should vary $D$, relative frame phases, analyzer count, and background patch
-load, including concurrent display consumption. Relative phase matters because
-several individually tolerable bursts can coincide; Bor\ss{} uses staggered
-filter schedules to address the analogous convolution problem~\cite{borss2009}.
-
-Skare's audio benchmark framework separates throughput from median, percentile,
-and maximum buffer-processing times, and distinguishes continuous batch
-execution from periodic invocation~\cite{skare2024}. Its periodic simulation
-also differs from variable plugin invocation times within a running DAW.
-Balasubramaniam et al. subsequently evaluate neural audio processing under
-controlled plugin contention, recording plugin timing, session callback
-utilization, driver-reported underruns, and worker inference underruns as
-distinct outcomes~\cite{balasubramaniam2026}. Their virtual audio driver omits
-physical-interface behavior. These studies inform our measurement design;
-their GPU and inference results do not establish FFT-backend rankings.
-
-A Rack evaluation should accordingly distinguish callback-budget exceedances
-from observed audio underruns and report its driver, load, and observation
-period. For a worker analyzer, missed requested publications and spectrum age
-also matter. Superseded display snapshots are a separate outcome: our mailbox
-deliberately permits them when the UI consumes more slowly than the engine
-publishes. These are proposed host measurements, not results of the campaigns
-reported here.
-
-For that future evaluation, Kalibera and Jones provide a method for allocating
-repetitions across builds, executions, and iterations according to the sources
-of variation, and for reporting effect-size confidence
-intervals~\cite{kalibera2013}. A pilot study should identify which levels matter
-on each platform before selecting repetition counts. Their methodology has
-not been applied retrospectively to our archived campaigns. Sensitivity to
-layout and execution environment should also be investigated, following the
-measurement-bias concerns of Mytkowicz et al.~\cite{mytkowicz2009}; identical
-rebuilds alone need not sample different layouts. Average-cost intervals and
-observed callback maxima answer different questions, and neither provides a
-hard worst-case execution-time bound.
-
-Wilhelm et al. distinguish observed execution-time extrema from the true
-worst case and from a safe upper bound~\cite{wilhelm2008}. Their survey also
-explains why caches, pipelines, and branch prediction complicate timing
-analysis. In those terms, our quota proof bounds the number of scheduled work
-units per call, while the timing campaigns report observations from sampled
-executions. Neither supplies a hardware timing model covering all relevant
-execution states, so their combination does not establish a safe execution-time
-bound.
-
-The one-hop implementation makes those formerly concentrated passes resumable
-and defines cancellation and ownership explicitly. The current fixed weight
-for dirty window preparation and Fourier's output reduces their operation
-density, but still permits systematic cost differences between stages and
-windows. Further calibrated
-weights would add machine-dependent assumptions and would not prove worst-case
-execution time on a general-purpose OS. The historical measurements above do
-not evaluate this newer weighting policy.
-Following the transform-subdivision discussion in Wefers~\cite{wefers2015},
-another experiment could compare individual butterflies with small batches or
-short subtransforms under the same hop and publication-latency constraint.
-Coarser units may improve locality and reduce scheduling overhead, but increase
-the indivisible work charged to a call. Both effects require measurement;
-the present study establishes no preferred granularity beyond its tested design.
-The depth-first traversal of B\'ecoulet and Verguet~\cite{becoulet2021}
-suggests a related experiment: compare immediate and resumable execution of
-each candidate kernel, across working-set sizes and concurrent analyzer counts.
-This would separate changes in factorization and locality from the effect of
-suspension, while retaining the same output and latency requirements.
-
-The scheduler always completes its work-count quota before advancing its
-logical hop. If a host call runs late, it does not silently overwrite an
-unfinished frame, but neither does it rescue the audio deadline. Actual host
-overruns require measurements beyond this logical schedule.
-
-The principal limitations of the evidence are its single host and compiler,
-small number of repeated runs, same-session resampling, absence of an optimized
-library baseline, and absence of an end-to-end Rack workload. The numerical
-campaign uses independent direct transforms only for small sizes; large-size
-checks establish schedule equivalence rather than independent correctness.
-The timing studies do not evaluate non-power-of-two lengths, inverse
-reconstruction applications, concurrent UI consumption, or calibration accuracy
-of every window/display setting. Production regression tests add invalid-setting
-rejection and concurrent mailbox stress; they are separate from timing evidence.
+The current weights distribute operation density without making operations
+equal in duration. Following Wefers' discussion of transform subdivision
+\cite{wefers2015}, a controlled study could vary butterfly batches or small
+subtransforms under the same hop and publication constraint. The depth-first
+traversal of B\'ecoulet and Verguet~\cite{becoulet2021} suggests comparing
+immediate and resumable forms of the same alternative kernel across working
+sets and analyzer counts. That would separate locality and factorization from
+suspension. Hardware-calibrated weights might improve typical behavior, but
+would add assumptions rather than prove execution time on a general-purpose OS.

@@ -1,32 +1,80 @@
 \section{Discussion and Limits}
-The design establishes a publication cadence and a bound on scheduling credits,
-not a performance ordering. Its usefulness depends on whether distributing work
-reduces callback tails enough to justify total cost, storage, and spectrum age.
-If a native batch transform fits the available budget, the additional traversal
-state may offer little benefit. A worker is a viable alternative when the host
-permits asynchronous analysis; overlap reuse may be useful when windows overlap
-heavily or only selected bins are required. These choices need matched
-measurements rather than a ranking inferred from operation counts.
+\label{sec:discussion}
+\subsection{When the tradeoff is useful}
+The strongest case for cooperative analysis is a caller that values reducing
+concentrated engine work and can tolerate an additional hop of spectrum age.
+The representative comparison reduces callback p99 while increasing aggregate
+cost. That is useful evidence for an engineering choice, not a new transform
+complexity result. For a low-cost visualizer, headroom in the callback budget
+may matter more than minimum arithmetic throughput; an application needing
+fresh output or many concurrent analyzers may make the opposite choice.
+The observed timing distributions cannot decide those application priorities.
+For the representative $D=64$, 48\,kHz case, the nominal callback interval is
+\PaperCmpBudgetUs\,$\mu$s: the production and vDSP p99 values occupy only
+\PaperCmpCoreBudgetPercent\% and \PaperCmpVdspBudgetPercent\% of that interval,
+respectively. Thus the measured reduction does not show that the native
+baseline was near its deadline, or that redistribution prevented audible
+failures. Such a claim would require a contended host and device measurements.
 
-The evaluation must retain unfavorable workloads and distinguish attribution
-from practical comparison. A matched scheduling pair identifies the effect of
-work placement within that pair. A core-versus-library comparison also changes
-arithmetic, layout, and storage, so a difference cannot be assigned entirely
-to suspension. A small or absent effect is informative. Callback p99, observed
-maximum, aggregate cost, and sample-index age answer different questions;
-none alone establishes suitability for an interactive application.
+The PFFFT hybrid is a useful intermediate design: it distributes surrounding
+work while keeping a native FFT indivisible. It shows that scheduling the
+pipeline around a batch transform can capture some benefit without suspending
+individual butterflies. Its comparison with the matched scheduled-batch
+control isolates work placement more closely than a comparison with the
+production analyzer, which also changes arithmetic, layout, storage, and
+caching. The extra state in a resumable transform is justified only when its
+measured behavior meets a requirement that the simpler alternative does not.
 
-The present evidence is historical and limited to one host and compiler.
-Independent direct-DFT checks cover small transforms; larger historical checks
-establish scheduling equivalence. The new protocol adds independent numerical
-replay and explicit comparison contracts, but implementation of that protocol
-is not completed measurement evidence. Final workload selection, repetitions,
-host descriptions, and comparative results remain to be integrated. Worker,
-overlap-reuse, and end-to-end audio-device comparisons are not evaluated here.
-Appendix~\ref{app:evaluation-agenda} retains possible extensions.
+The inverse and chain results sharpen that qualification. Deferring butterfly
+execution does not eliminate the bulk buffering and conjugation at job or
+stage boundaries. The representative native PFFFT and vDSP inverse jobs provide both lower
+aggregate cost and lower p99 than the incremental control. The complete-chain
+control reduces p99 more modestly than its large aggregate-cost penalty. Thus the favorable
+analysis example cannot be generalized to all frequency-domain processing.
+The formulas in Section~\ref{sec:inverse-chain} identify what a future complete
+inverse scheduler would need to change. The current measurements are already
+useful as counterexamples to a blanket claim that incremental execution
+reduces callbacks more effectively than optimized batch execution.
 
-Even with a bounded quota, unequal operation costs, cache effects, preemption,
-and other engine work determine elapsed callback time. A delayed call still
-executes its logical quota; the schedule does not recover the missed deadline.
-Likewise, producer publication does not guarantee display consumption or repaint
-cadence. A slow display may intentionally skip snapshots.
+\subsection{Interpretation and external validity}
+The primary tables compare declared input/output contracts. Smoothing
+interval arithmetic and transform layouts differ across implementation
+families; numerical agreement is within the stated contracts and budgets,
+not bitwise identity. Precision, channel count, state, callback phase, and
+additional DSP change the task. Extension results should be read within each
+matched group rather than combined into a single provider score.
+
+A high percentile, a maximum, and aggregate throughput answer different
+questions. Single-sample p99 can omit frame work occurring less than once per
+hundred calls. Maxima retain those bursts and rare preemptions but depend on
+observation duration; the separate group durations preclude indiscriminate
+maxima comparisons. No samples are trimmed and no empty-timer cost is
+subtracted. Small absolute differences and sub-tick observations should not
+be interpreted as finely resolved instruction costs. Storage probes measure
+only their declared allocation scope; unknown provider-native storage prevents
+a complete memory ranking.
+
+All confirmation observations come from one compiler and one macOS ARM64 host
+on one night. The prepared sessions expose temporal variation, including
+unfavorable session excursions, but do not establish independent-host
+replication or a stable rare-event distribution. Dynamic FFTW planning is part
+of the recorded configuration. Other architectures, compilers, and plans may
+change the relative costs. Binary64 references, deterministic fixtures, and
+all-publication audits support the stated numerical workloads, not every
+possible input or application-specific tolerance.
+
+\subsection{Work bounds and real-time behavior}
+The proof bounds credits in the complete analysis sequence. Unequal unit
+costs, memory hierarchy, preemption, host lifecycle work, and unrelated DSP
+still determine elapsed time. A late call executes its logical quota; the
+scheduler does not recover a missed deadline. Producer publication also does
+not guarantee display consumption or repaint cadence: a slow display may skip
+complete snapshots by design.
+
+The benchmark runs synchronously without an audio driver or concurrent UI.
+It therefore provides no measured device underrun rate or proof of hard
+real-time safety. Worker-thread analyzers, overlap-reusing sliding/hopping
+methods, non-power-of-two transforms, and long-filter applications are not
+ranked. Appendix~\ref{app:evaluation-agenda} identifies the next experiments.
+The complete paper can support an implementation decision under its recorded
+conditions; broader recommendations require those additional measurements.

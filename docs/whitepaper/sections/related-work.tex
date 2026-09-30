@@ -13,7 +13,9 @@ processing chains and optimized transform kernels have precedents within
 cooperative scheduling. Wefers treats manual preemption and transform
 subdivision more broadly~\cite{wefers2015}; suspension granularity remains an
 implementation choice rather than an inherent advantage of butterfly-level
-execution.
+execution. Liu, Yan, and Zou explicitly study time-distributed FFT and inverse
+FFT execution for online control~\cite{liu2017}. Neither transform suspension
+nor extending it to an inverse chain is a new principle of this report.
 
 For spectral visualization, Pr\r{u}\v{s}a and Holighaus use a worker thread
 and distinguish computation, polling, and repaint delay~\cite{prusa2016}.
@@ -27,13 +29,17 @@ Overlap reuse and time distribution can be combined; they are not mutually
 exclusive alternatives. Our implementation selects a complete window and
 starts a fresh transform for each frame.
 
-Within this literature, the present study specifies the execution contract of
-a complete windowed analyzer: allocation of work over an exact hop, retention
-of selected input, cancellation, and ownership of published output. FFTW,
-Rack's PFFFT wrapper, and Apple Accelerate/vDSP provide relevant optimized
-batch baselines~\cite{frigo2005,pffft,vdsp}. A fair comparison must match input
-frames, requested bins, window and normalization, output processing, and
-numerical acceptance, while recording differences in layout and execution
-context. Section~\ref{sec:evaluation} separates scheduling controls from these
-practical implementation comparisons. Appendix~\ref{app:related-work} retains
-the detailed literature comparison.
+Within this literature, the present contribution is an implementation contract
+and an empirical study: a complete windowed analyzer with an exact publication
+hop, retained input, cancellation, and ownership of published output, evaluated
+alongside periodic inverse jobs and complete transform--filter--inverse chains.
+The inverse and overlap-save chains are benchmark applications of the same
+scheduling principle; they do not introduce a new convolution method.
+We measure FFTW, Rack's PFFFT wrapper, and Apple Accelerate/vDSP as practical
+optimized batch baselines~\cite{frigo2005,pffft,vdsp}. Matched first-party and
+PFFFT hybrid controls distinguish work placement from changing the underlying
+FFT implementation. The comparison accounts for input frames, bins, window,
+normalization, output processing, numerical acceptance, and layout. It does not
+rank the unmeasured worker-thread or overlap-reuse alternatives.
+Section~\ref{sec:evaluation} defines the measurement boundaries;
+Appendix~\ref{app:related-work} gives the detailed literature comparison.

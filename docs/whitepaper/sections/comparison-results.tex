@@ -1,0 +1,186 @@
+\section{Comparative Results}
+\label{sec:comparison-results}
+The confirmation experiment supports a scheduling tradeoff, rather than a
+throughput advantage for the scalar resumable transform. Distributing the
+complete analysis reduces the concentration of work in the tested callbacks,
+but optimized native batch implementations generally have lower aggregate
+cost and publish the selected frame sooner. The inverse and complete-chain
+controls further delimit the result: distributing butterflies alone does not
+consistently beat an optimized batch transform's callback duration.
+All results below come from the September 30 confirmation campaign. Historical
+measurements are not used to rank the current implementations.
+
+\subsection{Scalar analysis: cost, concentration, and age}
+Table~\ref{tab:comparison-analysis} uses the middle of the three primary
+transform lengths, rather than selecting the length with the largest effect.
+The workload fixes the frame cadence, precision, required unsmoothed magnitudes,
+instance count, input bytes, and callback origin. At this configuration,
+the production core costs \PaperCmpCoreCost\,ns per engine sample and has a
+callback p99 of \PaperCmpCoreTail\,$\mu$s. The native vDSP adapter costs
+\PaperCmpVdspCost\,ns per sample with p99 \PaperCmpVdspTail\,$\mu$s: the
+core has \PaperCmpCostRatio{} times the aggregate cost while reducing this
+p99 statistic by a factor of \PaperCmpTailRatio. This is a practical
+implementation comparison, not the isolated cost of suspending a common
+FFT kernel.
+
+\input{generated/paper-comparison/tables/analysis.tex}
+
+The matched PFFFT scheduled-batch/hybrid pair gives a narrower attribution.
+Both retain the same transform arithmetic and surrounding scheduled tasks;
+the hybrid redistributes preparation and output work while leaving the native
+FFT indivisible. Its smaller p99 shows that distributing those surrounding
+stages already removes much of the callback concentration. The production
+core lowers p99 further at this configuration, but costs more than the hybrid.
+The legacy batch/incremental pair likewise shows reduced concentration,
+while its remaining unscheduled frame and output stages explain why it does
+not attain the production core's p99. These controls separate the benefit of
+work placement from the much larger difference between scalar kernels and
+optimized native implementations.
+
+Figure~\ref{fig:comparison-length} retains all three primary lengths at a
+fixed hop and callback size. The core's lower callback p99 coexists with
+higher aggregate cost than the native analysis adapters throughout these
+lengths. Fixed $H$ makes longer transforms more work per publication; these
+curves are not an experiment with constant overlap ratio. The hybrid's large
+throughput variation at the longest length is retained: its session means
+span \PaperCmpHybridLargeLow--\PaperCmpHybridLargeHigh\,ns per sample.
+A single favorable run would misrepresent this observation.
+
+\input{generated/paper-comparison/figures/length.tex}
+
+Publication delay is the other material cost. At $H=1024$ and 48\,kHz,
+the production core and hybrid add \PaperCmpDelayMs\,ms after the selected
+frame endpoint; immediate implementations add none. At $N=4096$, the nominal
+spectrum-center age is therefore \PaperCmpCoreAgeMs\,ms for the core and
+\PaperCmpBatchAgeMs\,ms for immediate batch execution. Neither quantity
+includes callback-end visibility, repaint delay, or smoothing response.
+A visualizer that can accept the additional age and places high value on
+shorter callbacks has a reason to choose the core; an application primarily
+constrained by throughput or publication age has a reason to prefer native
+batch execution.
+
+Observed maxima do not establish the same ranking as p99. For example,
+the core's maximum at $N=2048$ is \PaperCmpCoreSmallMax\,$\mu$s despite a
+small session-median p99. The measurement includes interruptions on a general
+purpose operating system; these observations are retained, not attributed
+solely to the arithmetic scheduler. Conversely, the finite observations
+cannot certify that a more concentrated implementation meets every deadline.
+The logical credit bound and the measured duration distributions answer
+different questions.
+
+\subsection{Inverse jobs and complete frequency-domain chains}
+Table~\ref{tab:comparison-synthesis} keeps the periodic inverse job and both
+complete chains distinct. Relative to their matching scalar batch controls,
+the incremental controls substantially lower callback p99 while leaving
+aggregate cost of a similar order. Native implementations change that
+conclusion: for the periodic inverse workload at the representative size,
+PFFFT and vDSP have both lower aggregate cost and lower p99 than the
+incremental control. Thus the forward analyzer's measured advantage in
+callback concentration does not generalize automatically to the inverse path.
+
+\input{generated/paper-comparison/tables/synthesis.tex}
+
+The complete identity and FIR chains include retention, transforms, spectral
+multiplication, normalization, overlap-save extraction, and output delivery.
+Their incremental variants have smaller p99 than the native chains at this
+configuration, at a large aggregate-work penalty and an additional hop-minus-one
+samples of delivery delay. These controls retain bulk input-buffering and frame-copy passes,
+including an $O(N)$ inverse-buffer task charged as one scheduling unit. They demonstrate a
+partially distributed frequency-domain operation, not the analyzer's
+whole-pipeline work bound or a production audio effect.
+
+Isolated execution reinforces the importance of kernel cost. At $N=4096$,
+the normalized scalar IFFT costs \PaperCmpScalarIfftUs\,$\mu$s per transform,
+compared with \PaperCmpVdspIfftUs\,$\mu$s for vDSP under the isolated-transform
+contract. The isolated contract includes input buffering but excludes the periodic
+job's per-sample scheduling and additional canonical-output copies. These
+values must not be interpreted as streaming cost per sample. The fixtures
+also do not justify choosing an FFT implementation for a three-tap filter,
+whose direct evaluation is a different, much smaller algorithmic workload.
+
+\subsection{Sensitivity, channels, and configuration changes}
+Table~\ref{tab:comparison-extensions} tests the practical limits of the
+scalar analysis result. The p99 ordering depends on the hop, number and
+alignment of instances, and work performed around the analyzer. At the short
+$N=128$, $H=37$ setting, the native vDSP p99 is smaller than the core's.
+Staggering many native analyses across callbacks can also reverse an advantage
+seen with synchronized publications. This is an alternative means of reducing
+aggregate callback concentration when the application controls frame phases.
+The independent small-hop campaign has a different observation window and
+is not pooled with the primary campaign.
+
+\input{generated/paper-comparison/tables/extensions.tex}
+
+Live window and smoothing updates give another limit: the hybrid's p99 can
+be lower than the production core's, even though the core is lower in the
+clean-cache reference case. The configured background DSP brings the total
+callback statistics closer because that shared work occupies more of the
+interval. Higher sample rate changes the callback budget and sample-index
+age without inherently reducing the work in a fixed-length transform.
+None of these extensions measures a complete Rack patch or an audio device.
+
+Single-sample callbacks illustrate a percentile failure rather than an
+especially favorable scheduler. For $N=2048$, $H=1024$, the core and native
+vDSP both have p99 \PaperCmpSingleTail\,$\mu$s, equal to the median empty-timer p99 of
+\PaperCmpSingleTimer\,$\mu$s, while their retained maxima are
+\PaperCmpSingleCoreMax\,$\mu$s and \PaperCmpSingleVdspMax\,$\mu$s.
+One transform release per 1024 samples can fall outside p99. These short,
+unpaced experiments retain only 64 hops per process; they cannot identify
+a precise rare-event tail from the apparent equality of p99.
+
+Table~\ref{tab:comparison-channels} prevents the scalar result from standing
+in for the independent-channel implementation. The four-lane core substantially
+reduces aggregate work relative to four scalar cores. At the selected size,
+its aggregate cost is also below the measured banks of native float analyses,
+while retaining a smaller p99. This is evidence for this channel-parallel
+implementation and input layout on the measured host, not a general SIMD
+advantage over those libraries. The double-precision rows form their own
+comparison and retain the same throughput/concentration tradeoff.
+
+\input{generated/paper-comparison/tables/channels.tex}
+
+The transition suite checks requests, application boundaries, publication
+responses, and every affected output together
+(Table~\ref{tab:comparison-transitions}). Across both transition horizons,
+\PaperCmpTransitionPublications{} published spectra were audited. Requests
+can replace earlier requests, and a final request can remain pending at the
+finite horizon; neither outcome is silently converted into a successful
+response. The displayed response delay can exceed a stationary hop because
+it begins at the request and includes latching and changed-hop scheduling.
+Event-window maxima include overlap between adjacent request windows and
+ordinary system interference, so subtracting the no-change maximum would
+not isolate the cost of a settings change.
+
+\input{generated/paper-comparison/tables/transitions.tex}
+
+\subsection{Numerical and resource evidence}
+Every analysis coverage record has its expected publication and bin counts.
+Table~\ref{tab:comparison-numerical} reports the largest observed vectorwise
+errors separately by precision, including the independent channels. The
+recorded float and double maxima satisfy their frozen normwise acceptance
+budgets established before confirmation. The nonzero float pointwise
+diagnostics remain visible: passing a
+spectrum norm does not bound the relative error of every weak bin. The
+transition audits also pass; their largest relative $\ell_\infty$ errors are
+$\PaperCmpFloatTransitionLinf$ and $\PaperCmpDoubleTransitionLinf$ for float
+and double respectively.
+
+\input{generated/paper-comparison/tables/numerical.tex}
+
+Inverse and chain checks use their own analytical/time-domain references
+and output-amplitude units. Their largest recorded absolute errors across
+all stationary configurations are $\PaperCmpFloatInverseAbs$ and
+$\PaperCmpFloatChainAbs$ for float, and $\PaperCmpDoubleInverseAbs$ and
+$\PaperCmpDoubleChainAbs$ for double, respectively. These maxima do not
+replace the reference-specific acceptance tests or extend a partial isolated
+transform check to every possible spectrum.
+
+Storage probes require equally careful scope. At the representative scalar
+analysis configuration, the recorded C++ live-heap counters are
+\PaperCmpCoreHeapKiB\,KiB for the core and \PaperCmpVdspHeapKiB\,KiB for the
+native vDSP adapter. These cover intercepted C++ heap allocations but
+exclude unknown native-library storage, stack workspace and allocator
+overheads; they cannot establish a total-memory ranking. In particular,
+observing no intercepted C++ allocation during execution does not exclude
+allocation inside an opaque library. The archived provider plans and
+allocation-scope records retain these distinctions.

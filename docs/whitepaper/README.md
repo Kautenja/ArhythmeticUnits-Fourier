@@ -2,6 +2,8 @@
 
 A technical report by Christian Kauten (Arhythmetic Units), studying resumable
 FFT execution, complete analysis scheduling, frame cadence and practical costs.
+Manuscript version 3 incorporates the September 30, 2026 comparison campaign,
+including periodic inverse jobs and complete overlap-save filtering controls.
 The supporting software is the Fourier/Spectre VCV Rack plugin. The manuscript
 is an implementation study within the time-distributed FFT literature; it is
 not yet deposited on arXiv, assigned a DOI, or peer reviewed.
@@ -47,7 +49,8 @@ The archive command does not submit or publish anything.
 | [data/](data/README.md) | Immutable manuscript campaigns and historical research |
 | [tools/](tools/README.md) | Manuscript checks and source expansion |
 | `.build/` | Local PDF, fixture and reproduction outputs |
-| `generated/` | Explicitly exported, checked replacement assets for paper integration |
+| `generated/paper-comparison/` | Selected, checked tables, macros and vector plots used by the paper |
+| Other `generated/` directories | Immutable full-grid diagnostic exports from the measurement handoff |
 
 ## Measurements And Reproduction
 
@@ -58,7 +61,7 @@ reports, selections, paper export and portable evidence bundles. The C++
 measurement code remains in [benchmark/paper](../../benchmark/paper/README.md).
 Neither the benchmark runner nor report generation changes the Rack modules.
 
-Current replacement measurements are separate from the two historical
+The completed comparison measurements are separate from the two historical
 manuscript campaigns: [original FFT evaluation](data/README.md) and
 [complete-pipeline study](data/pipeline/README.md). Their raw bytes, metadata
 and source archives remain intact. Use their isolated extraction commands for
@@ -70,8 +73,10 @@ The [archived comparison implementation](../../specs/archive/004-external-fft-co
 records the completed tooling. [Spec 012](../../specs/archive/012-comparison-evidence-and-paper-integration.md)
 records the replacement campaign and
 [results handoff](data/comparison-012/README.md), covering forward, inverse and
-complete-chain work. Analysis, writing and manuscript insertion remain for the
-next agent. A smoke report proves tooling, not a speedup. New evidence must
+complete-chain work. [Spec 013](../../specs/archive/013-comparison-paper.md) records
+the manuscript integration and publication checks. The paper compares total
+cost, callback bursts and algorithmic age; it does not claim a universal
+speedup. New evidence must
 pass provenance, numerical coverage and session checks before explicit export.
 Hardware-dependent timing replication is different from regenerating statistics
 from retained raw data. [Historical verification notes](data/verification-history.md)
@@ -87,10 +92,19 @@ For source-only TeX reorganizations, compare before/after rendered pages, text,
 metadata and references and compile the extracted export.
 
 Paper export writes separate table/macro/figure includes and a provenance
-receipt. Editorial insertion and interpretation belong to spec 012; export never
-rewrites prose or historical results. Included generated receipts are checked
-for freshness. Retain source selections and evidence bundles with published
-claims; do not transcribe numeric results manually.
+receipt. The publication-specific
+[comparison generator](tools/comparison_paper.py) derives the selected tables,
+vector plots and prose numbers from the immutable committed tables. It verifies
+the input hashes and per-session aggregation without requiring local raw
+bundles. Run it without arguments to regenerate, or with `--check` to compare
+against committed assets; `make check` includes this check. The original
+diagnostic exports and historical results remain unchanged.
+
+The compact evidence and exact measured-source archive are committed. Individual
+callback observations remain in local, untracked bundles; a fresh clone cannot
+rederive statistics without acquiring those bundles. Their locations and hashes
+are in the [handoff](data/comparison-012/README.md). Public raw-data deposition
+is still a dissemination step, and no such deposit is claimed.
 
 [CITATION.bib](CITATION.bib) and the repository [CITATION.cff](../../CITATION.cff)
 identify the manuscript as the shared report/software citation. After a public
@@ -98,6 +112,11 @@ deposit, update its real identifier and URL consistently in both and the project
 README. Do not invent a DOI or publication date. Public searchable PDFs,
 accurate title/author metadata and stable links help discovery, but Scholar
 indexing and citation counts remain external outcomes.
+
+For a public deposit, follow the [arXiv TeX guidance](https://info.arxiv.org/help/submit_tex.html)
+and the chosen license terms. [Scholar inclusion guidance](https://scholar.google.com/intl/en/scholar/inclusion.html)
+describes discovery requirements; a source archive or citation file alone does
+not establish indexing.
 
 The repository [license](../../LICENSE.md) governs its code and artwork.
 Benchmark provider and redistribution limits are documented with the workflow.

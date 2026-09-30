@@ -21,8 +21,17 @@ tex = read_manuscript(sources=manuscript_sources)
 # Only explicitly included generated results enter the publication freshness gate.
 sys.path.insert(0, str(PAPER / 'benchmarks/lib'))
 from publication import verify_export
+generated_inputs = set()
 for source in manuscript_sources:
     for name in re.findall(r'\\input\{(generated/[^/]+)/[^}]+\}', source.read_text()):
+        generated_inputs.add(name)
+for name in sorted(generated_inputs):
+    if name == 'generated/paper-comparison':
+        # This editorial selection derives from the immutable committed tables.
+        # It is independently checked without requiring local raw bundles.
+        subprocess.run([sys.executable, str(PAPER / 'tools/comparison_paper.py'),
+                        '--check'], check=True)
+    else:
         verify_export(PAPER/name)
 
 meta = json.loads((PAPER / 'data/metadata.json').read_text())
@@ -88,7 +97,9 @@ for n in [1024, 2048, 4096, 16384]:
     cadence_row = f'{n:,} & {h:,} & {b:,} & {q} & {length:,} & {h/length:.3f}'
     assert cadence_row in tex, cadence_row
 
-points = re.findall(r'\(([\d.]+),([\d.]+)\) \+= \(0,([\d.]+)\) -= \(0,([\d.]+)\)', tex)
+legacy_figure = PAPER / 'figures/peak-call-duration.tex'
+assert legacy_figure in manuscript_sources
+points = re.findall(r'\(([\d.]+),([\d.]+)\) \+= \(0,([\d.]+)\) -= \(0,([\d.]+)\)', legacy_figure.read_text())
 assert len(points) == 8
 for (mode, index), point in zip([(m,i) for m in ['complete','incremental'] for i in range(4)], points):
     n = [1024,2048,4096,16384][index]
@@ -116,6 +127,9 @@ for path in [ROOT / 'README.md', PAPER / 'README.md']:
     assert title in ' '.join(path.read_text().split()), path
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
 assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
+assert 'manuscript version 3' in tex
+for path in [ROOT / 'CITATION.cff', ROOT / 'README.md', PAPER / 'CITATION.bib']:
+    assert 'Manuscript version 3' in path.read_text(), path
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')
 
 # The prototype campaign is separate from the original FFT campaign and from

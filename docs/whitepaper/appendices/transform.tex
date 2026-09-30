@@ -90,8 +90,11 @@ is essential to the timing model in Appendix~\ref{sec:cost}.
 
 The inverse class uses
 $\operatorname{IFFT}(X)=\overline{\operatorname{FFT}(\overline X)}/N$.
-In the evaluated revision it treats each output normalization as an additional
-resumable step, giving $B_c(N)+N$ steps after buffering. This differs from the
-real forward transform's bulk reconstruction. Neither production visualization
-module uses the inverse transform, and the timing campaign concerns only the
-real forward path.
+It treats each output normalization as an additional resumable step, giving
+$B_c(N)+N$ steps after buffering. This differs from the real forward transform's
+bulk reconstruction. Input copying, permutation, and conjugation remain
+$O(N)$ buffering work. Neither production visualization module uses the
+inverse transform. The original historical campaign concerns the real forward
+path; the replacement campaign also measures isolated inverse transforms,
+periodic inverse jobs, and complete filtering chains. Their normalization,
+buffering, and delivery contracts are stated in Section~\ref{sec:inverse-chain}.
