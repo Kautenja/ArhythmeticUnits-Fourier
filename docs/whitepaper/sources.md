@@ -79,7 +79,7 @@ accuracy experiments are this report's proposals, not measurements reported
 by those sources or completed experiments in this repository.
 
 PFFFT and Apple Accelerate/vDSP are named execution targets alongside FFTW.
-The [external comparison plan](../../benchmark/paper/comparisons.md) tracks
+The [external comparison plan](benchmarks/comparisons.md) tracks
 adapter readiness, workload matching, and intended tables and figures.
 The local Rack wrapper was also inspected; it calls PFFFT's real transform
 and exposes both output orders. This establishes availability in the inspected

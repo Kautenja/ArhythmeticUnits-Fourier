@@ -81,7 +81,7 @@ were verified byte-for-byte against committed spec 008 before advancing the
 checkout. Prior ignored measurement archives were retained. New raw data,
 manifests, build logs and frozen headers are under `.build/research-009/`.
 
-The retained [matrix](../../benchmark/paper/configs/research-009.json) contains
+The retained [matrix](../../docs/whitepaper/benchmarks/configs/research-009.json) contains
 55 workloads. It extends spec 008's 47-workload repeat matrix with large live
 core/PFFFT/hybrid comparisons and a live H=1024 core case. Each run uses five
 repetitions, 512 measured hops, 64 warmup hops and the default fixed seed.
@@ -106,7 +106,7 @@ The baseline invocation was:
 ```shell
 DYLD_LIBRARY_PATH="$RACK_DIR" .build/benchmark/rack/paper \
     --development --profile full \
-    --config benchmark/paper/configs/research-009.json \
+    --config docs/whitepaper/benchmarks/configs/research-009.json \
     --output .build/research-009/baseline-a \
     --repeats 5 --hops 512 --warm-hops 64 --label baseline-a
 ```
@@ -115,16 +115,16 @@ Use fresh output names when replaying. Each candidate patch applies separately
 to the baseline, never on top of another candidate. For example:
 
 ```shell
-git apply --check benchmark/paper/experiments/cache-kernel-009/weighted-window-fast.patch
-git apply benchmark/paper/experiments/cache-kernel-009/weighted-window-fast.patch
+git apply --check docs/whitepaper/benchmarks/experiments/cache-kernel-009/weighted-window-fast.patch
+git apply docs/whitepaper/benchmarks/experiments/cache-kernel-009/weighted-window-fast.patch
 make -j2 benchmark-dev-build PAPER_VDSP=1
 DYLD_LIBRARY_PATH="$RACK_DIR" .build/benchmark/rack/paper \
     --development --profile full \
-    --config benchmark/paper/configs/research-009.json \
+    --config docs/whitepaper/benchmarks/configs/research-009.json \
     --output .build/research-009/weighted-fast-a \
     --baseline .build/research-009/baseline-a \
     --repeats 5 --hops 512 --warm-hops 64 --label weighted-fast-a
-git apply -R benchmark/paper/experiments/cache-kernel-009/weighted-window-fast.patch
+git apply -R docs/whitepaper/benchmarks/experiments/cache-kernel-009/weighted-window-fast.patch
 ```
 
 The other patches are `butterfly-segments.patch`, `cached-stride.patch`, and
@@ -133,7 +133,7 @@ The other patches are `butterfly-segments.patch`, `cached-stride.patch`, and
 `baseline-b` and `weighted-fast-b` repeat the same 55 workloads; the latter
 compares with `baseline-b`. Raw observations and rejected variants are kept.
 
-The [differential check](../../benchmark/paper/experiments/cache-kernel-009/equivalence.cpp)
+The [differential check](../../docs/whitepaper/benchmarks/experiments/cache-kernel-009/equivalence.cpp)
 loads the frozen header under renamed types and compares published bins with
 the candidate. Five lengths (4, 8, 128, 2048, 16384), six hops (1, 3, 37, 257,
 1024, 4096), and all 15 windows cover 450 frames per precision, float/double.
@@ -143,7 +143,7 @@ selected candidate patch is applied:
 
 ```shell
 c++ -std=c++11 -O3 -I src/dsp -I .build/research-009 \
-    benchmark/paper/experiments/cache-kernel-009/equivalence.cpp \
+    docs/whitepaper/benchmarks/experiments/cache-kernel-009/equivalence.cpp \
     -o .build/research-009/equivalence
 .build/research-009/equivalence allow-redistribution
 ```
@@ -250,7 +250,7 @@ their likely speedup.
     ```shell
     clang++ -std=c++11 -O1 -g -fsanitize=address,undefined \
         -fno-omit-frame-pointer -I src/dsp -I .build/research-009 \
-        benchmark/paper/experiments/cache-kernel-009/equivalence.cpp \
+        docs/whitepaper/benchmarks/experiments/cache-kernel-009/equivalence.cpp \
         -o .build/research-009/equivalence-sanitized
     .build/research-009/equivalence-sanitized allow-redistribution
     ```
@@ -265,14 +265,14 @@ their likely speedup.
     this research-only delivery; benchmark compilation instantiates Rack code
     but does not substitute for a shipped plugin build or audio-engine test.
 
-The [summary script](../../benchmark/paper/experiments/cache-kernel-009/summarize.py)
+The [summary script](../../docs/whitepaper/benchmarks/experiments/cache-kernel-009/summarize.py)
 reads completed manifests, rejects mismatched workloads, and retains timing
 values without subtracting timer overhead. `comparison.json` in the local
 archive compares all runs with `baseline-a`; `repeat-comparison.json` compares
 only the B pair with `baseline-b`. Generate the latter with:
 
 ```shell
-python3 benchmark/paper/experiments/cache-kernel-009/summarize.py \
+python3 docs/whitepaper/benchmarks/experiments/cache-kernel-009/summarize.py \
     .build/research-009/baseline-b .build/research-009/weighted-fast-b \
     > .build/research-009/repeat-comparison.json
 ```

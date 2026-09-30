@@ -118,7 +118,8 @@ when reusing a result.
 
 ## Current Production Measurements
 
-The [publication benchmark suite](../../benchmark/paper/README.md) measures the
+The [C++ benchmark suite](../../benchmark/paper/README.md) and its
+[publication tooling](benchmarks/README.md) measure the
 current production core and modules, with raw simulated-callback observations,
 matched batch/incremental controls built from this repository's RFFT, analyzer
 scaling, spectrum-age audits, and forward/inverse transform phases. Its runner
@@ -127,7 +128,7 @@ checks for repeated campaigns. Future external backends can share its workload
 contract. These new campaigns do not replace the historical evidence or update
 the manuscript's tables automatically; comparisons require matched workloads,
 independent sessions and explicit interpretation of the documented limits.
-The [external comparison plan](../../benchmark/paper/comparisons.md) tracks
+The [external comparison plan](benchmarks/comparisons.md) tracks
 FFTW, Rack/PFFFT, and Apple Accelerate/vDSP as execution targets, their pending
 adapters, and the tables and figures to derive from matched campaigns.
 

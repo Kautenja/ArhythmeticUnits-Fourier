@@ -104,9 +104,14 @@ inline std::string capture(const char* command) {
 
 inline Json source_identity() {
     auto result = object();
-    std::istringstream paths(capture("git ls-files --cached --others --exclude-standard -- src benchmark mk Makefile"));
+    std::istringstream paths(capture("git ls-files --cached --others --exclude-standard -- src benchmark mk Makefile docs/whitepaper/benchmarks test/paper"));
     std::string path;
-    while (std::getline(paths, path)) set(result, path.c_str(), fingerprint(path));
+    while (std::getline(paths, path)) {
+        // Uncommitted moves leave deleted paths in the Git index.
+        struct stat status{};
+        if (stat(path.c_str(), &status) == 0) set(result, path.c_str(), fingerprint(path));
+        else require(errno == ENOENT, "Cannot inspect benchmark source");
+    }
     return result;
 }
 
@@ -330,7 +335,7 @@ int run(int argc, char** argv, const std::string& executable,
     require(created == 0, "Output directory must be new and its parent must exist");
     write_json(o.output+"/results.json", manifest);
     try {
-        write_text(o.output+"/source.patch", capture("git diff HEAD --binary -- src benchmark mk Makefile"));
+        write_text(o.output+"/source.patch", capture("git diff HEAD --binary -- src benchmark mk Makefile docs/whitepaper/benchmarks test/paper"));
         std::cout << "Development " << o.profile << ": " << configs.size() << " workloads x "
             << o.repeats << " repetitions; preflight..." << std::endl;
         {

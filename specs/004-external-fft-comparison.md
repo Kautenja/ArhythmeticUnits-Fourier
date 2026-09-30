@@ -12,8 +12,8 @@ Status: IN PROGRESS
 Created: September 29, 2026
 
 This spec supersedes the detailed plan formerly in
-[`benchmark/paper/comparisons.md`](../benchmark/paper/comparisons.md).
-The [protocol README](../benchmark/paper/README.md) defines current measurement
+[`docs/whitepaper/benchmarks/comparisons.md`](../docs/whitepaper/benchmarks/comparisons.md).
+The [protocol README](../docs/whitepaper/benchmarks/README.md) defines current measurement
 semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
@@ -35,6 +35,43 @@ metric gathering, including the pilot, waits until FR-11's final measurement
 phase on a prepared host. Individual implementation FRs can complete before
 that phase; this spec remains in progress until the results and paper pass.
 
+## Benchmark Layout Refactor
+
+September 29, 2026: the measurement suite now lives in a flat
+[`benchmark/paper/`](../benchmark/paper/README.md), with first-party workloads
+in `fourier.hpp`, headless module cases in `modules.hpp`, and one adapter header
+per external library. The command-line entry point is `benchmark.cpp`.
+Template workloads still compile together; timed operations, protocol arguments,
+backend IDs, raw records, numerical budgets, and executable paths are preserved.
+
+Campaign scripts, configurations, provider notes, and historical experiments
+moved to [`docs/whitepaper/benchmarks/`](../docs/whitepaper/benchmarks/README.md).
+Standalone numerical verifier programs moved to `test/paper/`, outside Catch2
+suite discovery. Source archiving includes the relocated tooling; the artifact
+checker accepts both old and new archived registry paths. Development source
+fingerprints also tolerate the deleted index entries from uncommitted moves.
+All 32 moved historical experiment artifacts were checked byte-for-byte.
+
+Validation on macOS ARM64 (no timing campaign):
+
+-   `make -j2 benchmark-paper-build`: passed with Rack/PFFFT.
+-   `make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX="$PWD/.build/deps/fftw"`:
+    passed with FFTW and vDSP; existing Rack deprecation and local FFTW
+    deployment-target warnings remain.
+-   `.build/benchmark/rack/paper --verify` with the Rack library search path:
+    passed with all three providers enabled.
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+    39 tests, 38 passed and the optional plotting test skipped in system Python.
+    The skipped test then passed separately with the existing report environment:
+    `PYTHONPATH=docs/whitepaper/benchmarks MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest test_report.ReportTests.test_figure_determinism`.
+-   `make test-benchmark-dev`: 124 assertions in seven cases passed.
+-   `make check-build`: five checks passed. `make -C docs/whitepaper check`,
+    workload listing, campaign configuration checks, local Markdown links, and
+    `git diff --check` passed.
+
+No production DSP changes, plugin build, manual Rack session, new measurements,
+or manuscript result updates were part of this refactor. FR-12 remains open.
+
 ## Review Of The Current Work
 
 The reviewed checkout is `4e58290`. Its relevant improvements are:
@@ -44,7 +81,7 @@ The reviewed checkout is `4e58290`. Its relevant improvements are:
     and output over exactly one hop. Cache rebuilding is scheduled; retained
     input, prepared plans, cancellation, and output ownership are explicit.
     The original frame-sized boundary passes have been addressed in production.
--   The [publication driver](../benchmark/rack/paper.cpp) measures production
+-   The [publication driver](../benchmark/paper/benchmark.cpp) measures production
     cores, actual headless modules, and fixed-cadence legacy controls. It adds
     callback observations, separate throughput passes, analyzer alignment/load,
     startup/live/cache-pressure cases, and FFT/RFFT/IFFT phase measurements.
@@ -100,7 +137,7 @@ waveform against direct filtering rather than reporting only frame completion.
 ## First-Party Evidence Pathways
 
 Forward, inverse, and complete-chain baselines are required before external
-comparisons. The [protocol](../benchmark/paper/README.md#inverse-and-end-to-end-baselines)
+comparisons. The [protocol](../docs/whitepaper/benchmarks/README.md#inverse-and-end-to-end-baselines)
 documents the implemented semantics and reproduction commands.
 
 | Family | Implemented Baseline | Required External Comparison |
@@ -699,7 +736,7 @@ assumes the default `../..` Rack layout. Substitute the configured SDK directory
 for a different layout; Windows needs its DLL search path configured.
 
 ```shell
-python3 -m unittest discover -s benchmark/paper -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
 make test/dsp/test_spectrum_analysis
 make benchmark-paper-build
 DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify
@@ -712,9 +749,9 @@ The Python suite now compiles the host-independent synthesis verifier using
 The following first-party configuration exists now; use new directories:
 
 ```shell
-python3 benchmark/paper/run.py .build/paper-inverse-smoke --config benchmark/paper/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py .build/paper-inverse-smoke
-python3 benchmark/paper/run.py .build/paper-synthesis-session-01 --profile synthesis --list
+python3 docs/whitepaper/benchmarks/run.py .build/paper-inverse-smoke --config docs/whitepaper/benchmarks/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/check.py .build/paper-inverse-smoke
+python3 docs/whitepaper/benchmarks/run.py .build/paper-synthesis-session-01 --profile synthesis --list
 ```
 
 The dedicated smoke config contains 48 streaming and eight isolated inverse
@@ -723,14 +760,14 @@ Its controls require no analyzer settings and reject live-window/smoothing
 options. Resolve feasible H/N combinations per family before measurement.
 
 FR-10 supplies tracked smoke, pilot, and extension manifests under
-`benchmark/paper/configs/`. The
-[protocol README](../benchmark/paper/README.md#external-campaigns-and-reports)
+`docs/whitepaper/benchmarks/configs/`. The
+[protocol README](../docs/whitepaper/benchmarks/README.md#external-campaigns-and-reports)
 provides current variant-specific commands, dependency prerequisites and
 resolved counts. Listing the pilot does not measure it. For the full macOS
 variant, with the documented FFTW prefix already prepared:
 
 ```shell
-python3 benchmark/paper/run.py --config benchmark/paper/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
+python3 docs/whitepaper/benchmarks/run.py --config docs/whitepaper/benchmarks/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
 ```
 
 Only in FR-11, after the readiness gate and host preparation, run the pilot
@@ -800,9 +837,9 @@ FFT arithmetic, layouts, fusion, plan capacity and storage remain explicit
 confounds; this stage makes no causal production-scheduling-overhead claim
 and therefore does not add a same-production-pipeline batch ablation.
 
-[The benchmark guide](../benchmark/paper/README.md#hybrid-scheduling-attribution)
+[The benchmark guide](../docs/whitepaper/benchmarks/README.md#hybrid-scheduling-attribution)
 defines the schedule and reproduction commands.
-[The attribution generator](../benchmark/paper/hybrid_report.py) checks the
+[The attribution generator](../docs/whitepaper/benchmarks/hybrid_report.py) checks the
 archived campaign before producing JSON and Markdown in a separate directory.
 It requires all six matched controls, preserves process-level cost/tail
 summaries, ages and resource records, and labels four comparison types.
@@ -812,7 +849,7 @@ Short smoke runs establish the reporting path, not comparative conclusions.
 
 Validation on the current Apple Silicon host:
 
--   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: all
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: all
     27 tests passed. New checks cover every supported power of two, H=1/37/
     257/65536, retained-input wraparound, native-call placement, live caches,
     postprocessing dependencies, zero observed C++ execution allocations,
@@ -822,13 +859,13 @@ Validation on the current Apple Silicon host:
     with all providers enabled. Hybrid preflight checks exact paired output,
     the ordinary batch control, and independent numerical references at
     N=128/2048/16384, including long idle quotas and live smoothing.
--   `python3 benchmark/paper/run.py .build/paper-fr6-hybrid-final --config benchmark/paper/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 benchmark/paper/check.py .build/paper-fr6-hybrid-final`: all
+-   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr6-hybrid-final --config docs/whitepaper/benchmarks/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr6-hybrid-final`: all
     120 runs passed. The matrix spans 20 matched conditions, all six controls,
     callback/throughput passes, startup, live settings, aligned/staggered banks,
     load/cache pressure and callback/sample-rate variations. Paired adapters
     have equal persistent C++ storage and zero observed execution allocations.
--   `python3 benchmark/paper/hybrid_report.py .build/paper-fr6-hybrid-final .build/paper-fr6-attribution-final`:
+-   `python3 docs/whitepaper/benchmarks/hybrid_report.py .build/paper-fr6-hybrid-final .build/paper-fr6-attribution-final`:
     generated and checked 20 groups and 80 explicitly qualified comparisons.
 -   `make check-build`: five tests passed. `make -j2` and
     `make -C docs/whitepaper check` passed. Local documentation paths/links
@@ -848,7 +885,7 @@ packing, real-output factor-of-two correction, natural-order stores, and
 normalized inverse output. The shared adapters supply analysis, periodic
 inverse jobs, and complete overlap-save identity/FIR chains. Independent
 all-output fixtures cover every supported power of two from 128 to 16384.
-See [provider details](../benchmark/paper/providers/vdsp.md).
+See [provider details](../docs/whitepaper/benchmarks/vdsp.md).
 
 `--enable-vdsp` and `PAPER_VDSP=1` enable the runner and paper executables,
 respectively. Non-macOS opt-in rejects before building; a disabled build
@@ -871,11 +908,11 @@ Validation on Apple Silicon/macOS:
 -   `make benchmark-paper-build PAPER_VDSP=1` and
     `DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify`: passed,
     including both precisions and matched forward/inverse/complete chains.
--   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: all
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: all
     24 tests passed, including independent vDSP fixtures, C++ allocation
     checks, unavailable-platform rejection, and required platform evidence.
--   `python3 benchmark/paper/run.py .build/paper-fr5-vdsp --enable-vdsp --config benchmark/paper/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 benchmark/paper/check.py .build/paper-fr5-vdsp`: all 112
+-   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr5-vdsp --enable-vdsp --config docs/whitepaper/benchmarks/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr5-vdsp`: all 112
     native/control runs and archived evidence passed. This includes startup,
     smoothing/live analysis, staggered instances, load, and cache pressure.
 -   A separate six-run combined-feature campaign passed with
@@ -908,7 +945,7 @@ policy is `FFTW_MEASURE`, one thread, fresh processes, forgotten prior wisdom,
 and restored inputs after planning. Every actual timed/resource instance
 retains its own plan text; process-global wisdom is labeled separately.
 The registered baseline does not silently use the low-level `ESTIMATE` option.
-See [provider details](../benchmark/paper/providers/fftw.md).
+See [provider details](../docs/whitepaper/benchmarks/fftw.md).
 
 `--fftw-prefix` enables the runner and matching generated C++ inventory;
 `PAPER_FFTW_PREFIX` enables only paper-executable compilation/linking. Without
@@ -929,17 +966,17 @@ unknown to the C++ allocation audit. This is not an allocation-free claim.
 
 Validation:
 
--   `python3 benchmark/paper/providers/build_fftw.py --jobs 2`: fresh pinned
+-   `python3 docs/whitepaper/benchmarks/build_fftw.py --jobs 2`: fresh pinned
     float/double builds passed, with source-tree integrity verified afterward.
--   `python3 -m unittest discover -s benchmark/paper/providers -p 'test_fftw.py'`:
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_fftw.py'`:
     two tests passed, including 115,200 independent numerical bin checks and
     deliberate stale-source/object isolation. Common protocol and optional
     feature/dependency/plan-policy regression tests also passed.
 -   `make benchmark-paper-build PAPER_FFTW_PREFIX=.build/deps/fftw` and the
     expanded executable `--verify`: passed. Rebuilding without that option
     restored the disabled inventory and rejected a requested FFTW workload.
--   `python3 benchmark/paper/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config benchmark/paper/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 benchmark/paper/check.py .build/paper-fr4-fftw`: all 112
+-   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config docs/whitepaper/benchmarks/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr4-fftw`: all 112
     native/control runs, actual plan records, resource pairs, and archived
     dependency/source/build evidence passed.
 -   `make check-build` and `git diff --check`: passed. Plugin sources and
@@ -956,7 +993,7 @@ analysis, periodic inverse jobs, and complete overlap-save identity/FIR chains.
 The provider uses ordered Rack wrappers and aligned native transfer buffers;
 analysis writes K positive bins, while isolated RFFT reconstructs all N bins
 for the existing full-complex control. Production module sources and plugin
-link dependencies are unchanged. See [provider evidence](../benchmark/paper/providers/pffft.md)
+link dependencies are unchanged. See [provider evidence](../docs/whitepaper/benchmarks/pffft.md)
 for inspected revisions, hashes, native scratch formulas, and ABI limitations.
 
 The common external driver audits all output values, cadence, startup, live
@@ -976,8 +1013,8 @@ Validation:
 -   `make benchmark-paper-build` and the executable `--verify`: passed.
     Shared streaming preflight covers small, medium, and maximum sizes,
     non-dividing hops, wraparound, smoothing, and live controls.
--   `python3 benchmark/paper/run.py .build/paper-fr3-pffft --config benchmark/paper/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    followed by `python3 benchmark/paper/check.py .build/paper-fr3-pffft`:
+-   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr3-pffft --config docs/whitepaper/benchmarks/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    followed by `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr3-pffft`:
     all 56 native/control runs and their resource pairs passed.
 -   `make check-build` and `git diff --check`: passed. No interactive Rack
     session or publication-performance campaign was run.
@@ -988,7 +1025,7 @@ statistical comparisons remain FR-11 work.
 ### Shared Adapter And Evidence Contracts Completion
 
 September 29, 2026: FR-2 is complete. The canonical
-[`backends.json`](../benchmark/paper/backends.json) registry feeds Python and a
+[`backends.json`](../docs/whitepaper/benchmarks/backends.json) registry feeds Python and a
 generated C++ descriptor table. It declares 28 implemented backends and three
 explicitly unavailable external families. Dispatch, capability validation,
 resolved latency/output contracts, and schema-2 artifact checks use these
@@ -1009,7 +1046,7 @@ checks and offline archive validation.
 
 Validation performed:
 
--   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: 14 tests
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: 14 tests
     passed, including standalone C++11 synthesis/reference checks, malformed
     and unavailable capabilities, opaque transforms, incorrect scale/layout,
     missing output/coverage, wrong publication/playback age, changed dependency
@@ -1017,8 +1054,8 @@ Validation performed:
 -   `make benchmark-paper-build` and the expanded executable `--verify`:
     passed. All-bin direct-DFT fixtures and independent analyzer magnitudes
     supplement the 48 matched scalar configurations and synthesis fixtures.
--   `python3 benchmark/paper/run.py .build/paper-fr2-verified --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 benchmark/paper/check.py .build/paper-fr2-verified`: 129 runs
+-   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr2-verified --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr2-verified`: 129 runs
     and 129 pairs of resource reports passed. Each resolved workload agreed
     between C++ and Python. Artifacts are retained in that ignored directory.
 -   `make test/dsp/test_spectrum_analysis`: 1,934,764 assertions in seven cases
@@ -1055,16 +1092,16 @@ Only the first-party baseline acceptance item is complete.
 
 Validation performed:
 
--   `python3 -m unittest discover -s benchmark/paper -p 'test_*.py'`: nine tests
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: nine tests
     passed, including standalone C++11 compilation without Rack/Catch2,
     analytical inverse and direct-filter fixtures, deliberate output/scaling
     corruption, latency-contract checks, and missing numerical coverage.
 -   `make benchmark-paper-build` and the expanded `--verify`: passed. Existing
     Rack SDK deprecation warnings remain. This is a benchmark executable
     build, not a plugin build or an interactive host test.
--   `python3 benchmark/paper/run.py build/paper-synthesis-baseline-verified
+-   `python3 docs/whitepaper/benchmarks/run.py build/paper-synthesis-baseline-verified
     --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`, followed by
-    `python3 benchmark/paper/check.py build/paper-synthesis-baseline-verified`:
+    `python3 docs/whitepaper/benchmarks/check.py build/paper-synthesis-baseline-verified`:
     129 runs passed, including 48 new streaming runs and the existing isolated
     inverse passes. The new runs checked 336 publications, 28672 output values,
     and 7168 playback samples. Sources, build flags, raw observations and
@@ -1083,7 +1120,7 @@ changed for this baseline work.
 
 September 29, 2026: Campaign and reporting tooling is implemented under
 `benchmark/`, with no production DSP, module, UI, or plugin dependency changes.
-The [protocol commands](../benchmark/paper/README.md#external-campaigns-and-reports)
+The [protocol commands](../docs/whitepaper/benchmarks/README.md#external-campaigns-and-reports)
 define reproduction, host variants, evidence phases, and statistical limits.
 
 -   Generated smoke/pilot/extensions manifests resolve 156/270/537 workloads
@@ -1116,12 +1153,12 @@ define reproduction, host variants, evidence phases, and statistical limits.
 
 Validation performed on Apple Silicon/macOS:
 
--   `.build/paper-report-env/bin/python -m unittest discover -s benchmark/paper
+-   `.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks
     -p 'test_*.py'`: all 34 tests passed, including host variants, missing-feature
     rejection, equal-channel counts, offset cadence, provenance separation,
     session weighting, phase rejection, and byte-identical fixture figures.
     The four report tests passed again after final reporting refinements.
--   `python3 benchmark/paper/campaigns.py --check`: passed. The README's
+-   `python3 docs/whitepaper/benchmarks/campaigns.py --check`: passed. The README's
     `--describe-matrix` command resolves 408 pilot workloads; the same command
     with `external-extensions.json` resolves 875. These commands only list work.
 -   The exact 256-workload smoke command in the protocol README passed,
@@ -1131,11 +1168,11 @@ Validation performed on Apple Silicon/macOS:
     Numerical replay records 1464 publications and 364111 checked output values,
     including 20352 playback samples. First-party transform selected-bin checks
     have their own reports and are additional to these replay counts.
--   `python3 benchmark/paper/check.py .build/paper-fr10-smoke`: verified all 256
+-   `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr10-smoke`: verified all 256
     runs, archived sources/dependencies, summaries, contracts, resources and
     hashes. The same command on `.build/paper-fr6-hybrid-final` verified its 120
     historical v1 runs without rewriting that archive.
--   `.build/paper-report-env/bin/python benchmark/paper/report.py
+-   `.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py
     .build/paper-fr10-smoke --output .build/paper-fr10-report-final --phase smoke`:
     generated 256 evidence rows and 75 SVG/PNG figure pairs. Representative
     analysis, independent-channel, inverse, complete-chain and cost-versus-N
@@ -1229,7 +1266,7 @@ hashed by the new campaign; the failed and corrected campaigns are never pooled.
 The invocation from the repository root is:
 
 ```shell
-caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-pilot-02 --config .build/paper-fr11-host/pilot-eligible.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-02 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929 --notes 'Use the full host, numerical-gate, and provisional-exclusion notes retained in metadata.json'
+caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-pilot-02 --config .build/paper-fr11-host/pilot-eligible.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-02 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929 --notes 'Use the full host, numerical-gate, and provisional-exclusion notes retained in metadata.json'
 ```
 
 The final argument above abbreviates human-readable notes; the actual
@@ -1245,7 +1282,7 @@ three process repetitions each). The report generator validated the campaign
 before emitting 376 evidence rows and 65 SVG/PNG figure pairs:
 
 ```shell
-.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-pilot-02 --output .build/paper-fr11-pilot-02-report --phase pilot
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-pilot-02 --output .build/paper-fr11-pilot-02-report --phase pilot
 ```
 
 Representative analysis, inverse-job and full-chain figures were visually
@@ -1292,7 +1329,7 @@ September 29, 2026: committed the preceding pilot/reference progress as
 benchmark-only spectrum-level contract. The old pilot failures and provisional
 exclusions above describe the earlier policy and remain preserved.
 
-The [numerical acceptance document](../benchmark/paper/numerical-accuracy.md)
+The [numerical acceptance document](../docs/whitepaper/benchmarks/numerical-accuracy.md)
 derives the distinction between pointwise and vector-relative error, cites
 benchFFT's primary methodology, specifies exact equations and scope, and
 provides native reproduction commands. Per published channel, both relative
@@ -1352,8 +1389,8 @@ evidence only. The negative-policy fixture was additionally rerun under
 The full macOS pilot was then restored without exclusions and rerun serially:
 
 ```shell
-caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-pilot-03 --config benchmark/paper/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-03 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929
-.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-pilot-03 --output .build/paper-fr11-pilot-03-report --phase pilot
+caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-pilot-03 --config docs/whitepaper/benchmarks/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-03 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-pilot-03 --output .build/paper-fr11-pilot-03-report --phase pilot
 ```
 
 The actual invocation also supplied detailed `--notes`, retained in metadata,
@@ -1403,7 +1440,7 @@ measurement sessions, rather than trimming results or reporting tight error
 bars. Timer p99 was 42 ns throughout both pilots; quantization matters for
 very short calls and is never mechanically subtracted.
 
-The frozen [plan](../benchmark/paper/configs/external-confirmation-plan.json)
+The frozen [plan](../docs/whitepaper/benchmarks/configs/external-confirmation-plan.json)
 retains all 408 primary and all 875 extension workloads, partitioned solely by
 observation-length requirements. Its four configuration hashes are fixed before
 confirmation. Each of three sessions uses three process repeats, 64 warmup
@@ -1452,7 +1489,7 @@ For each group, substitute its frozen config, hop count, session label and
 seed into this command from the repository root (metadata retains full notes):
 
 ```shell
-caffeinate -i python3 benchmark/paper/run.py .build/paper-fr11-confirmation-SS-GROUP --config benchmark/paper/configs/external-confirmation-GROUP.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase confirmation --host-id m1-pro-16gb-local --session-id fr11-confirmation-SS --repeats 3 --hops GROUP_HOPS --frames 1024 --step-frames 2 --warm-hops 64 --seed SESSION_GROUP_SEED --notes 'Actual preparation, activity, power and session context'
+caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-confirmation-SS-GROUP --config docs/whitepaper/benchmarks/configs/external-confirmation-GROUP.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase confirmation --host-id m1-pro-16gb-local --session-id fr11-confirmation-SS --repeats 3 --hops GROUP_HOPS --frames 1024 --step-frames 2 --warm-hops 64 --seed SESSION_GROUP_SEED --notes 'Actual preparation, activity, power and session context'
 ```
 
 The full command list, invocations, timestamps and preparation snapshots are
@@ -1595,7 +1632,7 @@ or duplicate workloads. Output directories must be new; use a different
 output path when regenerating rather than overwriting retained evidence.
 
 ```shell
-.build/paper-report-env/bin/python benchmark/paper/report.py .build/paper-fr11-confirmation-[0-9][0-9]-* --output .build/paper-fr11-confirmation-report --phase confirmation
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-confirmation-[0-9][0-9]-* --output .build/paper-fr11-confirmation-report --phase confirmation
 python3 .build/paper-fr11-confirmation-control/summarize.py
 ```
 
@@ -1625,7 +1662,7 @@ second measurement campaign or unnecessary raw-data recomputation:
 
 ```shell
 .build/paper-report-env/bin/python .build/paper-fr11-confirmation-control/render_readable.py
-.build/paper-report-env/bin/python -m unittest discover -s benchmark/paper -p test_report.py
+.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p test_report.py
 ```
 
 All 288 SVG/PNG pairs were produced. The tables and cost-versus-length figures

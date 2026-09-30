@@ -28,7 +28,7 @@ endif
 
 STANDALONE_TEST_BUILD := $(if $(INSTRUMENT),.build/instrumented/$(INSTRUMENT)/standalone,.build/test/standalone)
 STANDALONE_BENCHMARK_BUILD := .build/benchmark/standalone
-STANDALONE_TEST_SOURCES := $(sort $(shell find test -name '*.cpp' ! -path 'test/rack/*'))
+STANDALONE_TEST_SOURCES := $(sort $(shell find test -name '*.cpp' ! -path 'test/rack/*' ! -path 'test/paper/*'))
 STANDALONE_BENCHMARK_SOURCES := $(sort $(shell find benchmark/dsp -name '*.cpp'))
 STANDALONE_TEST_ALIASES := $(STANDALONE_TEST_SOURCES:.cpp=)
 STANDALONE_BENCHMARK_ALIASES := $(STANDALONE_BENCHMARK_SOURCES:.cpp=)

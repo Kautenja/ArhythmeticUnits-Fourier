@@ -1,10 +1,12 @@
-// Equal, independent four-channel workloads; include after the Core adapter.
+// Equal, independent four-channel analysis workloads.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 #ifndef ARHYTHMETIC_UNITS_FOURIER_PAPER_CHANNELS_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_PAPER_CHANNELS_HPP_
 #include <array>
 #include "external.hpp"
+#include "fourier.hpp"
+#include "pffft.hpp"
 
 namespace Paper {
 /// @brief Shared immutable input fixtures, prepared before resource/timing probes.
@@ -56,13 +58,13 @@ struct ScalarChannels {
     }
 };
 
-struct SimdChannels : Core<simd::float_4> {
+struct SimdChannels : Core<rack::simd::float_4> {
     size_t cursor = 0;
-    explicit SimdChannels(const Config& c) : Core<simd::float_4>(c) {}
+    explicit SimdChannels(const Config& c) : Core<rack::simd::float_4>(c) {}
     void process(float) {
         const auto& input = channel_signals();
         const size_t i = cursor++%input[0].size();
-        process_value(simd::float_4(input[0][i], input[1][i], input[2][i], input[3][i]));
+        process_value(rack::simd::float_4(input[0][i], input[1][i], input[2][i], input[3][i]));
     }
     size_t bins() const { return output.size(); }
     float value(size_t j, size_t k) const { return output[k][j]; }

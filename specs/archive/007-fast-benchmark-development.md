@@ -73,7 +73,7 @@ Apple Clang through `c++`:
 make -j2 benchmark-dev-build test-benchmark-dev PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
 make -j2 test/dsp/test_spectrum_analysis test/dsp/test_fft check-build
 make -j2 all test-rack PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
-python3 -m unittest discover -s benchmark/paper -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
 make benchmark-fast PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw BENCHMARK_DEV_OUT=.build/dev-final-baseline
 make benchmark-fast PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw BENCHMARK_DEV_OUT=.build/dev-final-candidate BENCHMARK_DEV_ARGS="--baseline .build/dev-final-baseline-fast"
 DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile full --output .build/dev-final-full
@@ -116,7 +116,7 @@ For each group, the exact command was the following, with `GROUP` and `HOPS`
 replaced by the corresponding table row:
 
 ```shell
-DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile full --config benchmark/paper/configs/external-confirmation-GROUP.json --output .build/dev-complete-GROUP --repeats 3 --hops HOPS --frames 1024 --warm-hops 64 --label 'Full inventory validation of C++ development runner; shared process, not publication confirmation'
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile full --config docs/whitepaper/benchmarks/configs/external-confirmation-GROUP.json --output .build/dev-complete-GROUP --repeats 3 --hops HOPS --frames 1024 --warm-hops 64 --label 'Full inventory validation of C++ development runner; shared process, not publication confirmation'
 ```
 
 Source/build/dependency/executable stability checks passed in each group.
@@ -132,7 +132,7 @@ and passed their full archive checker, including phase/step paths excluded from
 the development profiles:
 
 ```shell
-python3 benchmark/paper/run.py .build/dev-publication-compat --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --enable-vdsp --fftw-prefix .build/deps/fftw
+python3 docs/whitepaper/benchmarks/run.py .build/dev-publication-compat --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --enable-vdsp --fftw-prefix .build/deps/fftw
 ```
 
 Expected-failure checks rejected deliberately corrupted copied raw data,

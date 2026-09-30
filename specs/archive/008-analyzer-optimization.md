@@ -130,7 +130,7 @@ publication confirmation sessions.
 | `baseline-b` | 47 | 235 | Rebuilt original implementation on the fixed repeat matrix |
 | `sparse-b` | 47 | 235 | Rebuilt selected implementation on the same repeat matrix |
 
-The [repeat matrix](../../benchmark/paper/configs/optimization-008-repeat.json)
+The [repeat matrix](../../docs/whitepaper/benchmarks/configs/optimization-008-repeat.json)
 includes N=128/2048/16384, smoothing off/on, live H=257, scalar double,
 independent scalar/SIMD channels, both headless modules, and unchanged PFFFT
 batch/hybrid controls. The broader A matrix includes additional sizes/hops,
@@ -197,8 +197,8 @@ The exact measurement settings for the selected A/B comparisons were:
 ```shell
 .build/benchmark/rack/paper --development --profile full --output .build/optimization-008/baseline-a --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 isolated baseline A; AC; shared-process development evidence'
 .build/benchmark/rack/paper --development --profile full --output .build/optimization-008/sparse-a --baseline .build/optimization-008/baseline-a --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 stage segments with original sparse loop A; AC; development evidence'
-.build/benchmark/rack/paper --development --profile full --config benchmark/paper/configs/optimization-008-repeat.json --output .build/optimization-008/baseline-b --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 rebuilt baseline B; fixed 47-workload repeat matrix; AC'
-.build/benchmark/rack/paper --development --profile full --config benchmark/paper/configs/optimization-008-repeat.json --output .build/optimization-008/sparse-b --baseline .build/optimization-008/baseline-b --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 rebuilt segmented candidate B; fixed 47-workload repeat matrix; AC'
+.build/benchmark/rack/paper --development --profile full --config docs/whitepaper/benchmarks/configs/optimization-008-repeat.json --output .build/optimization-008/baseline-b --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 rebuilt baseline B; fixed 47-workload repeat matrix; AC'
+.build/benchmark/rack/paper --development --profile full --config docs/whitepaper/benchmarks/configs/optimization-008-repeat.json --output .build/optimization-008/sparse-b --baseline .build/optimization-008/baseline-b --repeats 5 --hops 512 --warm-hops 64 --label 'Spec 008 rebuilt segmented candidate B; fixed 47-workload repeat matrix; AC'
 ```
 
 Between runs, the original or selected header was restored and the build

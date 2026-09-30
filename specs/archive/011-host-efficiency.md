@@ -44,7 +44,7 @@ claiming novelty for ordinary caching or ring-index arithmetic.
 -   `make INSTRUMENT=asan-ubsan test/dsp/test_spectrum_analysis`
 -   `make RACK_TEST_INSTRUMENT=asan-ubsan test-spectrum-points`
 -   `make -j2 benchmark-dev-build PAPER_FFTW_PREFIX=.build/deps/fftw PAPER_VDSP=1`
--   Run `benchmark/paper/configs/host-011.json` through the development runner
+-   Run `docs/whitepaper/benchmarks/configs/host-011.json` through the development runner
     with full preflight, five repetitions, 512 hops, and 64 warmup hops.
 -   Record in-app observations, research positioning, failures, rejected
     candidates, exact commands, and measurement limitations before completion.
@@ -306,7 +306,7 @@ local FFTW prefix, and Apple's Accelerate framework available. Source snapshots,
 raw timings, binaries, and full logs remain in `.build/host-011/`. Reproduction
 patches, probes, stock test copies, control CSVs, and compressed descriptive
 results/source identities are preserved in
-[`benchmark/paper/experiments/host-011`](../../benchmark/paper/experiments/host-011).
+[`docs/whitepaper/benchmarks/experiments/host-011`](../../docs/whitepaper/benchmarks/experiments/host-011).
 The compact `measurements.json.gz` intentionally excludes per-run raw data and
 Git status; use the ignored full archives for raw-block reanalysis. It retains
 configuration, compiler/environment, preflight, executable/source identities,
@@ -322,13 +322,13 @@ an active checkout's uncommitted work to reproduce an ablation.
 make -j2 benchmark-dev-build all PAPER_FFTW_PREFIX=.build/deps/fftw PAPER_VDSP=1
 DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper \
     --development --profile full \
-    --config benchmark/paper/configs/host-011.json \
+    --config docs/whitepaper/benchmarks/configs/host-011.json \
     --output .build/host-011/reproduction \
     --repeats 5 --hops 512 --warm-hops 64 --label reproduction
-python3 benchmark/paper/experiments/host-011/summarize.py --backend fourier
-python3 benchmark/paper/experiments/host-011/summarize.py \
+python3 docs/whitepaper/benchmarks/experiments/host-011/summarize.py --backend fourier
+python3 docs/whitepaper/benchmarks/experiments/host-011/summarize.py \
     --candidate combined-b --backend fourier
-python3 benchmark/paper/experiments/host-011/summarize.py \
+python3 docs/whitepaper/benchmarks/experiments/host-011/summarize.py \
     --baseline baseline-full --candidate combined-full
 ```
 
@@ -347,7 +347,7 @@ The supplemental control probe build/run command used the following flags
 c++ -std=c++11 -stdlib=libc++ -DTEST -fPIC -I. -I../../include -I../../dep/include \
     -O3 -funsafe-math-optimizations -fno-omit-frame-pointer \
     -march=armv8-a+fp+simd -mmacosx-version-min=10.9 \
-    benchmark/paper/experiments/host-011/control_probe.cpp \
+    docs/whitepaper/benchmarks/experiments/host-011/control_probe.cpp \
     -o .build/host-011/controls-reproduction -L../.. -lRack
 DYLD_LIBRARY_PATH=../.. .build/host-011/controls-reproduction \
     > .build/host-011/controls-reproduction.csv
@@ -359,12 +359,12 @@ For differential reproduction, extract the reference and compile the probes:
 git show bb748ec:src/dsp/spectrum_analysis.hpp > .build/host-011/baseline-analysis.hpp
 c++ -std=c++11 -O3 -funsafe-math-optimizations \
     -Isrc/dsp -I.build/host-011 \
-    benchmark/paper/experiments/host-011/rounding-scalar.cpp \
+    docs/whitepaper/benchmarks/experiments/host-011/rounding-scalar.cpp \
     -o .build/host-011/rounding-scalar-reproduction
 .build/host-011/rounding-scalar-reproduction
 c++ -std=c++11 -O3 -funsafe-math-optimizations -march=armv8-a+fp+simd \
     -I../../include -I../../dep/include -Isrc/dsp -I.build/host-011 \
-    benchmark/paper/experiments/host-011/rounding-simd.cpp \
+    docs/whitepaper/benchmarks/experiments/host-011/rounding-simd.cpp \
     -o .build/host-011/rounding-simd-reproduction -L../.. -lRack
 DYLD_LIBRARY_PATH=../.. .build/host-011/rounding-simd-reproduction
 ```

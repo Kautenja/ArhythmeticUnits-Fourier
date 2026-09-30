@@ -102,7 +102,7 @@ pair checks reproducibility. A broader 240-workload profile uses three
 repetitions, 128 measured hops and 32 warmup hops. It covers startup, short
 hops, additional lengths, staggered analyzers and background load.
 
-The separate [module matrix](../../benchmark/paper/configs/production-010-modules.json)
+The separate [module matrix](../../docs/whitepaper/benchmarks/configs/production-010-modules.json)
 measures actual Fourier/Spectre live window/band changes at N=2048/H=1024,
 with smoothing off/on and callback/throughput passes. It checks whether
 rebalance of the lower-level DSP also benefits the complete engine pipeline,
@@ -150,7 +150,7 @@ export PAPER_FFTW_PREFIX=/Users/christiankauten/Documents/Projects/Rack/plugins/
 make -j2 benchmark-dev-build PAPER_VDSP=1
 DYLD_LIBRARY_PATH="$RACK_DIR" .build/benchmark/rack/paper \
     --development --profile full \
-    --config benchmark/paper/configs/research-009.json \
+    --config docs/whitepaper/benchmarks/configs/research-009.json \
     --output .build/production-010/final-b \
     --baseline .build/production-010/baseline-b \
     --repeats 5 --hops 512 --warm-hops 64 --label final-b
@@ -158,7 +158,7 @@ DYLD_LIBRARY_PATH="$RACK_DIR" .build/benchmark/rack/paper \
 
 Use fresh output names when replaying. The full matrix omits `--config` and
 uses `--repeats 3 --hops 128 --warm-hops 32`. The module matrix substitutes
-`benchmark/paper/configs/production-010-modules.json` and compares with
+`docs/whitepaper/benchmarks/configs/production-010-modules.json` and compares with
 `baseline-modules`. Every manifest contains its exact invocation, compiler
 settings, source identities, artifact hashes and workload definitions.
 

@@ -143,7 +143,9 @@ changing DSP, Rack modules, or displays.
 -   `test/dsp/` mirrors the flat DSP header layout. `test/functions.hpp` and
     `test/ieee754.hpp` provide test helpers.
 -   `benchmark/dsp/` holds standalone DSP benchmarks; `benchmark/rack/`
-    measures headless module processing and display preparation. See the
+    measures headless module processing and display preparation.
+    `benchmark/paper/` holds the C++ comparison workloads;
+    `docs/whitepaper/benchmarks/` owns campaign and reporting tools. See the
     testing section for workloads and interpretation.
 -   `src/rack_extensions/panel.hpp` draws both panel formats and shares their
     geometry with the module controls. `panel_artwork.hpp` preserves the original
@@ -274,8 +276,8 @@ selected Rack tree's `plugin.mk`. Nested `.cpp` files are not automatically
 included by that wildcard.
 
 `mk/standalone.mk` discovers standalone `.cpp` suites recursively under
-`test` (excluding `test/rack`) and `benchmark/dsp`. Each suite includes DSP
-headers directly; there is no standalone DSP library. `mk/rack.mk` supplies
+`test` (excluding `test/rack` and `test/paper`) and `benchmark/dsp`. Each suite
+includes DSP headers directly; there is no standalone DSP library. `mk/rack.mk` supplies
 headless Rack tests and benchmarks. Standalone goals skip the SDK entirely,
 including when `RACK_DIR` points to a missing directory. Mixed invocations
 such as `make test all` load the SDK but keep standalone flags independent.
@@ -717,7 +719,7 @@ adapters, timing loops, and numerical/cadence checks. Builds are incremental;
 neither mode forces compilation or builds the allocation-audit executable.
 Registry generation, execution, statistics, and baseline comparison are C++.
 Use `make test-benchmark-dev` to check the runner itself; `test-rack` includes
-these checks. See the [development workflow](benchmark/paper/DEVELOPMENT.md)
+these checks. See the [development workflow](docs/whitepaper/benchmarks/DEVELOPMENT.md)
 for baseline comparison, raw artifacts, filters, and publication boundaries.
 
 These short runs are development feedback. The publication archiver below
@@ -795,7 +797,7 @@ engine or display performance.
 
 #### Publication Experiments
 
-The [publication measurement protocol](benchmark/paper/README.md) adds
+The [publication measurement protocol](docs/whitepaper/benchmarks/README.md) adds
 raw callback/step observations, continuous throughput, matched fixed-cadence
 RFFT controls, scalar/SIMD and module scaling, spectrum-age audits, background
 DSP load, cache pressure, and FFT/RFFT/IFFT phase measurements. It captures
@@ -804,8 +806,8 @@ process observations for later backend comparisons. Run its short validation
 campaign from the repository root:
 
 ```shell
-python3 benchmark/paper/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 benchmark/paper/check.py .build/paper-smoke
+python3 docs/whitepaper/benchmarks/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/check.py .build/paper-smoke
 ```
 
 These simulate audio callbacks; compute budget exceedances are not device

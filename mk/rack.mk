@@ -147,33 +147,33 @@ endif
 benchmark-paper-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX) .build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX)
 benchmark-rack-build: benchmark-paper-build
 
-.build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper.cpp.o $(PAPER_NATIVE_INPUTS)
+.build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/paper/benchmark.cpp.o $(PAPER_NATIVE_INPUTS)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
--include .build/benchmark/rack/paper.cpp.d
+-include .build/benchmark/paper/benchmark.cpp.d
 
-.build/benchmark/generate-registry$(RACK_TEST_SUFFIX): benchmark/paper/generate_registry.cpp .build/rack-config
+.build/benchmark/generate-registry$(RACK_TEST_SUFFIX): docs/whitepaper/benchmarks/generate_registry.cpp .build/rack-config
 	@mkdir -p $(@D)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
 
-.build/benchmark/registry.generated.hpp: benchmark/paper/backends.json .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) .build/benchmark/paper-config
+.build/benchmark/registry.generated.hpp: docs/whitepaper/benchmarks/backends.json .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) .build/benchmark/paper-config
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) $< $@ "$(PAPER_FEATURES)"
 
-.build/benchmark/rack/paper.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
+.build/benchmark/paper/benchmark.cpp.o: benchmark/paper/benchmark.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) $(PAPER_IDENTITY_FLAGS) -I.build/benchmark -c -o $@ $<
 
-.build/benchmark/rack/paper-audit.cpp.o: benchmark/rack/paper.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk .build/rack-config
+.build/benchmark/paper/benchmark-audit.cpp.o: benchmark/paper/benchmark.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk .build/rack-config
 	@mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) $(PAPER_IDENTITY_FLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
 
-.build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/rack/paper-audit.cpp.o $(PAPER_NATIVE_INPUTS)
+.build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/paper/benchmark-audit.cpp.o $(PAPER_NATIVE_INPUTS)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
--include .build/benchmark/rack/paper-audit.cpp.d
+-include .build/benchmark/paper/benchmark-audit.cpp.d
 
 .build/benchmark/paper-config: PRIVATE_CONFIG := $(PAPER_FLAGS) $(PAPER_LIBS) $(PAPER_FEATURES) $(PAPER_IDENTITY_FLAGS)
-.build/benchmark/rack/paper.cpp.o .build/benchmark/rack/paper-audit.cpp.o: .build/benchmark/paper-config
+.build/benchmark/paper/benchmark.cpp.o .build/benchmark/paper/benchmark-audit.cpp.o: .build/benchmark/paper-config
 
 # Native development modes share a serial recipe, even with both goals and -j.
 # Only the timing executable is needed; the publication audit build stays opt-in.
@@ -212,6 +212,6 @@ $(RACK_TEST_BUILD)/config: PRIVATE_CONFIG := $(CXX) $(RACK_TEST_FLAGS) $(abspath
 	@printf '%s\n' $(call shell-quote,$(PRIVATE_CONFIG)) > $@.tmp
 	@cmp -s $@.tmp $@ && rm $@.tmp || mv $@.tmp $@
 
-$(OBJECTS) .build/benchmark/rack/display.cpp.o .build/benchmark/rack/paper.cpp.o .build/test/rack/inspect_displays.cpp.o .build/test/rack/inspect_panels.cpp.o: .build/rack-config
+$(OBJECTS) .build/benchmark/rack/display.cpp.o .build/benchmark/paper/benchmark.cpp.o .build/test/rack/inspect_displays.cpp.o .build/test/rack/inspect_panels.cpp.o: .build/rack-config
 $(addprefix $(RACK_TEST_BUILD)/,$(addsuffix .cpp.o,$(RACK_TEST_NAMES))) $(RACK_TEST_BUILD)/catch_amalgamated.cpp.o: $(RACK_TEST_BUILD)/config
 $(RACK_BENCHMARK_OBJECTS) .build/benchmark/rack/catch_amalgamated.cpp.o: .build/benchmark/rack/config
