@@ -76,3 +76,23 @@ For publication evidence, use the
 retain source/dependency identities and repeated raw observations. Its report
 scripts derive tables and plots separately. No benchmark command updates the
 paper or its archived results automatically.
+
+## Comparison Boundaries
+
+Keep isolated transforms, complete core analysis, and headless module
+processing in separate comparisons. The modules include input handling and
+engine-side display preparation, but no concurrent display, graphics loop or
+audio device. Four independent SIMD channels require four independent scalar
+channels; the older correlated-lane control is a different fixture.
+
+The live analysis state alternates window functions and octave bands at frame
+boundaries. It does not measure arbitrary parameter response, FFT-length or
+sample-rate changes, or UI latency. Numerical coverage also differs by adapter:
+per-run reports and preflight-only checks must remain explicitly identified.
+
+Use the protocol's [claim-to-evidence mapping and metric definitions](../../docs/whitepaper/benchmarks/README.md#claims-and-presentation)
+when selecting tables or figures. Mean cost, callback tails and algorithmic
+age are separate outcomes; a faster transform does not imply a lower burst
+or newer displayed spectrum. The report retains process/session observations
+and measured source identities without treating observed ranges as confidence
+intervals or observed maxima as worst-case execution-time bounds.

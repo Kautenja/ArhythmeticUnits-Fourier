@@ -19,6 +19,8 @@ namespace Paper {
 /// call (including provider packing/stores), K magnitude/prefix sums, K band/EMA
 /// stores. Balanced quotas count tasks, not equal-cost operations or FFT steps.
 /// Both modes retain N+H inputs and run identical arithmetic and cache updates.
+/// Disabled smoothing skips prefix/band arithmetic without removing task units;
+/// alpha=0 still stores the current magnitude so output history stays current.
 /// The extra H slots protect the frame ending at jH until its last preparation
 /// read; subsequent input never changes that frame. No boundary snapshot copy.
 template<typename T, typename Backend>
@@ -43,7 +45,7 @@ struct ScheduledAnalysis {
         // allocations in a pair whose persistent DSP storage is matched.
         std::string().swap(config.backend);
         for (size_t i = 0; i < c.n; ++i) prepare_window(i);
-        for (size_t k = 0; k < low.size(); ++k) prepare_band(k);
+        if (bands) for (size_t k = 0; k < low.size(); ++k) prepare_band(k);
     }
     void prepare_window(size_t i) {
         window[i] = gain*Fourier::Window::window<float>(function, float(i), float(config.n), false);
@@ -67,14 +69,14 @@ struct ScheduledAnalysis {
         } else if (cursor < n+1+k_count) {
             const size_t k = cursor-n-1;
             magnitudes[k] = std::abs(coefficients[k]);
-            prefix[k+1] = prefix[k]+magnitudes[k];
+            if (bands) prefix[k+1] = prefix[k]+magnitudes[k];
         } else {
             const size_t k = cursor-n-1-k_count;
-            if (dirty) prepare_band(k);
+            if (bands && dirty) prepare_band(k);
             const T magnitude = bands ? (prefix[high[k]+1]-prefix[low[k]])/T(high[k]-low[k]+1)
                                       : magnitudes[k];
             const float alpha = config.smooth ? 0.8f : 0.f;
-            output[k] = alpha*output[k]+(1.f-alpha)*magnitude;
+            output[k] = alpha == 0.f ? magnitude : alpha*output[k]+(1.f-alpha)*magnitude;
         }
         ++cursor;
     }

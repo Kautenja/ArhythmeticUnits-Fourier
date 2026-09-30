@@ -311,8 +311,6 @@ def check(directory):
                 validate_provider_info(instance, registry[config["backend"]])
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
                     validate_hybrid_info(instance, config)
-            if contract["boundary"] == "transform" and report["checked_bins"] != config["n"]:
-                raise ValueError("Missing external transform bins")
         if contract["boundary"] in ("inverse-job", "chain") or (external and contract["boundary"] == "analysis"):
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry,
@@ -335,6 +333,11 @@ def validate_transform_accuracy(accuracy, contract):
         raise ValueError("Invalid transform numerical report")
     if contract["step_count"] is not None and accuracy["steps"] != contract["step_count"]:
         raise ValueError("Transform work count mismatch")
+    if contract["step_count"] is None:
+        bins = contract["outputs_per_channel"]
+        for key, expected in (("checked_bins", bins), ("direct_bins", bins if bins <= 256 else 17)):
+            if type(accuracy.get(key)) is not int or accuracy[key] != expected:
+                raise ValueError("Missing or incorrect external transform reference coverage")
 
 
 if __name__ == "__main__":

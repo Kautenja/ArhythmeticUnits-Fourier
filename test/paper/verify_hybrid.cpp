@@ -23,8 +23,62 @@ struct InspectBackend {
     std::string info_json() const { return "{}"; }
 };
 
+/// @brief Direct band sums and EMA history across optional/live smoothing.
+/// @details The native fixture produces exact positive bins k+1. Compare the
+/// ordinary batch, scheduled batch and hybrid against independent scalar sums,
+/// including frames that disable bands between frames that require them.
+void verify_optional_postprocessing() {
+    using namespace Paper;
+    for (bool smooth : {false, true}) for (bool live : {false, true}) {
+        Config c{};
+        c.n = 128; c.hop = 37; c.rate = 48000; c.smooth = smooth;
+        c.state = live ? "live" : "steady";
+        c.backend = "pffft-hybrid-float";
+        ScheduledAnalysis<float, InspectBackend> hybrid(c);
+        c.backend = "pffft-scheduled-batch-float";
+        ScheduledAnalysis<float, InspectBackend> scheduled(c);
+        c.backend = "pffft-analysis-float";
+        ExternalAnalysis<float, InspectBackend> batch(c);
+        hybrid.fft.live = scheduled.fft.live = batch.fft.live = live;
+        std::vector<float> expected(c.n/2+1, 0.f);
+        for (size_t s = 0; s < 8*c.hop; ++s) {
+            hybrid.fft.endpoint = scheduled.fft.endpoint = batch.fft.endpoint = s/c.hop*c.hop;
+            const float input = float(int64_t(s%23)-11);
+            hybrid.process(input); scheduled.process(input); batch.process(input);
+            if (batch.published()) {
+                const bool bands = live ? (s/c.hop)%2 == 1 : smooth;
+                const float alpha = smooth ? 0.8f : 0.f;
+                for (size_t k = 0; k < expected.size(); ++k) {
+                    long double magnitude = k+1;
+                    if (bands) {
+                        const double width = double(c.rate)/c.n;
+                        const float half = std::pow(2.f, (1.f/3.f)/2.f);
+                        double a = k*width/half, b = k*width*half;
+                        if (b > c.rate/2) { b = c.rate/2; a = b/std::pow(2.f, 1.f/3.f); }
+                        const size_t first = size_t(std::floor(a/width));
+                        const size_t last = std::min(c.n/2, size_t(std::floor(b/width)));
+                        magnitude = 0;
+                        for (size_t j = first; j <= last; ++j) magnitude += j+1;
+                        magnitude /= last-first+1;
+                    }
+                    expected[k] = float(alpha*expected[k]+(1.f-alpha)*magnitude);
+                }
+            }
+            auto compare = [&](const std::vector<float>& output) {
+                for (size_t k = 0; k < output.size(); ++k)
+                    require(std::abs(output[k]-expected[k]) <= 1e-5f*std::max(1.f, expected[k]),
+                        "Optional smoothing changed band output or EMA history");
+            };
+            require(batch.published() == scheduled.published(), "Matched batch cadence changed");
+            if (batch.published()) { compare(batch.output); compare(scheduled.output); }
+            if (hybrid.published()) compare(hybrid.output);
+        }
+    }
+}
+
 int main() {
     using namespace Paper;
+    verify_optional_postprocessing();
     for (size_t n = 128; n <= 16384; n *= 2) for (size_t hop : {1u, 37u, 257u, 65536u}) {
         for (bool live : {false, true}) {
             Config c{};

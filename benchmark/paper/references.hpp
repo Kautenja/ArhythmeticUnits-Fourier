@@ -18,6 +18,13 @@ inline void check(bool valid) {
 }
 template<typename T> double tolerance() { return sizeof(T) == 4 ? 2e-5 : 1e-10; }
 
+/// @brief Reject non-finite errors before a maximum can silently discard NaN.
+inline long double absolute_error(const Complex& actual, const Complex& expected) {
+    const long double error = std::abs(actual-expected);
+    check(std::isfinite(error));
+    return error;
+}
+
 /// @brief Direct DFT, natural order, negative forward sign and 1/N inverse.
 inline Complex coefficient(const std::vector<Complex>& input, size_t bin, bool inverse) {
     Complex result(0, 0);

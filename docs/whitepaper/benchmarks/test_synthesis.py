@@ -17,7 +17,8 @@ class SynthesisTests(unittest.TestCase):
             binary = Path(directory)/"verify"
             generate(Path(directory)/"registry.generated.hpp")
             command = shlex.split(os.environ.get("CXX", "c++"))
-            build = subprocess.run(command + ["-std=c++11", "-O2", "-Wall", "-Wextra",
+            # Match Rack's arithmetic options, including the non-finite rejection checks.
+            build = subprocess.run(command + ["-std=c++11", "-O3", "-funsafe-math-optimizations", "-Wall", "-Wextra",
                                               "-pedantic", "-I"+directory, str(source), "-o", str(binary)],
                                    capture_output=True, text=True, timeout=120)
             self.assertEqual(build.returncode, 0, build.stdout+build.stderr)

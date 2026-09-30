@@ -48,11 +48,29 @@ class ContractTests(unittest.TestCase):
             path = Path(temp)/"raw.csv"
             path.write_text("kind,ns\n"+"timer,20\n"*1024+"complete,100\n"*2)
             validate_rows(path, c, registry)
-        accuracy = dict(max_abs_error=0, max_reference=1, roundtrip_max_abs_error=0)
+        accuracy = dict(max_abs_error=0, max_reference=1, roundtrip_max_abs_error=0,
+                        checked_bins=c["n"], direct_bins=17)
         validate_transform_accuracy(accuracy, contract)
         for value in (float("nan"), -1, .1):
             with self.assertRaises(ValueError):
                 validate_transform_accuracy(dict(accuracy, max_abs_error=value), contract)
+
+    def test_external_transform_requires_complete_reference_coverage(self):
+        for n in (128, 256, 512, 16384):
+            config = dict(BASE, backend="pffft-fft-float", n=n, pass_name="complete")
+            contract = resolve_contract(config)
+            accuracy = dict(max_abs_error=0, max_reference=1, roundtrip_max_abs_error=0,
+                            checked_bins=n, direct_bins=n if n <= 256 else 17)
+            validate_transform_accuracy(accuracy, contract)
+            for field in ("checked_bins", "direct_bins"):
+                for value in (None, 0, accuracy[field]-1, accuracy[field]+1, float(accuracy[field]), True):
+                    altered = dict(accuracy, **{field: value})
+                    with self.assertRaisesRegex(ValueError, "reference coverage"):
+                        validate_transform_accuracy(altered, contract)
+                altered = dict(accuracy)
+                del altered[field]
+                with self.assertRaisesRegex(ValueError, "reference coverage"):
+                    validate_transform_accuracy(altered, contract)
 
     def campaign(self, directory, registry_name="docs/whitepaper/benchmarks/backends.json"):
         config = dict(BASE, backend="driver", n=128, hop=32, callbacks=2, warm_hops=0)

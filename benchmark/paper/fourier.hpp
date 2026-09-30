@@ -328,7 +328,7 @@ void transform(const Config& c, bool real, bool inverse) {
         forward.compute();
         for (size_t i = 0; i < c.n; ++i)
             roundtrip_error = std::max(roundtrip_error,
-                std::abs(std::complex<long double>(forward.coefficients[i])-std::complex<long double>(complex[i])));
+                Reference::absolute_error(Reference::Complex(forward.coefficients[i]), Reference::Complex(complex[i])));
     } else {
         Fourier::OnTheFlyIFFT<T> backward(c.n);
         backward.buffer(fft.coefficients.data());
@@ -337,7 +337,7 @@ void transform(const Config& c, bool real, bool inverse) {
             const auto expected = real ? std::complex<long double>(values[i]*window.get_samples()[i], 0)
                                        : std::complex<long double>(complex[i]);
             roundtrip_error = std::max(roundtrip_error,
-                std::abs(std::complex<long double>(backward.coefficients[i])-expected));
+                Reference::absolute_error(Reference::Complex(backward.coefficients[i]), expected));
         }
     }
     require(roundtrip_error < (sizeof(T) == 4 ? 2e-5 : 1e-10), "Transform round trip failed");

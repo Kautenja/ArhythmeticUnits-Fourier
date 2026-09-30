@@ -10,6 +10,8 @@
 namespace Paper {
 /// @brief Immediate batch analysis with cached float windows and band intervals.
 /// @details Preparation, conversion, magnitudes, smoothing and K stores are timed.
+/// Disabled smoothing bypasses prefix/band work and alpha=0 bypasses the EMA,
+/// matching the production analyzer's optional postprocessing semantics.
 template<typename T, typename Backend>
 struct ExternalAnalysis {
     Config config;
@@ -23,7 +25,9 @@ struct ExternalAnalysis {
     explicit ExternalAnalysis(const Config& c) : config(c), fft(c.n, "analysis"),
         window(Fourier::Window::Function::Hann, c.n, false, true), ring(c.n), frame(c.n),
         magnitudes(c.n/2+1), prefix(c.n/2+2), output(c.n/2+1), coefficients(c.n/2+1),
-        low(c.n/2+1), high(c.n/2+1), bands(c.smooth) { prepare_bands(); }
+        low(c.n/2+1), high(c.n/2+1), bands(c.smooth) {
+        if (bands) prepare_bands();
+    }
     // Binary64 interval arithmetic avoids float floor boundaries changing when
     // the compiler vectorizes this loop versus the hybrid's single-bin task.
     void prepare_bands() {
@@ -44,7 +48,7 @@ struct ExternalAnalysis {
                 window.set_window(frames++%2 ? Fourier::Window::Function::Hann
                     : Fourier::Window::Function::BlackmanHarris, config.n, false, true);
                 bands = frames%2 == 0;
-                prepare_bands();
+                if (bands) prepare_bands();
             }
             for (size_t i = 0; i < ring.size(); ++i)
                 frame[i] = ring[(head+i)%ring.size()]*window.get_samples()[i];
@@ -52,13 +56,13 @@ struct ExternalAnalysis {
             prefix[0] = 0;
             for (size_t k = 0; k < output.size(); ++k) {
                 magnitudes[k] = std::abs(coefficients[k]);
-                prefix[k+1] = prefix[k]+magnitudes[k];
+                if (bands) prefix[k+1] = prefix[k]+magnitudes[k];
             }
             const float alpha = config.smooth ? 0.8f : 0.f;
             for (size_t k = 0; k < output.size(); ++k) {
                 const T magnitude = bands ? (prefix[high[k]+1]-prefix[low[k]])/T(high[k]-low[k]+1)
                                           : magnitudes[k];
-                output[k] = alpha*output[k]+(1.f-alpha)*magnitude;
+                output[k] = alpha == 0.f ? magnitude : alpha*output[k]+(1.f-alpha)*magnitude;
             }
         }
         phase = (phase+1)%config.hop;

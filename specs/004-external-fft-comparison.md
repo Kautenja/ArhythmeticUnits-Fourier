@@ -26,6 +26,10 @@ integration remains outstanding. The initial numerical acceptance issue,
 provisional coverage, and versioned policy correction remain recorded under
 [pilot evidence](#fr-11-pilot-evidence).
 Implementation smoke checks do not constitute publication comparison evidence.
+The [pre-campaign publication audit](#pre-campaign-publication-audit) below
+records later benchmark corrections and the scope of the next measurement
+run. The completed FR-11 results describe their archived revision, not these
+updated adapters or the current production code.
 
 Complete implementation, correctness checks, and benchmark tooling first.
 Each framework or algorithm has its own functional requirement (FR), with an
@@ -71,6 +75,112 @@ Validation on macOS ARM64 (no timing campaign):
 
 No production DSP changes, plugin build, manual Rack session, new measurements,
 or manuscript result updates were part of this refactor. FR-12 remains open.
+
+## Pre-Campaign Publication Audit
+
+September 29, 2026: reviewed the suite at `34de6db` against the current
+production analyzer, intended claims, and primary benchmarking literature.
+This was a correctness, comparability, and presentation pass. No new timing
+campaign was launched, and historical campaign manifests/results were not
+changed. The numerical policy and acceptance thresholds remain unchanged.
+
+The existing suite covers the scoped scheduling paper: complete analysis,
+native transform baselines, matched batch/hybrid attribution, independent
+four-channel processing, inverse jobs, filtering chains, startup/live windows,
+callback size and phase, non-dividing hops, load, cache pressure, precision,
+and setup/storage evidence. A larger contender inventory is not a substitute
+for these matched contracts. No additional algorithm family is required to
+answer the current questions; the FR-7--FR-9 deferrals still apply.
+
+### Corrections And Presentation
+
+-   External analysis and both scheduled PFFFT modes now bypass unused
+    prefix/band work when band smoothing is disabled, and bypass zero-alpha
+    EMA arithmetic. This matches production's optional-processing semantics
+    without changing outputs, task counts, or publication timing. Leaving this
+    extra work in the baselines would disadvantage them in the next comparison.
+-   Opaque-transform artifact checks now require the promised all-bin and
+    direct-DFT reference counts. First-party transform round trips explicitly
+    reject non-finite errors before maximum accumulation. Negative fixtures
+    verify that corrupt evidence fails instead of silently passing.
+-   The report exposes every workload setting and observation count, separate
+    process timing controls, p99, observed maxima, and algorithmic ages in
+    human-readable tables. `process-timings.csv` retains process quantiles and
+    source/raw identities. `cost-tail-*.svg` / `.png` show mean cost against
+    callback p99 with observed session ranges; existing age plots use
+    milliseconds and callback CDFs use microseconds. Raw units remain available.
+-   Cost averages session means equally. P99 is the median of session medians
+    of per-process p99 values. Neither pools callbacks; ranges are descriptive,
+    not confidence intervals. Simulated audio spans and full-callback budget
+    percentages are not elapsed wall time, Rack CPU readings, or device
+    deadline evidence. A rare FFT burst can fall above p99, so retain maxima,
+    counts, replay coverage, and full distributions alongside it.
+
+The [claim-to-evidence map](../docs/whitepaper/benchmarks/README.md#claims-and-presentation)
+connects the intended questions to figures and comparison boundaries. Its
+methodology references include [Kalibera and Jones](https://kar.kent.ac.uk/33611/)
+on levels of repetition and uncertainty,
+[Mytkowicz et al.](https://sape.inf.usi.ch/publications/asplos09.html) on setup
+bias, and [benchFFT](https://www.fftw.org/accuracy/method.html) on independent
+references and relative vector errors. The protocol does not claim to
+implement their entire methodologies or benchFFT's arbitrary-precision oracle.
+
+### Remaining Claim-Dependent Gaps
+
+Two extensions would be substantive new work rather than minor audit fixes:
+
+1.  A comparative numerical-accuracy ranking of scalar core/legacy against
+    native providers requires equal per-run coverage. Scalar rows currently
+    have preflight coverage; native/scheduled and independent-four-channel
+    rows also replay every published output with norm checks. Suggested fix:
+    add the shared untimed output audit to scalar core/legacy dispatch and
+    validate its archive policy before including those rows in an accuracy
+    ranking. Until then, state the coverage and claim tested accuracy, not
+    numerical superiority. Large-frame binary64 references and weak-bin
+    diagnostics also remain explicit limitations.
+2.  A measured claim about arbitrary control-response latency requires
+    timestamped requests at multiple processing phases, including length/hop
+    changes and rapid replacement, with first-correct-publication age,
+    transient error, cancellation, and callback-tail evidence. Existing live
+    cases change window/band settings at frame boundaries with fixed N/H/rate.
+    Suggested fix: a focused transition experiment if this becomes a headline
+    claim; production regression tests alone are not a latency comparison.
+
+Neither gap invalidates the scoped cost/burst/age comparisons. Battery savings,
+cross-architecture generalization, ML feature quality, device underruns and
+display-thread contention require their own experiments if claimed. Headless
+module measurements remain an application case study, separate from core FFT
+ranking. Real-time work-unit bounds must not be called measured WCET bounds.
+
+### Validation And Next Run
+
+Validation on macOS ARM64:
+
+-   `make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX="$PWD/.build/deps/fftw"`:
+    passed for timing/allocation executables with all native providers enabled.
+    Existing Rack deprecation and FFTW deployment-target warnings remain.
+-   `DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify`:
+    passed independent/matched analysis, transform, inverse, filtering, and
+    hybrid fixtures.
+-   `.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+    42 tests passed, including deterministic plots, coverage corruption,
+    non-finite rejection, and optional-processing numerical regressions.
+    Synthesis verification uses Rack's actual
+    `-O3 -funsafe-math-optimizations` arithmetic flags; full `-ffast-math`
+    assumes finite values and is not a supported validation configuration.
+-   `python3 docs/whitepaper/benchmarks/campaigns.py --check`,
+    `make -C docs/whitepaper check`, local link checks, and `git diff --check`:
+    passed. Synthetic plot fixtures were visually checked; they are not
+    performance evidence. Logs are in `.build/paper-audit-20260929/`.
+
+No production DSP edits, plugin build, manual Rack check, or new comparative
+metrics belong to this audit. For the next run, freeze the updated measured
+source/dependencies and selected manifests together, retain a short pilot to
+check duration/timer resolution and variability, then gather fresh independent
+sessions. Preserve native-batch wins and unfavorable regimes in FR-12. Do not
+pool these new runs with FR-11's older implementation stratum or infer a
+speedup from a changed benchmark. FR-12 remains unfinished pending fresh
+evidence selection, manuscript integration, and reproducibility packaging.
 
 ## Review Of The Current Work
 

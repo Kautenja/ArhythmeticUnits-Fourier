@@ -1,9 +1,10 @@
 # Publication Measurement Protocol
 
-This suite measures the current Fourier code for the scheduling paper. It
-complements the Catch2 throughput benchmarks with individual observations,
-matched frame controls, and a repeatable protocol for future FFT backends.
-It does not update the manuscript's historical results or claim a speedup.
+This suite measures the selected Fourier source revision for the scheduling
+paper. It complements the Catch2 throughput benchmarks with individual
+observations, matched frame controls, and a repeatable comparison protocol.
+Each archive identifies its measured sources; new runs do not update the
+manuscript's historical results or establish a speedup automatically.
 
 For routine optimization, use the [fast C++ development pathway](DEVELOPMENT.md):
 `make benchmark-fast` runs a small fixed matrix, and `make benchmark-full`
@@ -116,7 +117,7 @@ size, analyzer count/alignment, and callback-origin offsets. They do not form
 an unrestricted Cartesian product. Final matrix reductions require a recorded
 rationale after the pilot.
 
-Run only a short implementation smoke check at this stage:
+For implementation validation, run a short smoke check:
 
 ```shell
 python3 docs/whitepaper/benchmarks/run.py .build/paper-fr10-smoke --config docs/whitepaper/benchmarks/configs/external-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --host-id apple-silicon-validation --session-id fr10-smoke
@@ -130,8 +131,11 @@ final configuration. Non-smoke execution requires explicit `--host-id` and
 Use a stable host identity and distinct labels for actual independent
 sessions. Record power, thermal state, host activity and ordering context in
 `--notes`. Labels alone cannot prove independence. The matrix inventory and
-input configuration hash are archived with every campaign. Publication
-measurements, including the pilot, remain FR-11 work.
+input configuration hash are archived with every campaign. The completed
+FR-11 confirmation and its source identities are recorded in the
+[owning spec](../../../specs/004-external-fft-comparison.md#fr-11-confirmation-evidence).
+Later revisions require separately identified evidence; confirmation status
+does not transfer to new code.
 
 Generate checked evidence tables and scientific SVG/PNG figures in a separate,
 new directory. Matplotlib is an optional reporting dependency, isolated from
@@ -147,7 +151,10 @@ python3 -m venv .build/paper-report-env
 `--no-plots` generates tables/JSON with standard Python alone. The optional
 plot fixture checks byte-identical SVG/PNG output in one plotting environment;
 font/runtime differences across environments are not a reproducibility claim.
-`results.csv` contains workload, cost, channel, age, storage and error fields;
+`results.csv` contains workload, cost, tail, channel, age, storage and error
+fields; `process-timings.csv` exposes each process's timing and observation
+window without pooling callbacks. Its `publication_audit_rows` counts the
+separate untimed replay's checks, not jobs observed inside the timed interval.
 `implementations.csv` joins native setup/storage/numerical evidence with source
 and dependency provenance. `evidence.json` retains every process summary,
 timer control, raw-data hash, numerical report and figure membership.
@@ -178,6 +185,88 @@ independent channels. Resource probes describe one bank. The older
 Existing scalar core/legacy analysis retains its preflight checks; reports
 explicitly mark its absent per-run numerical summary instead of inventing an
 error value. All of this code remains under `benchmark/`.
+
+## Claims And Presentation
+
+Choose the claim and matched workload before selecting a figure. Keep cases
+favoring native batch execution, and distinguish practical comparisons from
+controls that isolate scheduling. The intended mappings are:
+
+| Question | Evidence Boundary | Figure Or Table |
+| --- | --- | --- |
+| Does distributing work reduce bursts? | Matched scheduled-batch/hybrid pair with shared arithmetic and storage | Cost versus callback p99, with publication delay and observed session ranges |
+| Does suspending the FFT add practical value? | Core versus hybrid; arithmetic, layout and plan differences remain confounds | N/callback-size tradeoffs, including hybrid wins; no causal scheduling-overhead claim |
+| How does the complete analyzer compare? | Core versus ordinary native analysis; equal windows, outputs and independent channels | Cost versus N, tails and spectrum age; scalar and four-channel groups separate |
+| Are output and live-cache behavior correct? | Independent numerical/cadence checks and specified window/band changes | Accuracy/coverage table and steady/live comparison; report acceptance policy and oracle precision |
+| Does the result extend beyond analysis? | Periodic inverse jobs and complete filtering chains | Separate cost/tail/delivery tables; preserve each family's time origin |
+| Does it help the deployed modules? | Headless module processing plus separately recorded Rack observations | Application case study; identify host, patch, module settings and measured revision |
+
+`state=live` alternates Hann/Blackman-Harris windows and disabled/one-third-
+octave bands at frame boundaries. It stresses those cache transitions while
+retaining N, hop and sample rate. It does not measure arbitrary mid-frame
+control response, length changes, reset/sample-rate callbacks, display geometry
+changes or visible UI latency. Cite separate tests or experiments for those
+claims. Startup is a separate zero-padding condition, not a control change.
+
+Core analysis ends at magnitude output stores. Actual headless modules also
+include their input handling and engine-side display preparation/publication;
+they do not run a display thread, graphics loop, audio device or Rack engine
+worker. Their checks are not a substitute for the core's independent numerical
+oracle. Module CPU cost, FFT throughput and visible display response answer
+different questions. Module and correlated-lane fixtures are also distinct
+from the independent four-channel comparison.
+
+### Metric Definitions
+
+-   **Mean cost:** average process costs within each session, then average
+    session means equally. Keep callback and uninterrupted throughput passes
+    separate. Streaming cost is ns per engine sample for all configured
+    instances and included background work; transform cost is ns per transform.
+-   **Serial audio-time cost:** `100 * cost_ns_per_sample * rate / 1e9`.
+    This expresses synchronous work relative to simulated audio time. It is
+    neither a measured Rack meter value nor whole-device CPU utilization.
+-   **Callback p99:** compute each process's nearest-rank quantile, take the
+    median within each session, then report the median of session medians.
+    The accompanying range is the observed minimum/maximum of those session
+    medians. The cost-versus-p99 figure uses microseconds for its p99 axis;
+    the per-process CDFs retain distribution differences.
+-   **Callback budget fraction:** `100 * duration_seconds / (block / rate)`.
+    The denominator is the full callback interval, not an assigned analyzer
+    allowance. A simulated exceedance is not an observed audio underrun.
+-   **Observed maximum:** largest retained duration. Interpret it alongside
+    process observation counts, frame-job counts and windows. The reported
+    `observation_window_seconds` is the simulated audio span (engine samples
+    divided by sample rate), not elapsed wall-clock time; the driver runs as
+    fast as it can. Separate replay publication counts are not timed job
+    counts. Unequal windows do not provide equally strong opportunities to
+    observe rare events.
+    Many idle sample calls can coexist with few FFT bursts, so p99 alone can
+    miss the events of interest. A maximum is not a WCET bound.
+-   **Algorithmic age:** samples converted to milliseconds using the workload's
+    rate. Analysis uses spectrum-center age; inverse jobs use release-to-
+    publication delay; chains use input-to-delivery delay. Callback-end
+    visibility remains separate; none of these measures screen repaint delay.
+
+Raw nanosecond/sample values remain available beside derived units. No timer
+subtraction, callback pooling or inferential confidence interval is applied.
+Three labeled sessions are a reporting coverage floor, not proof of statistical
+independence. [Kalibera and Jones](https://kar.kent.ac.uk/33611/) motivate
+repetitions at the build/process/iteration levels where variation arises and
+effect-size intervals when their assumptions are justified.
+[Mytkowicz et al.](https://sape.inf.usi.ch/publications/asplos09.html) show why
+setup and layout bias can survive otherwise careful repetition. Our session
+ranges are descriptive; they do not claim either source's full methodology.
+
+For accuracy, [benchFFT](https://www.fftw.org/accuracy/method.html) motivates
+independent references and vector-relative errors. Our binary64 large-frame
+oracle is not arbitrary precision, and magnitude/smoothing errors do not
+inherit a complex FFT's unitary error identities. Follow the
+[versioned numerical policy](numerical-accuracy.md), retain weak-bin diagnostics,
+and expose preflight-only coverage rather than inventing per-run error values.
+
+Cross-architecture, battery-energy, worker-thread, overlap-reuse and hard
+deadline claims require their own evidence. They are conditional follow-ups,
+not extra contenders needed to rank the currently measured implementations.
 
 ## Shared Adapter Contracts
 

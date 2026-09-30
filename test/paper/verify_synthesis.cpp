@@ -2,6 +2,7 @@
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../../benchmark/paper/synthesis.hpp"
+#include <limits>
 
 template<typename Operation>
 void rejects(Operation operation) {
@@ -34,6 +35,21 @@ void fixtures() {
                 }
 }
 
+/// @brief Corrupt inverse/forward recovery must not disappear in a max reduction.
+template<typename T>
+void nonfinite_roundtrip() {
+    using namespace Paper;
+    require(Reference::absolute_error({3, 4}, {0, 0}) == 5, "Finite roundtrip error differs");
+    for (const T value : {std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::infinity()}) {
+        for (const std::complex<T> actual : {std::complex<T>(value, 0), std::complex<T>(0, value)}) {
+            rejects([&]() {
+                const auto error = std::max(0.L, Reference::absolute_error(Reference::Complex(actual), {0, 0}));
+                require(error < Reference::tolerance<T>(), "Roundtrip tolerance exceeded");
+            });
+        }
+    }
+}
+
 int main() {
     using namespace Paper;
     try {
@@ -41,6 +57,8 @@ int main() {
         verify_synthesis<double>();
         fixtures<float>();
         fixtures<double>();
+        nonfinite_roundtrip<float>();
+        nonfinite_roundtrip<double>();
         // A direct-sum oracle must reject scale, layout and missing-output errors.
         std::vector<Reference::Complex> expected = {Reference::Complex(1, 2), Reference::Complex(-3, 4)};
         std::vector<std::complex<double>> actual(expected.begin(), expected.end());

@@ -43,6 +43,31 @@ def variation(processes):
                 uncertainty="observed session range; no inferential interval")
 
 
+def callback_tails(processes):
+    """Summarize process quantiles without pooling callbacks or weighting busy sessions."""
+    sessions = defaultdict(list)
+    for row in processes:
+        sessions[row["session"]].append(row["timing"]["p99_ns"])
+    medians = {key: statistics.median(values) for key, values in sorted(sessions.items())}
+    return dict(session_median_p99_ns=medians, median_session_p99_ns=statistics.median(medians.values()),
+                observed_session_p99_min_ns=min(medians.values()),
+                observed_session_p99_max_ns=max(medians.values()),
+                observed_max_ns=max(p["timing"]["observed_max_ns"] for p in processes),
+                uncertainty="observed range of session medians of process p99; not a confidence interval")
+
+
+def ages(contract, rate):
+    """Keep distinct time origins; a buffered transform has no streaming age."""
+    result = {name+"_ms": (contract[name+"_samples"]*1000/rate
+                          if contract[name+"_samples"] is not None and contract[name+"_samples"] >= 0 else None)
+              for name in ("publication_delay", "center_offset", "playback_delay")}
+    result["spectrum_center_age_ms"] = (
+        result["publication_delay_ms"]+result["center_offset_ms"]
+        if contract["boundary"] == "analysis" and result["publication_delay_ms"] is not None
+        and result["center_offset_ms"] is not None else None)
+    return result
+
+
 def collect(directories, phase):
     records, sources, seen = {}, [], set()
     for directory in sorted(directories, key=lambda p: str(p.resolve())):
@@ -104,6 +129,7 @@ def collect(directories, phase):
                     cost_per_channel=cost/record["independent_channels"], timing=timing, timer=groups["timer"],
                     observation_count=len(values), observation_window_samples=config["callbacks"]*config["block"]
                         if mode in ("callback", "throughput") else None,
+                    publication_audit_rows=run["summary"]["publication_audit_rows"],
                     ecdf=[[values[i], (i+1)/len(values)] for i in indices],
                     callback_visible_age_range=[min(visible), max(visible)] if visible else None,
                     playback_delay_range=[min(playback), max(playback)] if playback else None,
@@ -112,6 +138,7 @@ def collect(directories, phase):
     result = []
     for key, record in sorted(records.items()):
         record["variation"] = variation(record["processes"])
+        record["tails"] = callback_tails(record["processes"]) if record["config"]["pass_name"] == "callback" else None
         if phase == "confirmation" and record["variation"]["sessions"] < 3:
             raise ValueError("Confirmation reporting requires at least three labeled sessions per workload/stratum")
         result.append(record)
@@ -133,12 +160,20 @@ def tables(data, output):
                "mode", "state", "callback_offset", "cost_unit", "mean_session_cost", "session_min", "session_max",
                "sessions", "processes", "publication_delay_samples", "center_offset_samples", "playback_delay_samples",
                "cpp_live_heap_bytes_min", "cpp_live_heap_bytes_max", "native_memory", "max_abs_error", "max_relative_l2", "max_relative_linf", "legacy_pointwise_failures", "numerical_status", "callback_visible_age_min", "callback_visible_age_max"]
+    workload_columns = ["config_sha256", "host", "rate", "count", "alignment", "load", "smooth", "voices",
+                        "cache_mib", "warm_hops", "callbacks"]
+    human_columns = ["mean_serial_audio_time_percent", "callback_budget_us", "median_session_p99_us",
+                     "session_p99_min_us", "session_p99_max_us", "observed_callback_max_us", "p99_budget_percent",
+                     "process_observations_min", "process_observations_max", "observation_window_seconds",
+                     "publication_delay_ms", "center_offset_ms", "playback_delay_ms", "spectrum_center_age_ms"]
+    columns += workload_columns+human_columns
     lines = ["# External FFT Evidence Report", "", "Evidence phase: **"+data["phase"].upper()+"**.", "",
              "SMOKE data validates tooling only and must not enter manuscript results." if data["phase"] == "smoke"
              else "Pilot informs design; only frozen confirmation campaigns support final results.", "", LIMITS, "",
-             "See results.csv for matched workload/cost/age/error/storage columns and evidence.json for every process, native plan, raw-data hash and source identity.", "",
-             "| Backend | Family / Operation | N / H | Channels | Cost | Session Range | Sessions |",
-             "| --- | --- | ---: | ---: | ---: | --- | ---: |"]
+             "See results.csv for every workload setting and results in raw and human units; process-timings.csv exposes each process's quantiles, timer control, observation count and window. evidence.json retains native plans, raw-data hashes and source identity.", "",
+             "Cost is the mean of session means. P99 is the median of session medians of process p99 values; brackets give the observed session-median range. Maxima are observed, not bounds. No callbacks are pooled. Blank CSV fields mean not applicable or unavailable.", "",
+             "Serial audio-time % expresses measured synchronous work relative to simulated audio time; it is not a Rack CPU meter or an energy measurement. Budget % uses the entire callback interval, of which an analyzer receives only a share. Ages end at algorithmic publication/delivery, not screen repaint.", "",
+             "Observation windows are simulated audio spans, not elapsed wall time: the driver has no real-time pacing. timed_total_ns sums measured intervals only. Publication audit counts come from a separate untimed replay; they are not hardware or timed-burst counters.", ""]
     with (output/"results.csv").open("w", newline="") as stream:
         writer = csv.writer(stream); writer.writerow(columns)
         for r in data["records"]:
@@ -149,6 +184,21 @@ def tables(data, output):
             status = sorted({p["numerical_status"] for p in r["processes"]})
             visible = [age for p in r["processes"] for age in (p["callback_visible_age_range"] or [])]
             unit = r["processes"][0]["cost_unit"]
+            streaming = c["pass_name"] in ("callback", "throughput")
+            tails = r["tails"]
+            budget_us = 1e6*c["block"]/c["rate"] if tails else None
+            age = ages(contract, c["rate"])
+            extra = [identity(c), r["host"]]+[c[key] for key in workload_columns[2:]]
+            human = [v["mean_of_session_means"]*c["rate"]/1e7 if streaming else None, budget_us,
+                     tails["median_session_p99_ns"]/1000 if tails else None,
+                     tails["observed_session_p99_min_ns"]/1000 if tails else None,
+                     tails["observed_session_p99_max_ns"]/1000 if tails else None,
+                     tails["observed_max_ns"]/1000 if tails else None,
+                     tails["median_session_p99_ns"]/10/budget_us if tails else None,
+                     min(p["observation_count"] for p in r["processes"]),
+                     max(p["observation_count"] for p in r["processes"]),
+                     c["callbacks"]*c["block"]/c["rate"] if streaming else None,
+                     *age.values()]
             writer.writerow([r["stratum"], c["backend"], contract["boundary"], contract["operation"], contract["precision"],
                 c["n"], c["hop"], c["block"], r["independent_channels"], c["pass_name"], c["state"], c.get("callback_offset", 0),
                 unit, v["mean_of_session_means"], v["observed_session_min"], v["observed_session_max"], v["sessions"], v["processes"],
@@ -157,10 +207,34 @@ def tables(data, output):
                 max(x["max_relative_l2"] for x in norms) if norms else "unavailable",
                 max(x["max_relative_linf"] for x in norms) if norms else "unavailable",
                 sum(x["legacy_pointwise_failures"] for x in norms) if norms else "unavailable", "; ".join(status),
-                min(visible) if visible else "unavailable", max(visible) if visible else "unavailable"])
-            lines.append(f"| {c['backend']} | {contract['boundary']} / {contract['operation']} | {c['n']} / {c['hop']} | "
-                         f"{r['independent_channels']} | {v['mean_of_session_means']:.3f} {unit} | "
-                         f"{v['observed_session_min']:.3f}–{v['observed_session_max']:.3f} | {v['sessions']} |")
+                min(visible) if visible else "unavailable", max(visible) if visible else "unavailable"]+extra+human)
+    # Group only identical contracts/settings; the header names all experimental factors.
+    matched = defaultdict(list)
+    for record in data["records"]:
+        matched[comparison_key(record)].append(record)
+    def number(value):
+        return "N/A" if value is None else f"{value:.3f}"
+    for key, members in sorted(matched.items()):
+        r = members[0]
+        c, contract = r["config"], r["contract"]
+        lines += [f"## Matched Group {key}", "",
+                  f"{contract['boundary']} / {contract['operation']}; {contract['precision']}; "
+                  f"{r['independent_channels']} channels; {r['input_contract']}; host {r['host']}; stratum {r['stratum']}.", "",
+                  "Settings: "+", ".join(f"{k}={v}" for k, v in sorted(c.items()) if k != "backend")+".", "",
+                  "| Backend | Mean Cost (ns) / Unit | Session Cost Range | P99 [Range] (us) | Max (us) | Spectrum / Publication / Delivery Age (ms) | Sessions / Processes |",
+                  "| --- | ---: | --- | --- | ---: | --- | ---: |"]
+        for r in sorted(members, key=lambda x: x["config"]["backend"]):
+            v, t = r["variation"], r["tails"]
+            tail = (f"{t['median_session_p99_ns']/1000:.3f} [{t['observed_session_p99_min_ns']/1000:.3f}, "
+                    f"{t['observed_session_p99_max_ns']/1000:.3f}]" if t else "N/A")
+            age = ages(r["contract"], r["config"]["rate"])
+            age_text = " / ".join(number(age[k]) for k in ("spectrum_center_age_ms", "publication_delay_ms", "playback_delay_ms"))
+            lines.append(f"| {r['config']['backend']} | {v['mean_of_session_means']:.3f} / "
+                         f"{r['processes'][0]['cost_unit'].split('/', 1)[1]} | "
+                         f"{v['observed_session_min']:.3f}–{v['observed_session_max']:.3f} | {tail} | "
+                         f"{number(t['observed_max_ns']/1000 if t else None)} | {age_text} | {v['sessions']} / {v['processes']} |")
+        lines.append("")
+    process_tables(data, output)
     with (output/"implementations.csv").open("w", newline="") as stream:
         writer = csv.writer(stream)
         writer.writerow(["stratum", "backend", "config_sha256", "provider", "plan_policy", "descriptor",
@@ -176,6 +250,44 @@ def tables(data, output):
                 json.dumps([dict(session=p["session"], repeat=p["repeat"], accuracy=p["accuracy"], status=p["numerical_status"])
                             for p in r["processes"]], sort_keys=True)])
     (output/"report.md").write_text("\n".join(lines)+"\n")
+
+
+def process_tables(data, output):
+    config_keys = sorted({key for r in data["records"] for key in r["config"]})
+    columns = ["stratum", "host", "config_sha256", *config_keys, "session", "repeat", "cost", "cost_unit",
+               "observations", "observation_window_samples", "observation_window_seconds", "publication_audit_rows",
+               "timed_total_ns", "timed_total_us", "p50_ns", "p95_ns", "p99_ns", "observed_max_ns",
+               "p50_us", "p95_us", "p99_us", "observed_max_us",
+               "callback_budget_us", "observed_compute_budget_exceedances", "compute_budget_exceedance_fraction",
+               "timer_p99_us", "timer_max_us", "publication_delay_ms", "center_offset_ms", "playback_delay_ms",
+               "spectrum_center_age_ms", "callback_visible_age_min_ms", "callback_visible_age_max_ms", "raw", "raw_sha256"]
+    with (output/"process-timings.csv").open("w", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=columns)
+        writer.writeheader()
+        for r in data["records"]:
+            c = r["config"]
+            for p in r["processes"]:
+                t = p["timing"]
+                row = dict(c, stratum=r["stratum"], host=r["host"], config_sha256=identity(c),
+                           **{k: p[k] for k in ("session", "repeat", "cost", "cost_unit", "observation_window_samples",
+                                               "publication_audit_rows", "raw", "raw_sha256")},
+                           observations=p["observation_count"],
+                           timed_total_ns=t["total_ns"], timed_total_us=t["total_ns"]/1000,
+                           observation_window_seconds=p["observation_window_samples"]/c["rate"]
+                               if p["observation_window_samples"] is not None else None,
+                           timer_p99_us=p["timer"]["p99_ns"]/1000, timer_max_us=p["timer"]["observed_max_ns"]/1000,
+                           **ages(r["contract"], c["rate"]))
+                for name in ("p50", "p95", "p99", "observed_max"):
+                    row[name+"_ns"] = t[name+"_ns"]
+                    row[name+"_us"] = t[name+"_ns"]/1000
+                if c["pass_name"] == "callback":
+                    row.update(callback_budget_us=t["budget_ns"]/1000,
+                               observed_compute_budget_exceedances=t["observed_compute_budget_exceedances"],
+                               compute_budget_exceedance_fraction=t["observed_compute_budget_exceedances"]/p["observation_count"])
+                if p["callback_visible_age_range"]:
+                    row.update(callback_visible_age_min_ms=p["callback_visible_age_range"][0]*1000/c["rate"],
+                               callback_visible_age_max_ms=p["callback_visible_age_range"][1]*1000/c["rate"])
+                writer.writerow(row)
 
 
 def figures(data, output):
@@ -233,25 +345,41 @@ def figures(data, output):
             color = plt.get_cmap("tab10")(color_index%10)
             name = r["config"]["backend"]
             for i, p in enumerate(r["processes"]):
-                axes[0].step([x[0] for x in p["ecdf"]], [x[1] for x in p["ecdf"]], where="post", color=color, alpha=.6, label=name if i == 0 else None)
+                axes[0].step([x[0]/1000 for x in p["ecdf"]], [x[1] for x in p["ecdf"]], where="post", color=color, alpha=.6, label=name if i == 0 else None)
             contract = r["contract"]
             age = contract["playback_delay_samples"] if contract["boundary"] == "chain" else contract["publication_delay_samples"]
             if contract["boundary"] == "analysis":
                 age += contract["center_offset_samples"]
+            age *= 1000/r["config"]["rate"]
             v = r["variation"]
             axes[1].plot(age, v["mean_of_session_means"], ".", color=color, label=name)
             axes[1].vlines(age, v["observed_session_min"], v["observed_session_max"], color=color)
         # Keep rare long observations visible without compressing the bulk of
         # the distribution. Symlog also retains timer-quantized zero durations;
         # the 1 ns linear region is a display scale, not a resolution claim.
-        axes[0].set_xscale("symlog", linthresh=1)
-        axes[0].set(xlabel="Callback duration (ns; symlog scale)", ylabel="Empirical CDF per process", ylim=(0, 1.02))
-        axes[1].set(xlabel="Delivery delay (samples)" if members[0]["contract"]["boundary"] == "chain" else ("Spectrum-center age (samples)" if members[0]["contract"]["boundary"] == "analysis"
-                      else "Publication delay (samples)"), ylabel="ns/engine-sample")
+        axes[0].set_xscale("symlog", linthresh=.001)
+        axes[0].set(xlabel="Callback duration (µs; symlog scale)", ylabel="Empirical CDF per process", ylim=(0, 1.02))
+        axes[1].set(xlabel="Delivery delay (ms)" if members[0]["contract"]["boundary"] == "chain" else ("Spectrum-center age (ms)" if members[0]["contract"]["boundary"] == "analysis"
+                      else "Publication delay (ms)"), ylabel="ns/engine-sample")
         for ax in axes:
             ax.legend(fontsize=5); ax.grid(alpha=.2)
         fig.suptitle(title(members))
         save(fig, "tail-age-"+key, "per-process callback CDF and cost/age; no pooled callbacks", members)
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for color_index, r in enumerate(sorted(members, key=lambda r: r["config"]["backend"])):
+            color = plt.get_cmap("tab10")(color_index%10)
+            v, t = r["variation"], r["tails"]
+            x, y = v["mean_of_session_means"], t["median_session_p99_ns"]/1000
+            ax.plot(x, y, ".", color=color, label=r["config"]["backend"])
+            ax.hlines(y, v["observed_session_min"], v["observed_session_max"], color=color)
+            ax.vlines(x, t["observed_session_p99_min_ns"]/1000, t["observed_session_p99_max_ns"]/1000, color=color)
+        ax.set(xlabel="Mean cost (ns/engine-sample)", ylabel="Callback p99 (µs; median of session medians)",
+               title=title(members))
+        ax.text(.01, .01, "Lower left = lower cost and p99; bars = observed session ranges\n"
+                "Inspect age and maximum tables too; p99 can miss rare FFT bursts",
+                transform=ax.transAxes, fontsize=6, va="bottom")
+        ax.legend(fontsize=6, loc="best"); ax.grid(alpha=.2)
+        save(fig, "cost-tail-"+key, "mean cost versus callback p99; observed session ranges", members)
     return catalog
 
 
