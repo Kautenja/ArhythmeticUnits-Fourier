@@ -27,14 +27,17 @@ the decision records the evidence limits and conditions for reopening them.
 
 ## Layout
 
-The C++ measurement suite and its source map live in
+The [explicit workload guide](workloads.md) documents protocol-v3 controls,
+small profiles, and scheduling tables. Historical v1/v2 records keep their
+original contracts. The C++ measurement suite and its source map live in
 [`benchmark/paper`](../../../../benchmark/paper/README.md). The private [`lib/`](../lib/) directory owns
 `run.py` (campaign orchestration and raw archives), `check.py` (artifact
 validation), and `report.py` / `hybrid_report.py` (derived statistics and plots).
 `observations.py` shares CSV validation, summary statistics and compact plot
-data. Ordinary checking and reporting parse each CSV once and sort each timing
+data. Historical checking and reporting parse each CSV once and sort each timing
 group once; reports reuse the verified artifact hash. Transition reports also
-read callback coordinates to derive their event windows. Integrity checks,
+read callback coordinates to derive their event windows. V3 scheduling metrics
+also read the original ordered coordinates and execution sidecar. Integrity checks,
 original-order floating-point totals, raw files and command-line usage are
 preserved.
 `configs/` contains workload selections; `backends.json` describes capabilities.

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
 from pathlib import Path
+from workloads import validate as validate_controls, contract_fields
 
 
 def load_registry(path=None, features=()):
@@ -70,6 +71,7 @@ def validate_config(config, registry=None, measurement=False):
         from transitions import validate_transition_config
         validate_transition_config(config, registry)
     d = descriptor(config["backend"], registry)
+    validate_controls(config, d)
     bounds = dict(n=(d["size_min"], d["size_max"]), hop=(1, 65536), block=(1, 65536),
                   count=(1, 64), load=(0, 4096), voices=(1, d["max_voices"]),
                   rate=(8000, 192000), cache_mib=(0, 256), smooth=(0, 1))
@@ -137,7 +139,7 @@ def resolve_contract(config, registry=None):
                 layout=d["layout"], normalization=d["normalization"], origin=origin,
                 outputs_per_channel=outputs, publication_delay_samples=delay,
                 center_offset_samples=center, playback_delay_samples=playback, step_count=steps,
-                step_model=model, operation=d["operation"], plan=d["plan"])
+                step_model=model, operation=d["operation"], plan=d["plan"], **contract_fields(config))
 
 SYNTHESIS_BACKENDS = {
     f"{family}-{mode}-{precision}"

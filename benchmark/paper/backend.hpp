@@ -7,6 +7,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include "workload.hpp"
 
 namespace Paper {
 #include "registry.generated.hpp"
@@ -23,6 +24,7 @@ inline const BackendDescriptor& backend_descriptor(const std::string& name) {
 template<typename Config>
 void validate_backend(const Config& c) {
     const auto& d = backend_descriptor(c.backend);
+    validate_workload_controls(c, d);
     auto check = [](bool valid) { if (!valid) throw std::runtime_error("Unsupported backend workload"); };
     check(c.n >= d.size_min && c.n <= d.size_max && c.n%d.size_multiple == 0
         && (!d.power_of_two || !(c.n&(c.n-1))) && (!d.fixed_n || c.n == d.fixed_n)
@@ -101,7 +103,12 @@ std::string contract_json(const Config& c) {
         << ",\"playback_delay_samples\":" << r.playback << ",\"step_count\":";
     if (r.has_steps) out << r.steps; else out << "null";
     out << ",\"step_model\":\"" << d.step_model << "\",\"operation\":\"" << d.operation
-        << "\",\"plan\":\"" << d.plan << "\"}";
+        << "\",\"plan\":\"" << d.plan << '"';
+    if (c.workload_schema == 3) out << ",\"workload\":" << workload_controls_json(c)
+        << ",\"effective_octave\":" << octave_width(c)
+        << ",\"effective_temporal_alpha\":" << temporal_alpha(c)
+        << ",\"input_contract\":\"finite-float-v3; abs(input)<=1; silence/decay may flush subnormals\"";
+    out << '}';
     return out.str();
 }
 }  // namespace Paper

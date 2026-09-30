@@ -35,16 +35,25 @@ def checked_report(path):
     if data.get("tooling_sha256") != current:
         raise ValueError("Stale report tools; regenerate before selecting/exporting")
     fresh = collect(campaigns, data["phase"])
+    if data.get("schema") != fresh["schema"]:
+        raise ValueError("Report schema disagrees with checked workloads")
+    if fresh["schema"] == 2:
+        def scheduling(document):
+            return {(r["stratum"], identity(r["config"]), p["session"], p["repeat"]): p.get("scheduling")
+                    for r in document["records"] for p in r["processes"]}
+        if scheduling(data) != scheduling(fresh):
+            raise ValueError("Stale or edited scheduling evidence")
     # Re-derive the source of numeric claims; checksums alone do not establish a statistic.
     with tempfile.TemporaryDirectory() as temporary:
         tables(fresh, Path(temporary))
+        extra = tuple("scheduling-"+name+".csv" for name in ("processes", "analyzers", "hops", "phases", "budgets", "sessions")) if fresh["schema"] == 2 else ()
         for name in (
             "results.csv",
             "accuracy-coverage.csv",
             "transitions-responses.csv",
             "transitions-callback-costs.csv",
             "transitions-publications.csv",
-        ):
+        )+extra:
             # Path columns differ after relocation; compare numeric/identity columns.
             old = read_csv(path / name)
             new = read_csv(Path(temporary) / name)

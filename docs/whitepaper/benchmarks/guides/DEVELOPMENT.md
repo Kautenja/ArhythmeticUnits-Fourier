@@ -38,11 +38,15 @@ macOS measurements; directly launching an unprotected timing pass fails.
 
 | Profile | Workload Selection | Default Observation Policy |
 | --- | --- | --- |
-| `fast` | 24 workloads: six matched float analyzers at N=2048/H=1024/B=64, smoothing off/on, callback and throughput | Three shared-process repetitions, 32 measured hops, eight warmup hops |
-| `full` | Fast cases plus N=128/512/8192/16384, H=37/257/509, live/startup states, staggered banks/load, independent scalar/SIMD channels, modules, inverse/filtering paths, and compiled transform providers | Three shared-process repetitions, 128 measured hops or transform frames, 32 warmup hops |
+| `fast` | 36 workloads, or 40 with vDSP: six scalar float analyzers, independent SIMD, Fourier, Spectre, and optional native vDSP at N=2048/H=1024/B=64; smoothing off/on, callback and throughput | Three shared-process repetitions, 32 measured hops, eight warmup hops |
+| `full` | Broader scalar sweep with N=128/512/8192/16384, H=37/257/509, live/startup states, staggered banks/load, independent scalar/SIMD channels, representative modules, inverse/filtering paths, and compiled transform providers | Three shared-process repetitions, 128 measured hops or transform frames, 32 warmup hops |
 
 The six primary analyzers are the production core, legacy batch/incremental,
-ordinary PFFFT batch, and the matched scheduled PFFFT batch/hybrid pair. The
+ordinary PFFFT batch, and the matched scheduled PFFFT batch/hybrid pair. Fast
+mode now also covers the existing vDSP adapter when enabled; `--list` states
+its omission otherwise. Efficient replacement native adapters remain Phase 3
+work. Fast is a focused development selection, not a ranking across these
+different channel/module boundaries. The
 full profile contains 210 workloads with Rack/PFFFT alone and 240 with both
 optional FFTW and vDSP enabled. Its additional sizes and hops provide checks
 outside the fixed tuning set; once used for tuning they are no longer unseen
@@ -128,11 +132,19 @@ Streaming windows round up to complete callbacks. Throughput measures that
 same sample count in up to eight ordered, callback-aligned chunks. Their sum
 remains one aggregate CSV observation; the execution sidecar retains individual
 chunks. Timer observations are never subtracted.
-Phase/individual-step experiments remain in the publication runner.
+Phase/individual-step experiments remain in the publication runner. New
+[explicit workload controls and scheduling reports](workloads.md) separate
+windows, octave/temporal smoothing, fixtures, ports, and execution regime.
 
 For custom workloads, `--config` accepts the existing frozen JSON array format,
 including the confirmation configurations. Invalid fields, unsupported
-providers, duplicate workloads, and empty selections fail before measurement:
+providers, duplicate workloads, and empty selections fail before measurement.
+V3 arrays must include the complete explicit control object on each v3 row;
+the native parser does not infer omitted control fields. The native result's
+derived `contract` and `cost_unit` fields are output metadata, not `--config`
+input. Supply base workload settings and resolved v3 controls; omit
+`callbacks`/`warm_hops`, which development derives from `--hops`/`--warm-hops`.
+Do not pass a results document or whole plan as the workload array:
 
 ```shell
 make benchmark-fast BENCHMARK_DEV_OUT=.build/custom BENCHMARK_DEV_ARGS="--config docs/whitepaper/benchmarks/history/configs/external-confirmation-primary.json --list"

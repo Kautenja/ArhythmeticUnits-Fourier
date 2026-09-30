@@ -16,6 +16,7 @@
 #endif
 #include <jansson.h>
 #include "development_matrix.hpp"
+#include "workload_json.hpp"
 
 namespace Paper {
 namespace Development {
@@ -140,9 +141,11 @@ inline Json environment() {
 inline Config config_from_json(json_t* j) {
     require(json_is_object(j), "Workload must be an object");
     Config c = base();
+    if (json_object_get(j, "workload_schema")) parse_workload_controls(c, j, false);
     const char* key; json_t* value;
     json_object_foreach(j, key, value) {
         const std::string name(key);
+        if (c.workload_schema == 3 && control_fields().count(name)) continue;
         if (name == "backend") c.backend = string(value);
         else if (name == "pass_name") c.pass = string(value);
         else if (name == "alignment") c.alignment = string(value);
@@ -187,6 +190,10 @@ inline Json config_json(const Config& c) {
     set(j, "rate", c.rate); set(j, "smooth", c.smooth ? 1 : 0);
     set(j, "cache_mib", c.cache_mib); set(j, "callback_offset", c.callback_offset);
     set(j, "callbacks", c.callbacks); set(j, "warm_hops", c.warm_hops);
+    if (c.workload_schema == 3) {
+        auto controls = own(json_loads(workload_controls_json(c).c_str(), 0, nullptr));
+        require(json_object_update(j.get(), controls.get()) == 0, "Cannot store workload controls");
+    }
     set(j, "cost_unit", c.pass == "callback" || c.pass == "throughput"
         ? "ns/engine-sample" : "ns/transform");
     set(j, "contract", own(json_loads(contract_json(c).c_str(), 0, nullptr)));
@@ -309,11 +316,17 @@ int run(int argc, char** argv, const std::string& executable,
     const auto configs = matrix(o);
     if (o.list) {
         for (const auto& c : configs) std::cout << identity(c) << '\n';
+        if (o.profile == "fast")
+            for (const auto& d : backend_registry) if (std::string(d.id) == "vdsp-analysis-float" && !d.available)
+                std::cout << "Omitted vdsp-analysis-float: " << d.reason << '\n';
         std::cout << configs.size() << " workloads, " << configs.size()*o.repeats << " repetitions\n";
         return 0;
     }
     require(!o.output.empty(), "Use --output with a new directory (or --list)");
-    for (const auto& c : configs) Execution::Policy::configured(c.pass);
+    for (const auto& c : configs) {
+        const auto requested = Execution::Policy::configured(c.pass);
+        require(c.workload_schema < 3 || c.execution_regime == requested.regime, "Workload/execution regime mismatch");
+    }
     const auto policy = Execution::Policy::configured(configs.front().pass);
     const auto settle_seconds = Execution::number("PAPER_SESSION_SETTLE_SECONDS", 180, 3600);
     require(settle_seconds >= 180, "Session settling must be at least 180 seconds");

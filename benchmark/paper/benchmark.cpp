@@ -85,6 +85,8 @@ void execute(const Config& c, bool provider_info = false) {
     Paper::Context context(c.rate);
     std::unique_ptr<Execution::Session> execution;
     if (!c.resources && !provider_info) execution.reset(new Execution::Session(c.pass));
+    if (execution && c.workload_schema == 3)
+        require(execution->policy.regime == c.execution_regime, "Workload/execution regime mismatch");
     if (!c.transition_suite.empty()) {
         require(!provider_info, "Use transition resource and trace provenance");
         if (c.backend == "core-float") Transition::run<float, Transition::CoreEngine<float>>(c);
@@ -174,7 +176,7 @@ int main(int argc, char** argv) {
             c.transition_control = std::string(argv[3]) == "control";
             argc -= 3; argv += 3;
         }
-        require(argc == 17 || argc == 18, "Use docs/whitepaper/benchmarks/lib/run.py; expected v1 or v2 protocol arguments");
+        require(argc == 17 || argc == 18 || argc == 19, "Use run.py; expected v1, v2 or v3 protocol arguments");
         c.backend = argv[1]; c.pass = argv[2]; c.n = integer(argv[3]); c.hop = integer(argv[4]);
         c.block = integer(argv[5]); c.count = integer(argv[6]); c.alignment = argv[7];
         c.load = integer(argv[8]);
@@ -184,8 +186,13 @@ int main(int argc, char** argv) {
         c.callbacks = integer(argv[11]); c.warm_hops = integer(argv[12]); c.rate = integer(argv[13]);
         c.state = argv[14]; c.cache_mib = integer(argv[15]);
         require((argc == 17 && std::string(argv[16]) == "v1")
-            || (argc == 18 && std::string(argv[17]) == "v2"), "Unknown protocol version");
-        c.callback_offset = argc == 18 ? integer(argv[16]) : 0;
+            || (argc == 18 && std::string(argv[17]) == "v2")
+            || (argc == 19 && std::string(argv[17]) == "v3"), "Unknown protocol version");
+        c.callback_offset = argc >= 18 ? integer(argv[16]) : 0;
+        if (argc == 19) {
+            auto controls = Development::own(json_loads(argv[18], JSON_REJECT_DUPLICATES, nullptr));
+            parse_workload_controls(c, controls.get());
+        }
         require(c.n >= 128 && c.n <= 16384 && !(c.n & (c.n-1)) && c.hop && c.hop <= 65536,
             "Invalid FFT length or hop");
         require(c.block && c.block <= 65536 && c.count && c.count <= 64 && c.callbacks

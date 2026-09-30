@@ -30,9 +30,9 @@ struct Core {
         settings.length = c.n;
         settings.hop = c.hop;
         settings.sample_rate = c.rate;
-        settings.window = Fourier::Window::Function::Hann;
-        settings.octave = c.smooth ? 1.f/3.f : 0.f;
-        settings.alpha = c.smooth ? 0.8f : 0.f;
+        settings.window = window_function(c);
+        settings.octave = octave_width(c);
+        settings.alpha = temporal_alpha(c);
         require(analysis.configure(settings), "Core settings rejected");
     }
     void process_value(T input) {
@@ -57,7 +57,7 @@ struct Core {
             require(std::isfinite(sum(value)), "Non-finite core output");
             total += sum(value);
         }
-        require(total > 0, "Core output is empty");
+        require(!output.empty() && std::isfinite(total), "Core output is empty or non-finite");
     }
 };
 
@@ -73,10 +73,11 @@ struct Legacy {
     std::vector<T> ring, frame, output;
     size_t head = 0, phase = 0, frames = 0;
     bool complete = false, delivered = false, smooth, immediate;
+    float alpha;
     explicit Legacy(const Config& c) : config(c), fft(c.n),
-        window(Fourier::Window::Function::Hann, c.n, false, true),
-        ring(c.n, T(0)), frame(c.n), output(c.n/2+1, T(0)), smooth(c.smooth),
-        immediate(std::string(backend_descriptor(c.backend).schedule) == "immediate") {}
+        window(window_function(c), c.n, false, true),
+        ring(c.n, T(0)), frame(c.n), output(c.n/2+1, T(0)), smooth(octave_width(c) > 0),
+        immediate(std::string(backend_descriptor(c.backend).schedule) == "immediate"), alpha(temporal_alpha(c)) {}
     size_t delay() const {
         if (immediate) return 0;
         const size_t steps = fft.get_total_steps();
@@ -102,8 +103,7 @@ struct Legacy {
             if (immediate) fft.compute();
             else fft.step(config.hop);
             if (fft.is_done_computing()) {
-                if (smooth) fft.smooth(config.rate, 1.f/3.f);
-                const float alpha = config.smooth ? 0.8f : 0.f;
+                if (smooth) fft.smooth(config.rate, config.workload_schema == 3 ? octave_width(config) : 1.f/3.f);
                 for (size_t k = 0; k < output.size(); ++k)
                     output[k] = alpha*output[k] + (1.f-alpha)*std::abs(fft.coefficients[k]);
                 delivered = complete = true;
@@ -119,7 +119,7 @@ struct Legacy {
             require(std::isfinite(value), "Non-finite legacy output");
             total += value;
         }
-        require(total > 0, "Empty legacy output");
+        require(!output.empty() && std::isfinite(total), "Empty or non-finite legacy output");
     }
 };
 

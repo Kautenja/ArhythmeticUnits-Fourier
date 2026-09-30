@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import tarfile
 
+from workloads import FIELDS, expand
 from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, validate_config
 from dependencies import fftw_inputs
 from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
@@ -42,7 +43,7 @@ def source_inputs(root=ROOT):
 
 
 def workload(**changes):
-    return dict(BASE, **changes)
+    return expand(dict(BASE, **changes))
 
 
 def matrix(profile):
@@ -125,7 +126,8 @@ def command(config, executable=BINARY):
     prefix = (["--transition", config["transition_suite"],
                "control" if config.get("transition_control", False) else "change"]
               if config.get("transition_suite") else [])
-    return [str(executable)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
+    return ([str(executable)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0))]
+            + (["v3", json.dumps({k: config[k] for k in sorted(FIELDS)})] if config.get("workload_schema") == 3 else ["v2"]))
 
 
 def digest(path):
@@ -214,8 +216,8 @@ def main():
     if not (args.list or args.describe_matrix) and phase != "smoke" and not (args.session_id and args.host_id):
         parser.error("Pilot/confirmation requires explicit --host-id and --session-id")
     for config in configs:
-        if config.keys() - (set(BASE) | {"transition_suite", "transition_control"}):
-            parser.error("Unknown workload keys: " + str(config.keys() - (set(BASE) | {"transition_suite", "transition_control"})))
+        if config.keys() - (set(BASE) | FIELDS | {"transition_suite", "transition_control"}):
+            parser.error("Unknown workload keys: " + str(config.keys() - (set(BASE) | FIELDS | {"transition_suite", "transition_control"})))
         try:
             validate_config(config, registry)
         except ValueError as error:

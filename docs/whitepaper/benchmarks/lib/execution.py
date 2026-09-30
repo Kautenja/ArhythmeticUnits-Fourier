@@ -38,6 +38,8 @@ def validate_policy(value, configs=()):
             raise ValueError("Invalid execution policy: " + key)
     if value["regime"] == "paced" and any(c["pass_name"] != "callback" for c in configs):
         raise ValueError("Paced execution requires a callback-only workload matrix")
+    if any(c.get("workload_schema") == 3 and c["execution_regime"] != value["regime"] for c in configs):
+        raise ValueError("Workload execution regime differs from campaign policy")
     return value
 
 
@@ -311,6 +313,8 @@ def validate_campaign(metadata):
     """Historical archives remain readable; new sources cannot omit their policy."""
     policy = metadata.get("execution_policy")
     if policy is None:
+        if any(c.get("workload_schema") == 3 for c in metadata.get("configs", [])):
+            raise ValueError("Explicit workloads require execution evidence")
         if "benchmark/paper/execution.hpp" in metadata.get("source_sha256", {}):
             raise ValueError("New measurement sources require an execution contract")
         if any("execution" in item for item in metadata["runs"]):

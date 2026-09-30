@@ -35,12 +35,15 @@ struct ScheduledAnalysis {
     size_t head = 0, origin = 0, cursor = 0, frames = 0;
     bool bands, dirty = false;
     Fourier::Window::Function function = Fourier::Window::Function::Hann;
-    float gain = 2.f;
+    float gain = 2.f, alpha;
 
     explicit ScheduledAnalysis(const Config& c) : config(c), fft(c.n, "analysis"),
         schedule(c, c.n+1+2*(c.n/2+1)), ring(c.n+c.hop), frame(c.n),
         magnitudes(c.n/2+1), prefix(c.n/2+2), output(c.n/2+1),
-        coefficients(c.n/2+1), window(c.n), low(c.n/2+1), high(c.n/2+1), bands(c.smooth) {
+        coefficients(c.n/2+1), window(c.n), low(c.n/2+1), high(c.n/2+1), bands(octave_width(c) > 0),
+        alpha(temporal_alpha(c)) {
+        function = window_function(c);
+        gain = 1.f/Fourier::Window::coherent_gain(function);
         // Dispatch already consumed the name; avoid retaining unequal label
         // allocations in a pair whose persistent DSP storage is matched.
         std::string().swap(config.backend);
@@ -51,7 +54,8 @@ struct ScheduledAnalysis {
         window[i] = gain*Fourier::Window::window<float>(function, float(i), float(config.n), false);
     }
     void prepare_band(size_t k) {
-        const float half = std::pow(2.f, (1.f/3.f)/2.f), ratio = std::pow(2.f, 1.f/3.f);
+        const float octave = config.workload_schema == 3 ? octave_width(config) : 1.f/3.f;
+        const float half = std::pow(2.f, octave/2.f), ratio = std::pow(2.f, octave);
         const double width = double(config.rate)/config.n, maximum = double(config.rate)/2;
         double a = k*width/half, b = k*width*half;
         if (b > maximum) { b = maximum; a = b/ratio; }
@@ -75,7 +79,6 @@ struct ScheduledAnalysis {
             if (bands && dirty) prepare_band(k);
             const T magnitude = bands ? (prefix[high[k]+1]-prefix[low[k]])/T(high[k]-low[k]+1)
                                       : magnitudes[k];
-            const float alpha = config.smooth ? 0.8f : 0.f;
             output[k] = alpha == 0.f ? magnitude : alpha*output[k]+(1.f-alpha)*magnitude;
         }
         ++cursor;

@@ -82,6 +82,7 @@ inline std::string identity(const Config& c) {
         << "/rate=" << c.rate << '/' << c.state << "/cache=" << c.cache_mib
         << "/offset=" << c.callback_offset << "/observations=" << c.callbacks
         << "/warm=" << c.warm_hops;
+    if (c.workload_schema == 3) out << '/' << workload_controls_json(c);
     return out.str();
 }
 
@@ -103,9 +104,13 @@ inline void validate(const Config& c) {
 /// @brief Fast is a fixed tuning set; full also exercises unseen sizes and hops.
 inline std::vector<Config> builtin(const Options& o) {
     std::vector<Config> rows;
-    const std::vector<std::string> primary = {"core-float", "legacy-batch-float",
+    std::vector<std::string> primary = {"core-float", "legacy-batch-float",
         "legacy-incremental-float", "pffft-analysis-float",
         "pffft-scheduled-batch-float", "pffft-hybrid-float"};
+    if (o.profile == "fast") {
+        for (const std::string name : {"core-independent4-simd", "fourier", "spectre", "vdsp-analysis-float"})
+            for (const auto& d : backend_registry) if (name == d.id && d.available) primary.push_back(name);
+    }
     const std::vector<size_t> sizes = o.profile == "fast" ? std::vector<size_t>{2048}
         : std::vector<size_t>{128, 512, 2048, 8192, 16384};
     for (size_t n : sizes) for (bool smooth : {false, true}) {

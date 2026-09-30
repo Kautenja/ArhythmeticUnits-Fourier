@@ -11,6 +11,11 @@ warmup. [transitions.md](transitions.md) defines the entire event contract.
 
 ## Add A Workload
 
+For a small selection without a preset, start with the schema-3
+[controls example](../profiles/controls.json) and the
+[explicit workload guide](workloads.md). The schema-2 example below appends its
+extra cases to the selected preset.
+
 Copy `profiles/smoke.json` to `.build/my-study.json`, retaining its schema and
 counts, then add this member to the JSON object:
 

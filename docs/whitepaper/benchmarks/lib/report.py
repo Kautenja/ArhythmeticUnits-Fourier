@@ -105,8 +105,8 @@ def collect(directories, phase):
             contract = metadata["contracts"][str(index)]
             record = records.setdefault(key, dict(stratum=stratum, host=host, config=config,
                 descriptor=descriptor, contract=contract, processes=[], resources=[],
-                independent_channels=config["count"]*contract["channels"],
-                input_contract="independent-four-v1" if descriptor["kind"] == "analysis4" else "common-float-v1"))
+                independent_channels=config["count"]*(config["active_ports"] if config.get("workload_schema") == 3 else contract["channels"]),
+                input_contract=contract.get("input_contract", "independent-four-v1" if descriptor["kind"] == "analysis4" else "common-float-v1")))
             record["resources"].append(dict(session=session, measurements=resource))
             for run in sorted((r for r in metadata["runs"] if r["workload"] == index), key=lambda r: r["repeat"]):
                 groups = run["summary"]["groups"]
@@ -150,7 +150,8 @@ def collect(directories, phase):
         result.append(record)
     if not result:
         raise ValueError("No checked observations")
-    return dict(schema=1, phase=phase, limitations=LIMITS, sources=sources, records=result)
+    return dict(schema=2 if any(r["config"].get("workload_schema") == 3 for r in result) else 1,
+                phase=phase, limitations=LIMITS, sources=sources, records=result)
 
 
 def comparison_key(record, vary_length=False):
@@ -173,6 +174,9 @@ def tables(data, output):
                "cpp_live_heap_bytes_min", "cpp_live_heap_bytes_max", "native_memory", "max_abs_error", "max_relative_l2", "max_relative_linf", "legacy_pointwise_failures", "numerical_status", "callback_visible_age_min", "callback_visible_age_max"]
     workload_columns = ["config_sha256", "host", "rate", "count", "alignment", "load", "smooth", "voices",
                         "cache_mib", "warm_hops", "callbacks"]
+    if data.get("schema") == 2:
+        from workloads import DEFAULTS
+        workload_columns += list(DEFAULTS)
     human_columns = ["mean_serial_audio_time_percent", "callback_budget_us", "median_session_p99_us",
                      "session_p99_min_us", "session_p99_max_us", "observed_callback_max_us", "p99_budget_percent",
                      "process_observations_min", "process_observations_max", "observation_window_seconds",
@@ -186,6 +190,10 @@ def tables(data, output):
              "Serial audio-time % expresses measured synchronous work relative to simulated audio time; it is not a Rack CPU meter or an energy measurement. Budget % uses the entire callback interval, of which an analyzer receives only a share. Ages end at algorithmic publication/delivery, not screen repaint.", "",
              "Transition workloads have separate response, callback-cost and publication-error tables in transitions.md and transitions-*.csv. Their changing configurations are excluded from stationary results.csv and age figures, but retained in process-timings.csv, implementations.csv and evidence.json. accuracy-coverage.csv records stationary numerical coverage; transition coverage is publication-specific.", "",
              "Observation windows are simulated audio spans, not elapsed wall time: the driver has no real-time pacing. timed_total_ns sums measured intervals only. Publication audit counts come from a separate untimed replay; they are not hardware or timed-burst counters.", ""]
+    if data.get("schema") == 2:
+        lines[-2] = ("v3 execution sidecars distinguish continuous and paced intervals. Simulated audio duration, "
+                     "summed compute duration and elapsed measurement span are separate. See scheduling.md for "
+                     "hop peaks, shared callback membership, phase profiles and allocation scenarios.")
     with (output/"results.csv").open("w", newline="") as stream:
         writer = csv.writer(stream); writer.writerow(columns)
         for r in stationary_records(data):
@@ -200,7 +208,7 @@ def tables(data, output):
             tails = r["tails"]
             budget_us = 1e6*c["block"]/c["rate"] if tails else None
             age = ages(contract, c["rate"])
-            extra = [identity(c), r["host"]]+[c[key] for key in workload_columns[2:]]
+            extra = [identity(c), r["host"]]+[c.get(key) for key in workload_columns[2:]]
             human = [v["mean_of_session_means"]*c["rate"]/1e7 if streaming else None, budget_us,
                      tails["median_session_p99_ns"]/1000 if tails else None,
                      tails["observed_session_p99_min_ns"]/1000 if tails else None,
@@ -247,6 +255,8 @@ def tables(data, output):
                          f"{number(t['observed_max_ns']/1000 if t else None)} | {age_text} | {v['sessions']} / {v['processes']} |")
         lines.append("")
     process_tables(data, output)
+    from metrics import tables as scheduling_tables
+    scheduling_tables(data, output)
     coverage_tables(dict(data, records=stationary_records(data)), output)
     transition_report_tables(data, output)
     with (output/"implementations.csv").open("w", newline="") as stream:
@@ -435,9 +445,12 @@ def figures(data, output):
         r = members[0]
         c, contract = r["config"], r["contract"]
         lengths = sorted({m["config"]["n"] for m in members})
+        controls = (f"window={c['window']}; octave={c['octave']:g}; "
+                    f"time={c['temporal_mode']}:{c['temporal_value']:g}; fixture={c['fixture']}; {c['execution_regime']}"
+                    if c.get("workload_schema") == 3 else f"smooth={c['smooth']}")
         return (f"{data['phase'].upper()} · {contract['boundary']} / {contract['operation']}\n"
                 f"N={','.join(map(str, lengths))}; H={c['hop']}; B={c['block']}; {contract['precision']}; "
-                f"{r['independent_channels']} channels; {c['pass_name']}; {c['state']}; smooth={c['smooth']}\n"
+                f"{r['independent_channels']} channels; {c['pass_name']}; {c['state']}; {controls}\n"
                 f"offset={c.get('callback_offset', 0)}; {c['alignment']}; load={c['load']}; "
                 f"cache={c['cache_mib']} MiB; {c['rate']:g} Hz; host={r['host']}")
     def save(fig, name, kind, members):

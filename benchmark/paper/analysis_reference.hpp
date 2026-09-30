@@ -26,13 +26,14 @@ struct AnalysisReference {
     size_t next_endpoint = 0;
     bool float_intervals;
     explicit AnalysisReference(const Config& c) : config(c),
-        window(Fourier::Window::Function::Hann, c.n, false, true),
+        window(window_function(c), c.n, false, true),
         frame(c.n), expected(c.n/2+1),
         float_intervals(c.backend.find("core-") == 0 || c.backend.find("legacy-") == 0) {}
 
     template<typename Arithmetic>
     std::pair<size_t, size_t> band(size_t k) const {
-        const float half = std::pow(2.f, (1.f/3.f)/2.f), ratio = std::pow(2.f, 1.f/3.f);
+        const float octave = config.workload_schema == 3 ? octave_width(config) : 1.f/3.f;
+        const float half = std::pow(2.f, octave/2.f), ratio = std::pow(2.f, octave);
         const Arithmetic width = Arithmetic(config.rate)/Arithmetic(config.n);
         const Arithmetic maximum = Arithmetic(config.rate)/Arithmetic(2);
         Arithmetic low = Arithmetic(k)*width/half, high = Arithmetic(k)*width*half;
@@ -45,10 +46,10 @@ struct AnalysisReference {
             const size_t index = next_endpoint/config.hop;
             const bool live = config.state == "live";
             window.set_window(live && index%2 == 0 ? Fourier::Window::Function::BlackmanHarris
-                : Fourier::Window::Function::Hann, config.n, false, true);
+                : window_function(config), config.n, false, true);
             for (size_t i = 0; i < config.n; ++i) {
                 const int64_t source = int64_t(next_endpoint)-int64_t(config.n)+1+int64_t(i);
-                frame[i] = source < 0 ? T(0) : T(input[size_t(source)%input.size()])*window.get_samples()[i];
+                frame[i] = source < 0 ? T(0) : T(input_sample(config, input, size_t(source)))*window.get_samples()[i];
             }
             std::vector<long double> magnitudes(expected.size());
             if (config.n <= 256) {
@@ -60,8 +61,8 @@ struct AnalysisReference {
                 for (size_t k = 0; k < expected.size(); ++k)
                     magnitudes[k] = std::abs(forward.coefficients[k]);
             }
-            const bool bands = live ? index%2 == 1 : config.smooth;
-            const float alpha = config.smooth ? 0.8f : 0.f;
+            const bool bands = live ? index%2 == 1 : octave_width(config) > 0;
+            const float alpha = temporal_alpha(config);
             for (size_t k = 0; k < expected.size(); ++k) {
                 long double value = magnitudes[k];
                 if (bands) {

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -35,7 +36,7 @@ inline double elapsed(Clock::time_point start, Clock::time_point end) {
 }
 
 /// @brief One explicitly labeled workload; all sample counts are engine samples.
-struct Config {
+struct Config : WorkloadControls {
     std::string backend, pass, alignment, state;
     size_t n, hop, block, count, load, voices, callbacks, warm_hops, cache_mib;
     float rate;
@@ -57,6 +58,43 @@ inline std::vector<float> signal() {
             + 0.05*(double(seed >> 8)/16777216. - 0.5);
     }
     return values;
+}
+
+/// @brief Finite binary32 fixtures, bounded by one, shared by every precision.
+/// @details Decay and impulse are one-shot absolute sample events; other signals
+/// repeat the retained 65536-sample sequence. No randomness runs in measurement.
+inline std::vector<float> signal(const Config& c, size_t channel = 0) {
+    if (c.workload_schema < 3) return signal();
+    std::vector<float> values(65536);
+    uint32_t seed = uint32_t(c.fixture_seed)+uint32_t(channel)*0x9e3779b9u;
+    for (size_t i = 0; i < values.size(); ++i) {
+        seed = 1664525u*seed+1013904223u;
+        const double angle = 2*std::acos(-1.)*i/c.n;
+        double value = 0;
+        if (c.fixture == "silence") value = 0;
+        else if (c.fixture == "impulse") value = i == 0 ? 1 : 0;
+        else if (c.fixture == "dc") value = .5;
+        else if (c.fixture == "nyquist") value = i%2 ? -.5 : .5;
+        else if (c.fixture == "off-bin") value = .5*std::sin(7.25*angle);
+        else if (c.fixture == "weak") value = 1e-9*std::sin(7.25*angle);
+        else if (c.fixture == "noise") value = double(seed>>8)/16777216.-.5;
+        else value = .05*channel+.5*std::sin((7+3*channel)*angle)
+            +.25*std::cos((31+7*channel)*angle)+.05*(double(seed>>8)/16777216.-.5);
+        values[i] = float(value);
+    }
+    return values;
+}
+/// @brief Resolve one-shot fixture policy before entering measured sample work.
+inline size_t input_limit(const Config& c) {
+    if (c.workload_schema == 3 && c.fixture == "decay") return c.decay_samples;
+    if (c.workload_schema == 3 && c.fixture == "impulse") return 1;
+    return std::numeric_limits<size_t>::max();
+}
+inline float input_sample(const std::vector<float>& input, size_t sample, size_t limit) {
+    return sample < limit ? input[sample%input.size()] : 0;
+}
+inline float input_sample(const Config& c, const std::vector<float>& input, size_t sample) {
+    return input_sample(input, sample, input_limit(c));
 }
 
 /// @brief Retain raw observations; writing CSV happens after all timing.
@@ -140,11 +178,12 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     Runtime::set(Runtime::Phase::Setup);
     const auto contract = backend_contract(c);
     if (center_offset < 0) center_offset = contract.center;
-    const auto input = signal();
+    const auto input = signal(c);
+    const size_t limit = input_limit(c);
     if (c.resources) {
         const size_t samples = c.transition_suite.empty() ? 2*c.n+2*c.hop : c.callbacks*c.block;
         PaperResources::inspect<Adapter>([&]() { return new Adapter(c); }, [&](Adapter& adapter) {
-            for (size_t i = 0; i < samples; ++i) adapter.process(input[i%input.size()]);
+            for (size_t i = 0; i < samples; ++i) adapter.process(input_sample(input, i, limit));
             adapter.barrier();
             adapter.check();
         }, samples);
@@ -169,7 +208,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         for (size_t a = 0; a < c.count; ++a) {
             Runtime::set(replay ? Runtime::Phase::ReplayWarmup : Runtime::Phase::TimedWarmup);
             for (size_t s = 0; s < cursors[a]; ++s)
-                bank[a]->process(input[s%input.size()]);
+                bank[a]->process(input_sample(input, s, limit));
             bank[a]->published(); // Establish the initial consumer snapshot.
         }
     };
@@ -191,12 +230,12 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         Runtime::set(Runtime::Phase::TimedSetup);
         Runtime::set(Runtime::Phase::TimedWarmup);
         if (c.state != "startup")
-            for (size_t i = 0; i < c.warm_hops*c.hop; ++i) background.process(input[i%input.size()]);
+            for (size_t i = 0; i < c.warm_hops*c.hop; ++i) background.process(input_sample(input, i, limit));
         auto run = [&](size_t samples) {
             for (size_t s = 0; s < samples; ++s) {
-                background.process(input[cursors[0]%input.size()]);
+                background.process(input_sample(input, cursors[0], limit));
                 for (size_t a = 0; a < bank.size(); ++a) {
-                    bank[a]->process(input[cursors[a]%input.size()]);
+                    bank[a]->process(input_sample(input, cursors[a], limit));
                     ++cursors[a];
                 }
             }
@@ -259,7 +298,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         Runtime::set(Runtime::Phase::CorrectnessReplay);
         for (size_t s = 0; s < total; ++s) {
             for (size_t a = 0; a < bank.size(); ++a) {
-                bank[a]->process(input[cursors[a]++%input.size()]);
+                bank[a]->process(input_sample(input, cursors[a]++, limit));
                 audit(*bank[a], input, cursors[a]-1);
                 if (!bank[a]->published()) continue;
                 const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);

@@ -102,11 +102,11 @@ def validate_resources(resource):
         raise ValueError("Resource adapter mismatch")
 
 
-def validate_provider_info(info, descriptor):
+def validate_provider_info(info, descriptor, config=None):
     if descriptor["kind"] == "analysis4":
         simd = descriptor["id"] == "core-independent4-simd"
         native = info.get("native_instances", [])
-        if (info.get("input_contract") != "independent-four-v1"
+        if (info.get("input_contract") != ("explicit-four-v3" if config and config.get("workload_schema") == 3 else "independent-four-v1")
                 or info.get("scalar_instances") != (0 if simd else 4) or len(native) != (0 if simd else 4)):
             raise ValueError("Missing independent four-channel evidence")
         if descriptor["provider"] != "fourier":
@@ -286,6 +286,10 @@ def check(directory, report_data=None):
     if ("benchmark/paper/analysis_accuracy.hpp" in metadata["source_sha256"]
             and metadata.get("analysis_accuracy_policy") != "spectrum-norms-v1"):
         raise ValueError("Missing analysis policy for archived implementation")
+    if any(c.get("workload_schema") == 3 for c in metadata["configs"]):
+        if (metadata.get("analysis_accuracy_policy") != "spectrum-norms-v1"
+                or metadata.get("scalar_analysis_audit_policy") != "all-publications-v1"):
+            raise ValueError("Explicit workloads require complete numerical policies")
     scalar_policy = metadata.get("scalar_analysis_audit_policy")
     if scalar_policy not in (None, "all-publications-v1"):
         raise ValueError("Unknown scalar numerical coverage policy")
@@ -326,7 +330,7 @@ def check(directory, report_data=None):
                 validate_transition_resources(resource[label]["provider_info"], config, registry)
         elif registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4"):
             for label in ("timing", "allocation"):
-                validate_provider_info(resource[label]["provider_info"], registry[config["backend"]])
+                validate_provider_info(resource[label]["provider_info"], registry[config["backend"]], config)
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
                     validate_hybrid_info(resource[label]["provider_info"], config)
     identities = set()
@@ -360,7 +364,7 @@ def check(directory, report_data=None):
             if len(report["provider_instances"]) != config["count"]:
                 raise ValueError("Missing measured provider instances")
             for instance in report["provider_instances"]:
-                validate_provider_info(instance, registry[config["backend"]])
+                validate_provider_info(instance, registry[config["backend"]], config)
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
                     validate_hybrid_info(instance, config)
         if not transition and (contract["boundary"] in ("inverse-job", "chain") or ((external or scalar) and contract["boundary"] == "analysis")):
@@ -373,6 +377,10 @@ def check(directory, report_data=None):
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_transform_accuracy(accuracy, contract)
         if report_data is not None:
+            if config.get("workload_schema") == 3:
+                from metrics import read as scheduling_metrics
+                details["scheduling"] = scheduling_metrics(directory/run["raw"], config, contract,
+                    json.loads((directory/run["execution"]).read_text()))
             report_data[run["raw"]] = details
     expected = {(index, repeat) for index in range(len(metadata["configs"]))
                 for repeat in range(metadata["repeats"])}

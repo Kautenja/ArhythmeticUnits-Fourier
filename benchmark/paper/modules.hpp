@@ -52,13 +52,20 @@ struct Publication {
 void check(SpectrumAnalyzer& module, size_t n) {
     const auto& snapshot = module.consume_display_spectrum();
     require(snapshot.count == n/2+1, "Wrong module spectrum size");
+    // The existing logarithmic display maps zero magnitude to -infinity.
+    // This is a coordinate audit, not the module's pending all-bin oracle.
+    const bool logarithmic = module.get_magnitude_scale() != MagnitudeScale::Linear;
     for (const auto& lane : snapshot.points)
-        require(std::isfinite(lane[7].y), "Empty module spectrum");
+        for (size_t bin = 0; bin < snapshot.count; ++bin)
+            require(std::isfinite(lane[bin].x) && (std::isfinite(lane[bin].y)
+                || (logarithmic && lane[bin].y == -std::numeric_limits<float>::infinity())),
+                "Invalid module spectrum coordinate");
 }
 void check(Spectrogram& module, size_t) {
     const auto index = (module.get_hop_index()+Spectrogram::N_STFT-1)%Spectrogram::N_STFT;
     const auto* column = module.consume_display_column(index, true);
-    require(column && column->revision > 0 && column->values[7] > 0, "Empty module history");
+    require(column && column->revision > 0, "Empty module history");
+    for (auto value : column->values) require(std::isfinite(value), "Non-finite module history");
 }
 
 template<typename Module>
@@ -67,13 +74,21 @@ struct Host {
     Publication publication;
     rack::engine::Module::ProcessArgs args = {};
     Config config;
+    std::vector<std::vector<float>> input_signals;
+    size_t limit;
+    size_t cursor = 0;
     size_t phase = 0, frames = 0;
-    explicit Host(const Config& c) : config(c) {
+    explicit Host(const Config& c) : config(c), limit(input_limit(c)) {
         configure(module, c);
-        module.set_window_function(Fourier::Window::Function::Hann);
-        module.set_frequency_smoothing(c.smooth ? FrequencySmoothing::_1_3 : FrequencySmoothing::None);
-        module.set_time_smoothing(c.smooth ? 0.1f : 0.f);
-        for (auto& input : module.inputs) input.channels = c.voices;
+        module.set_window_function(window_function(c));
+        const float octave = octave_width(c);
+        module.set_frequency_smoothing(octave == 0 ? FrequencySmoothing::None :
+            octave == 1 ? FrequencySmoothing::_1_1 : octave == 2 ? FrequencySmoothing::_2_1 : FrequencySmoothing::_1_3);
+        module.set_time_smoothing(c.workload_schema == 3 ? float(c.temporal_value) : c.smooth ? 0.1f : 0.f);
+        for (size_t port = 0; port < module.inputs.size(); ++port) {
+            module.inputs[port].channels = c.workload_schema < 3 || port < c.active_ports ? c.voices : 0;
+            if (c.workload_schema == 3 && c.fixture == "independent") input_signals.push_back(signal(c, port));
+        }
         args.sampleRate = c.rate;
         args.sampleTime = 1.f/c.rate;
         publication.poll(module);
@@ -85,9 +100,12 @@ struct Host {
             module.set_frequency_smoothing(frames%2 ? FrequencySmoothing::None : FrequencySmoothing::_1_3);
         }
         for (size_t port = 0; port < module.inputs.size(); ++port)
-            for (size_t voice = 0; voice < config.voices; ++voice)
-                module.inputs[port].setVoltage(5.f*value*(1.f-0.15f*port)/config.voices, voice);
+            for (size_t voice = 0; voice < size_t(module.inputs[port].channels); ++voice) {
+                const float input = input_signals.empty() ? value : input_sample(input_signals[port], cursor, limit);
+                module.inputs[port].setVoltage(5.f*input*(1.f-0.15f*port)/config.voices, voice);
+            }
         module.process(args);
+        ++cursor;
         ++args.frame;
         phase = (phase+1)%config.hop;
     }

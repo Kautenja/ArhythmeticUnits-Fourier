@@ -24,9 +24,10 @@ build launches a benchmark or replaces its results.
 | Location | Purpose |
 | --- | --- |
 | [bench.py](bench.py) | Setup, plan, run, freeze, status, check, report, export and bundle commands |
-| [profiles/](profiles/README.md) | Three small maintained profiles; ordinary users start here |
+| [profiles/](profiles/README.md) | Maintained study profiles and a small explicit-controls example |
 | [guides/workflow.md](guides/workflow.md) | Copyable launch, review, freeze and publication handoff |
 | [guides/extending.md](guides/extending.md) | Add a workload/backend and compare a future revision |
+| [guides/workloads.md](guides/workloads.md) | Explicit v3 controls, input fixtures, and checked scheduling metrics |
 | [guides/](guides/) | Detailed measurement contracts and provider notes |
 | [lib/](lib/) | Private runner, validation, derivation and workflow implementation |
 | [tests/](tests/) | Python tests and small C++ verifier drivers |

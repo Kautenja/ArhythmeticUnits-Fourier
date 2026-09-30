@@ -17,7 +17,7 @@ def load(profile, variant, system):
         else BENCHMARKS / "profiles" / (profile + ".json")
     )
     value = json.loads(path.read_text())
-    if value.get("schema") != 2 or set(value) - {
+    if value.get("schema") not in (2, 3) or set(value) - {
         "schema",
         "preset",
         "transitions",
@@ -28,17 +28,21 @@ def load(profile, variant, system):
         "warm_hops",
         "workloads",
     }:
-        raise ValueError("Expected a version-2 study profile; see profiles/README.md")
+        raise ValueError("Expected a version-2 or version-3 study profile; see profiles/README.md")
     if type(value.get("transitions", True)) is not bool or not isinstance(
         value.get("workloads", []), list
     ):
         raise ValueError("transitions must be boolean and workloads must be a list")
-    preset = value["preset"]
-    if preset not in ("smoke", "pilot", "extensions") or variant not in VARIANTS:
+    preset = value.get("preset", "explicit" if value["schema"] == 3 else None)
+    if preset not in (("smoke", "pilot", "extensions", "explicit") if value["schema"] == 3 else ("smoke", "pilot", "extensions")) or variant not in VARIANTS:
         raise ValueError("Unknown preset or provider variant")
     features = VARIANTS[variant]["features"]
     registry = load_registry(features=features)
-    if preset == "smoke":
+    if preset == "explicit":
+        if value.get("transitions", False) or not value.get("workloads"):
+            raise ValueError("Explicit profiles require workloads and cannot append transitions")
+        rows, phase = [], "pilot"
+    elif preset == "smoke":
         rows = []
         for precision in ("float", "double"):
             for family in ("core", "legacy-batch", "legacy-incremental"):
@@ -136,8 +140,12 @@ def load(profile, variant, system):
                         )
         phase = "pilot"
     rows += value.get("workloads", [])
+    # Historical schema-2 presets excluded Rack modules. Explicit v3 profiles
+    # can select these already-linked workloads without changing old matrices.
+    variants = ({name: dict(v, providers=v["providers"]+["rack-module"]) for name, v in VARIANTS.items()}
+                if value["schema"] == 3 else VARIANTS)
     configs, manifest = resolve(
-        dict(schema=1, phase=phase, variants=VARIANTS, workloads=rows),
+        dict(schema=1, phase=phase, variants=variants, workloads=rows),
         variant,
         registry,
         system,

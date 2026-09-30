@@ -11,7 +11,12 @@ using namespace Paper::Development;
 TEST_CASE("Development matrix keeps tuning and validation distinct", "[benchmark]") {
     Options o;
     const auto fast = matrix(o);
-    REQUIRE(fast.size() == 24);
+    bool vdsp = false;
+    for (const auto& d : backend_registry)
+        if (std::string(d.id) == "vdsp-analysis-float") vdsp = d.available;
+    REQUIRE(fast.size() == (vdsp ? 40 : 36));
+    for (const std::string backend : {"core-independent4-simd", "fourier", "spectre"})
+        REQUIRE(std::any_of(fast.begin(), fast.end(), [&](const Config& c) { return c.backend == backend; }));
     for (const auto& c : fast) {
         REQUIRE(c.n == 2048);
         REQUIRE(c.hop == 1024);
@@ -68,6 +73,35 @@ TEST_CASE("CLI rejects ambiguous or invalid measurement options", "[benchmark]")
     REQUIRE(parse({"--profile", "full"}).hops == 128);
     REQUIRE(parse({"--hops", "4", "--profile", "full"}).hops == 4);
     REQUIRE(parse({"--seed", "20260929"}).seed == 20260929);
+}
+
+TEST_CASE("Explicit workload controls survive native JSON and identity boundaries", "[benchmark]") {
+    Config c = base(); c.workload_schema = 3;
+    c.fixture = "decay"; c.window = "blackman-harris"; c.temporal_mode = "module-seconds";
+    c.temporal_value = 0.1; c.octave = 1.; c.fixture_seed = UINT32_MAX;
+    const auto encoded = own(json_loads(workload_controls_json(c).c_str(), 0, nullptr));
+    REQUIRE(identity(config_from_json(encoded.get())) == identity(c));
+    Config retained = base();
+    parse_workload_controls(retained, config_json(c).get(), false);
+    REQUIRE(workload_controls_json(retained) == workload_controls_json(c));
+    auto altered = own(json_deep_copy(encoded.get()));
+    set(altered, "fixture_seed", own(json_integer(7)));
+    REQUIRE(identity(config_from_json(altered.get())) != identity(c));
+    for (const auto& field : control_fields()) {
+        altered = own(json_deep_copy(encoded.get()));
+        json_object_del(altered.get(), field.c_str());
+        REQUIRE_THROWS(config_from_json(altered.get()));
+    }
+    altered = own(json_deep_copy(encoded.get()));
+    set(altered, "workload_schema", own(json_integer(2)));
+    REQUIRE_THROWS(config_from_json(altered.get()));
+    altered = own(json_deep_copy(encoded.get()));
+    set(altered, "fixture_seed", own(json_true()));
+    REQUIRE_THROWS(config_from_json(altered.get()));
+    c.callbacks = 512; c.temporal_mode = "alpha"; c.temporal_value = 1.;
+    REQUIRE_THROWS(validate(c));
+    c.temporal_value = .8;
+    REQUIRE_NOTHROW(validate(c));
 }
 
 TEST_CASE("Callback cost normalizes by samples and preserves timer overhead", "[benchmark]") {

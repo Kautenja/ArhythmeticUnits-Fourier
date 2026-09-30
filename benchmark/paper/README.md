@@ -20,6 +20,7 @@ The suite groups adapters by approach and shares matched workload code:
 | `channels.hpp` | Independent four-channel scalar/SIMD comparisons |
 | `modules.hpp` | Actual headless Fourier/Spectre module cases |
 | `protocol.hpp`, `backend.hpp` | Raw records, streaming loop, workload validation, and contracts |
+| `workload.hpp`, `workload_json.hpp` | Explicit v3 controls, fixture policy, and strict JSON parsing |
 | `resources.hpp` | Separate setup, execution, destruction, and allocation probes |
 | `runtime.hpp` | Optional coarse wall-time accounting outside measured intervals |
 | `references.hpp`, `analysis_reference.hpp`, `analysis_accuracy.hpp` | Independent numerical references and acceptance policy |
@@ -73,6 +74,15 @@ background load, smoothing, voices, measured callbacks, warmup hops, sample
 rate, state, cache MiB, callback offset, and protocol version. Use `--inventory`
 for backend capabilities or prepend `--describe` to inspect a case's contract
 without timing it. FFTW/vDSP/PFFFT cases use the same protocol.
+
+Protocol v3 appends a complete JSON controls object after its version token.
+It adds independent window/octave/temporal smoothing, deterministic fixtures,
+active ports, and execution policy. Use the
+[explicit workload guide](../../docs/whitepaper/benchmarks/guides/workloads.md)
+and profile resolver to prepare these arguments. Earlier protocols retain
+their existing meanings. Measurement launch on macOS requires the existing
+sleep/power guard; the unwrapped CLI form above documents arguments and is
+rejected for actual macOS timing without that guard.
 
 Set `PAPER_RUNTIME_PATH` to a writable JSON filename to record coarse process
 phases for an ordinary measurement command. The campaign runner sets this

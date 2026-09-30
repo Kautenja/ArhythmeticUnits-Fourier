@@ -28,17 +28,27 @@ inline const std::array<std::vector<float>, 4>& channel_signals() {
     return values;
 }
 
+inline std::array<std::vector<float>, 4> channel_signals(const Config& c) {
+    std::array<std::vector<float>, 4> values;
+    if (c.workload_schema == 3)
+        for (size_t j = 0; j < 4; ++j) values[j] = signal(c, c.fixture == "independent" ? j : 0);
+    return values;
+}
+
 /// @brief Four scalar analyzers receive exactly the same channel bytes as SIMD.
 template<typename Adapter>
 struct ScalarChannels {
     std::array<std::unique_ptr<Adapter>, 4> channels;
+    Config config;
+    std::array<std::vector<float>, 4> inputs;
+    size_t limit;
     size_t cursor = 0;
-    explicit ScalarChannels(const Config& c) {
+    explicit ScalarChannels(const Config& c) : config(c), inputs(channel_signals(c)), limit(input_limit(c)) {
         for (auto& channel : channels) channel.reset(new Adapter(c));
     }
     void process(float) {
-        const auto& input = channel_signals();
-        for (size_t j = 0; j < 4; ++j) channels[j]->process(input[j][cursor%input[j].size()]);
+        const auto& input = config.workload_schema == 3 ? inputs : channel_signals();
+        for (size_t j = 0; j < 4; ++j) channels[j]->process(input_sample(input[j], cursor, limit));
         ++cursor;
     }
     size_t delay() const { return channels[0]->delay(); }
@@ -49,7 +59,8 @@ struct ScalarChannels {
     void barrier() const { for (auto& c : channels) c->barrier(); }
     std::string info_json() const {
         std::ostringstream out;
-        out << "{\"input_contract\":\"independent-four-v1\",\"scalar_instances\":4,\"native_instances\":[";
+        out << "{\"input_contract\":\"" << (config.workload_schema == 3 ? "explicit-four-v3" : "independent-four-v1")
+            << "\",\"scalar_instances\":4,\"native_instances\":[";
         for (size_t j = 0; j < 4; ++j) {
             if (j) out << ',';
             out << PaperResources::provider_info(*channels[j], 0);
@@ -59,17 +70,22 @@ struct ScalarChannels {
 };
 
 struct SimdChannels : Core<rack::simd::float_4> {
+    Config config;
+    std::array<std::vector<float>, 4> inputs;
+    size_t limit;
     size_t cursor = 0;
-    explicit SimdChannels(const Config& c) : Core<rack::simd::float_4>(c) {}
+    explicit SimdChannels(const Config& c) : Core<rack::simd::float_4>(c), config(c), inputs(channel_signals(c)), limit(input_limit(c)) {}
     void process(float) {
-        const auto& input = channel_signals();
-        const size_t i = cursor++%input[0].size();
-        process_value(rack::simd::float_4(input[0][i], input[1][i], input[2][i], input[3][i]));
+        const auto& input = config.workload_schema == 3 ? inputs : channel_signals();
+        const size_t i = cursor++;
+        process_value(rack::simd::float_4(input_sample(input[0], i, limit), input_sample(input[1], i, limit),
+            input_sample(input[2], i, limit), input_sample(input[3], i, limit)));
     }
     size_t bins() const { return output.size(); }
     float value(size_t j, size_t k) const { return output[k][j]; }
     std::string info_json() const {
-        return "{\"input_contract\":\"independent-four-v1\",\"scalar_instances\":0,\"native_instances\":[]}";
+        return std::string("{\"input_contract\":\"") + (config.workload_schema == 3 ? "explicit-four-v3" : "independent-four-v1")
+            + "\",\"scalar_instances\":0,\"native_instances\":[]}";
     }
 };
 
@@ -78,8 +94,10 @@ struct ChannelAudit {
     SynthesisAccuracy& accuracy;
     std::vector<std::string>& instances;
     Config config;
+    std::array<std::vector<float>, 4> inputs;
     std::map<const void*, std::array<std::unique_ptr<AnalysisReference<float>>, 4>> references;
-    ChannelAudit(SynthesisAccuracy& a, std::vector<std::string>& p, const Config& c) : accuracy(a), instances(p), config(c) {}
+    ChannelAudit(SynthesisAccuracy& a, std::vector<std::string>& p, const Config& c)
+        : accuracy(a), instances(p), config(c), inputs(channel_signals(c)) {}
     ChannelAudit(ChannelAudit&&) = default;
     template<typename Adapter> void timed_instance(const Adapter& a) { instances.push_back(a.info_json()); }
     template<typename Adapter> void operator()(const Adapter& a, const std::vector<float>&, size_t sample) {
@@ -88,7 +106,7 @@ struct ChannelAudit {
         auto& bank = references[&a];
         for (size_t j = 0; j < 4; ++j) {
             if (!bank[j]) bank[j].reset(new AnalysisReference<float>(config));
-            bank[j]->advance(channel_signals()[j], sample-a.delay());
+            bank[j]->advance(config.workload_schema == 3 ? inputs[j] : channel_signals()[j], sample-a.delay());
             require(a.bins() == bank[j]->expected.size(), "Missing four-channel bins");
             accuracy.analysis.compare(bank[j]->expected, [&](size_t k) { return a.value(j, k); }, sample-a.delay(), j);
             accuracy.maximum_error = accuracy.analysis.maximum_error;

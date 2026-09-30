@@ -18,9 +18,9 @@ preparation checks before dependent work; retain decisions and validation
 evidence in this spec. Completion ends at the runnable handoff, without
 requiring benchmark numbers, a performance winner, or manuscript changes.
 
-The current implementation request covers Phase 1. Its completion evidence is
-recorded below; unchecked phases remain future work. No measurements have been
-collected by the agent. The user prefers strengthening the full paper before
+The current implementation request covers Phases 1 and 2. Their completion
+evidence is recorded below; unchecked phases remain future work. No measurements
+have been collected by the agent. The user prefers strengthening the full paper before
 choosing a venue and retaining the M1 Pro as the primary test platform. A second
 architecture is optional follow-up; cross-architecture claims require actual
 measurements on that architecture.
@@ -226,41 +226,43 @@ Primary files: `benchmark/paper/{protocol,backend,analysis_reference}.hpp`,
 `docs/whitepaper/benchmarks/lib/{profiles,contracts,observations,report}.py`,
 the backend registry, and their existing verifier/test directories.
 
-- [ ] Add explicit window, independent octave/temporal smoothing, fixture/seed,
+- [x] Add explicit window, independent octave/temporal smoothing, fixture/seed,
       active-port/voice, execution-regime, and experimental-policy fields.
       Specify temporal smoothing in samples/alpha or physical time explicitly;
       preserve the modules' time-control convention. Include every effective
       field in C++/Python contracts, hashes, freezes, raw metadata, and grouping.
       Existing protocol versions keep their historical meanings.
-- [ ] Add silence, signal-to-silence decay, impulse, DC/Nyquist, off-bin tones,
+- [x] Add silence, signal-to-silence decay, impulse, DC/Nyquist, off-bin tones,
       weak signals, deterministic noise, and independent-channel fixtures.
       State supported finite input ranges and FPU-dependent expectations.
       Retain independent all-bin reference audits and existing error budgets;
       numerical changes do not justify loosening tolerances after timing.
-- [ ] Implement per-hop maximum-callback distributions, per-phase profiles,
+- [x] Implement per-hop maximum-callback distributions, per-phase profiles,
       peak/mean summaries, individual process points, means and medians,
       sample counts, elapsed duration, and actual budget-exceedance counts.
       Keep p99 and maxima as secondary descriptive outcomes.
-- [ ] Define hop grouping using actual frame endpoints and callback intervals,
+- [x] Define hop grouping using actual frame endpoints and callback intervals,
       including offsets, staggered instances, partial edge hops, D>H, and
       non-divisible H/D. A callback overlapping multiple hops cannot yield
       independent hop observations or a fabricated sub-callback duration.
       Test these cases with synthetic traces and retain original coordinates.
-- [ ] Separate per-analyzer, aggregate-block, publication, consumer, and device
+- [x] Separate per-analyzer, aggregate-block, publication, consumer, and device
       metrics. Fractional-budget thresholds are explicit allocation scenarios;
       they are not actual device deadlines. Do not pool channels or callbacks
       as independent process/session replicates. Any confidence intervals must
       respect temporal clustering and state their limited same-host scope.
-- [ ] Use retained raw evidence as regression fixtures for headline values,
+- [x] Use retained raw evidence as regression fixtures for headline values,
       hop peaks, phase imbalance, slow hybrid processes, maxima, and exceedances.
       Keep inverse/chain misses in their own comparison boundary. New research
       interpretation belongs to the follow-up after user measurements.
-- [ ] Allow small explicit-workload profiles without appending an entire
-      preset. Revise fast development coverage to include efficient macOS
+- [x] Allow small explicit-workload profiles without appending an entire
+      preset. Revise fast development coverage to include available macOS
       native analysis when enabled, SIMD, and representative module work;
       keep optional-provider omissions explicit. Keep development and frozen
-      publication repetition policies distinct.
-- [ ] Extend report/export/bundle checks to the new metrics and schemas.
+      publication repetition policies distinct. Phase 3 adds efficient native
+      replacements to this coverage; the existing adapter is not relabeled as
+      an optimized baseline.
+- [x] Extend report/export/bundle checks to the new metrics and schemas.
       Demonstrate that malformed timestamps, missing bins, missing processes,
       invalid norms, and mixed contracts fail. Historical archives remain
       readable by their recorded schema/tooling.
@@ -613,7 +615,7 @@ Those tasks must not run automatically as part of this preparation spec.
 
 - [x] Phase 1: sleep protection, power/isolation checks, stabilization, pacing,
       and failure behavior verified with untimed checks and fixtures.
-- [ ] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
+- [x] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
 - [ ] Phase 3: native and matched scheduling controls numerically validated.
 - [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
@@ -709,11 +711,92 @@ calling thread's effective scheduler/QoS/FPU state is observable here; opaque
 provider worker state is explicitly unavailable. Unsupported thread/FPU policies
 and the future Rack-engine regime fail explicitly.
 
-Phase 1's fixture/untimed gate is complete. Phases 2--7 remain pending, including
+At Phase 1 completion, Phases 2--7 remained pending, including
 the prepared no-build launcher, isolated-host checklist/manifest, and final
 one-command handoff. Existing measurement commands still perform preparation
 before settling; they are not the promised Phase 7 offline package. Do not
 archive this spec or launch measurements to close the remaining preparation.
+
+### Phase 2 Implementation: September 30, 2026
+
+Committed Phase 1 as `29111a6` before implementing Phase 2. The new benchmark
+code and [workload guide](../docs/whitepaper/benchmarks/guides/workloads.md)
+provide:
+
+-   Opt-in v3 contracts with independent window/octave/temporal settings,
+    deterministic input/seed policy, active ports/voices, execution regime,
+    and explicit experimental-policy rejection. C++ and Python retain requested
+    controls and effective binary32 smoothing values. All fields participate
+    in identity, freeze enforcement, metadata, grouping, and report tables.
+    Module time smoothing preserves the panel's exp(-10 H/f_s/seconds)
+    convention and public 0--2.5 second range. Old protocols remain unchanged.
+-   Silence, one-shot decay/impulse, DC/Nyquist, off-bin/weak tones, seeded
+    noise, and independent channels. Input preparation and alpha conversion
+    happen before measured sample work. Existing norm budgets remain intact.
+    Untimed tests cover 108 signal/window/smoothing combinations across scalar,
+    legacy and PFFFT adapters, plus independent scalar/SIMD channels and real
+    module control/port/voice wiring. Silence is valid; logarithmic negative
+    infinity is accepted only as a valid Fourier display y coordinate.
+-   Coordinate-preserving hop peaks, callback phase distributions, peak/mean,
+    process points, session means/medians, durations/counts, and actual
+    allocation-budget exceedances. Six new CSV tables and checked JSON retain
+    partial/shared hops, non-divisible H/D, offsets/staggering, and D>H without
+    splitting callbacks or creating independent replicates. Paced release
+    misses remain distinct from compute scenarios and unavailable device data.
+-   Five compact retained raw fixtures, with original hashes and metadata,
+    reproducing maxima, hop peaks, phase imbalance, the slow hybrid process,
+    and an inverse process's 64 compute exceedances. Nine-process historical
+    summaries still reproduce the 3.42/9.50 us and 2.27 headline values. This
+    reads old measurements; no new performance observations were collected.
+-   Small schema-3 explicit profiles with no appended preset. Explicit module
+    requests survive the new profile's provider filter; old matrices remain
+    intact. Fast development now covers 36 workloads, or 40 with vDSP enabled,
+    including independent SIMD and both modules. Missing vDSP is reported.
+    Current native adapters remain the existing baselines; efficient versions
+    and their inclusion belong to Phase 3.
+-   Synthetic v3 campaign/report/export/bundle round trips and rejection of
+    corrupted timestamps, missing bins/processes/instances, invalid norms,
+    changed controls/freezes, wrong schemas, edited scheduling JSON, and edited
+    derived tables even after rehashing. Synthetic examples are never promoted
+    to real confirmation evidence.
+
+Validation actually run from the repository root:
+
+```shell
+python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
+python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_scheduling_metrics.py'
+make test-benchmark-dev PAPER_VDSP=1 PAPER_FFTW_PREFIX=
+make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify
+DYLD_LIBRARY_PATH=../.. LD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --development --profile fast --list
+python3 docs/whitepaper/benchmarks/bench.py plan --profile controls --variant rack --output .build/controls-plan-phase2.json
+python3 docs/whitepaper/benchmarks/bench.py plan --profile controls --variant macos --output .build/controls-macos-plan-phase2.json
+make -C docs/whitepaper check
+python3 docs/whitepaper/tools/comparison_paper.py --check
+git diff --check
+```
+
+Results: 105 Python tests passed with one optional plotting-environment skip;
+the seven scheduling tests also passed after the final evidence-integrity
+change. Native development tests passed 196 assertions in eight cases. Both
+benchmark executables built with PFFFT/vDSP and no FFTW, and untimed native
+preflight passed. A separate inspection compared 72 native `--describe`
+contracts with Python exactly; the persistent fixture suite also checks C++
+JSON/contract parity. The controls plans retain five/six workloads respectively,
+including both modules. Whitepaper checks passed the historical hashes,
+2880 timing rows, 27 phase rows, 31 references, numerical tables/figures,
+32768 schedules, and byte-for-byte reproduction of all nine editorial assets.
+Repository links, new shell-example syntax, and whitespace checks passed.
+
+Limitations: no performance pass, hardware smoke, live sleep/power guard,
+full plugin build, or manual Rack session ran. No production source or paper
+result changed. Existing Rack SDK deprecation warnings and an unused window
+name-helper warning remain. Float input is bounded; underflow/flush-to-zero
+behavior remains FPU-policy dependent. Module checks are control/display
+audits, not Phase 4's full module oracle. There are no new consumer, Rack
+engine, device deadline, or optimized native results. Phase 2's fixture/untimed
+gate is complete; Phases 3--7 and the final no-build offline launcher remain
+pending. The spec remains IN PROGRESS.
 
 Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate

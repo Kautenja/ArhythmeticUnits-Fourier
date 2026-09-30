@@ -9,6 +9,7 @@ from collections import Counter
 import json
 from pathlib import Path
 
+from workloads import FIELDS, expand
 from contracts import validate_config, resolve_contract
 
 VARIANTS = {
@@ -104,9 +105,9 @@ def resolve(document, variant, registry, system, base):
             raise ValueError("Campaign requires optional feature: "+feature)
     rows, omitted = [], Counter()
     for partial in document["workloads"]:
-        if partial.keys()-(base.keys() | {"transition_suite", "transition_control"}):
+        if partial.keys()-(base.keys() | FIELDS | {"transition_suite", "transition_control"}):
             raise ValueError("Unknown campaign workload field")
-        config = dict(base, **partial)
+        config = expand(dict(base, **partial))
         descriptor = registry[config["backend"]]
         if descriptor["provider"] not in selected["providers"]:
             omitted[descriptor["provider"]] += 1
@@ -120,7 +121,7 @@ def inventory(configs, registry):
     return dict(workloads=len(configs), by_backend=dict(Counter(c["backend"] for c in configs)),
                 by_boundary=dict(Counter(registry[c["backend"]]["boundary"] for c in configs)),
                 by_precision=dict(Counter(registry[c["backend"]]["precision"] for c in configs)),
-                by_independent_channels=dict(Counter(str(registry[c["backend"]]["channels"]*c["count"]) for c in configs)),
+                by_independent_channels=dict(Counter(str((c["active_ports"] if c.get("workload_schema") == 3 else registry[c["backend"]]["channels"])*c["count"]) for c in configs)),
                 contracts=[resolve_contract(c, registry) for c in configs])
 
 

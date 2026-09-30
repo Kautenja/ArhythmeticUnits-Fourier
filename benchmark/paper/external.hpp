@@ -23,16 +23,18 @@ struct ExternalAnalysis {
     std::vector<size_t> low, high;
     size_t head = 0, phase = 0, frames = 0;
     bool complete = false, bands;
+    float alpha;
     explicit ExternalAnalysis(const Config& c) : config(c), fft(c.n, "analysis"),
-        window(Fourier::Window::Function::Hann, c.n, false, true), ring(c.n), frame(c.n),
+        window(window_function(c), c.n, false, true), ring(c.n), frame(c.n),
         magnitudes(c.n/2+1), prefix(c.n/2+2), output(c.n/2+1), coefficients(c.n/2+1),
-        low(c.n/2+1), high(c.n/2+1), bands(c.smooth) {
+        low(c.n/2+1), high(c.n/2+1), bands(octave_width(c) > 0), alpha(temporal_alpha(c)) {
         if (bands) prepare_bands();
     }
     // Binary64 interval arithmetic avoids float floor boundaries changing when
     // the compiler vectorizes this loop versus the hybrid's single-bin task.
     void prepare_bands() {
-        const float half = std::pow(2.f, (1.f/3.f)/2.f), ratio = std::pow(2.f, 1.f/3.f);
+        const float octave = config.workload_schema == 3 ? octave_width(config) : 1.f/3.f;
+        const float half = std::pow(2.f, octave/2.f), ratio = std::pow(2.f, octave);
         const double width = double(config.rate)/config.n, maximum = double(config.rate)/2;
         for (size_t k = 0; k < low.size(); ++k) {
             double a = k*width/half, b = k*width*half;
@@ -59,7 +61,6 @@ struct ExternalAnalysis {
                 magnitudes[k] = std::abs(coefficients[k]);
                 if (bands) prefix[k+1] = prefix[k]+magnitudes[k];
             }
-            const float alpha = config.smooth ? 0.8f : 0.f;
             for (size_t k = 0; k < output.size(); ++k) {
                 const T magnitude = bands ? (prefix[high[k]+1]-prefix[low[k]])/T(high[k]-low[k]+1)
                                           : magnitudes[k];
