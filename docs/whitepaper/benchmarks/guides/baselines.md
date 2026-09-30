@@ -17,7 +17,7 @@ provider registry; `--inventory` and `--describe` perform no measurements.
 | `core-matched-{batch,distributed}-{float,double}` | Current production arithmetic, storage, caches and output stores; only work placement differs |
 | `pffft-native-{batch,hybrid}-float` | Direct real input, ordered packed output, direct natural-bin magnitudes |
 | `pffft-native-unordered-{batch,hybrid}-float` | Unordered transform plus explicitly charged `pffft_zreorder`; retains the extra buffer |
-| `vdsp-native-{batch,hybrid}-{float,double}` | Window multiplication into even/odd split input, native split magnitudes and real-FFT scaling |
+| `vdsp-native-{batch,hybrid}-{float,double}` | Window multiplication into even/odd split input, scaled magnitudes read from split output, with real-FFT scaling |
 | `vdsp-native4-{batch,hybrid}-{float,double}` | Four rows in one `vDSP_fftm_zrip` call, with simultaneous endpoints |
 | `fftw-native-{batch,hybrid}-{float,double}` | Direct aligned input, serial real plan-many, native output magnitudes |
 | `fftw-native4-{batch,hybrid}-{float,double}` | Four independent rows in one serial real plan-many execution |

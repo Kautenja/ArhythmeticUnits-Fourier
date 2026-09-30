@@ -59,14 +59,15 @@ a recorded 180-second settling interval. Measured processes use the retained
 settles for another 1000 ms, calibrates, and performs its declared warmup before
 measurement. Replay, hashing, and previous-process output precede the next
 process's settling. No repeated search for a favorable quiet interval occurs.
-The current CLI still prepares/builds on launch; the separate prepared-package
-interface is later work in [spec 014](../../../../specs/014-benchmark-reliability-and-scheduling-study.md).
+The general `run` CLI still prepares/builds on launch. The
+[offline package interface](offline-study.md) instead uses immutable prepared
+artifacts, implemented in [spec 014](../../../../specs/archive/014-benchmark-reliability-and-scheduling-study.md).
 
 `run` accepts `--execution-regime continuous` (default) or `paced`,
 `--session-settle-seconds` (minimum 180), `--process-settle-ms` (minimum 1),
 and `--throughput-chunks` (default 8, minimum 2). Pacing requires a callback-only
-matrix; requesting a Rack-engine regime fails until its dedicated harness
-exists. Thread/FPU policy requests currently support only `inherit`, with
+matrix. Complete Rack-engine profiles use the dedicated harness through the
+offline package; they are not a generic streaming execution regime. Thread/FPU policy requests currently support only `inherit`, with
 effective scheduler/QoS and FPU control recorded on the calling thread.
 Opaque provider worker state remains unavailable. No core assignment is inferred.
 

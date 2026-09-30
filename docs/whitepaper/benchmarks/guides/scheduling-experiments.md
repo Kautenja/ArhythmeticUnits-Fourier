@@ -1,7 +1,7 @@
 # Scheduling Experiment Readiness
 
 These decisions belong to phase 5 of
-[spec 014](../../../../specs/014-benchmark-reliability-and-scheduling-study.md).
+[spec 014](../../../../specs/archive/014-benchmark-reliability-and-scheduling-study.md).
 They prepare comparisons without selecting an optimization or collecting times.
 
 ## Ready Comparisons

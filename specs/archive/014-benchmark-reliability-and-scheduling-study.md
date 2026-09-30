@@ -5,7 +5,7 @@ for the user to collect reliable measurements on a quiet laptop. The intended
 evidence will support the full paper's discussion of scheduling, cost, and
 execution granularity. Collecting and interpreting it are separate follow-ups.
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 Created: September 30, 2026
 
@@ -471,33 +471,33 @@ Primary files: the existing Make/benchmark entry points, workflow library,
 benchmark profiles, and their tests/documentation. Extend those components;
 the convenience targets below must not introduce a second campaign engine.
 
-- [ ] Add `make benchmark-study-prepare` to prepare all required groups in one
+- [x] Add `make benchmark-study-prepare` to prepare all required groups in one
       operation. Resolve dependencies while connectivity is available, build
       executables, run untimed correctness checks, archive source/dependency
       identities, and save an explicit launch manifest. Preparation never
       invokes a timing pass, calibration benchmark, or implicit smoke campaign.
       Record unavailable providers as errors for required comparisons.
-- [ ] Add `make benchmark-study-run SESSION=pilot-01` as the user entry point.
+- [x] Add `make benchmark-study-run SESSION=pilot-01` as the user entry point.
       Resolve groups, profiles, binary paths, host identity, order seed, output
       paths, and recording policy from the prepared manifest. Require an
       explicit, fresh session label. The target must have no build prerequisite
       and no network operation; absent, stale, or incompatible preparation is
       an actionable failure, never an automatic rebuild or dependency download.
-- [ ] Have that launch apply `/usr/bin/caffeinate -is` automatically, retain its
+- [x] Have that launch apply `/usr/bin/caffeinate -is` automatically, retain its
       assertions for the entire runner and its children, check readiness,
       perform the declared stabilization wait, and execute groups serially.
       Any expensive verification precedes settling. Keep deliberate per-process
       setup and warmup within the declared Phase 1 policy. The user must not
       need to assemble flags, manually time a sleep interval, or keep an agent
       connected. Do not create a recurring task or remote monitor.
-- [ ] Keep campaign outputs outside normal clean/build directories, defaulting
+- [x] Keep campaign outputs outside normal clean/build directories, defaulting
       to `~/Fourier-benchmarks/spec014/SESSION/`. Expand and print the actual
       absolute location. Retain raw observations, complete/failed status,
       prepared manifest, workload/seed policy, checksums, numerical audits,
       logs, and source/dependency identities needed for later analysis. Preserve
       failed/interrupted directories and reject collisions; never delete or
       overwrite an earlier session to retry it.
-- [ ] Provide a short quiet-host checklist: connect AC, disable Low Power Mode,
+- [x] Provide a short quiet-host checklist: connect AC, disable Low Power Mode,
       keep the lid open, disconnect Wi-Fi/Ethernet/other network connections,
       turn off Bluetooth, stop agents, and close unnecessary applications.
       Use the built-in keyboard/trackpad or wired controls as needed. Launch
@@ -506,25 +506,25 @@ the convenience targets below must not introduce a second campaign engine.
       from observable host state, and never claim that all OS activity ceased.
       The launcher must not toggle radios, modify power settings, kill services,
       or require the internet to validate readiness.
-- [ ] Print local progress/status at boundaries outside measured loops and a
+- [x] Print local progress/status at boundaries outside measured loops and a
       final result-directory path. Once timing ends, write an offline handback
       archive with its checksum and a concise README. Include everything needed
       for the follow-up except documented restricted SDK/provider binaries.
       Do not render reports, select favorable rows, rewrite the paper, or start
       another independent session automatically. No upload is required.
-- [ ] Add `make benchmark-study-check` to test launch dispatch, stale-input
+- [x] Add `make benchmark-study-check` to test launch dispatch, stale-input
       rejection, sleep-assertion lifetime, quiet-gate ordering, offline operation,
       argument forwarding, output collisions, interrupted children, and final
       packaging using fake clocks, fixture records, and stub measurement
       processes. Untimed real numerical/concurrency checks remain separate.
       Distinguish synthetic artifacts unmistakably from measured campaigns.
-- [ ] With dependencies already available locally, validate preparation and
+- [x] With dependencies already available locally, validate preparation and
       fixture-based launch checks with network calls blocked and no connected
       agent service required. Confirm that missing dependencies produce
       preparation instructions, not a fetch during launch. Document any untested
       real-host measurement behavior; obtaining actual performance numbers is
       the user's task.
-- [ ] Deliver the exact repository path, successful preparation/check commands,
+- [x] Deliver the exact repository path, successful preparation/check commands,
       manifest identity, copyable session launches, expected output/archive
       paths, completion/failure markers, and interruption instructions. Provide
       workload counts and labeled planning estimates; do not invent a measured
@@ -569,11 +569,9 @@ spec. Documentation-only changes use link, command, and diff checks.
 
 ### Required Simple Command Interface
 
-The following Make targets are requirements to implement; they do not exist at
-this spec revision. Do not execute or present them as available until their
-implementation and preparation checks pass. Exact profile filenames, resolved
-workload lists, paths, and source identities belong in the generated manifest
-and handoff README so the user's commands can stay short.
+The following Make targets are implemented and verified. Exact profile filenames,
+resolved workload lists, paths and source identities are retained in the generated
+manifest and the offline handoff guide so the user's commands remain short.
 
 The agent prepares the package while dependencies and build tools are available:
 
@@ -619,13 +617,13 @@ Those tasks must not run automatically as part of this preparation spec.
       and failure behavior verified with untimed checks and fixtures.
 - [x] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
 - [x] Phase 3: native and matched scheduling controls numerically validated.
-- [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
+- [x] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
 - [x] Phase 5: experimental variants prepared or explicitly deferred; no
       measured performance selection required.
-- [ ] Phase 6: pilot profiles and future confirmation policy prepared and
+- [x] Phase 6: pilot profiles and future confirmation policy prepared and
       fixture-validated; no campaign executed by the agent.
-- [ ] Phase 7: offline package, simple launch targets, handback format, and
+- [x] Phase 7: offline package, simple launch targets, handback format, and
       exact user commands delivered; no paper integration required.
 
 ## Execution Evidence
@@ -722,7 +720,7 @@ archive this spec or launch measurements to close the remaining preparation.
 ### Phase 2 Implementation: September 30, 2026
 
 Committed Phase 1 as `29111a6` before implementing Phase 2. The new benchmark
-code and [workload guide](../docs/whitepaper/benchmarks/guides/workloads.md)
+code and [workload guide](../../docs/whitepaper/benchmarks/guides/workloads.md)
 provide:
 
 -   Opt-in v3 contracts with independent window/octave/temporal settings,
@@ -803,7 +801,7 @@ pending. The spec remains IN PROGRESS.
 ### Phase 3 Implementation: September 30, 2026
 
 Committed Phase 2 as `0ce591c` before implementing Phase 3. The
-[native baseline guide](../docs/whitepaper/benchmarks/guides/baselines.md)
+[native baseline guide](../../docs/whitepaper/benchmarks/guides/baselines.md)
 documents 24 additional backend identities and their comparison boundaries:
 
 -   Matched current-core batch/distributed controls in float/double use one
@@ -909,20 +907,20 @@ Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate
 completion diary or mark preparation COMPLETE merely because planning passed.
 
-[evidence-spec]: archive/012-comparison-evidence-and-paper-integration.md
-[paper-spec]: archive/013-comparison-paper.md
-[weight-spec]: archive/010-production-cache-scheduling.md
-[workflow]: ../docs/whitepaper/benchmarks/guides/workflow.md
-[adapters]: ../benchmark/paper/README.md
-[development]: ../docs/whitepaper/benchmarks/guides/DEVELOPMENT.md
-[paper-guide]: ../docs/whitepaper/README.md
-[cpp-style]: ../docs/style-guides/cpp.md
-[contributing]: ../CONTRIBUTING.md
-[runner]: ../docs/whitepaper/benchmarks/lib/run.py
-[modules]: ../benchmark/paper/modules.hpp
-[process-table]: ../docs/whitepaper/data/comparison-012/tables/primary/process-timings.csv
-[host-snapshot]: ../docs/whitepaper/data/comparison-012/host/pre-confirm-01.json
-[reviews]: ../docs/whitepaper/reviews/2026-09-30-Opus-5-5-M/meta-review.md
+[evidence-spec]: 012-comparison-evidence-and-paper-integration.md
+[paper-spec]: 013-comparison-paper.md
+[weight-spec]: 010-production-cache-scheduling.md
+[workflow]: ../../docs/whitepaper/benchmarks/guides/workflow.md
+[adapters]: ../../benchmark/paper/README.md
+[development]: ../../docs/whitepaper/benchmarks/guides/DEVELOPMENT.md
+[paper-guide]: ../../docs/whitepaper/README.md
+[cpp-style]: ../../docs/style-guides/cpp.md
+[contributing]: ../../CONTRIBUTING.md
+[runner]: ../../docs/whitepaper/benchmarks/lib/run.py
+[modules]: ../../benchmark/paper/modules.hpp
+[process-table]: ../../docs/whitepaper/data/comparison-012/tables/primary/process-timings.csv
+[host-snapshot]: ../../docs/whitepaper/data/comparison-012/host/pre-confirm-01.json
+[reviews]: ../../docs/whitepaper/reviews/2026-09-30-Opus-5-5-M/meta-review.md
 [reliability-chat]: codex://threads/01a0f32a-4bf7-7fd0-bfc2-c641595e07d8
 
 ### Phase 4 Implementation: September 30, 2026
@@ -934,7 +932,7 @@ coordinates and publication cadence. Controlled Fourier N=16384/H=240 and both
 actual defaults pass. Existing module timings now carry a separate versioned
 module numerical policy; historical artifacts retain their old coverage.
 
-The [engine guide](../docs/whitepaper/benchmarks/guides/engine.md) defines the
+The [engine guide](../../docs/whitepaper/benchmarks/guides/engine.md) defines the
 actual pinned Rack `stepBlock` boundary, engine wrappers, native complete-module
 controls, fixed background load, consumer cadence/stalls, allocation replay and
 lifecycle behavior. All engine cases use preallocated observation storage and a
@@ -991,7 +989,7 @@ Phase 7 remains responsible for the protected offline launch package.
 
 ### Phase 5 Implementation: September 30, 2026
 
-[Scheduling Experiment Readiness](../docs/whitepaper/benchmarks/guides/scheduling-experiments.md)
+[Scheduling Experiment Readiness](../../docs/whitepaper/benchmarks/guides/scheduling-experiments.md)
 records each candidate's readiness or reasoned deferral. Native hybrid scalar
 and true four-channel pipelines now accept fixed completion horizons
 `native-horizon-half-v1` and `native-horizon-quarter-v1`. Their H_c values use
@@ -1042,7 +1040,7 @@ measurement package. Phases 6 and 7 are incomplete. The extended decay check
 also reopens Phase 4's stress acceptance item; its earlier bounded checks still
 passed, but did not reach the failing amplitude range.
 
-The draft [pilot design](../docs/whitepaper/benchmarks/profiles/study-014.json)
+The draft [pilot design](../../docs/whitepaper/benchmarks/profiles/study-014.json)
 and pure `study_plan.py` resolver retain 194 cells / 388 fresh processes per
 session across seven groups, two explicit order seeds, candidate practical
 thresholds, fixed stopping/retention rules and descriptive quantile ranks.
@@ -1052,7 +1050,7 @@ planning inputs, not a prepared manifest, confirmation freeze or launch promise.
 Confirmation-seed enforcement, immutable artifact preparation and the offline
 launch package have not been implemented in this phase.
 
-The new [long-decay reproducer profile](../docs/whitepaper/benchmarks/profiles/engine/long-decay-regression.json)
+The new [long-decay reproducer profile](../../docs/whitepaper/benchmarks/profiles/engine/long-decay-regression.json)
 passes finite input for 4096 samples and then silence, with actual Rack FPU
 reset and all-output replay. It is an untimed correctness check. Under the
 existing `spectrum-norms-v1` limit of 0.0003:
@@ -1067,10 +1065,10 @@ existing `spectrum-norms-v1` limit of 0.0003:
 
 These are sample coordinates and numerical errors, not benchmark durations.
 The complete stdout/stderr failure summaries and binary/Rack/source identities
-are retained in [failure-evidence.json](../docs/whitepaper/benchmarks/tests/fixtures/decay/failure-evidence.json).
+are retained in [failure-evidence.json](../../docs/whitepaper/benchmarks/tests/fixtures/decay/failure-evidence.json).
 No numerical tolerance was widened and no failing observation was excluded.
 
-The isolated [magnitude reproducer](../test/paper/reproduce_tiny_magnitude.cpp)
+The isolated [magnitude reproducer](../../test/paper/reproduce_tiny_magnitude.cpp)
 confirms one cause: Rack's SIMD complex `abs` calls its `hypot`, implemented as
 `sqrt(a*a+b*b)`. Under ARM64 FPU control 16777216 (flush-to-zero), finite normal
 inputs `(1e-25,1e-25)` produce zero, while a binary64 reference gives
@@ -1213,3 +1211,65 @@ prerequisites. The offline shared-runner fixtures passed after the final
 publication-coverage metadata adjustment. Implementation is committed before
 preparation so the archived source revision identifies the tested code; final
 spec completion will record the prepared manifest and network-denied checks.
+
+
+### Phase 7 Validation And Handoff: September 30, 2026
+
+All preparation phases are complete. The code package passed actual preparation
+and launch-fixture checks under macOS sandbox rules denying every network
+operation. The sandbox's denial was independently verified with a rejected
+loopback connection. No connected agent service is part of the commands.
+
+```shell
+/usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' make benchmark-study-prepare
+/usr/bin/sandbox-exec -p '(version 1)(allow default)(deny network*)' make benchmark-study-check
+```
+
+The first verified package used source commit `ec87cab` with a clean working
+tree and manifest
+`f7e002e0c3bff9facc2b7c65ff4026ffcb9be17143362d10f7bece1f0ef32b75`.
+It passed 97 distinct stream contract/resource checks and all 94 exact engine
+profiles with independent all-output replay and separate lifecycle allocation
+checks. The five long-decay profiles reached zero-reference tails: Fourier
+checked 2976 vectors per path (2411 zero-reference, 2554 flagged tail), and
+Spectre checked 1040 per path (841 zero-reference, 868 flagged tail). These
+counts include pre-roll and warmup; they are correctness coverage, not timing
+observations. The offline check passed seven launch fixtures, fourteen execution
+fixtures and two immutable-study policy fixtures, then verified the manifest.
+
+The package is preserved as `.build/study-014/verified-before-archive` while
+archive links are updated. A fresh final package at `.build/study-014/prepared`
+will capture those documentation bytes; its manifest identity and final check
+are recorded below. This refresh runs the same preparation-only commands.
+
+The absolute repository is
+`/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier`.
+After quiet-host preparation and closing agents, use a standalone terminal:
+
+```shell
+cd /Users/christiankauten/Documents/Projects/Rack/plugins/Fourier
+make benchmark-study-run SESSION=pilot-01
+```
+
+Run `make benchmark-study-run SESSION=pilot-02` only in a separately prepared
+host session. Each command collects 194 cells / 388 fresh processes under its
+predeclared seed, automatically applies caffeinate and the stabilization gates,
+and asks for the explicit `READY` isolation declaration. Follow the
+[offline guide](../../docs/whitepaper/benchmarks/guides/offline-study.md) for full
+power/isolation, failure, interruption and artifact-retention instructions.
+Default outputs and handback files are under
+`/Users/christiankauten/Fourier-benchmarks/spec014/`, named `pilot-01/`,
+`pilot-01.handback.tar.gz`, `pilot-01.handback.tar.gz.sha256` (and corresponding
+`pilot-02` names). Return both session archives and checksum files. A successful
+session has `COMPLETE` and `session.json`; failures retain `FAILED` or
+`INTERRUPTED` and every attempted raw/log file. Ctrl-C requests cleanup and
+packaging. Forced termination cannot guarantee a finished archive.
+
+No measured pilot, real pacing/caffeinate session, thermal characterization,
+audio-device experiment or Rack GUI session was performed. The plugin build,
+DSP/Rack numerical checks, synthetic recording tests and offline preparation
+are distinct validations. Provider opacity and the existing FFTW deployment
+warnings remain; compatibility with older macOS releases is unverified. Native
+leaves, new weights and separate performance-kernel candidates remain explicitly
+deferred. Paper figures, conclusions, confirmation selection and publication
+are subsequent work after the user returns real observations.
