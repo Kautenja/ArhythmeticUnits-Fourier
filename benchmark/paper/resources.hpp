@@ -9,6 +9,7 @@
 #include <iostream>
 #include <new>
 #include <string>
+#include "measurement_clock.hpp"
 
 namespace PaperResources {
 struct Counts { size_t allocations = 0, allocated = 0, live = 0, peak = 0; };
@@ -67,7 +68,7 @@ std::string provider_info(const Object&, long) { return "null"; }
 /// @brief Factory owns one object; run includes buffering and required output work.
 template<typename Object, typename Factory, typename Run>
 void inspect(Factory factory, Run run, size_t operations) {
-    using Clock = std::chrono::steady_clock;
+    using Clock = PaperMeasurement::Clock;
     auto elapsed = [](Clock::time_point a, Clock::time_point b) {
         return std::chrono::duration<double, std::nano>(b-a).count();
     };

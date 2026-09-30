@@ -18,6 +18,16 @@ class BuildTests(unittest.TestCase):
         self.root = Path(self.temp.name)
         shutil.copy(ROOT / 'Makefile', self.root)
         shutil.copytree(ROOT / 'mk', self.root / 'mk')
+        # Exercise the real Make wrapper wiring without acquiring assertions,
+        # waiting for stabilization, or invoking a hardware benchmark.
+        launcher = self.root / 'docs/whitepaper/benchmarks/lib/execution.py'
+        launcher.parent.mkdir(parents=True)
+        launcher.write_text('''import pathlib, subprocess, sys
+args = sys.argv[1:]
+assert args[0] == "--record" and args[2] == "--"
+pathlib.Path(args[1]).write_text("fixture guard, no performance measurement\\n")
+raise SystemExit(subprocess.call(args[3:]))
+''')
         for directory in ('src', 'test/dsp', 'test/threads', 'benchmark/dsp',
                           'dep/Catch2', 'sdk'):
             (self.root / directory).mkdir(parents=True, exist_ok=True)

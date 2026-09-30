@@ -266,6 +266,7 @@ void transform(const Config& c, bool real, bool inverse) {
         const auto end = Clock::now();
         rows.emplace_back("timer", i, 0, 0, 0, elapsed(start, end));
     }
+    Execution::settle();
     Runtime::set(Runtime::Phase::TimedWarmup);
     for (size_t i = 0; i < c.warm_hops; ++i) { buffer(); fft.compute(); }
     Runtime::set(Runtime::Phase::Measurement);
@@ -296,6 +297,7 @@ void transform(const Config& c, bool real, bool inverse) {
         }
         require(fft.is_done_computing(), "Transform step count did not complete");
     }
+    Execution::measured();
     Runtime::set(Runtime::Phase::CorrectnessReplay);
     const auto measured = fft.coefficients;
     buffer();

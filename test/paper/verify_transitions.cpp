@@ -1,6 +1,7 @@
 // Deterministic transition identities, retained history and corrupted outputs.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
+#define PAPER_FIXTURE_CLOCK
 #include <limits>
 #include "../../benchmark/paper/transitions.hpp"
 

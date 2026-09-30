@@ -15,6 +15,7 @@ from contracts import normalize_registry, resolve_contract, validate_config
 from runtime import validate_profile
 from numerical import validate_scalar_audit
 from transitions import validate_transition_trace, validate_transition_resources
+from execution import validate_campaign, validate_process
 
 
 
@@ -224,6 +225,10 @@ def check(directory, report_data=None):
     required.update(runtime_files)
     transition_files = transition_artifacts(metadata, required)
     required.update(transition_files)
+    execution_files = validate_campaign(metadata)
+    if set(execution_files) & (required | {"metadata.json"}):
+        raise ValueError("Execution artifact aliases another artifact")
+    required.update(execution_files)
     omissions_path = directory/"bundle-omissions.json"
     omissions = set()
     if omissions_path.exists():
@@ -237,7 +242,7 @@ def check(directory, report_data=None):
             raise ValueError("An omitted dependency artifact is unexpectedly present")
     if not required <= artifacts.keys():
         raise ValueError("Missing artifact checksums")
-    for filename in runtime_files+transition_files:
+    for filename in runtime_files+transition_files+execution_files:
         path = directory/filename
         if path.is_symlink() or not path.is_file():
             raise ValueError(f"Missing or aliased runtime artifact: {filename}")
@@ -336,6 +341,10 @@ def check(directory, report_data=None):
                                              report=report_data is not None)
         if summary != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
+        if metadata.get("execution_policy"):
+            validate_process(json.loads((directory/run["execution"]).read_text()),
+                             metadata["execution_policy"], config, summary, directory/run["raw"],
+                             metadata["sleep_protection"].get("pid", 0))
         descriptor = registry[config["backend"]]
         external = descriptor["kind"] in ("external", "scheduled-analysis", "analysis4")
         scalar = (scalar_policy is not None and descriptor["kind"] in ("core", "legacy")

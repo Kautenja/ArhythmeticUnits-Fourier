@@ -3,8 +3,8 @@
 Use this pathway to evaluate small FFT/analyzer changes without launching a
 publication campaign. It reuses the same adapters, timing boundaries, output
 stores, and numerical/cadence checks as `paper`. No production DSP changes are
-part of the runner. Python remains available for publication archival and
-scientific plots; it is not required to build or execute this pathway.
+part of the runner. Compilation and statistics remain native C++; on macOS,
+measurement launch uses Python 3 for local power checks and sleep protection.
 
 ## Build And Iterate
 
@@ -26,6 +26,16 @@ The run targets serialize their selected profiles even with `-j`; unrelated
 builds, tests, campaigns, and applications can still compete with timing.
 Finish compilation first and measure on an otherwise idle host.
 
+On macOS the Make targets hold `caffeinate` assertions and require AC power
+with Low Power Mode off. A 180-second settling interval follows the C++
+preflight; each workload then settles for 1000 ms after plan creation and before
+warmup. Allow for these waits in addition to actual computation. Networking,
+Bluetooth, agents, and unnecessary applications should be stopped before the
+user launches a measured run from a standalone terminal. The wrapper never
+changes those settings. Build, help/list, and correctness-test targets perform
+no benchmark measurements and need no sleep guard. Use the Make targets for
+macOS measurements; directly launching an unprotected timing pass fails.
+
 | Profile | Workload Selection | Default Observation Policy |
 | --- | --- | --- |
 | `fast` | 24 workloads: six matched float analyzers at N=2048/H=1024/B=64, smoothing off/on, callback and throughput | Three shared-process repetitions, 32 measured hops, eight warmup hops |
@@ -42,9 +52,9 @@ confirmation.
 Fast mode runs a focused independent scalar preflight; full mode runs the
 existing complete preflight. `--verify` also enables the complete preflight
 in fast mode. Every workload retains its existing untimed replay and checks.
-Scalar core/legacy timing retains preflight-only numerical coverage; external
-and independent-channel adapters additionally retain their per-run numerical
-reports. No accuracy budget is relaxed. There is no skip-verification switch.
+Scalar core/legacy, external, and independent-channel adapters retain their
+per-run numerical reports. No accuracy budget is relaxed. There is no
+skip-verification switch.
 
 ## Compare A Baseline And Candidate
 
@@ -65,8 +75,8 @@ claim. Alternate baseline/candidate runs across separately prepared sessions
 before drawing conclusions about small changes.
 
 Comparison requires identical workload/observation/warmup settings, repetition
-count, preflight policy, compiler/flags, backend registry, host identity, and
-recorded dependency fingerprints. Source/binary identities may differ, as
+count, preflight/execution policy, compiler/flags, backend registry, host
+identity, and recorded dependency fingerprints. Source/binary identities may differ, as
 expected for an optimization. Changed conditions fail instead of silently
 comparing an unmatched subset. Missing or modified baseline raw/diagnostic
 files also fail fingerprint checks. Output directories are never overwritten, and
@@ -83,6 +93,13 @@ Each directory contains:
     records, written after timing.
 -   `workload-*-repeat-*.stderr`: existing numerical/provider diagnostics when
     supplied by that adapter; empty files do not imply numerical error zero.
+-   `workload-*-repeat-*.execution.json`: ordered streaming intervals,
+    pre/post timer calibration, process settling, and calling-thread policy/FPU
+    state. Opaque provider worker state is unavailable.
+-   `execution-guard.json` on macOS: completed sleep-protection and power checks,
+    linked to this run. The wrapper also retains a guard record beside the
+    output directory when failure precedes native output creation. A failed
+    guard invalidates its own native result; missing guards reject baselines.
 -   `comparison.csv`: candidate/baseline cost ratios and callback p99 ratios.
     Throughput/transform rows have no callback-tail ratio.
 -   `preflight.txt` and `source.patch`: preflight outcome and tracked source
@@ -108,7 +125,9 @@ Make handles Linux/macOS library paths. Supported filters are `--backend`,
 `--pass`, `--n`, and `--hop`. Observation options are `--repeats`, `--hops`,
 `--frames`, `--warm-hops`, and `--seed`. `--label` records an experiment note.
 Streaming windows round up to complete callbacks. Throughput measures that
-same sample count in one interval. Timer observations are never subtracted.
+same sample count in up to eight ordered, callback-aligned chunks. Their sum
+remains one aggregate CSV observation; the execution sidecar retains individual
+chunks. Timer observations are never subtracted.
 Phase/individual-step experiments remain in the publication runner.
 
 For custom workloads, `--config` accepts the existing frozen JSON array format,

@@ -209,13 +209,16 @@ class RuntimeTests(unittest.TestCase):
                              phase, manifest, runtime, metadata):
                     metadata.update(status="complete", runs=[])
                     runtime.switch("artifact_hashes")
-                    runtime.switch("validation")
+
+                def checker(_):
                     if fail:
                         raise ValueError("fixture checker failure")
 
                 argv = ["run.py", str(output), "--config", str(config), "--hops", "2", "--warm-hops", "0"]
                 with patch("sys.argv", argv), patch("run.RuntimeProfile", return_value=profile), \
-                        patch("run.run_campaign", side_effect=campaign), redirect_stdout(io.StringIO()):
+                        patch("run.run_campaign", side_effect=campaign), \
+                        patch("run.SleepProtection", return_value=__import__("execution").SleepProtection(system="fixture")), \
+                        patch("check.check", side_effect=checker), redirect_stdout(io.StringIO()):
                     if fail:
                         with self.assertRaisesRegex(ValueError, "fixture checker failure"):
                             run.main()

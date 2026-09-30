@@ -40,6 +40,10 @@ STANDALONE_TEST_CATCH := $(STANDALONE_TEST_BUILD)/catch_amalgamated.o
 STANDALONE_BENCHMARK_CATCH := $(STANDALONE_BENCHMARK_BUILD)/catch_amalgamated.o
 TEST_ARGS ?=
 BENCHMARK_ARGS ?=
+# Timing launch protection is separate from build prerequisites and never applies
+# to correctness tests. Other platforms retain their existing launch behavior.
+BENCHMARK_GUARD := $(if $(filter Darwin,$(shell uname -s)),python3 docs/whitepaper/benchmarks/lib/execution.py)
+STANDALONE_BENCHMARK_MEASURES = $(if $(filter --list-tests --list-tags --list-reporters --list-listeners --help -?,$(BENCHMARK_ARGS)),,1)
 
 .PHONY: test test-dsp test-mailbox test-build benchmark benchmark-build
 .PHONY: $(STANDALONE_TEST_ALIASES) $(STANDALONE_BENCHMARK_ALIASES)
@@ -58,7 +62,9 @@ STANDALONE_BENCHMARK_SELECTED := $(if $(filter benchmark,$(MAKECMDGOALS)),$(STAN
 .PHONY: run-standalone-benchmarks
 benchmark $(STANDALONE_BENCHMARK_ALIASES): run-standalone-benchmarks
 run-standalone-benchmarks: $(STANDALONE_BENCHMARK_SELECTED)
-	@set -e; for suite in $(STANDALONE_BENCHMARK_SELECTED); do "$$suite" $(BENCHMARK_ARGS); done
+	@set -e; for suite in $(STANDALONE_BENCHMARK_SELECTED); do \
+		$(if $(and $(BENCHMARK_GUARD),$(STANDALONE_BENCHMARK_MEASURES)),$(BENCHMARK_GUARD) --record "$$suite.guard-$$$$.json" --) "$$suite" $(BENCHMARK_ARGS); \
+	done
 
 $(STANDALONE_TEST_BINARIES): $(STANDALONE_TEST_BUILD)/%$(STANDALONE_SUFFIX): $(STANDALONE_TEST_BUILD)/%.o $(STANDALONE_TEST_CATCH)
 	$(STANDALONE_CXX) $(STANDALONE_TEST_FLAGS) -o $@ $^ $(STANDALONE_LDFLAGS)

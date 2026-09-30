@@ -1,6 +1,9 @@
 // Publication experiments using current production code and the common protocol.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
+#ifdef PAPER_FIXTURE_CLOCK
+#error The benchmark executable cannot be built with synthetic measurement clocks.
+#endif
 #include <complex>
 #include <cstdlib>
 #include <limits>
@@ -80,6 +83,8 @@ void execute(const Config& c, bool provider_info = false) {
     const std::string kind(descriptor.kind), precision(descriptor.precision);
     require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
     Paper::Context context(c.rate);
+    std::unique_ptr<Execution::Session> execution;
+    if (!c.resources && !provider_info) execution.reset(new Execution::Session(c.pass));
     if (!c.transition_suite.empty()) {
         require(!provider_info, "Use transition resource and trace provenance");
         if (c.backend == "core-float") Transition::run<float, Transition::CoreEngine<float>>(c);
@@ -134,6 +139,7 @@ void execute(const Config& c, bool provider_info = false) {
         if (precision == "float") transform<float, Fourier::OnTheFlyIFFT<float>>(c, false, true);
         else transform<double, Fourier::OnTheFlyIFFT<double>>(c, false, true);
     } else require(false, "Adapter implementation missing");
+    if (execution) execution->finish();
 }
 }  // namespace Paper
 

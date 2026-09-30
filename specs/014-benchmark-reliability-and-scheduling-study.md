@@ -5,7 +5,7 @@ for the user to collect reliable measurements on a quiet laptop. The intended
 evidence will support the full paper's discussion of scheduling, cost, and
 execution granularity. Collecting and interpreting it are separate follow-ups.
 
-Status: PLANNED
+Status: IN PROGRESS
 
 Created: September 30, 2026
 
@@ -18,11 +18,12 @@ preparation checks before dependent work; retain decisions and validation
 evidence in this spec. Completion ends at the runnable handoff, without
 requiring benchmark numbers, a performance winner, or manuscript changes.
 
-The current request updates and commits this specification only. Its unchecked
-items are future work, not completed implementation or measurements. The user
-prefers strengthening the full paper before choosing a venue and retaining the
-M1 Pro as the primary test platform. A second architecture is optional follow-up;
-cross-architecture claims require actual measurements on that architecture.
+The current implementation request covers Phase 1. Its completion evidence is
+recorded below; unchecked phases remain future work. No measurements have been
+collected by the agent. The user prefers strengthening the full paper before
+choosing a venue and retaining the M1 Pro as the primary test platform. A second
+architecture is optional follow-up; cross-architecture claims require actual
+measurements on that architecture.
 
 Implementation of this spec authorizes builds, dependency preparation, untimed
 correctness/allocation/concurrency checks, and tests using synthetic timing
@@ -146,15 +147,15 @@ Behavior examples:
 ## Phase 1: Establish Reliable Measurement Boundaries
 
 Primary files: [runner][runner], `benchmark/paper/protocol.hpp`,
-`benchmark/paper/runtime.hpp`, and `benchmarks/lib/{workflow,study,runtime}.py`
-under `docs/whitepaper/`.
+`benchmark/paper/{execution,measurement_clock,development}.hpp`, and
+`benchmarks/lib/{execution,workflow,study,check}.py` under `docs/whitepaper/`.
 
-- [ ] Define a versioned execution contract distinguishing continuous,
+- [x] Define a versioned execution contract distinguishing continuous,
       absolute-time-paced, and Rack-engine runs. Record compiler flags, binary,
       source, SDK/provider identities, power mode, timer resolution, requested
       and effective thread policy, and per-thread FPU state. Unsupported policy
       requests fail or are explicitly unavailable; they never silently succeed.
-- [ ] Require `/usr/bin/caffeinate -is` around every macOS benchmark launch,
+- [x] Require `/usr/bin/caffeinate -is` around every macOS benchmark launch,
       including development, smoke, pilot, confirmation, and Rack-host timing.
       Hold its assertions from before stabilization through the last measured
       child process; the wrapped runner must wait for all measurement children.
@@ -164,30 +165,30 @@ under `docs/whitepaper/`.
       Missing or prematurely ended protection fails the run's integrity check;
       retain its observations and failure record without promoting it to valid
       confirmation evidence.
-- [ ] Require the user's M1 Pro sessions to use AC power with Low Power Mode off.
+- [x] Require the user's M1 Pro sessions to use AC power with Low Power Mode off.
       Verify and record power source and effective power settings separately
       from sleep assertions; flag any change during the session. `caffeinate`
       does not disable Low Power Mode, fix CPU frequency, or prevent thermal
       throttling. Fail readiness when required settings cannot be established;
       do not silently change system settings or infer stable performance from
       an active sleep assertion.
-- [ ] Put build, archive/hash work, full preflight, inventory verification,
+- [x] Put build, archive/hash work, full preflight, inventory verification,
       and resource probes before a recorded stabilization gate. No rebuild or
       resource probe may occur between that gate and measurement. Execute
       verified prepared binary bytes, retaining source/dependency checks.
-- [ ] Define session settling and inter-process preparation policies. Account
+- [x] Define session settling and inter-process preparation policies. Account
       for FFTW planning, previous correctness replay, hashing, serialization,
       and calibration work. Deliberate warmup follows the declared steady-state
       protocol; startup remains a separate cold-analysis workload. Do not assume
       a quiet interval before compilation establishes either condition.
-- [ ] Configure pilot launches with at least 180 seconds of settling after
+- [x] Configure pilot launches with at least 180 seconds of settling after
       session preparation. Implement timestamped host observations and
       calibration recording; later pilot review will freeze measurable
       start/flag conditions. Absence of a thermal warning is not a temperature
       or frequency measurement. Bound gate waiting and retain failure/timeout
       evidence without killing services or repeatedly restarting until a
       favorable run appears.
-- [ ] Support unattended serial execution without active interactive
+- [x] Support unattended serial execution without active interactive
       agent/editor work, builds, tests, or reporting during the campaign.
       Require fully local launch inputs and no network access, downloads,
       dependency resolution, remote logging, or agent connection. Document the
@@ -196,20 +197,20 @@ under `docs/whitepaper/`.
       user declarations separately; disconnected radios alone do not prove an
       idle host. Do not change those settings or terminate processes on behalf
       of the user.
-- [ ] For paced runs, retain scheduled release, actual start, and finish times;
+- [x] For paced runs, retain scheduled release, actual start, and finish times;
       distinguish compute duration, wake-up lateness, and release-to-finish
       deadline misses. Use absolute deadlines and an explicit overrun policy:
       preserve logical sample order, never silently drop or rebase late work.
       Label catch-up execution. Include deliberately interleaved DSP in timing;
       keep synthetic cache-conditioning cost separately identified.
-- [ ] Implement configurable throughput chunks with original ordering retained.
+- [x] Implement configurable throughput chunks with original ordering retained.
       Prepare explicit initial duration, warmup, calibration-placement, and
       pacing policies for later pilot review. Do not subtract timer overhead
       or time every butterfly in the primary loop.
-- [ ] Record pre/post calibration and available host-state evidence. Keep all
+- [x] Record pre/post calibration and available host-state evidence. Keep all
       slow runs. A predeclared flag policy supports sensitivity analysis, not
       retrospective deletion or unsupported E-core/preemption attribution.
-- [ ] Add runner tests proving preparation precedes settling, measured binary
+- [x] Add runner tests proving preparation precedes settling, measured binary
       identity cannot change, required sleep assertions cover the campaign,
       unsupported policies are visible, and failed or partial runs cannot
       become valid confirmation evidence. Test pacing arithmetic/overruns with
@@ -610,7 +611,7 @@ Those tasks must not run automatically as part of this preparation spec.
 
 ### Completion Checklist
 
-- [ ] Phase 1: sleep protection, power/isolation checks, stabilization, pacing,
+- [x] Phase 1: sleep protection, power/isolation checks, stabilization, pacing,
       and failure behavior verified with untimed checks and fixtures.
 - [ ] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
 - [ ] Phase 3: native and matched scheduling controls numerically validated.
@@ -648,6 +649,71 @@ targets. Retained mandatory `caffeinate`, power checks, settling, and data
 integrity requirements. Repository links, shell-example syntax, existing
 command references, and `git diff --check` passed. The new Make targets remain
 unimplemented requirements; no benchmark was launched or code changed.
+
+### Phase 1 Implementation: September 30, 2026
+
+The preparation-only specification was committed as `1892663` before Phase 1
+implementation. The measurement-boundary code now provides:
+
+-   Execution contract version 1, continuous and absolute-time-paced streaming,
+    ordered throughput chunks, and calibration/thread/FPU sidecars. Paced
+    overruns catch up without dropping or rebasing samples; conditioning remains
+    separate from compute duration. Frozen comparisons and report strata include
+    execution policy; historical archives remain readable.
+-   A local macOS guard for campaign, native development, and standalone Make
+    launches. It owns and verifies both `caffeinate -is` assertions, checks AC
+    power and Low Power Mode separately, and retains readiness failures.
+    Failed guards invalidate their own development output without modifying a
+    colliding prior run. Numerical tests and help/list/build targets are exempt.
+-   A recorded session gate after heavy preparation, with 180 seconds of
+    settling by default; plans precede a further 1000 ms per-workload interval
+    and deliberate warmup. Publication runs execute their retained binary.
+    Native development settles after its in-process preflight. Partial
+    observations and failed status survive ordinary processing/guard failures.
+-   Deterministic clock fixtures and stub launches covering release arithmetic,
+    overruns, sample ordering, preparation order, guard lifetime, power failures,
+    binary replacement, sidecar integrity, and interrupted/failed evidence.
+    Synthetic sidecars cannot qualify as measurements. Existing correctness
+    fixtures that entered timing loops now use a synthetic clock.
+
+Validation actually run from the repository root:
+
+```shell
+python3 -m unittest discover -v -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
+python3 scripts/test-build.py
+make test-benchmark-dev PAPER_VDSP=1 PAPER_FFTW_PREFIX=
+make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=
+DYLD_LIBRARY_PATH=/Users/christiankauten/Documents/Projects/Rack LD_LIBRARY_PATH=/Users/christiankauten/Documents/Projects/Rack .build/benchmark/rack/paper --verify
+make -C docs/whitepaper check
+git diff --check
+```
+
+Results: the Python suite passed (93 tests, one optional plotting-environment skip);
+five Make-dispatch fixture tests passed; native development tests passed 127
+assertions in seven cases. Both benchmark executables built with PFFFT/vDSP;
+the compiled `--inventory` matched the Python registry with `features=['vdsp']`.
+Untimed native preflight passed. The Python suite also exercised the available
+FFTW adapter fixtures; the native build above deliberately disabled FFTW.
+Existing Rack SDK deprecation warnings remain. Whitepaper checks verified
+historical campaign/source hashes, 2880 timing rows, 27 phase rows, 31 references,
+numerical tables, figures, and 32768 schedules. Documentation links, shell
+syntax, and whitespace checks passed.
+
+Limitations: no performance pass, live `caffeinate` launch, paced hardware run,
+full plugin build, or manual Rack session was performed. Live power readiness
+remains unverified: this agent environment's read-only `pmset -g` response did
+not expose Low Power Mode, which the launcher correctly treats as unreadable
+and would reject. Pre/post host snapshots cannot exclude transient power or
+thermal changes; user isolation notes do not prove an idle host. Only the
+calling thread's effective scheduler/QoS/FPU state is observable here; opaque
+provider worker state is explicitly unavailable. Unsupported thread/FPU policies
+and the future Rack-engine regime fail explicitly.
+
+Phase 1's fixture/untimed gate is complete. Phases 2--7 remain pending, including
+the prepared no-build launcher, isolated-host checklist/manifest, and final
+one-command handoff. Existing measurement commands still perform preparation
+before settling; they are not the promised Phase 7 offline package. Do not
+archive this spec or launch measurements to close the remaining preparation.
 
 Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate

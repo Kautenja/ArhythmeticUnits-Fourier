@@ -764,6 +764,16 @@ for baseline comparison, raw artifacts, filters, and publication boundaries.
 These short runs are development feedback. The publication archiver below
 retains its separate fresh-process and independent-session requirements.
 
+macOS benchmark Make targets now require Python 3 for a local sleep-protection
+launcher. It holds `caffeinate` assertions, requires AC power with Low Power Mode
+off, and records a guard sidecar. Development runs settle for 180 seconds after
+their native preflight, then 1000 ms per workload before warmup; standalone
+Catch2 suites settle before launch. These waits add to total wall time. Build
+and correctness-test targets do not launch measurements or acquire assertions.
+Run measurements from a quiet standalone terminal with networking, Bluetooth,
+agents, and unnecessary applications stopped. Keep the lid open. The launcher
+does not change system settings; unreadable required power settings fail closed.
+
 The standalone Catch2 v3 benchmarks cover every computational DSP header.
 They build with C++14 and `-O3`, independently of Rack. Run from the repository
 root with the same dependencies as the standalone tests:

@@ -40,6 +40,51 @@ actual power mode, thermal conditions, affinity policy and competing activity.
 Fresh subprocesses are repeated measurements, not independent host sessions.
 The commands below never loop over fictitious session labels.
 
+New campaigns use execution contract version 1 in addition to the existing v2
+workload/CSV protocol. Run measurements yourself from a standalone terminal
+after disconnecting networking, switching off Bluetooth, and stopping agents
+and unnecessary applications. The runner uses local files and subprocesses;
+it does not require an agent connection or change radio/power settings.
+On macOS it holds `caffeinate -is -w RUNNER_PID` until all measurement children
+finish, checks that its own idle/system sleep assertions exist, and requires AC
+power with Low Power Mode off. Unreadable required settings fail readiness.
+Keep the lid open. Sleep assertions do not fix CPU frequency or prevent thermal
+throttling. Pre/post host snapshots cannot rule out transient disturbances.
+Use `--notes` for your declared isolation steps; those notes remain separate
+from observed host snapshots and are not proof that background activity ceased.
+
+Build, archive, preflight, inventory, resource probes, and host checks precede
+a recorded 180-second settling interval. Measured processes use the retained
+`paper.bin`, not the shared build output. Each workload then creates its plans,
+settles for another 1000 ms, calibrates, and performs its declared warmup before
+measurement. Replay, hashing, and previous-process output precede the next
+process's settling. No repeated search for a favorable quiet interval occurs.
+The current CLI still prepares/builds on launch; the separate prepared-package
+interface is later work in [spec 014](../../../../specs/014-benchmark-reliability-and-scheduling-study.md).
+
+`run` accepts `--execution-regime continuous` (default) or `paced`,
+`--session-settle-seconds` (minimum 180), `--process-settle-ms` (minimum 1),
+and `--throughput-chunks` (default 8, minimum 2). Pacing requires a callback-only
+matrix; requesting a Rack-engine regime fails until its dedicated harness
+exists. Thread/FPU policy requests currently support only `inherit`, with
+effective scheduler/QoS and FPU control recorded on the calling thread.
+Opaque provider worker state remains unavailable. No core assignment is inferred.
+
+Each authenticated `.execution.json` retains pre/post timer calibration and
+ordered streaming intervals. Paced observations have absolute releases relative
+to a monotonic epoch, wake, compute start, finish, and deadline offsets in ns.
+Late work catches up without dropping samples or rebasing releases. Cache
+conditioning lies between wake and compute start; fixed background DSP remains
+inside compute. Continuous throughput retains multiple callback-aligned chunks
+in that sidecar and their summed compute time in the historical aggregate CSV
+row. Chunks are not independent process repetitions. Historical archives retain
+their original contracts; new freezes and report strata include execution policy.
+
+Preparation validation uses numerical checks, stub processes, and synthetic
+clocks. Synthetic sidecars are marked and rejected as measurement evidence;
+the publication executable cannot compile with the fixture-clock macro. The
+agent must not use a timed smoke run as an implementation check for spec 014.
+
 ## Plan And Smoke
 
 ```shell

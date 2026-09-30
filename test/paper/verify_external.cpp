@@ -1,6 +1,7 @@
 // Regressions for analysis reference precision and non-finite external output.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
+#define PAPER_FIXTURE_CLOCK
 #include "../../benchmark/paper/external.hpp"
 #include <limits>
 

@@ -1,6 +1,7 @@
 // Schedule and retained-input invariants without a Rack/native FFT dependency.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
+#define PAPER_FIXTURE_CLOCK
 #include "../../benchmark/paper/hybrid.hpp"
 
 struct InspectBackend {

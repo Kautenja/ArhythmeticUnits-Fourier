@@ -180,14 +180,18 @@ benchmark-rack-build: benchmark-paper-build
 # Native development modes share a serial recipe, even with both goals and -j.
 # Only the timing executable is needed; the publication audit build stays opt-in.
 BENCHMARK_DEV_ARGS ?=
-BENCHMARK_DEV_OUT ?= .build/benchmark-dev-$(shell date +%Y%m%d-%H%M%S)-$(shell echo $$$$)
+ifeq ($(origin BENCHMARK_DEV_OUT),undefined)
+BENCHMARK_DEV_OUT := .build/benchmark-dev-$(shell date +%Y%m%d-%H%M%S)-$(shell echo $$$$)
+endif
 BENCHMARK_DEV_PROFILES = $(if $(filter benchmark-fast,$(MAKECMDGOALS)),fast) $(if $(filter benchmark-full,$(MAKECMDGOALS)),full)
+BENCHMARK_DEV_MEASURES = $(if $(filter --list --help,$(BENCHMARK_DEV_ARGS)),,1)
 .PHONY: benchmark-fast benchmark-full run-development-benchmarks benchmark-dev-build test-benchmark-dev
 benchmark-dev-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX)
 benchmark-fast benchmark-full: run-development-benchmarks
 run-development-benchmarks: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX)
 	@set -e; for profile in $(BENCHMARK_DEV_PROFILES); do \
-		DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" $< --development \
+		DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" \
+		$(if $(and $(BENCHMARK_GUARD),$(BENCHMARK_DEV_MEASURES)),$(BENCHMARK_GUARD) --native-development-gate --record "$(BENCHMARK_DEV_OUT)-$$profile.guard.json" --) $< --development \
 		--profile "$$profile" --output "$(BENCHMARK_DEV_OUT)-$$profile" $(BENCHMARK_DEV_ARGS); \
 	done
 

@@ -230,10 +230,20 @@ inline void compatible(const Json& baseline, const Json& current) {
     for (const char* key : {"environment", "workloads", "repeats", "preflight"})
         require(json_equal(json_object_get(baseline.get(), key), json_object_get(current.get(), key)),
             (std::string("Incompatible baseline: ")+key).c_str());
+    if (json_object_get(baseline.get(), "execution_policy") || json_object_get(current.get(), "execution_policy"))
+        require(json_equal(json_object_get(baseline.get(), "execution_policy"),
+                           json_object_get(current.get(), "execution_policy")),
+            "Incompatible baseline: execution policy");
 }
 
 /// @brief Detect missing/corrupt retained files before trusting a baseline table.
 inline void check_artifacts(const Json& baseline, const std::string& directory) {
+    if (auto* token = json_object_get(baseline.get(), "execution_guard_token")) {
+        auto guard = read_json(directory+"/execution-guard.json");
+        require(string(json_object_get(guard.get(), "status")) == "complete" &&
+            string(json_object_get(guard.get(), "token")) == string(token),
+            "Baseline execution guard is incomplete or belongs to another run");
+    }
     auto* runs = json_object_get(baseline.get(), "runs");
     auto* workloads = json_object_get(baseline.get(), "workloads");
     auto* results = json_object_get(baseline.get(), "results");
@@ -252,8 +262,10 @@ inline void check_artifacts(const Json& baseline, const std::string& directory) 
             && json_is_number(json_object_get(row, "repeat")) && repeat >= 0 && repeat < repeats
             && repeat == std::floor(repeat) && seen.insert({id, size_t(repeat)}).second,
             "Duplicate or invalid baseline repetition");
-        for (const char* field : {"raw", "numerical_report"}) {
-            const auto file = string(json_object_get(row, field));
+        std::vector<std::string> fields{"raw", "numerical_report"};
+        if (json_object_get(baseline.get(), "execution_policy")) fields.push_back("execution");
+        for (const auto& field : fields) {
+            const auto file = string(json_object_get(row, field.c_str()));
             require(!file.empty() && file.find_first_of("/\\") == std::string::npos
                 && file != "." && file != "..", "Invalid baseline artifact path");
             const auto hash = string(json_object_get(row, (std::string(field)+"_fnv1a64").c_str()));
@@ -301,6 +313,14 @@ int run(int argc, char** argv, const std::string& executable,
         return 0;
     }
     require(!o.output.empty(), "Use --output with a new directory (or --list)");
+    for (const auto& c : configs) Execution::Policy::configured(c.pass);
+    const auto policy = Execution::Policy::configured(configs.front().pass);
+    const auto settle_seconds = Execution::number("PAPER_SESSION_SETTLE_SECONDS", 180, 3600);
+    require(settle_seconds >= 180, "Session settling must be at least 180 seconds");
+    const auto guard_token = Execution::environment("PAPER_GUARD_TOKEN");
+#if defined(__APPLE__) && !defined(PAPER_FIXTURE_CLOCK)
+    require(!guard_token.empty(), "Use the protected development launcher on macOS");
+#endif
     const auto began = Clock::now();
     auto manifest = object(), workloads = object(), results = object();
     auto sources = source_identity();
@@ -319,6 +339,17 @@ int run(int argc, char** argv, const std::string& executable,
     set(manifest, "revision", capture("git rev-parse HEAD"));
     set(manifest, "git_status", capture("git status --short"));
     set(manifest, "environment", environment()); set(manifest, "sources_fnv1a64", sources);
+    auto execution_policy = object();
+    set(execution_policy, "schema", 1); set(execution_policy, "regime", policy.regime);
+    set(execution_policy, "process_settle_ms", policy.settle_ms);
+    set(execution_policy, "throughput_chunks", policy.chunks);
+    set(execution_policy, "session_settle_seconds", settle_seconds);
+    set(execution_policy, "thread_policy", "inherit"); set(execution_policy, "fpu_policy", "inherit");
+    set(execution_policy, "overrun", "catch-up-no-drop-no-rebase");
+    set(execution_policy, "warmup", "after-process-settling");
+    set(execution_policy, "conditioning", "outside-compute-inside-release-to-finish");
+    set(manifest, "execution_policy", execution_policy);
+    if (!guard_token.empty()) set(manifest, "execution_guard_token", guard_token);
     set(manifest, "executable_fnv1a64", fingerprint(executable));
     for (const auto& c : configs) set(workloads, identity(c).c_str(), config_json(c));
     set(manifest, "workloads", workloads);
@@ -361,6 +392,13 @@ int run(int argc, char** argv, const std::string& executable,
         auto order = own(json_array());
         std::map<std::string, std::vector<Summary>> summaries;
         size_t ordinal = 0;
+        std::cout << "Preflight complete; settling for " << settle_seconds << " seconds..." << std::endl;
+        const auto interval = Execution::session_settle(settle_seconds);
+        auto stabilization = object();
+        set(stabilization, "seconds", settle_seconds);
+        set(stabilization, "start_ns", own(json_integer(interval.first)));
+        set(stabilization, "finish_ns", own(json_integer(interval.second)));
+        set(manifest, "session_stabilization", stabilization);
         for (const auto& job : jobs) {
             const auto& c = configs[job.first];
             const auto id = identity(c);
@@ -369,6 +407,7 @@ int run(int argc, char** argv, const std::string& executable,
             Summary summary; bool received = false;
             std::string diagnostics;
             {
+                Execution::OutputPath execution_path(o.output+"/"+stem+".execution.json");
                 Capture capture_rows([&](const std::vector<Row>& rows) {
                     require(!received, "Multiple result batches"); received = true;
                     summary = summarize(c, rows);
@@ -388,6 +427,8 @@ int run(int argc, char** argv, const std::string& executable,
             auto record = summary_json(summary);
             set(record, "workload", id); set(record, "repeat", job.second); set(record, "raw", stem+".csv");
             set(record, "numerical_report", stem+".stderr");
+            set(record, "execution", stem+".execution.json");
+            set(record, "execution_fnv1a64", fingerprint(o.output+"/"+stem+".execution.json"));
             set(record, "raw_fnv1a64", fingerprint(o.output+"/"+stem+".csv"));
             set(record, "numerical_report_fnv1a64", fingerprint(o.output+"/"+stem+".stderr"));
             json_array_append(order.get(), record.get());

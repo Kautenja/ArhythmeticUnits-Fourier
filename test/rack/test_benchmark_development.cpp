@@ -127,6 +127,15 @@ TEST_CASE("Baseline comparison rejects changed contracts and incomplete evidence
     baseline = own(json_deep_copy(current.get()));
     set(baseline, "workloads", object());
     REQUIRE_THROWS(compatible(baseline, current));
+    baseline = own(json_deep_copy(current.get()));
+    auto policy = object(); set(policy, "regime", "continuous");
+    set(current, "execution_policy", policy);
+    REQUIRE_THROWS(compatible(baseline, current));
+    set(baseline, "execution_policy", policy);
+    REQUIRE_NOTHROW(compatible(baseline, current));
+    auto changed_policy = object(); set(changed_policy, "regime", "paced");
+    set(current, "execution_policy", changed_policy);
+    REQUIRE_THROWS(compatible(baseline, current));
     REQUIRE_THROWS(check_artifacts(current, "/unused"));
 }
 

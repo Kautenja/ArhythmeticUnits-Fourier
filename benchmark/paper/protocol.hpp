@@ -18,9 +18,11 @@
 #include "backend.hpp"
 #include "resources.hpp"
 #include "runtime.hpp"
+#include "execution.hpp"
+#include "measurement_clock.hpp"
 
 namespace Paper {
-using Clock = std::chrono::steady_clock;
+using Clock = PaperMeasurement::Clock;
 inline void require(bool value, const char* message) {
     if (!value) throw std::runtime_error(message);
 }
@@ -152,6 +154,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     std::vector<Row> rows;
     rows.reserve(c.callbacks + total/c.hop*c.count + 2048);
     std::vector<unsigned char> cache(c.cache_mib*1024*1024, 1);
+    if (Execution::active()) Execution::active()->reserve(c.callbacks);
     auto prepare = [&](std::vector<std::unique_ptr<Adapter>>& bank, std::vector<size_t>& cursors, bool replay) {
         for (size_t a = 0; a < c.count; ++a) {
             Runtime::set(replay ? Runtime::Phase::ReplaySetup : Runtime::Phase::TimedSetup);
@@ -160,10 +163,14 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             const size_t warm = c.state == "startup" ? 0 :
                 ((c.n+c.hop-1)/c.hop + c.warm_hops)*c.hop;
             cursors.push_back(warm+offset);
+        }
+        // All provider planning/allocation precedes settling and declared warmup.
+        if (!replay) Execution::settle();
+        for (size_t a = 0; a < c.count; ++a) {
             Runtime::set(replay ? Runtime::Phase::ReplayWarmup : Runtime::Phase::TimedWarmup);
-            for (size_t s = 0; s < warm+offset; ++s)
-                bank.back()->process(input[s%input.size()]);
-            bank.back()->published(); // Establish the initial consumer snapshot.
+            for (size_t s = 0; s < cursors[a]; ++s)
+                bank[a]->process(input[s%input.size()]);
+            bank[a]->published(); // Establish the initial consumer snapshot.
         }
     };
     // Empty clock readings are retained, never subtracted from short calls.
@@ -178,9 +185,10 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     {
         std::vector<std::unique_ptr<Adapter>> bank;
         std::vector<size_t> cursors;
+        bank.reserve(c.count); cursors.reserve(c.count);
+        Background background(c.load);
         prepare(bank, cursors, false);
         Runtime::set(Runtime::Phase::TimedSetup);
-        Background background(c.load);
         Runtime::set(Runtime::Phase::TimedWarmup);
         if (c.state != "startup")
             for (size_t i = 0; i < c.warm_hops*c.hop; ++i) background.process(input[i%input.size()]);
@@ -195,18 +203,41 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
             for (const auto& adapter : bank) adapter->barrier();
             observe(background);
         };
-        const size_t chunks = c.pass == "throughput" ? 1 : c.callbacks;
-        const size_t samples = c.pass == "throughput" ? total : c.block;
-        Runtime::set(Runtime::Phase::Measurement);
-        for (size_t i = 0; i < chunks; ++i) {
-            // Cache pressure is outside timing, not charged to simulated deadlines.
+        auto condition = [&]() {
+            // Cache pressure is outside compute time. Paced release-to-finish
+            // latency includes it, separately visible as wake-to-start time.
             for (size_t k = 0; k < cache.size(); k += 64) ++cache[k];
             observe(cache);
-            const auto start = Clock::now();
-            run(samples);
-            const auto end = Clock::now();
-            rows.emplace_back(c.pass, i, 0, i*samples, samples, elapsed(start, end));
+        };
+        Runtime::set(Runtime::Phase::Measurement);
+        if (Execution::active()) {
+            auto& session = *Execution::active();
+            auto& measured = session.reserve(c.callbacks);
+            Execution::SystemClock clock;
+            Execution::measure(session.policy, c.pass, c.callbacks, c.block, c.rate,
+                clock, run, condition, measured);
+            double sum = 0;
+            for (size_t i = 0; i < measured.size(); ++i) {
+                const auto& r = measured[i];
+                sum += r.finish-r.start;
+                if (c.pass == "callback")
+                    rows.emplace_back(c.pass, i, 0, r.sample, r.samples, r.finish-r.start);
+            }
+            // Retain the historical aggregate CSV boundary; ordered chunks live
+            // in the authenticated execution sidecar, never as independent runs.
+            if (c.pass == "throughput") rows.emplace_back(c.pass, 0, 0, 0, total, sum);
+        } else {
+            const size_t chunks = c.pass == "throughput" ? 1 : c.callbacks;
+            const size_t samples = c.pass == "throughput" ? total : c.block;
+            for (size_t i = 0; i < chunks; ++i) {
+                condition();
+                const auto start = Clock::now();
+                run(samples);
+                const auto end = Clock::now();
+                rows.emplace_back(c.pass, i, 0, i*samples, samples, elapsed(start, end));
+            }
         }
+        Execution::measured();
         Runtime::set(Runtime::Phase::PostMeasurementChecks);
         for (const auto& adapter : bank) {
             adapter->check();

@@ -243,6 +243,7 @@ void external_transform(const Config& c) {
         const auto start = Clock::now(); observe(job); const auto end = Clock::now();
         rows.emplace_back("timer", i, 0, 0, 0, elapsed(start, end));
     }
+    Execution::settle();
     Runtime::set(Runtime::Phase::TimedWarmup);
     for (size_t i = 0; i < c.warm_hops; ++i) job.compute();
     Runtime::set(Runtime::Phase::Measurement);
@@ -250,6 +251,7 @@ void external_transform(const Config& c) {
         const auto start = Clock::now(); job.compute(); const auto end = Clock::now();
         rows.emplace_back("complete", i, 0, 0, c.n, elapsed(start, end));
     }
+    Execution::measured();
     Runtime::set(Runtime::Phase::CorrectnessReplay);
     for (const auto value : job.output)
         require(std::isfinite(value.real()) && std::isfinite(value.imag()), "Non-finite external transform output");

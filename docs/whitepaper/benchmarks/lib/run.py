@@ -21,6 +21,9 @@ from dependencies import fftw_inputs
 from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
 from runtime import RuntimeProfile, format_runtime, validate_profile
 from observations import quantile, summarize
+from execution import (SleepProtection, Gate, host_snapshot, add_arguments,
+                       policy_from_args, validate_policy, child_environment, validate_process,
+                       ENVIRONMENT, ReadinessError)
 
 from paths import ROOT, BENCHMARKS, HISTORY
 BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
@@ -116,13 +119,13 @@ def synthesis_matrix(smoke):
     return list({json.dumps(row, sort_keys=True): row for row in rows}.values())
 
 
-def command(config):
+def command(config, executable=BINARY):
     keys = ("backend", "pass_name", "n", "hop", "block", "count", "alignment", "load",
             "smooth", "voices", "callbacks", "warm_hops", "rate", "state", "cache_mib")
     prefix = (["--transition", config["transition_suite"],
                "control" if config.get("transition_control", False) else "change"]
               if config.get("transition_suite") else [])
-    return [str(BINARY)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
+    return [str(executable)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
 
 
 def digest(path):
@@ -162,6 +165,7 @@ def main():
     parser.add_argument("--phase", choices=("smoke", "pilot", "confirmation"), help="Evidence classification; defaults to smoke")
     parser.add_argument("--session-id", default="", help="Independent measurement session label; required outside smoke")
     parser.add_argument("--host-id", default="", help="Physical measurement host label; required outside smoke")
+    add_arguments(parser)
     args = parser.parse_args()
     features, external_inputs = [], {}
     if args.fftw_prefix:
@@ -228,6 +232,7 @@ def main():
         parser.error("Duplicate workload configuration")
     if not configs:
         parser.error("Empty workload matrix")
+    args.execution_policy = validate_policy(policy_from_args(args), configs)
     if args.list or args.describe_matrix:
         result = dict(campaign=manifest, phase=phase, inventory=campaign_inventory(configs, registry), configs=configs) if args.describe_matrix else configs
         print(json.dumps(result, indent=2))
@@ -240,14 +245,24 @@ def main():
         parser.error("Write campaigns outside source and Git metadata directories")
     output.mkdir(parents=True, exist_ok=False)
     runtime, metadata = RuntimeProfile(), {}
+    guard = SleepProtection()
+    metadata["sleep_protection"] = guard.record
     try:
-        run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
-                     runtime, metadata)
+        with guard:
+            args.sleep_guard = guard
+            run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
+                         runtime, metadata)
+        save(output/"metadata.json", metadata)
+        runtime.switch("validation")
+        from check import check
+        check(output)
     except BaseException:
         # Keep failed phase accounting without presenting partial evidence as complete.
         metadata["runtime"] = runtime.finish("failed")
         metadata["status"] = "invalid"
         metadata["failure"] = dict(type=__import__("sys").exc_info()[0].__name__, message=str(__import__("sys").exc_info()[1]))
+        if isinstance(__import__("sys").exc_info()[1], ReadinessError):
+            metadata["readiness_failure"] = __import__("sys").exc_info()[1].snapshot
         save(output/"metadata.json", metadata)
         raise
     metadata["runtime"] = runtime.finish("complete")
@@ -259,7 +274,7 @@ def main():
 
 def run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
                  runtime, metadata):
-    """Retain the existing serial protocol; profile only coarse outer phases."""
+    """Prepare completely, then launch protected, versioned serial measurements."""
     rack = args.rack_dir.resolve()
     build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
     # The recorded feature set must override ambient Make environment settings.
@@ -282,6 +297,7 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     if any(c.get("transition_suite") for c in configs):
         metadata["transition_policy"] = "fourier-transitions-v1"
     metadata["runtime_profile"] = "coarse-wall-v1"
+    metadata["execution_policy"] = args.execution_policy
     metadata["phase"] = phase
     metadata["session_id"] = args.session_id or "smoke"
     metadata["host_id"] = args.host_id or "unlabeled-smoke-host"
@@ -329,6 +345,8 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     audit_binary = BINARY.with_name("paper-audit" + BINARY.suffix)
     shutil.copy2(BINARY, output/"paper.bin")
     shutil.copy2(audit_binary, output/"paper-audit.bin")
+    measured_binary = output/"paper.bin"
+    measured_binary.chmod(0o500)
     metadata["binary_sha256"] = digest(BINARY)
     metadata["audit_binary_sha256"] = digest(audit_binary)
     metadata["source_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in sources}
@@ -364,22 +382,25 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     # Resource probes/preflight must not write into an inherited telemetry path.
     env.pop("PAPER_RUNTIME_PATH", None)
     env.pop("PAPER_TRANSITION_PATH", None)
+    for key in ENVIRONMENT:
+        env.pop(key, None)
+    env["PAPER_SLEEP_OWNER"] = str(args.sleep_guard.pid)
     runtime.switch("preflight")
     with (output/"verification.txt").open("w") as verification:
-        subprocess.run([str(BINARY), "--verify"], cwd=ROOT, env=env,
+        subprocess.run([str(measured_binary), "--verify"], cwd=ROOT, env=env,
                        stdout=verification, stderr=subprocess.STDOUT, check=True)
-    compiled_registry = json.loads(subprocess.check_output([str(BINARY), "--inventory"], env=env, text=True))
+    compiled_registry = json.loads(subprocess.check_output([str(measured_binary), "--inventory"], env=env, text=True))
     if compiled_registry != registry:
         raise ValueError("Compiled backend registry differs from runner")
     save(output/"inventory.json", compiled_registry)
     runtime.switch("resource_probes")
     for index, config in enumerate(configs):
         arguments = command(config)[1:]
-        contract = json.loads(subprocess.check_output([str(BINARY), "--describe"]+arguments, env=env, text=True))
+        contract = json.loads(subprocess.check_output([str(measured_binary), "--describe"]+arguments, env=env, text=True))
         if contract != metadata["contracts"][str(index)]:
             raise ValueError("C++ and Python evidence contracts differ")
         resource = {}
-        for label, executable in (("timing", BINARY), ("allocation", audit_binary)):
+        for label, executable in (("timing", measured_binary), ("allocation", output/"paper-audit.bin")):
             resource[label] = json.loads(subprocess.check_output(
                 [str(executable), "--resources"]+arguments, env=env, text=True))
         filename = f"resources-{index:04d}.json"
@@ -389,39 +410,58 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     random.Random(args.seed).shuffle(jobs)
     runtime.switch("metadata_checkpoint")
     save(output/"metadata.json", metadata)
+    runtime.switch("host_readiness")
+    metadata["host_before"] = host_snapshot(args.sleep_guard.pid)
+    gate = Gate(args.execution_policy, args.sleep_guard)
+    metadata["execution_events"] = gate.events
     for ordinal, (repeat, index) in enumerate(jobs):
         runtime.switch("job_dispatch", workload=index, repeat=repeat)
         config = configs[index]
         stem = f"workload-{index:04d}-repeat-{repeat:02d}"
         raw, errors = output/(stem+".csv"), output/(stem+".stderr")
         process_runtime = output/(stem+".runtime.json")
-        invocation = command(config)
+        process_execution = output/(stem+".execution.json")
+        invocation = command(config, measured_binary)
         print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['backend']} {config['pass_name']}", flush=True)
         started = dt.datetime.now(dt.timezone.utc).isoformat()
         metadata["active_job"] = dict(workload=index, repeat=repeat, raw=raw.name, stderr=errors.name)
         save(output/"metadata.json", metadata)
-        runtime.switch("benchmark_process", workload=index, repeat=repeat)
-        process_env = dict(env, PAPER_RUNTIME_PATH=str(process_runtime))
+        process_env = child_environment(args.execution_policy, process_execution,
+                                        dict(env, PAPER_RUNTIME_PATH=str(process_runtime)))
         transition = output/(stem+".transition.json") if config.get("transition_suite") else None
         if transition:
             process_env["PAPER_TRANSITION_PATH"] = str(transition)
         with raw.open("w") as stdout, errors.open("w") as stderr:
+            if ordinal == 0:
+                gate.prepared(measured_binary, metadata["binary_sha256"])
+                runtime.switch("stabilization")
+                gate.settle()
+                gate.launch()
+            args.sleep_guard.check()
+            runtime.switch("benchmark_process", workload=index, repeat=repeat)
             subprocess.run(invocation, cwd=ROOT, env=process_env,
                            stdout=stdout, stderr=stderr, check=True)
+            args.sleep_guard.check()
         runtime.switch("summarize", workload=index, repeat=repeat)
         validate_profile(json.loads(process_runtime.read_text()))
         metadata["runs"].append(dict(workload=index, repeat=repeat, command=invocation,
                                      started_utc=started, raw=raw.name, stderr=errors.name,
                                      runtime=process_runtime.name,
+                                     execution=process_execution.name,
                                      summary=summarize(raw, config)))
+        validate_process(json.loads(process_execution.read_text()), args.execution_policy,
+                         config, metadata["runs"][-1]["summary"], raw, args.sleep_guard.pid)
         if transition:
             metadata["runs"][-1]["transition"] = transition.name
         metadata.pop("active_job", None)
         runtime.switch("metadata_checkpoint", workload=index, repeat=repeat)
         save(output/"metadata.json", metadata)
     runtime.switch("final_integrity")
-    if (digest(BINARY) != metadata["binary_sha256"]
-            or digest(audit_binary) != metadata["audit_binary_sha256"]
+    metadata["host_after"] = host_snapshot(args.sleep_guard.pid)
+    if metadata["host_before"]["power"] != metadata["host_after"]["power"]:
+        raise ValueError("Power source/settings changed during campaign")
+    if (digest(measured_binary) != metadata["binary_sha256"]
+            or digest(output/"paper-audit.bin") != metadata["audit_binary_sha256"]
             or any(digest(p) != metadata["source_sha256"][str(p.relative_to(ROOT))] for p in sources)
             or any(digest(p) != metadata["sdk_sha256"][str(p.relative_to(rack))] for p in sdk)
             or any(digest(path) != metadata["external_dependency_sha256"][name] for name, path in external_inputs.items())):
@@ -432,14 +472,6 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     metadata["artifact_sha256"] = {p.name: digest(p) for p in output.iterdir()
                                   if p.is_file() and p.name != "metadata.json"}
     save(output/"metadata.json", metadata)
-    runtime.switch("validation")
-    from check import check
-    try:
-        check(output)
-    except Exception:
-        metadata["status"] = "invalid"
-        save(output/"metadata.json", metadata)
-        raise
 
 
 if __name__ == "__main__":

@@ -53,6 +53,8 @@ def freeze(pilots, configs, options, variant, rationale, output):
     identities = [{k: m.get(k) for k in IDENTITY} for m in metadata]
     if any(i != identities[0] for i in identities):
         raise ValueError("Pilot source/dependency/compiler identities differ")
+    if any(m.get("execution_policy") != metadata[0].get("execution_policy") for m in metadata):
+        raise ValueError("Pilot execution policies differ")
     if len({(m["host_id"], m["session_id"]) for m in metadata}) != len(metadata):
         raise ValueError("Duplicate pilot session label")
 
@@ -84,6 +86,8 @@ def freeze(pilots, configs, options, variant, rationale, output):
             for p, m in zip(pilots, metadata)
         ],
     )
+    if metadata[0].get("execution_policy") is not None:
+        value["execution_policy"] = metadata[0]["execution_policy"]
     value["freeze_id"] = identity(value)
     write_new(output, value)
     return value
@@ -108,6 +112,8 @@ def read_freeze(path):
 
 
 def enforce(f, metadata):
+    if metadata.get("execution_policy") != f.get("execution_policy"):
+        raise ValueError("Execution policy changed since the pilot freeze")
     if (
         metadata["configs"] != f["configs"]
         or metadata["repeats"] != f["options"]["repeats"]

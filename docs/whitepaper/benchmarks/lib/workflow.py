@@ -164,6 +164,10 @@ def run_study(args):
     ]
     for k, v in options.items():
         command += ["--" + k.replace("_", "-"), str(v)]
+    for key in ("execution_regime", "session_settle_seconds", "process_settle_ms", "throughput_chunks",
+                "thread_policy", "fpu_policy"):
+        if hasattr(args, key):
+            command += ["--" + key.replace("_", "-"), str(getattr(args, key))]
     if frozen:
         command += ["--freeze", str(args.freeze)]
     if "vdsp" in providers(args):
@@ -288,6 +292,8 @@ def main(argv=None):
     p.add_argument("--output", type=Path)
     p = commands.add_parser("run", help="Launch one serial smoke/pilot/frozen session")
     profile(p)
+    from execution import add_arguments
+    add_arguments(p)
     p.add_argument("--freeze", type=Path)
     p.add_argument("--output", required=True, type=Path)
     p.add_argument("--host", default="")

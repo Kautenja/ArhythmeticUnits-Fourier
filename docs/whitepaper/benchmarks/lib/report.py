@@ -84,6 +84,8 @@ def collect(directories, phase):
         provenance = {key: metadata.get(key) for key in (
             "source_sha256", "sdk_sha256", "external_dependency_sha256", "compiler", "build_command",
             "build_features", "compile_commands", "platform", "machine", "cpu_model")}
+        if "execution_policy" in metadata:
+            provenance["execution_policy"] = metadata["execution_policy"]
         # Different hosts, source/dependency bytes or build policies cannot be pooled.
         stratum = identity(dict(host=host, provenance=provenance))[:16]
         sources.append(dict(directory=str(directory.resolve()), metadata_sha256=digest(directory/"metadata.json"),
