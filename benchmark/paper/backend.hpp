@@ -29,6 +29,13 @@ void validate_backend(const Config& c) {
         && (!d.fixed_hop || c.hop == d.fixed_hop));
     check(c.voices <= d.max_voices && (!c.smooth || d.smoothing) && (c.state != "live" || d.live));
     const std::string kind(d.kind), boundary(d.boundary), model(d.step_model);
+    if (!c.transition_suite.empty()) {
+        check(c.backend == "core-float" || c.backend == "core-double"
+            || c.backend == "pffft-hybrid-float" || c.backend == "pffft-scheduled-batch-float");
+        check(boundary == "analysis" && d.channels == 1 && c.pass == "callback"
+            && c.state == "startup" && c.count == 1 && c.alignment == "aligned"
+            && c.callback_offset == 0 && c.warm_hops == 0);
+    }
     check(c.callback_offset < c.hop && (c.state != "startup" || c.callback_offset == 0));
     if (boundary == "transform") check(c.callback_offset == 0);
     if (boundary == "chain") check(c.hop <= c.n-2);

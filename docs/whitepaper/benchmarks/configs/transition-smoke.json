@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "phase": "smoke",
+  "variants": {
+    "rack": {
+      "systems": [
+        "Darwin",
+        "Linux",
+        "Windows"
+      ],
+      "features": [],
+      "providers": [
+        "fourier",
+        "pffft"
+      ]
+    }
+  },
+  "workloads": [
+    {
+      "backend": "core-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    },
+    {
+      "backend": "core-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": true
+    },
+    {
+      "backend": "core-double",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    },
+    {
+      "backend": "core-double",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": true
+    },
+    {
+      "backend": "pffft-hybrid-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    },
+    {
+      "backend": "pffft-hybrid-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": true
+    },
+    {
+      "backend": "pffft-scheduled-batch-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    },
+    {
+      "backend": "pffft-scheduled-batch-float",
+      "pass_name": "callback",
+      "n": 128,
+      "hop": 37,
+      "block": 16,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": true
+    },
+    {
+      "backend": "core-float",
+      "pass_name": "callback",
+      "n": 2048,
+      "hop": 1024,
+      "block": 64,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    },
+    {
+      "backend": "pffft-hybrid-float",
+      "pass_name": "callback",
+      "n": 2048,
+      "hop": 1024,
+      "block": 64,
+      "state": "startup",
+      "transition_suite": "interactive-v1",
+      "transition_control": false
+    }
+  ]
+}

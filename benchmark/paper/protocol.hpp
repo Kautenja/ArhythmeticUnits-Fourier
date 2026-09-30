@@ -40,6 +40,8 @@ struct Config {
     bool smooth;
     bool resources = false;
     size_t callback_offset = 0;
+    std::string transition_suite;
+    bool transition_control = false;
 };
 
 /// @brief Common float input bytes across precisions, lanes and backend families.
@@ -118,6 +120,18 @@ auto report_timed_instance(Audit& audit, const Adapter& adapter, int)
 template<typename Audit, typename Adapter>
 void report_timed_instance(Audit&, const Adapter&, long) {}
 
+/// @brief Optional variable-frame timestamps, evaluated only during replay.
+template<typename Adapter>
+auto publication_timestamps(const Adapter& adapter, size_t sample, Row& row, int)
+    -> decltype(adapter.publication_endpoint(sample), adapter.publication_center_offset(), void()) {
+    const size_t endpoint = adapter.publication_endpoint(sample);
+    require(endpoint <= sample, "Publication represents future input");
+    row.endpoint_age = sample-endpoint;
+    row.center_age = row.endpoint_age+adapter.publication_center_offset();
+}
+template<typename Adapter>
+void publication_timestamps(const Adapter&, size_t, Row&, long) {}
+
 template<typename Adapter, typename Audit = NoAudit>
 void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         double playback_delay = -1) {
@@ -126,7 +140,7 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
     if (center_offset < 0) center_offset = contract.center;
     const auto input = signal();
     if (c.resources) {
-        const size_t samples = 2*c.n+2*c.hop;
+        const size_t samples = c.transition_suite.empty() ? 2*c.n+2*c.hop : c.callbacks*c.block;
         PaperResources::inspect<Adapter>([&]() { return new Adapter(c); }, [&](Adapter& adapter) {
             for (size_t i = 0; i < samples; ++i) adapter.process(input[i%input.size()]);
             adapter.barrier();
@@ -219,13 +233,16 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
                 if (!bank[a]->published()) continue;
                 const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
                 const size_t delay = bank[a]->delay();
-                require(delay == contract.delay, "Adapter delay differs from registered contract");
-                require((s+offset)%c.hop == delay, "Publication phase differs from contract");
-                if (publications[a]) require(s-previous[a] == c.hop, "Publication cadence changed");
+                if (c.transition_suite.empty()) {
+                    require(delay == contract.delay, "Adapter delay differs from registered contract");
+                    require((s+offset)%c.hop == delay, "Publication phase differs from contract");
+                    if (publications[a]) require(s-previous[a] == c.hop, "Publication cadence changed");
+                }
                 previous[a] = s;
                 Row row("publication", publications[a]++, a, s, 0, 0);
                 row.endpoint_age = delay;
                 row.center_age = row.endpoint_age + center_offset;
+                publication_timestamps(*bank[a], cursors[a]-1, row, 0);
                 row.visible_age = row.endpoint_age + (c.block-1-s%c.block);
                 row.playback_delay = playback_delay;
                 rows.push_back(row);
@@ -233,8 +250,10 @@ void stream(const Config& c, Audit audit = Audit(), double center_offset = -1,
         }
         for (size_t a = 0; a < bank.size(); ++a) {
             const size_t offset = c.callback_offset + (c.alignment == "staggered" ? a*c.hop/c.count : 0);
-            const size_t bias = c.hop-1-bank[a]->delay();
-            require(publications[a] == (total+offset+bias)/c.hop-(offset+bias)/c.hop, "Missing publications");
+            if (c.transition_suite.empty()) {
+                const size_t bias = c.hop-1-bank[a]->delay();
+                require(publications[a] == (total+offset+bias)/c.hop-(offset+bias)/c.hop, "Missing publications");
+            }
             bank[a]->check();
         }
         Runtime::set(Runtime::Phase::ReplayTeardown);

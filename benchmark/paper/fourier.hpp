@@ -111,7 +111,7 @@ struct Legacy {
         }
         phase = (phase+1)%config.hop;
     }
-    bool published() { return complete; }
+    bool published() const { return complete; }
     void barrier() const { observe(output.data()); }
     void check() const {
         double total = 0;

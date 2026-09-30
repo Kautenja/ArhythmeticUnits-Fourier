@@ -62,6 +62,13 @@ def descriptor(name, registry=None):
 
 
 def validate_config(config, registry=None, measurement=False):
+    if "transition_control" in config and not config.get("transition_suite"):
+        raise ValueError("Transition control requires a suite")
+    if "transition_suite" in config and not config["transition_suite"]:
+        raise ValueError("Empty transition suite")
+    if measurement and config.get("transition_suite"):
+        from transitions import validate_transition_config
+        validate_transition_config(config, registry)
     d = descriptor(config["backend"], registry)
     bounds = dict(n=(d["size_min"], d["size_max"]), hop=(1, 65536), block=(1, 65536),
                   count=(1, 64), load=(0, 4096), voices=(1, d["max_voices"]),

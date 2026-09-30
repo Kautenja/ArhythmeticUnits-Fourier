@@ -13,6 +13,8 @@ from run import digest
 from observations import read_observations, validate_rows
 from contracts import normalize_registry, resolve_contract, validate_config
 from runtime import validate_profile
+from numerical import validate_scalar_audit
+from transitions import validate_transition_trace, validate_transition_resources
 
 
 
@@ -173,6 +175,27 @@ def runtime_artifacts(metadata, required):
     return names
 
 
+def transition_artifacts(metadata, required):
+    """Require an authenticated, distinct trace for each interactive process."""
+    declared = metadata.get("transition_policy")
+    if declared not in (None, "fourier-transitions-v1"):
+        raise ValueError("Unsupported transition policy")
+    names, occupied = [], required | {"metadata.json"}
+    for run in metadata["runs"]:
+        enabled = bool(metadata["configs"][run["workload"]].get("transition_suite"))
+        if not enabled:
+            if "transition" in run:
+                raise ValueError("Unexpected transition trace")
+            continue
+        name = run.get("transition")
+        if (declared is None or not isinstance(name, str) or not name
+                or Path(name).name != name or name in (".", "..") or name in occupied):
+            raise ValueError("Missing, invalid or aliased transition artifact")
+        occupied.add(name)
+        names.append(name)
+    return names
+
+
 def check(directory, report_data=None):
     """Validate evidence, optionally retaining compact per-file report inputs."""
     metadata = json.loads((directory / "metadata.json").read_text())
@@ -190,9 +213,11 @@ def check(directory, report_data=None):
     required.update(run[key] for run in metadata["runs"] for key in ("raw", "stderr"))
     runtime_files = runtime_artifacts(metadata, required)
     required.update(runtime_files)
+    transition_files = transition_artifacts(metadata, required)
+    required.update(transition_files)
     if not required <= artifacts.keys():
         raise ValueError("Missing artifact checksums")
-    for filename in runtime_files:
+    for filename in runtime_files+transition_files:
         path = directory/filename
         if path.is_symlink() or not path.is_file():
             raise ValueError(f"Missing or aliased runtime artifact: {filename}")
@@ -231,6 +256,12 @@ def check(directory, report_data=None):
     if ("benchmark/paper/analysis_accuracy.hpp" in metadata["source_sha256"]
             and metadata.get("analysis_accuracy_policy") != "spectrum-norms-v1"):
         raise ValueError("Missing analysis policy for archived implementation")
+    scalar_policy = metadata.get("scalar_analysis_audit_policy")
+    if scalar_policy not in (None, "all-publications-v1"):
+        raise ValueError("Unknown scalar numerical coverage policy")
+    if ("benchmark/paper/scalar_analysis_audit.hpp" in metadata["source_sha256"]
+            and scalar_policy != "all-publications-v1"):
+        raise ValueError("Missing scalar numerical coverage policy for archived implementation")
     if "matrix_inventory" in metadata:
         from campaigns import inventory
         if inventory(metadata["configs"], registry) != metadata["matrix_inventory"]:
@@ -260,7 +291,10 @@ def check(directory, report_data=None):
             raise ValueError("Evidence contract mismatch")
         resource = json.loads((directory/metadata["resources"][str(index)]).read_text())
         validate_resources(resource)
-        if registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4"):
+        if config.get("transition_suite"):
+            for label in ("timing", "allocation"):
+                validate_transition_resources(resource[label]["provider_info"], config, registry)
+        elif registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4"):
             for label in ("timing", "allocation"):
                 validate_provider_info(resource[label]["provider_info"], registry[config["backend"]])
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
@@ -277,8 +311,17 @@ def check(directory, report_data=None):
                                              report=report_data is not None)
         if summary != run["summary"]:
             raise ValueError(f"Summary mismatch: {identity}")
-        external = registry[config["backend"]]["kind"] in ("external", "scheduled-analysis", "analysis4")
-        if external:
+        descriptor = registry[config["backend"]]
+        external = descriptor["kind"] in ("external", "scheduled-analysis", "analysis4")
+        scalar = (scalar_policy is not None and descriptor["kind"] in ("core", "legacy")
+                  and descriptor["channels"] == 1)
+        transition = bool(config.get("transition_suite"))
+        if transition:
+            trace = json.loads((directory/run["transition"]).read_text())
+            validate_transition_trace(trace, config, registry)
+            if len(trace["publications"]) != summary["publication_audit_rows"]:
+                raise ValueError("Transition trace/raw coverage mismatch")
+        if external and not transition:
             report = json.loads((directory/run["stderr"]).read_text())
             if len(report["provider_instances"]) != config["count"]:
                 raise ValueError("Missing measured provider instances")
@@ -286,10 +329,12 @@ def check(directory, report_data=None):
                 validate_provider_info(instance, registry[config["backend"]])
                 if registry[config["backend"]]["kind"] == "scheduled-analysis":
                     validate_hybrid_info(instance, config)
-        if contract["boundary"] in ("inverse-job", "chain") or (external and contract["boundary"] == "analysis"):
+        if not transition and (contract["boundary"] in ("inverse-job", "chain") or ((external or scalar) and contract["boundary"] == "analysis")):
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_synthesis_accuracy(accuracy, config, run["summary"]["publication_audit_rows"], registry,
                                         metadata.get("analysis_accuracy_policy"))
+            if scalar:
+                validate_scalar_audit(accuracy, config, contract, run["summary"]["publication_audit_rows"])
         if contract["boundary"] == "transform":
             accuracy = json.loads((directory/run["stderr"]).read_text())
             validate_transform_accuracy(accuracy, contract)

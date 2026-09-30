@@ -22,7 +22,9 @@ The suite groups adapters by approach and shares matched workload code:
 | `protocol.hpp`, `backend.hpp` | Raw records, streaming loop, workload validation, and contracts |
 | `resources.hpp` | Separate setup, execution, destruction, and allocation probes |
 | `runtime.hpp` | Optional coarse wall-time accounting outside measured intervals |
-| `references.hpp`, `analysis_accuracy.hpp` | Independent numerical references and acceptance policy |
+| `references.hpp`, `analysis_reference.hpp`, `analysis_accuracy.hpp` | Independent numerical references and acceptance policy |
+| `scalar_analysis_audit.hpp` | Complete per-instance scalar replay coverage and diagnostics |
+| `transitions.hpp` | Benchmark host request/latch policy, dynamic analyzer controls, and independent lifecycle replay |
 | `development.hpp`, `development_matrix.hpp` | Native fast/full development runner shared with the Rack benchmarks |
 
 Template workloads remain in headers so each adapter uses the same measurement
@@ -97,6 +99,14 @@ The live analysis state alternates window functions and octave bands at frame
 boundaries. It does not measure arbitrary parameter response, FFT-length or
 sample-rate changes, or UI latency. Numerical coverage also differs by adapter:
 per-run reports and preflight-only checks must remain explicitly identified.
+New scalar runs audit every publication and bin; historical archives preserve
+their original coverage. The separate `interactive-v1` suite measures declared
+parameter requests through the production API and prepared PFFFT controls.
+Prepend `--transition interactive-v1 change` (or `control`) to its v2 arguments
+and set `PAPER_TRANSITION_PATH` for the replay sidecar. Prefer its checked
+[campaign manifests](../../docs/whitepaper/benchmarks/README.md#scalar-numerical-coverage-and-interactive-transitions)
+to hand-written invocations. Dynamic frame ages and response metrics belong
+in their own tables, not the fixed-setting transform rankings.
 
 Use the protocol's [claim-to-evidence mapping and metric definitions](../../docs/whitepaper/benchmarks/README.md#claims-and-presentation)
 when selecting tables or figures. Mean cost, callback tails and algorithmic

@@ -111,7 +111,10 @@ def synthesis_matrix(smoke):
 def command(config):
     keys = ("backend", "pass_name", "n", "hop", "block", "count", "alignment", "load",
             "smooth", "voices", "callbacks", "warm_hops", "rate", "state", "cache_mib")
-    return [str(BINARY)] + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
+    prefix = (["--transition", config["transition_suite"],
+               "control" if config.get("transition_control", False) else "change"]
+              if config.get("transition_suite") else [])
+    return [str(BINARY)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0)), "v2"]
 
 
 def digest(path):
@@ -192,14 +195,14 @@ def main():
     if not (args.list or args.describe_matrix) and phase != "smoke" and not (args.session_id and args.host_id):
         parser.error("Pilot/confirmation requires explicit --host-id and --session-id")
     for config in configs:
-        if config.keys() - set(BASE):
-            parser.error("Unknown workload keys: " + str(config.keys() - set(BASE)))
+        if config.keys() - (set(BASE) | {"transition_suite", "transition_control"}):
+            parser.error("Unknown workload keys: " + str(config.keys() - (set(BASE) | {"transition_suite", "transition_control"})))
         try:
             validate_config(config, registry)
         except ValueError as error:
             parser.error(str(error))
-        config["warm_hops"] = args.warm_hops
-        config["callbacks"] = (math.ceil(args.hops*config["hop"]/config["block"])
+        config["warm_hops"] = 0 if config.get("transition_suite") else args.warm_hops
+        config["callbacks"] = (math.ceil(max(args.hops, 26 if config.get("transition_suite") else 0)*config["hop"]/config["block"])
                                if config["pass_name"] in ("callback", "throughput") else
                                args.step_frames if config["pass_name"] == "steps" else args.frames)
         try:
@@ -253,6 +256,9 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
                     protocol="v2", configs=configs, runs=[], build_features=features,
                     external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
     metadata["analysis_accuracy_policy"] = "spectrum-norms-v1"
+    metadata["scalar_analysis_audit_policy"] = "all-publications-v1"
+    if any(c.get("transition_suite") for c in configs):
+        metadata["transition_policy"] = "fourier-transitions-v1"
     metadata["runtime_profile"] = "coarse-wall-v1"
     metadata["phase"] = phase
     metadata["session_id"] = args.session_id or "smoke"
@@ -330,6 +336,7 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     env = dict(os.environ, DYLD_LIBRARY_PATH=str(rack), LD_LIBRARY_PATH=str(rack))
     # Resource probes/preflight must not write into an inherited telemetry path.
     env.pop("PAPER_RUNTIME_PATH", None)
+    env.pop("PAPER_TRANSITION_PATH", None)
     runtime.switch("preflight")
     with (output/"verification.txt").open("w") as verification:
         subprocess.run([str(BINARY), "--verify"], cwd=ROOT, env=env,
@@ -365,8 +372,12 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
         print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['backend']} {config['pass_name']}", flush=True)
         started = dt.datetime.now(dt.timezone.utc).isoformat()
         runtime.switch("benchmark_process", workload=index, repeat=repeat)
+        process_env = dict(env, PAPER_RUNTIME_PATH=str(process_runtime))
+        transition = output/(stem+".transition.json") if config.get("transition_suite") else None
+        if transition:
+            process_env["PAPER_TRANSITION_PATH"] = str(transition)
         with raw.open("w") as stdout, errors.open("w") as stderr:
-            subprocess.run(invocation, cwd=ROOT, env=dict(env, PAPER_RUNTIME_PATH=str(process_runtime)),
+            subprocess.run(invocation, cwd=ROOT, env=process_env,
                            stdout=stdout, stderr=stderr, check=True)
         runtime.switch("summarize", workload=index, repeat=repeat)
         validate_profile(json.loads(process_runtime.read_text()))
@@ -374,6 +385,8 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
                                      started_utc=started, raw=raw.name, stderr=errors.name,
                                      runtime=process_runtime.name,
                                      summary=summarize(raw, config)))
+        if transition:
+            metadata["runs"][-1]["transition"] = transition.name
         runtime.switch("metadata_checkpoint", workload=index, repeat=repeat)
         save(output/"metadata.json", metadata)
     runtime.switch("final_integrity")

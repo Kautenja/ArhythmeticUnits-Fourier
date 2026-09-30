@@ -15,6 +15,8 @@ import statistics
 
 from check import check
 from run import digest
+from numerical import coverage_tables
+from transitions import transition_tables
 
 LIMITS = ("Costs retain traversal, conversion, required stores and configured background load. "
           "No timer subtraction. Callback quantiles and maxima describe each process, not WCET or device underruns. "
@@ -87,7 +89,7 @@ def collect(directories, phase):
         sources.append(dict(directory=str(directory.resolve()), metadata_sha256=digest(directory/"metadata.json"),
                             stratum=stratum, host=host, session=session, provenance=provenance,
                             revision=metadata["revision"], binary_sha256=metadata["binary_sha256"],
-                            notes=metadata.get("notes", ""), phase=phase))
+                            notes=metadata.get("notes", ""), phase=phase, runtime=metadata.get("runtime")))
         inventory = json.loads((directory/"inventory.json").read_text())
         for index, config in enumerate(metadata["configs"]):
             descriptor = inventory[config["backend"]]
@@ -113,13 +115,28 @@ def collect(directories, phase):
                 cost = timing["ns_per_engine_sample"] if mode in ("callback", "throughput") else timing["mean_ns"]
                 errors = (directory/run["stderr"]).read_text().strip()
                 accuracy = json.loads(errors) if errors.startswith("{") else None
+                transition = None
+                if config.get("transition_suite"):
+                    trace_path = directory/run["transition"]
+                    trace = json.loads(trace_path.read_text())
+                    transition = dict(trace=trace, path=str(trace_path.resolve()),
+                        sha256=metadata["artifact_sha256"][run["transition"]],
+                        tables=transition_tables(trace, config, directory/run["raw"], inventory))
+                runtime = None
+                if "runtime" in run:
+                    runtime = dict(profile=json.loads((directory/run["runtime"]).read_text()),
+                        path=str((directory/run["runtime"]).resolve()),
+                        sha256=metadata["artifact_sha256"][run["runtime"]])
                 record["processes"].append(dict(session=session, repeat=run["repeat"], cost=cost,
                     cost_unit="ns/engine-sample" if mode in ("callback", "throughput") else "ns/transform",
                     cost_per_channel=cost/record["independent_channels"], timing=timing, timer=groups["timer"],
                     observation_window_samples=config["callbacks"]*config["block"]
                         if mode in ("callback", "throughput") else None,
                     publication_audit_rows=run["summary"]["publication_audit_rows"],
-                    accuracy=accuracy, numerical_status="per-run numerical report; see reference coverage" if accuracy else "preflight only; no per-run numerical report",
+                    transition=transition, runtime=runtime, accuracy=accuracy,
+                    numerical_status=("all-publication transition replay; spectrum-norms-v1" if transition
+                        else "per-run numerical report; see reference coverage" if accuracy
+                        else "preflight only; no per-run numerical report"),
                     raw=str((directory/run["raw"]).resolve()),
                     raw_sha256=metadata["artifact_sha256"][run["raw"]], **report_data.pop(run["raw"])))
     result = []
@@ -142,6 +159,11 @@ def comparison_key(record, vary_length=False):
                          channels=record["independent_channels"], input=record["input_contract"]))[:16]
 
 
+def stationary_records(data):
+    """A changing length/hop has no single valid stationary publication age."""
+    return [record for record in data["records"] if not record["config"].get("transition_suite")]
+
+
 def tables(data, output):
     columns = ["stratum", "backend", "boundary", "operation", "precision", "n", "hop", "block", "channels",
                "mode", "state", "callback_offset", "cost_unit", "mean_session_cost", "session_min", "session_max",
@@ -160,10 +182,11 @@ def tables(data, output):
              "See results.csv for every workload setting and results in raw and human units; process-timings.csv exposes each process's quantiles, timer control, observation count and window. evidence.json retains native plans, raw-data hashes and source identity.", "",
              "Cost is the mean of session means. P99 is the median of session medians of process p99 values; brackets give the observed session-median range. Maxima are observed, not bounds. No callbacks are pooled. Blank CSV fields mean not applicable or unavailable.", "",
              "Serial audio-time % expresses measured synchronous work relative to simulated audio time; it is not a Rack CPU meter or an energy measurement. Budget % uses the entire callback interval, of which an analyzer receives only a share. Ages end at algorithmic publication/delivery, not screen repaint.", "",
+             "Transition workloads have separate response, callback-cost and publication-error tables in transitions.md and transitions-*.csv. Their changing configurations are excluded from stationary results.csv and age figures, but retained in process-timings.csv, implementations.csv and evidence.json. accuracy-coverage.csv records stationary numerical coverage; transition coverage is publication-specific.", "",
              "Observation windows are simulated audio spans, not elapsed wall time: the driver has no real-time pacing. timed_total_ns sums measured intervals only. Publication audit counts come from a separate untimed replay; they are not hardware or timed-burst counters.", ""]
     with (output/"results.csv").open("w", newline="") as stream:
         writer = csv.writer(stream); writer.writerow(columns)
-        for r in data["records"]:
+        for r in stationary_records(data):
             c, contract, v = r["config"], r["contract"], r["variation"]
             heaps = [x["measurements"]["allocation"]["setup"]["live_bytes"] for x in r["resources"]]
             errors = [p["accuracy"]["max_abs_error"] for p in r["processes"] if p["accuracy"]]
@@ -197,7 +220,7 @@ def tables(data, output):
                 min(visible) if visible else "unavailable", max(visible) if visible else "unavailable"]+extra+human)
     # Group only identical contracts/settings; the header names all experimental factors.
     matched = defaultdict(list)
-    for record in data["records"]:
+    for record in stationary_records(data):
         matched[comparison_key(record)].append(record)
     def number(value):
         return "N/A" if value is None else f"{value:.3f}"
@@ -222,6 +245,8 @@ def tables(data, output):
                          f"{number(t['observed_max_ns']/1000 if t else None)} | {age_text} | {v['sessions']} / {v['processes']} |")
         lines.append("")
     process_tables(data, output)
+    coverage_tables(dict(data, records=stationary_records(data)), output)
+    transition_report_tables(data, output)
     with (output/"implementations.csv").open("w", newline="") as stream:
         writer = csv.writer(stream)
         writer.writerow(["stratum", "backend", "config_sha256", "provider", "plan_policy", "descriptor",
@@ -234,7 +259,8 @@ def tables(data, output):
                     provenance_sha256=identity(s["provenance"]))
                     for s in data["sources"] if s["stratum"] == r["stratum"]], sort_keys=True),
                 json.dumps(r["resources"], sort_keys=True),
-                json.dumps([dict(session=p["session"], repeat=p["repeat"], accuracy=p["accuracy"], status=p["numerical_status"])
+                json.dumps([dict(session=p["session"], repeat=p["repeat"], accuracy=p["accuracy"], status=p["numerical_status"],
+                                transition_sha256=p["transition"]["sha256"] if p.get("transition") else None)
                             for p in r["processes"]], sort_keys=True)])
     (output/"report.md").write_text("\n".join(lines)+"\n")
 
@@ -263,7 +289,7 @@ def process_tables(data, output):
                            observation_window_seconds=p["observation_window_samples"]/c["rate"]
                                if p["observation_window_samples"] is not None else None,
                            timer_p99_us=p["timer"]["p99_ns"]/1000, timer_max_us=p["timer"]["observed_max_ns"]/1000,
-                           **ages(r["contract"], c["rate"]))
+                           **({} if c.get("transition_suite") else ages(r["contract"], c["rate"])))
                 for name in ("p50", "p95", "p99", "observed_max"):
                     row[name+"_ns"] = t[name+"_ns"]
                     row[name+"_us"] = t[name+"_ns"]/1000
@@ -271,10 +297,121 @@ def process_tables(data, output):
                     row.update(callback_budget_us=t["budget_ns"]/1000,
                                observed_compute_budget_exceedances=t["observed_compute_budget_exceedances"],
                                compute_budget_exceedance_fraction=t["observed_compute_budget_exceedances"]/p["observation_count"])
-                if p["callback_visible_age_range"]:
+                if not c.get("transition_suite") and p["callback_visible_age_range"]:
                     row.update(callback_visible_age_min_ms=p["callback_visible_age_range"][0]*1000/c["rate"],
                                callback_visible_age_max_ms=p["callback_visible_age_range"][1]*1000/c["rate"])
                 writer.writerow(row)
+
+
+
+def transition_report_tables(data, output):
+    """Keep each changing-setting process and every request/publication auditable."""
+    common = ["stratum", "host", "config_sha256", "backend", "precision", "session", "repeat",
+              "suite", "control", "horizon_samples", "rate", "block", "raw", "raw_sha256",
+              "transition_sha256"]
+    response_columns = common + ["generation", "reason", "request_sample", "application_sample",
+        "first_publication_sample", "outcome", "replaced_by", "requested_settings",
+        "application_latency_samples", "application_latency_ms",
+        "first_publication_latency_samples", "first_publication_latency_ms"]
+    cost_columns = common + ["generation", "reason", "request_count", "applied_generation_count", "window_start", "window_end",
+        "callback_indices", "observations", "mean_ns", "p99_ns", "observed_max_ns", "timer_p99_ns",
+        "mean_us", "p99_us", "observed_max_us", "timer_p99_us"]
+    publication_columns = common + ["instance", "channel", "generation", "endpoint", "publication_sample",
+        "history_start", "bins", "settings", "endpoint_age_samples", "endpoint_age_ms",
+        "accuracy_policy", "tolerance", "checked_spectra", "checked_bins", "zero_spectra",
+        "max_relative_l2", "max_relative_linf", "max_abs_error", "max_reference", "absolute_error_units",
+        "legacy_pointwise_failures", "max_legacy_scaled_error", "worst_pointwise"]
+    responses, costs, publications = [], [], []
+    lines = ["# Parameter-Transition Evidence", "", "Evidence phase: **"+data["phase"].upper()+"**.", "",
+        "Each row retains its process and session. No-change controls receive the same request",
+        "schedule with initial settings; their control field is true. Results are not pooled.", "",
+        "Response latencies use input-sample time, measured from request before processing to",
+        "application or the first complete publication for that generation. They are not UI",
+        "or wall-clock response. Replaced, pending and applied-without-publication outcomes",
+        "remain explicit; empty latency fields mean no response within the recorded horizon.", "",
+        "Callback windows run from one initial hop before each request through four initial",
+        "hops after it, clipped to the horizon. Every overlapping callback is retained by index;",
+        "windows intentionally overlap. Mean, nearest-rank p99 and maxima describe observed",
+        "costs, not WCET bounds or device underruns. Timer p99 is retained without subtraction.", "",
+        "Configuration and scheduled cache/output work are charged within timed callbacks.",
+        "Prepared plan/buffer policies are reproduced per process below; resource and provider",
+        "records remain in evidence.json. Plans prepared before measurement are not measured",
+        "as interactive construction. Numerical/lifecycle replay is separate from timing.", "",
+        "Publication errors use spectrum-norms-v1; relative errors are dimensionless and",
+        "absolute errors use unnormalized FFT magnitude. The publication table retains every",
+        "generation, endpoint, history origin, checked-bin count and weak-bin diagnostic.", ""]
+    for record in data["records"]:
+        config = record["config"]
+        if not config.get("transition_suite"):
+            continue
+        for process in record["processes"]:
+            item = process.get("transition")
+            if not item:
+                raise ValueError("Transition workload missing checked per-process trace")
+            trace, tables = item["trace"], item["tables"]
+            prefix = dict(stratum=record["stratum"], host=record["host"], config_sha256=identity(config),
+                backend=config["backend"], precision=record["contract"]["precision"],
+                session=process["session"], repeat=process["repeat"], suite=trace["suite"],
+                control=trace["control"], horizon_samples=trace["horizon"], rate=config["rate"],
+                block=config["block"], raw=process["raw"], raw_sha256=process["raw_sha256"],
+                transition_sha256=item["sha256"])
+            events = {event["generation"]: event for event in trace["events"]}
+            lines += [f"## {config['backend']} / {process['session']} / Repeat {process['repeat']}", "",
+                f"Stratum: {record['stratum']}; configuration: {identity(config)}; "
+                f"no-change control: {trace['control']}; horizon: {trace['horizon']} samples.", ""]
+            for key in ("time_origin", "latch", "retention", "memory_policy"):
+                lines += [key.replace("_", " ").capitalize()+": "+trace[key]+".", ""]
+            lines += ["| Generation / Request | Outcome | Application (samples / ms) | First Publication (samples / ms) | Callback Mean / P99 / Max (us) | Observations |",
+                "| --- | --- | --- | --- | --- | ---: |"]
+            process_costs = {row["generation"]: row for row in tables["costs"]}
+            for row in tables["responses"]:
+                event = events[row["generation"]]
+                responses.append(dict(prefix, **row,
+                    application_sample=event["application_sample"],
+                    first_publication_sample=event["first_publication_sample"],
+                    requested_settings=json.dumps(event["settings"], sort_keys=True)))
+                cost = process_costs[row["generation"]]
+                def latency(field):
+                    samples, ms = row[field+"_latency_samples"], row[field+"_latency_ms"]
+                    return "unavailable" if samples is None else f"{samples} / {ms:.6g}"
+                lines.append(f"| {row['generation']} / {row['reason']} | {row['outcome']} | "
+                    f"{latency('application')} | {latency('first_publication')} | "
+                    f"{cost['mean_ns']/1000:.6g} / {cost['p99_ns']/1000:.6g} / "
+                    f"{cost['observed_max_ns']/1000:.6g} | {cost['observations']} |")
+            lines.append("")
+            for row in tables["costs"]:
+                costs.append(dict(prefix, **dict(row, callback_indices=json.dumps(row["callback_indices"])),
+                    reason=events[row["generation"]]["reason"], request_count=len(events),
+                    applied_generation_count=sum(event["application_sample"] >= 0 for event in events.values()),
+                    **{name+"_us": row[name+"_ns"]/1000
+                       for name in ("mean", "p99", "observed_max", "timer_p99")}))
+            for row in tables["publications"]:
+                accuracy = row["accuracy"]
+                setting = events[row["generation"]]["settings"] if row["generation"] else trace["initial"]
+                age = row["publication_sample"]-row["endpoint"]
+                publications.append(dict(prefix,
+                    **{key: row[key] for key in ("instance", "channel", "generation", "endpoint",
+                        "publication_sample", "history_start", "bins")},
+                    settings=json.dumps(setting, sort_keys=True), endpoint_age_samples=age,
+                    endpoint_age_ms=age*1000/config["rate"], accuracy_policy=accuracy["policy"],
+                    tolerance=accuracy["tolerance"], checked_spectra=accuracy["vectors"],
+                    checked_bins=accuracy["values"], zero_spectra=accuracy["zero_vectors"],
+                    max_relative_l2=accuracy["max_relative_l2"], max_relative_linf=accuracy["max_relative_linf"],
+                    max_abs_error=row.get("max_abs_error", accuracy.get("max_abs_error")),
+                    max_reference=row.get("max_reference"), absolute_error_units="unnormalized FFT magnitude",
+                    legacy_pointwise_failures=accuracy["legacy_pointwise_failures"],
+                    max_legacy_scaled_error=accuracy["max_legacy_scaled_error"],
+                    worst_pointwise=json.dumps(accuracy["worst_pointwise"], sort_keys=True)))
+    for name, columns, rows in (("responses", response_columns, responses),
+                                ("callback-costs", cost_columns, costs),
+                                ("publications", publication_columns, publications)):
+        with (output/("transitions-"+name+".csv")).open("w", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(rows)
+    if not responses:
+        lines += ["No transition workloads are present in these checked campaigns.", ""]
+    (output/"transitions.md").write_text("\n".join(lines)+"\n")
 
 
 def figures(data, output):
@@ -288,7 +425,7 @@ def figures(data, output):
                                         numpy=numpy.__version__, freetype=matplotlib.ft2font.__freetype_version__)
     plt.rcParams.update({"svg.hashsalt": "fourier-fr10", "font.size": 8})
     matched, lengths = defaultdict(list), defaultdict(list)
-    for record in data["records"]:
+    for record in stationary_records(data):
         matched[comparison_key(record)].append(record)
         lengths[comparison_key(record, True)].append(record)
     catalog = []

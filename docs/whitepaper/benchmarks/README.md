@@ -29,9 +29,11 @@ The C++ measurement suite and its source map live in
 `run.py` (campaign orchestration and raw archives), `check.py` (artifact
 validation), and `report.py` / `hybrid_report.py` (derived statistics and plots).
 `observations.py` shares CSV validation, summary statistics and compact plot
-data. Checking and reporting parse each CSV once and sort each timing group
-once; reports reuse the verified artifact hash. Integrity checks, original-order
-floating-point totals, raw files and command-line usage are preserved.
+data. Ordinary checking and reporting parse each CSV once and sort each timing
+group once; reports reuse the verified artifact hash. Transition reports also
+read callback coordinates to derive their event windows. Integrity checks,
+original-order floating-point totals, raw files and command-line usage are
+preserved.
 `configs/` contains workload selections; `backends.json` describes capabilities.
 The registry generators and optional `build_fftw.py` support benchmark builds.
 Python tests here compile numerical verifiers from `test/paper/` as needed.
@@ -831,3 +833,57 @@ complete module. Worker-thread experiments will need a separate protocol for
 job submission/completion, queueing and real callback deadlines; the current
 synchronous driver cannot establish their behavior. GPU/display comparisons
 also remain separate from these engine measurements.
+
+## Scalar Numerical Coverage And Interactive Transitions
+
+New scalar `core-*` and `legacy-*` runs audit every published bin of every
+instance during the separate replay, using an independent binary64 FFT or
+long-double direct DFT. `all-publications-v1` records expected and checked
+spectra/bins, reference precision, and interval arithmetic alongside the
+existing `spectrum-norms-v1` acceptance policy. Timed callbacks, throughput
+loops, and resource probes do not execute this reference. Reports write
+`accuracy-coverage.csv` and `accuracy-coverage.md`; historical scalar archives
+remain explicitly preflight-only.
+
+The `interactive-v1` suite adds `transition_suite` and `transition_control`
+workload keys. It supports `core-float`, `core-double`, `pffft-hybrid-float`,
+and `pffft-scheduled-batch-float`. The native controls extend the scheduled
+analysis pipeline with two prepared exact-size plans and maximum storage;
+their recorded engine policy distinguishes them from fixed-setting adapters.
+Ordinary native analysis, FFTW, vDSP, modules, inverse processing, and four
+channels currently have no transition adapter and are rejected.
+
+Requests specify complete desired settings before an input sample. A benchmark
+host wrapper retains the latest pending request and applies it only at the
+analyzer's frame boundary; it never cancels an active transform. Length changes
+clear logical input and EMA history; other changes preserve them. A previously
+completed old spectrum may remain visible until the next complete publication.
+Only complete spectra enter the reference checks. This models the existing
+production configuration API, without adding module or device behavior.
+
+The versioned sequence exercises length increases/decreases, hop changes,
+window and frequency/time smoothing, no-op requests, pending replacement, and
+a final request with explicitly recorded response or no-response status. Initial
+N is 128 through 2048, H is at least 8, and the runner rounds a minimum 26H
+horizon to complete callbacks. It uses one startup instance and no warmup or
+added load. Configuration and dirty-cache work execute inside timed processing;
+plan/buffer preparation belongs to the separately recorded setup and memory
+policy. Every process retains an authenticated `.transition.json` sidecar.
+
+Raw CSV publication ages are independently checked against the variable
+schedule. Transition reports retain per-request application/publication delays
+in samples and milliseconds, per-publication numerical errors and frame
+identity, and callback mean/p99/observed maximum in declared event windows.
+The paired no-change workload submits the same requests with unchanged settings.
+These are algorithmic response times and observed compute costs, not device,
+display, or worst-case execution-time guarantees. Smoke data verify the harness;
+comparative metrics require later prepared-host measurements.
+
+From the repository root, use new output directories:
+
+```shell
+python3 docs/whitepaper/benchmarks/run.py .build/paper-numerical-smoke --config docs/whitepaper/benchmarks/configs/numerical-smoke.json --repeats 1 --hops 4 --warm-hops 2
+python3 docs/whitepaper/benchmarks/run.py .build/paper-transition-smoke --config docs/whitepaper/benchmarks/configs/transition-smoke.json --variant rack --repeats 1 --hops 26
+python3 docs/whitepaper/benchmarks/check.py .build/paper-transition-smoke
+python3 docs/whitepaper/benchmarks/report.py .build/paper-transition-smoke --output .build/paper-transition-report --phase smoke --no-plots
+```

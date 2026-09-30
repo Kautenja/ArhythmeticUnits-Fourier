@@ -5,6 +5,7 @@
 #define ARHYTHMETIC_UNITS_FOURIER_PAPER_EXTERNAL_HPP_
 #include <map>
 #include "synthesis.hpp"
+#include "analysis_reference.hpp"
 #include "../../src/dsp/window.hpp"
 
 namespace Paper {
@@ -141,62 +142,6 @@ struct ExternalChain {
     bool published() const { return schedule.complete; }
     void barrier() const { observe(playing.data()); observe(delivered_checksum); }
     void check() const { for (auto value : playing) require(std::isfinite(std::abs(value)), "Invalid external chain"); }
-};
-
-/// @brief Untimed scalar analysis oracle, independently summed bands and EMA.
-/// @details Direct DFT at small N; independent binary64 complex FFT at large N.
-/// Common float window/input bytes preserve the workload's precision contract.
-template<typename T>
-struct AnalysisReference {
-    Config config;
-    // Binary32 oracle error can exceed the adapter tolerance near weak bins
-    // beside strong tones at large N. Widen after the matched frame product;
-    // leave the measured providers and their existing tolerances unchanged.
-    Fourier::OnTheFlyFFT<double> forward;
-    Fourier::Window::CachedWindow<float> window;
-    std::vector<std::complex<double>> frame;
-    std::vector<T> expected;
-    size_t next_endpoint = 0;
-    explicit AnalysisReference(const Config& c) : config(c), forward(c.n),
-        window(Fourier::Window::Function::Hann, c.n, false, true), frame(c.n), expected(c.n/2+1) {}
-    void advance(const std::vector<float>& input, size_t endpoint) {
-        for (; next_endpoint <= endpoint; next_endpoint += config.hop) {
-            const size_t index = next_endpoint/config.hop;
-            const bool live = config.state == "live";
-            window.set_window(live && index%2 == 0 ? Fourier::Window::Function::BlackmanHarris
-                : Fourier::Window::Function::Hann, config.n, false, true);
-            for (size_t i = 0; i < config.n; ++i) {
-                const int64_t source = int64_t(next_endpoint)-int64_t(config.n)+1+int64_t(i);
-                frame[i] = source < 0 ? T(0) : T(input[size_t(source)%input.size()])*window.get_samples()[i];
-            }
-            std::vector<long double> magnitudes(expected.size());
-            if (config.n <= 256) {
-                const std::vector<Reference::Complex> precise(frame.begin(), frame.end());
-                for (size_t k = 0; k < expected.size(); ++k)
-                    magnitudes[k] = std::abs(Reference::coefficient(precise, k, false));
-            } else {
-                forward.buffer(frame.data()); forward.compute();
-                for (size_t k = 0; k < expected.size(); ++k) magnitudes[k] = std::abs(forward.coefficients[k]);
-            }
-            const bool bands = live ? index%2 == 1 : config.smooth;
-            const float alpha = config.smooth ? 0.8f : 0.f;
-            const double width = double(config.rate)/config.n, maximum = double(config.rate)/2;
-            for (size_t k = 0; k < expected.size(); ++k) {
-                long double value = magnitudes[k];
-                if (bands) {
-                    double low = k*width/std::pow(2.f, (1.f/3.f)/2.f);
-                    double high = k*width*std::pow(2.f, (1.f/3.f)/2.f);
-                    if (high > maximum) { high = maximum; low = high/std::pow(2.f, 1.f/3.f); }
-                    const size_t first = size_t(std::floor(low/width));
-                    const size_t last = std::min(config.n/2, size_t(std::floor(high/width)));
-                    value = 0;
-                    for (size_t j = first; j <= last; ++j) value += magnitudes[j];
-                    value /= last-first+1;
-                }
-                expected[k] = T(alpha*expected[k]+(1.f-alpha)*value);
-            }
-        }
-    }
 };
 
 /// @brief All required outputs checked on the independent untimed replay.

@@ -68,6 +68,33 @@ void transforms(Execute execute, bool real, bool inverse) {
     }
 }
 
+/// @brief Independent recursive radix-2 DFT; no production transform, packing or twiddle table.
+/// @details Binary64 complex arithmetic; each twiddle is evaluated directly,
+/// avoiding recursive twiddle drift. The small direct DFT fixtures validate this
+/// scalable oracle before it is used for every bin of large analysis frames.
+inline void independent_fft_recursive(const std::complex<double>* input, size_t stride,
+        std::complex<double>* output, size_t n) {
+    if (n == 1) { output[0] = *input; return; }
+    const size_t half = n/2;
+    independent_fft_recursive(input, stride*2, output, half);
+    independent_fft_recursive(input+stride, stride*2, output+half, half);
+    for (size_t k = 0; k < half; ++k) {
+        const double angle = -2*std::acos(-1.)*k/n;
+        const std::complex<double> odd = output[k+half]
+            *std::complex<double>(std::cos(angle), std::sin(angle));
+        const auto even = output[k];
+        output[k] = even+odd;
+        output[k+half] = even-odd;
+    }
+}
+inline std::vector<std::complex<double>> independent_fft(
+        const std::vector<std::complex<double>>& input) {
+    check(!input.empty() && !(input.size() & (input.size()-1)));
+    std::vector<std::complex<double>> output(input.size());
+    independent_fft_recursive(input.data(), 1, output.data(), input.size());
+    return output;
+}
+
 /// @brief Periodic coherent-gain-corrected windows, independent of production caches.
 inline long double window(size_t i, size_t n, bool blackman_harris) {
     const long double angle = 2*std::acos(-1.L)*i/n;

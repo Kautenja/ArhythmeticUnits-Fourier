@@ -21,6 +21,10 @@ def quantile(values, fraction):
 def _read(path, config, registry=None, report=False, validate=True):
     groups, counts, publications, previous = {}, Counter(), Counter(), {}
     visible_range = playback_range = None
+    transition_rows = None
+    if validate and config.get("transition_suite"):
+        from transitions import expected_publications
+        transition_rows = expected_publications(config, registry)
     mode = config.get("pass_name")
     details_requested = report and mode in ("callback", "throughput", "complete", "incremental")
     if validate:
@@ -40,6 +44,12 @@ def _read(path, config, registry=None, report=False, validate=True):
                     raise ValueError("Invalid timing observation" if validate
                                      else f"Invalid measurements in {path}")
             if kind != "publication":
+                if validate and transition_rows is not None and kind == "callback":
+                    index = counts[kind]-1
+                    expected_callback = dict(index=index, sample=index*config["block"],
+                                             samples=config["block"], analyzer=0)
+                    if any(int(row[key]) != value for key, value in expected_callback.items()):
+                        raise ValueError("Transition callback coordinates mismatch")
                 groups.setdefault(kind, []).append(duration)
                 continue
             if validate:
@@ -47,7 +57,16 @@ def _read(path, config, registry=None, report=False, validate=True):
                 offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
                 if not 0 <= analyzer < config["count"] or not 0 <= sample < config["callbacks"]*block:
                     raise ValueError("Publication index outside workload")
-                if (sample+offset)%hop != delay or (analyzer in previous and sample-previous[analyzer] != hop):
+                if transition_rows is not None:
+                    index = counts["publication"]-1
+                    if index >= len(transition_rows):
+                        raise ValueError("Extra transition publication")
+                    expected_row = transition_rows[index]
+                    if analyzer != 0 or sample != expected_row["publication_sample"]:
+                        raise ValueError("Transition publication cadence mismatch")
+                    delay = sample-expected_row["endpoint"]
+                    center_offset = (expected_row["n"]-1)/2
+                elif (sample+offset)%hop != delay or (analyzer in previous and sample-previous[analyzer] != hop):
                     raise ValueError("Publication cadence mismatch")
                 ages = (float(row["endpoint_age_samples"]), float(row["center_age_samples"]),
                         float(row["callback_visible_age_samples"]))
@@ -69,7 +88,9 @@ def _read(path, config, registry=None, report=False, validate=True):
         frames = config["callbacks"]
         if mode in ("callback", "throughput"):
             expected[mode] = frames if mode == "callback" else 1
-            if contract["boundary"] != "control":
+            if transition_rows is not None:
+                expected["publication"] = len(transition_rows)
+            elif contract["boundary"] != "control":
                 for analyzer in range(config["count"]):
                     offset = config.get("callback_offset", 0) + (analyzer*hop//config["count"] if config["alignment"] == "staggered" else 0)
                     bias = hop-1-delay

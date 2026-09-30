@@ -8,6 +8,7 @@
 #include "modules.hpp"
 #include "protocol.hpp"
 #include "synthesis.hpp"
+#include "scalar_analysis_audit.hpp"
 #include "external.hpp"
 #include "hybrid.hpp"
 #include "pffft.hpp"
@@ -18,6 +19,8 @@
 #ifdef PAPER_HAVE_FFTW
 #include "fftw.hpp"
 #endif
+
+#include "transitions.hpp"
 
 namespace Paper {
 /// @brief Harness/load control, labeled separately from spectral computation.
@@ -45,6 +48,11 @@ void verify_all() {
     verify_transform<double, Fourier::OnTheFlyRFFT<double>>(true, false);
     verify_transform<float, Fourier::OnTheFlyIFFT<float>>(false, true);
     verify_transform<double, Fourier::OnTheFlyIFFT<double>>(false, true);
+    verify_scalar_analysis();
+    Transition::verify<float, Transition::CoreEngine<float>>();
+    Transition::verify<double, Transition::CoreEngine<double>>();
+    Transition::verify<float, Transition::NativeEngine<float, PffftBackend, false>>();
+    Transition::verify<float, Transition::NativeEngine<float, PffftBackend, true>>();
     verify_analyzer<float>();
     verify_analyzer<double>();
     verify_controls<float>();
@@ -63,7 +71,7 @@ void verify_all() {
     verify_external<double, FftwBackend<double>>("fftw", "double");
 #endif
     std::cout << "Independent transform/analyzer fixtures and matched analysis frames verified for 48 configurations and two controls; "
-        << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid verified\n";
+        << "inverse jobs and overlap-save identity/FIR verified in both precisions; PFFFT hybrid, scalar replay and transition lifecycle verified\n";
 }
 
 /// @brief One workload with unchanged timing and numerical-audit boundaries.
@@ -72,7 +80,15 @@ void execute(const Config& c, bool provider_info = false) {
     const std::string kind(descriptor.kind), precision(descriptor.precision);
     require(!provider_info || kind == "external" || kind == "scheduled-analysis" || kind == "analysis4", "Provider metadata is only available for external adapters");
     Paper::Context context(c.rate);
-    if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
+    if (!c.transition_suite.empty()) {
+        require(!provider_info, "Use transition resource and trace provenance");
+        if (c.backend == "core-float") Transition::run<float, Transition::CoreEngine<float>>(c);
+        else if (c.backend == "core-double") Transition::run<double, Transition::CoreEngine<double>>(c);
+        else if (c.backend == "pffft-hybrid-float") Transition::run<float, Transition::NativeEngine<float, PffftBackend, false>>(c);
+        else if (c.backend == "pffft-scheduled-batch-float") Transition::run<float, Transition::NativeEngine<float, PffftBackend, true>>(c);
+        else require(false, "Backend has no transition adapter");
+    }
+    else if (c.backend == "core-independent4-simd") channel_stream<SimdChannels>(c, provider_info);
     else if (c.backend == "core-independent4-float") channel_stream<ScalarChannels<Core<float>>>(c, provider_info);
     else if (c.backend == "pffft-analysis4-float") channel_stream<ScalarChannels<ExternalAnalysis<float, PffftBackend>>>(c, provider_info);
 #ifdef PAPER_HAVE_FFTW
@@ -100,12 +116,12 @@ void execute(const Config& c, bool provider_info = false) {
         else synthesis_stream<double>(c);
     } else if (kind == "driver") stream<Driver>(c);
     else if (kind == "legacy") {
-        if (precision == "float") stream<Legacy<float>>(c);
-        else stream<Legacy<double>>(c);
+        if (precision == "float") scalar_analysis_stream<float, Legacy<float>>(c);
+        else scalar_analysis_stream<double, Legacy<double>>(c);
     } else if (kind == "core") {
         if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
-        else if (precision == "float") stream<Core<float>>(c);
-        else stream<Core<double>>(c);
+        else if (precision == "float") scalar_analysis_stream<float, Core<float>>(c);
+        else scalar_analysis_stream<double, Core<double>>(c);
     } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
     else if (kind == "spectre") stream<Host<Spectrogram>>(c);
     else if (kind == "fft") {
@@ -138,15 +154,21 @@ int main(int argc, char** argv) {
             std::cout << registry_json << '\n'; return 0;
         }
         bool describe = false, resources = false, provider_info = false;
-        if (argc > 2 && std::string(argv[1]).substr(0, 2) == "--") {
+        if (argc > 2 && std::string(argv[1]).substr(0, 2) == "--" && std::string(argv[1]) != "--transition") {
             describe = std::string(argv[1]) == "--describe";
             resources = std::string(argv[1]) == "--resources";
             provider_info = std::string(argv[1]) == "--provider-info";
             require(describe || resources || provider_info, "Unknown command");
             --argc; ++argv;
         }
-        require(argc == 17 || argc == 18, "Use docs/whitepaper/benchmarks/run.py; expected v1 or v2 protocol arguments");
         Config c;
+        if (argc > 4 && std::string(argv[1]) == "--transition") {
+            c.transition_suite = argv[2];
+            require(std::string(argv[3]) == "control" || std::string(argv[3]) == "change", "Invalid transition mode");
+            c.transition_control = std::string(argv[3]) == "control";
+            argc -= 3; argv += 3;
+        }
+        require(argc == 17 || argc == 18, "Use docs/whitepaper/benchmarks/run.py; expected v1 or v2 protocol arguments");
         c.backend = argv[1]; c.pass = argv[2]; c.n = integer(argv[3]); c.hop = integer(argv[4]);
         c.block = integer(argv[5]); c.count = integer(argv[6]); c.alignment = argv[7];
         c.load = integer(argv[8]);
@@ -167,6 +189,7 @@ int main(int argc, char** argv) {
         require(c.alignment == "aligned" || c.alignment == "staggered", "Invalid alignment");
         require(c.state == "steady" || c.state == "startup" || c.state == "live", "Invalid state");
         validate_backend(c);
+        if (!c.transition_suite.empty()) Transition::suite(c);
         if (describe) { std::cout << contract_json(c) << '\n'; return 0; }
         c.resources = resources;
         Runtime::Profile runtime(!resources && !provider_info);

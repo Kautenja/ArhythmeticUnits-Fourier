@@ -102,7 +102,7 @@ def resolve(document, variant, registry, system, base):
             raise ValueError("Campaign requires optional feature: "+feature)
     rows, omitted = [], Counter()
     for partial in document["workloads"]:
-        if partial.keys()-base.keys():
+        if partial.keys()-(base.keys() | {"transition_suite", "transition_control"}):
             raise ValueError("Unknown campaign workload field")
         config = dict(base, **partial)
         descriptor = registry[config["backend"]]

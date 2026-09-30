@@ -19,8 +19,9 @@ FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
 FR-10's campaign/report tooling is implemented and smoke-validated. New FR-11
-requires equal per-run scalar numerical auditing; new FR-12 implements and
-validates parameter-transition measurement. FR-13 packages these into a
+and FR-12 are implemented and validated: scalar all-output auditing and
+parameter-transition measurement now share the checked campaign/report path.
+FR-13 packages these into a
 reproducible experiment-to-paper workflow and hands the launch commands to
 the user. Its tooling can complete before the user runs the long campaigns.
 FR-14 requires validated replacement measurements before final paper completion.
@@ -653,24 +654,25 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 
 ### FR-11: Equal Per-Run Numerical Auditing
 
-Status: NOT STARTED. Extends scalar coverage without changing production DSP
-or timing the numerical reference. Existing preflight checks remain required.
+Status: COMPLETE (September 29, 2026). Scalar coverage and the independent
+reference are integrated and smoke-validated. Production DSP and timed
+measurement boundaries are unchanged; existing preflight checks remain required.
 
 #### Implementation And Integration
 
-- [ ] Add independent all-output auditing to the untimed replay of every
+- [x] Add independent all-output auditing to the untimed replay of every
     supported scalar production and legacy batch/incremental analysis case,
     in float and double. Match its exact input bytes, window, frame endpoints,
     startup padding, smoothing history, and supported live-setting semantics.
     Audit every instance and every publication; preserve the existing native,
     scheduled, and independent-four-channel coverage.
-- [ ] Reuse the versioned numerical policy and report its reference precision,
+- [x] Reuse the versioned numerical policy and report its reference precision,
     relative L2/Linf and maximum absolute error, exact-silence checks,
     non-finite rejection, and weak-bin diagnostics. Do not relax tolerances to
     obtain a pass or use a tested backend as its own oracle. Account explicitly
     for existing interval/window arithmetic differences without changing the
     measured implementation to match a reference.
-- [ ] Extend dispatch, numerical records, artifact validation, and reporting
+- [x] Extend dispatch, numerical records, artifact validation, and reporting
     together. Record expected/checked spectra and bins, with full coverage
     required for every included scalar configuration. Old archives retain
     their original policy and preflight-only status; never retroactively mark
@@ -679,16 +681,16 @@ or timing the numerical reference. Existing preflight checks remain required.
 
 #### Benchmark Implementation And Acceptance
 
-- [ ] Cover all supported analysis lengths and precisions, smoothing off/on,
+- [x] Cover all supported analysis lengths and precisions, smoothing off/on,
     startup/steady/live states, non-dividing hops, ring wraparound, multiple
     instances, and both callback/throughput passes. Supplement the campaign's
     common deterministic input with independent silence, impulse, DC/Nyquist,
     off-bin tones, seeded noise, and weak-signal fixtures where needed.
-- [ ] Add negative fixtures for a corrupted published bin, missing or duplicate
+- [x] Add negative fixtures for a corrupted published bin, missing or duplicate
     publication, wrong settings/history, non-finite output, and omitted or
     truncated numerical coverage. The checker must fail these cases; valid
     archived preflight-only records must remain readable with their limitation.
-- [ ] Generate a fixture-based accuracy/coverage table with consistent units
+- [x] Generate a fixture-based accuracy/coverage table with consistent units
     and policy identifiers across the compared scalar and native rows. Demonstrate
     that validation does not enter measured cost. Build with the supported
     compiler arithmetic flags, run the validation commands below, and retain
@@ -697,35 +699,35 @@ or timing the numerical reference. Existing preflight checks remain required.
 
 ### FR-12: Parameter-Transition Evidence
 
-Status: NOT STARTED. Implement and validate measurement of ordinary interactive
-changes through existing analyzer APIs. Deterministic fixtures and short smoke
-runs complete this FR; comparative transition metrics come from the user-run
-FR-13 workflow.
+Status: COMPLETE (September 29, 2026). Deterministic fixtures and the bounded
+integration smoke validate interactive changes through existing analyzer APIs
+and explicit benchmark host/control policies. Comparative transition metrics
+remain part of the user-run FR-13 workflow.
 This extends benchmarks without redesigning production control semantics or
 requiring audio-rate modulation.
 
 #### Implementation And Integration
 
-- [ ] Define a deterministic event contract recording requested configuration,
+- [x] Define a deterministic event contract recording requested configuration,
     request sample, acceptance/application sample, configuration generation,
     represented frame endpoint, and publication sample. Specify the existing
     latch, cancellation, coalescing, input-history, zero-padding and smoothing
     behavior before constructing the reference. A deferred/replaced request
     must be distinguishable from an applied request or a missing response.
-- [ ] Exercise requests at a frame boundary, early/middle/late in processing,
+- [x] Exercise requests at a frame boundary, early/middle/late in processing,
     and immediately before publication. Include FFT-length increases/decreases
     (for example 2048 to 16384 and back), hop increases/decreases, window and
     frequency/time-smoothing changes, no-op requests, and a short sequence that
     replaces a pending request before completion. Use supported rates and hop
     capacities; this requirement does not add host sample-rate/reset callbacks
     or display-geometry changes to the timed comparison.
-- [ ] Use the existing measurement harness for timed transition windows and
+- [x] Use the existing measurement harness for timed transition windows and
     a separate deterministic replay for all-output correctness and lifecycle
     traces. Charge actual configuration, cancellation, cache rebuilding and
     output work in the declared boundary. Declare plan/buffer preparation and
     memory policy; do not hide transition work as untimed setup. Any required
     allocation or unsupported operation must be reported explicitly.
-- [ ] Include production scalar analysis and matched scheduled/native controls
+- [x] Include production scalar analysis and matched scheduled/native controls
     for their supported transitions. Match inputs and requests, and document
     differing application/retention policies. Compare latency only when the
     requested result and time origins agree; do not delay a native result to
@@ -734,27 +736,125 @@ requiring audio-rate modulation.
 
 #### Benchmark Implementation And Acceptance
 
-- [ ] Retain request-to-application and request-to-first-correct-publication
+- [x] Retain request-to-application and request-to-first-correct-publication
     latency in samples and milliseconds, each accepted generation's numerical
     errors, cancellations/replacements, stale or mixed-generation outputs, and
     explicit no-response outcomes within a declared observation horizon.
     A complete spectrum must belong to one configuration. Document whether
     retaining the last complete old spectrum while pending is allowed.
-- [ ] Retain raw callback durations around each event and summarize mean,
+- [x] Retain raw callback durations around each event and summarize mean,
     p99 and observed maximum with transition counts, window definitions and
     timer controls. Include an otherwise identical no-change control, preserve
     per-process/session variation, and keep algorithmic response latency
     distinct from wall-clock/UI latency and simulated budget exceedances.
-- [ ] Add deterministic tests for correct first-publication identity and age,
+- [x] Add deterministic tests for correct first-publication identity and age,
     replacement/cancellation, retained/reset history, and rejection of wrong
     generations, mixed bins, missing events/publications and non-finite outputs.
     Produce a checked transition manifest and human-readable response/cost/error
     tables or plots. Run validation and smoke checks before gathering metrics
     through the FR-13 workflow; an unfavorable measured response remains valid evidence.
 
+#### Coordinated FR-11 / FR-12 Completion Evidence
+
+September 29, 2026: independent implementation agents completed the scalar
+reference/audit and transition adapters in parallel. Coordinated integration
+connected C++ dispatch, per-process traces, resource probes, authentication,
+raw-observation checks, numerical coverage, and report generation. A separate
+review found and closed an event-window attribution gap: transition callback
+index, sample coordinate, interval length and analyzer identity must now match
+the declared callback sequence, with negative fixtures for each field.
+
+All changes are confined to benchmark code, its tests, and research
+specification/documentation. Neither production DSP nor Fourier/Spectre module
+code changed. The overall spec remains IN PROGRESS for FR-13 and FR-14.
+
+The scalar oracle uses an independent recursive binary64 FFT for larger frames
+and long-double direct DFT for small frames. It reconstructs exact warmup,
+startup padding, staggered offsets, live settings, and EMA history. Its reported
+mantissa widths expose platforms where long double equals double. The new
+`all-publications-v1` coverage record accompanies the existing unchanged
+`spectrum-norms-v1` tolerances. Historical scalar archives stay preflight-only;
+existing native and independent-channel all-output audits stay distinct.
+
+The [transition contract](../docs/whitepaper/benchmarks/transitions.md) declares
+latest-pending-request replacement in the benchmark host, frame-boundary
+application in the production API, uninterrupted active frames, logical input
+and EMA reset on length changes, and retained history for other settings.
+Only complete publications are audited. The PFFFT immediate/balanced pair are
+explicit transition-capable benchmark controls with prepared exact-size plans
+and maximum buffers; they are not the ordinary fixed-setting native adapter.
+Configuration, request bookkeeping and dirty-cache work remain inside timed
+callbacks. Other adapters reject transition workloads explicitly.
+
+Validation performed on this Apple M1 Pro macOS host:
+
+-   Python discovery: 70 tests in 13.944 seconds, successful with one optional
+    matplotlib plotting test skipped. This includes 198 scalar C++ factor
+    cases and eight numerical/lifecycle corruption fixtures, optimized C++11
+    transition fixtures, negative trace/authentication tests, and report tests.
+    After the callback-coordinate review fix, the affected six integration
+    tests passed again in 2.374 seconds. No tolerance was relaxed.
+-   `make test/dsp/test_spectrum_analysis`: all 13 cases and 2,180,346 assertions
+    passed. This is DSP evidence, not a Rack module build or manual session.
+-   The campaign performed one forced build of timing/allocation executables
+    with Rack arithmetic flags and optional FFTW/vDSP, then `--verify` including
+    scalar replay and all four transition engines. All passed. Existing Rack
+    deprecation warnings and FFTW library deployment-target linker warnings
+    were retained; this run does not establish older-macOS compatibility.
+-   One serial smoke campaign retained 32 fresh processes: 12 scalar
+    configurations, ten existing native/scheduled/independent-channel cases,
+    and ten transition cases. It covered callback and throughput paths,
+    startup/live history, three staggered instances, odd H=37, paired
+    change/no-change controls, and 2048-to-16384-to-2048 core/PFFFT transitions.
+    FFTW and vDSP float/double stationary controls also passed the independent
+    reference. All source/dependency hashes, resource identities, numerical
+    counts, generation traces, raw ages, summaries and runtime sidecars passed.
+-   Campaign wall time was 36.176 seconds: 28.184 seconds building, 3.237 seconds
+    preflight, and 0.468 seconds across benchmark subprocesses. The tiny retained
+    timing windows verify implementation only and support no speedup or tail
+    claim. No long pilot/confirmation campaign was run.
+-   Separate report generation and artifact checking passed. The report has
+    22 stationary accuracy rows, 110 request-response rows, 110 event cost rows,
+    254 complete transition publications covering 110,974 bins, and all 32
+    process timing rows. Every dynamic publication has absolute/reference and
+    relative error metrics. Replaced, pending and applied-without-publication
+    outcomes remain explicit. Changing configurations are excluded from
+    stationary age rankings. All ten transition allocation probes observed
+    zero C++ execution allocations; native/stack storage limitations remain.
+-   `make -C docs/whitepaper check` passed historical artifact, reference/link,
+    numerical table, plot-coordinate and schedule checks. `git diff --check`
+    passed. No manuscript, plot rendering, Rack UI session, or plugin release
+    was needed for this benchmark-only change.
+
+Exact bounded integration commands, from the repository root with the existing
+FFTW prefix and Rack SDK (choose a new output directory when rerunning):
+
+```shell
+python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks -p test_evidence_integration.py
+make test/dsp/test_spectrum_analysis
+python3 docs/whitepaper/benchmarks/run.py .build/paper-audit-transition-smoke-20260929 --config docs/whitepaper/benchmarks/configs/audit-transition-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --warm-hops 2 --phase smoke --notes 'FR-11/FR-12 integration smoke only; one process per workload; no performance claims'
+python3 docs/whitepaper/benchmarks/check.py .build/paper-audit-transition-smoke-20260929
+python3 docs/whitepaper/benchmarks/report.py .build/paper-audit-transition-smoke-20260929 --output .build/paper-audit-transition-report-20260929 --phase smoke --no-plots
+make -C docs/whitepaper check
+git diff --check
+```
+
+The runner raises the transition horizon to at least 26 initial hops and rounds
+it to callbacks, while retaining four-hop stationary smoke windows. The same
+manifest's `rack` variant resolves 28 cases without optional-provider flags.
+Separate `numerical-smoke.json` and `transition-smoke.json` manifests allow
+focused reruns. Raw artifacts live in the ignored campaign directory above;
+the source archive SHA-256 is
+`ead0fa591123c7870e76d3ca5bb6f8c2b704b7bcb95465faa7a85c63d86fafa9`.
+The report directory is derived output, not manuscript evidence. FR-13 must
+provide the tested launch/recovery/export/package handoff, followed by user-run
+replacement campaigns and FR-14 integration; historical results remain intact.
+
 ### FR-13: Reproducible Experiment Workflow And Handoff
 
-Tooling status: REOPENED; awaiting FR-11 and FR-12.
+Tooling status: REOPENED; FR-11 and FR-12 implementation gates passed.
+Workflow, recovery, export, packaging and launch handoff remain outstanding.
 Replacement measurement status: NOT RUN.
 Evidence retirement status: DEFERRED.
 
@@ -1196,10 +1296,10 @@ of running benchmarks, reporting, or completing the handoff.
 - [x] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
     outputs, wrong publication age, unsupported configurations, altered
     dependencies, duplicate/missing runs, and invalid timing values.
-- [ ] FR-11: Every included scalar analysis run has checked all-output numerical
+- [x] FR-11: Every included scalar analysis run has checked all-output numerical
     coverage under the shared policy, with comparable error/coverage reports,
     negative validation fixtures and correctly labeled historical records.
-- [ ] FR-12: Deterministic fixture requests across processing phases produce validated
+- [x] FR-12: Deterministic fixture requests across processing phases produce validated
     generation/cancellation traces and first-correct-publication response,
     error and callback-cost views under explicit comparable control contracts.
 - [ ] FR-13: A researcher can set up a clean checkout, launch and observe a
@@ -1269,11 +1369,11 @@ git diff --check
 
 The Python suite now compiles the host-independent synthesis verifier using
 `CXX` (default `c++`) and C++11. It does not need Rack or Catch2 for that check.
-FR-11/FR-12 must register their new regression fixtures in this existing test
-discovery and extend `--verify` as appropriate. Before marking either complete,
-record its exact smoke-manifest, artifact-check and report-generation commands
-here using implemented paths, including optional-provider build flags. The
-current commands alone do not prove the planned extensions exist or pass.
+FR-11/FR-12 register their regression fixtures in this discovery and extend
+`--verify`. Their exact combined smoke, artifact-check and report commands and
+results appear in the [completion evidence](#coordinated-fr-11--fr-12-completion-evidence).
+The scalar fixture needs Rack headers/types; the transition fixture is
+host-independent. The combined smoke additionally checks actual native plans.
 The following first-party configuration exists now; use new directories:
 
 ```shell
