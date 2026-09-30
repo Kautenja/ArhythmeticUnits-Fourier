@@ -5,6 +5,7 @@ and code. This guide gets you from a fresh checkout to a tested contribution.
 It also covers the architecture, build targets, test coverage, benchmarks,
 and platform limitations used when reviewing changes.
 
+-   [Make your first contribution](#quick-start)
 -   [Set up your environment](#set-up-your-environment)
 -   [Understand the architecture](#architecture)
 -   [Build and test](#development-and-testing)
@@ -12,6 +13,41 @@ and platform limitations used when reviewing changes.
 -   [Update manual figures](#manual-figures)
 -   [Prepare a release and VCV update](#prepare-a-release-and-vcv-update)
 -   [Submit a pull request](#submit-a-pull-request)
+
+## Quick Start
+
+For a first DSP contribution, you need Git, GNU Make, and a C++14 compiler.
+Rack is not required for standalone tests. See the
+[platform setup instructions](#install-the-test-tools) if tools are missing.
+For Markdown-only changes, skip the C++ tests and check links, paths, and
+`git diff --check` instead.
+
+From your projects directory, clone the repository and run the standalone
+tests. If you plan to submit a pull request, fork the repository first and
+substitute your fork's URL in the clone command:
+
+```shell
+git clone https://github.com/Kautenja/ArhythmeticUnits-Fourier.git Fourier
+cd Fourier
+git switch -c my-first-contribution
+make test
+```
+
+Before editing, read [Before You Start](#before-you-start), then find the
+relevant source and tests in the [architecture overview](#architecture).
+Make one focused change and run its test from the repository root, for
+example:
+
+```shell
+make test/dsp/test_fft
+git diff --check
+```
+
+Choose any additional checks using [Choosing Validation](#choosing-validation).
+Module changes also need the [Rack SDK](#configure-the-rack-sdk) and relevant
+Rack checks. When ready, [submit a pull request](#submit-a-pull-request) with
+the change and validation results. The sections below provide the full
+setup and reference details.
 
 ## Before You Start
 
