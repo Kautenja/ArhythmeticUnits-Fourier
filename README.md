@@ -6,6 +6,7 @@ and watch sound evolve with **Fourier**, a four-input spectrum analyzer,
 and **Spectre**, a spectrogram visualizer.
 
 [![Latest GitHub Release][ReleaseBadge]][LatestRelease]
+[![DSP and Rack tests][TestsBadge]][TestsWorkflow]
 [![VCV Library: Rack 2][VCVBadge]][VCVLibrary]
 [![Source License: GPL-3.0-or-later][LicenseBadge]](LICENSING.md)
 
@@ -264,6 +265,8 @@ See [LICENSING.md](LICENSING.md) for details.
 
 [ReleaseBadge]: https://img.shields.io/github/v/release/Kautenja/ArhythmeticUnits-Fourier?label=GitHub%20release
 [LatestRelease]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest
+[TestsBadge]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/actions/workflows/dsp-tests.yml/badge.svg?branch=main
+[TestsWorkflow]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/actions/workflows/dsp-tests.yml?query=branch%3Amain
 [VCVBadge]: https://img.shields.io/badge/VCV-Rack%202-0099dd
 [VCVLibrary]: https://library.vcvrack.com/ArhythmeticUnits-Fourier
 [LicenseBadge]: https://img.shields.io/badge/source%20license-GPL--3.0--or--later-blue
