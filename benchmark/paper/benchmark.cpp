@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
             c.transition_control = std::string(argv[3]) == "control";
             argc -= 3; argv += 3;
         }
-        require(argc == 17 || argc == 18, "Use docs/whitepaper/benchmarks/run.py; expected v1 or v2 protocol arguments");
+        require(argc == 17 || argc == 18, "Use docs/whitepaper/benchmarks/lib/run.py; expected v1 or v2 protocol arguments");
         c.backend = argv[1]; c.pass = argv[2]; c.n = integer(argv[3]); c.hop = integer(argv[4]);
         c.block = integer(argv[5]); c.count = integer(argv[6]); c.alignment = argv[7];
         c.load = integer(argv[8]);

@@ -12,8 +12,8 @@ Status: IN PROGRESS
 Created: September 29, 2026
 
 This spec supersedes the detailed plan formerly in
-[`docs/whitepaper/benchmarks/comparisons.md`](../docs/whitepaper/benchmarks/comparisons.md).
-The [protocol README](../docs/whitepaper/benchmarks/README.md) defines current measurement
+[`docs/whitepaper/benchmarks/guides/comparisons.md`](../docs/whitepaper/benchmarks/guides/comparisons.md).
+The [protocol README](../docs/whitepaper/benchmarks/guides/protocol.md) defines current measurement
 semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
@@ -21,9 +21,9 @@ under the [optional contender decision](#optional-contender-decision).
 FR-10's campaign/report tooling is implemented and smoke-validated. New FR-11
 and FR-12 are implemented and validated: scalar all-output auditing and
 parameter-transition measurement now share the checked campaign/report path.
-FR-13 packages these into a
-reproducible experiment-to-paper workflow and hands the launch commands to
-the user. Its tooling can complete before the user runs the long campaigns.
+FR-13 tooling is COMPLETE: the [workflow handoff](../docs/whitepaper/benchmarks/guides/workflow.md)
+covers setup through checked paper export and portable evidence bundles.
+Replacement measurements remain NOT RUN; evidence retirement is DEFERRED.
 FR-14 requires validated replacement measurements before final paper completion.
 
 The former FR-11 measurement campaign completed for an older source revision:
@@ -58,7 +58,7 @@ Template workloads still compile together; timed operations, protocol arguments,
 backend IDs, raw records, numerical budgets, and executable paths are preserved.
 
 Campaign scripts, configurations, provider notes, and historical experiments
-moved to [`docs/whitepaper/benchmarks/`](../docs/whitepaper/benchmarks/README.md).
+moved to [`docs/whitepaper/benchmarks/`](../docs/whitepaper/benchmarks/guides/protocol.md).
 Standalone numerical verifier programs moved to `test/paper/`, outside Catch2
 suite discovery. Source archiving includes the relocated tooling; the artifact
 checker accepts both old and new archived registry paths. Development source
@@ -73,7 +73,7 @@ Validation on macOS ARM64 (no timing campaign):
     deployment-target warnings remain.
 -   `.build/benchmark/rack/paper --verify` with the Rack library search path:
     passed with all three providers enabled.
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`:
     39 tests, 38 passed and the optional plotting test skipped in system Python.
     The skipped test then passed separately with the existing report environment:
     `PYTHONPATH=docs/whitepaper/benchmarks MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest test_report.ReportTests.test_figure_determinism`.
@@ -125,7 +125,7 @@ answer the current questions; the FR-7--FR-9 deferrals still apply.
     deadline evidence. A rare FFT burst can fall above p99, so retain maxima,
     counts, replay coverage, and full distributions alongside it.
 
-The [claim-to-evidence map](../docs/whitepaper/benchmarks/README.md#claims-and-presentation)
+The [claim-to-evidence map](../docs/whitepaper/benchmarks/guides/protocol.md#claims-and-presentation)
 connects the intended questions to figures and comparison boundaries. Its
 methodology references include [Kalibera and Jones](https://kar.kent.ac.uk/33611/)
 on levels of repetition and uncertainty,
@@ -174,13 +174,13 @@ Validation on macOS ARM64:
 -   `DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify`:
     passed independent/matched analysis, transform, inverse, filtering, and
     hybrid fixtures.
--   `.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+-   `.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`:
     42 tests passed, including deterministic plots, coverage corruption,
     non-finite rejection, and optional-processing numerical regressions.
     Synthesis verification uses Rack's actual
     `-O3 -funsafe-math-optimizations` arithmetic flags; full `-ffast-math`
     assumes finite values and is not a supported validation configuration.
--   `python3 docs/whitepaper/benchmarks/campaigns.py --check`,
+-   `python3 docs/whitepaper/benchmarks/lib/campaigns.py --check`,
     `make -C docs/whitepaper check`, local link checks, and `git diff --check`:
     passed. Synthetic plot fixtures were visually checked; they are not
     performance evidence. Logs are in `.build/paper-audit-20260929/`.
@@ -270,7 +270,7 @@ waveform against direct filtering rather than reporting only frame completion.
 ## First-Party Evidence Pathways
 
 Forward, inverse, and complete-chain baselines are required before external
-comparisons. The [protocol](../docs/whitepaper/benchmarks/README.md#inverse-and-end-to-end-baselines)
+comparisons. The [protocol](../docs/whitepaper/benchmarks/guides/protocol.md#inverse-and-end-to-end-baselines)
 documents the implemented semantics and reproduction commands.
 
 | Family | Implemented Baseline | Required External Comparison |
@@ -776,7 +776,7 @@ mantissa widths expose platforms where long double equals double. The new
 `spectrum-norms-v1` tolerances. Historical scalar archives stay preflight-only;
 existing native and independent-channel all-output audits stay distinct.
 
-The [transition contract](../docs/whitepaper/benchmarks/transitions.md) declares
+The [transition contract](../docs/whitepaper/benchmarks/guides/transitions.md) declares
 latest-pending-request replacement in the benchmark host, frame-boundary
 application in the production API, uninterrupted active frames, logical input
 and EMA reset on length changes, and retained history for other settings.
@@ -830,12 +830,12 @@ Exact bounded integration commands, from the repository root with the existing
 FFTW prefix and Rack SDK (choose a new output directory when rerunning):
 
 ```shell
-python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
-python3 -m unittest discover -s docs/whitepaper/benchmarks -p test_evidence_integration.py
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_evidence_integration.py
 make test/dsp/test_spectrum_analysis
-python3 docs/whitepaper/benchmarks/run.py .build/paper-audit-transition-smoke-20260929 --config docs/whitepaper/benchmarks/configs/audit-transition-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --warm-hops 2 --phase smoke --notes 'FR-11/FR-12 integration smoke only; one process per workload; no performance claims'
-python3 docs/whitepaper/benchmarks/check.py .build/paper-audit-transition-smoke-20260929
-python3 docs/whitepaper/benchmarks/report.py .build/paper-audit-transition-smoke-20260929 --output .build/paper-audit-transition-report-20260929 --phase smoke --no-plots
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-audit-transition-smoke-20260929 --config docs/whitepaper/benchmarks/history/configs/audit-transition-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --warm-hops 2 --phase smoke --notes 'FR-11/FR-12 integration smoke only; one process per workload; no performance claims'
+python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-audit-transition-smoke-20260929
+python3 docs/whitepaper/benchmarks/lib/report.py .build/paper-audit-transition-smoke-20260929 --output .build/paper-audit-transition-report-20260929 --phase smoke --no-plots
 make -C docs/whitepaper check
 git diff --check
 ```
@@ -853,8 +853,8 @@ replacement campaigns and FR-14 integration; historical results remain intact.
 
 ### FR-13: Reproducible Experiment Workflow And Handoff
 
-Tooling status: REOPENED; FR-11 and FR-12 implementation gates passed.
-Workflow, recovery, export, packaging and launch handoff remain outstanding.
+Tooling status: COMPLETE (September 29, 2026); FR-11 and FR-12 gates passed.
+The tested workflow and copyable launch handoff are implemented.
 Replacement measurement status: NOT RUN.
 Evidence retirement status: DEFERRED.
 
@@ -868,26 +868,26 @@ to execute the full pilot/confirmation campaign before completing this FR.
 
 #### Reproducible Tooling And Documentation
 
-- [ ] Provide a single documented workflow entry point or a small stable set
+- [x] Provide a single documented workflow entry point or a small stable set
     of commands for setup/preflight, inventory/dry-run, smoke, pilot, frozen
     confirmation sessions, status/logs, validation, reporting, paper export,
     and evidence packaging. Commands must run without chat context, local
     helper scripts, hand-edited measurements, or the author's home-directory
     paths. Reuse the existing timing harness rather than creating another.
-- [ ] Document supported platforms and explicit Rack-only/portable/macOS
+- [x] Document supported platforms and explicit Rack-only/portable/macOS
     provider variants, SDK/compiler/Python/plot/TeX prerequisites, pinned
     dependency acquisition/build commands and licenses, environment setup,
     and output layout. Detect missing requested providers and incompatible
     settings before starting. Distinguish tested platforms from prospective
     support and record framework components that cannot be redistributed.
-- [ ] Supply versioned workload/transition manifests, seeds, configurable
+- [x] Supply versioned workload/transition manifests, seeds, configurable
     output roots and host/session notes, and a resolved workload inventory.
     Expose smoke versus paper scale and how to estimate time/disk needs from
     the pilot. Document how pilot variation, timer resolution and tail counts
     determine the confirmation freeze; do not silently treat old settings as
     validated for new code. Record source/dependency/build/policy identities
     and refuse incompatible pooling or overwrite of existing evidence.
-- [ ] Make user-launched runs observable through terminal progress, current
+- [x] Make user-launched runs observable through terminal progress, current
     workload/session/repetition, completed/failed counts and retained logs,
     with documented exit codes, interruption and safe restart/resume behavior.
     Any resume must verify provenance/configuration and retain failed or partial
@@ -895,12 +895,12 @@ to execute the full pilot/confirmation campaign before completing this FR.
     Build before measurement, run timed jobs serially, and keep progress I/O
     outside measured intervals. Session labels must represent actual sessions,
     not an automated loop falsely claiming independent machine conditions.
-- [ ] Turn checked raw archives into human-readable CSV/Markdown tables and
+- [x] Turn checked raw archives into human-readable CSV/Markdown tables and
     SVG/PNG figures for cost, callback tails, storage, accuracy, attribution,
     spectrum/delivery age and parameter response. Preserve units, coverage,
     uncertainty and unfavorable outcomes. Allow report regeneration without
     rerunning measurements or requiring the original absolute artifact paths.
-- [ ] Provide an explicit paper-export step driven by a versioned selection
+- [x] Provide an explicit paper-export step driven by a versioned selection
     manifest. Map each selected table, figure and numeric claim/macro to its
     workload, source archive, statistic, units and intended manuscript include
     path. Generate LaTeX table/macro includes and figure assets consumed by the
@@ -911,19 +911,19 @@ to execute the full pilot/confirmation campaign before completing this FR.
     Generated assets must not rewrite editorial prose or historical results.
     Ordinary paper builds/checks must not launch benchmarks or fetch new
     results automatically; measurement and export are explicit commands.
-- [ ] Package the sources/configurations, numerical policy, dependency identity,
+- [x] Package the sources/configurations, numerical policy, dependency identity,
     raw observations, logs, checker/report/export versions, selection manifest,
     commands and checksums needed to audit a published result. Document how to
     regenerate outputs and rerun on another host, distinguishing deterministic
     derivation from hardware-dependent timing replication. Do not claim identical
     timings across machines or promise redistribution of opaque libraries.
-- [ ] Document adding a workload/backend and comparing a compatible future
+- [x] Document adding a workload/backend and comparing a compatible future
     baseline without changing the frozen paper profile. Include small worked
     examples, schema/units, numerical acceptance and unsupported cases, required
     regression checks, and rules for separating revisions and experimental
     variants. No bespoke assistant-written script should be needed for routine
     reruns, figure regeneration or a supported new workload.
-- [ ] Inventory superseded results and provide a separately invoked retirement
+- [x] Inventory superseded results and provide a separately invoked retirement
     operation with a non-destructive preview, exact candidate identities,
     dependency checks and supersession receipt. Test the
     [replacement and retirement gate](#replacement-and-retirement-gate) in
@@ -935,7 +935,8 @@ to execute the full pilot/confirmation campaign before completing this FR.
 
 September 29, 2026: added coarse runtime accounting as the first step toward
 reducing campaign execution time. This completes only the attribution
-prerequisite; FR-13 tooling remains REOPENED, replacement measurements remain
+prerequisite at that point; the later workflow completion is recorded below.
+At that point, replacement measurements remained
 NOT RUN, and evidence retirement remains DEFERRED.
 
 The runner records disjoint wall-time phases and per-job events, including
@@ -947,7 +948,7 @@ outside individual measured intervals; counts, scheduling, provider planning,
 numerical references, tolerances and raw observation formats are unchanged.
 No production DSP code changed, and no execution-time reduction is claimed.
 
-The [runtime diagnostic command](../docs/whitepaper/benchmarks/README.md#campaign-runtime-diagnostics)
+The [runtime diagnostic command](../docs/whitepaper/benchmarks/guides/protocol.md#campaign-runtime-diagnostics)
 prints seconds and percentages from retained data. It preserves unclassified
 work and failed-process time explicitly. Old archives need no new fields.
 Failed/interrupted campaigns retain invalid status and elapsed phases rather
@@ -960,7 +961,7 @@ Validation on macOS ARM64:
 -   `make -j2 benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX="$PWD/.build/deps/fftw"`:
     passed; existing Rack deprecation and local FFTW deployment-target warnings
     remain.
--   `MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`:
+-   `MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`:
     all 51 tests passed, including native opt-in/failure behavior, invalid or
     aliased sidecars, checksum failures, legacy archives, disjoint accounting,
     failed-job reporting and final-validation timing.
@@ -974,9 +975,9 @@ Validation on macOS ARM64:
     The retained configuration is `.build/runtime-attribution-smoke-config.json`:
 
     ```shell
-    python3 docs/whitepaper/benchmarks/run.py .build/runtime-attribution-smoke --config .build/runtime-attribution-smoke-config.json --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --notes 'Runtime-attribution implementation smoke only; not publication timing evidence'
-    python3 docs/whitepaper/benchmarks/check.py .build/runtime-attribution-smoke
-    python3 docs/whitepaper/benchmarks/runtime.py .build/runtime-attribution-smoke
+    python3 docs/whitepaper/benchmarks/lib/run.py .build/runtime-attribution-smoke --config .build/runtime-attribution-smoke-config.json --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --notes 'Runtime-attribution implementation smoke only; not publication timing evidence'
+    python3 docs/whitepaper/benchmarks/lib/check.py .build/runtime-attribution-smoke
+    python3 docs/whitepaper/benchmarks/lib/runtime.py .build/runtime-attribution-smoke
     ```
 
     All 14 runs, numerical/publication checks, archived sources, artifact hashes
@@ -1038,38 +1039,151 @@ old/new result files. The retained
 snapshots without rerunning DSP workloads.
 
 Validation: all 56 tests passed with
-`MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`.
+`MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`.
 New regressions cover exact historical summaries, original-order floating
 totals, nearest-rank quantiles, corrupt rows/counts/cadence, one checksum read
 plus one CSV parse per report input, and rejection of invalid evidence before
-report export. No C++/DSP or Rack changes were made. FR-13 and replacement
+report export. No C++/DSP or Rack changes were made. The remaining FR-13 work at that point is completed below; replacement
 measurements remain open.
 
 #### Validation, Handoff And Completion
 
-- [ ] Verify the documented path from a fresh checkout or equivalent isolated
+- [x] Verify the documented path from a fresh checkout or equivalent isolated
     clean environment, using a small smoke run plus fixture evidence. Exercise
     setup/preflight, launch/progress, interruption/restart policy, artifact
     checking, deterministic reports, fixture paper export/build, and package
     extraction/regeneration under a different directory. Record the host and
     commands actually tested; validate optional-provider paths where available.
-- [ ] Add negative checks for missing/corrupt runs, changed sources or manifest,
+- [x] Add negative checks for missing/corrupt runs, changed sources or manifest,
     mixed phases/sessions, incomplete numerical/transition coverage, stale paper
     assets, fixture-to-production export, and premature evidence deletion.
     The quick validation path must be bounded and must not launch a full paper
     campaign as a side effect. Verify representative generated figures visually.
-- [ ] Give the user exact copyable setup, pilot-launch, freeze, per-session
+- [x] Give the user exact copyable setup, pilot-launch, freeze, per-session
     confirmation-launch, progress/log, validate/report, paper-export/build and
     bundle commands, with required inputs, output paths and expected success
     markers. Explain what to do after each phase and which steps need an idle
     machine. The user should be able to watch execution and finish the workflow
     without another implementation request or recovering commands from chat.
-- [ ] Mark FR-13 tooling COMPLETE only after these deliverables pass. Record
+- [x] Mark FR-13 tooling COMPLETE only after these deliverables pass. Record
     measurement status separately as NOT RUN, PARTIAL or VALIDATED, and
     retirement as DEFERRED or completed with retained exceptions. A handoff or
     smoke report does not create paper evidence or close FR-14. Leave all old
     results intact at handoff unless a real replacement has already passed
     the retirement gate.
+
+#### Workflow Completion Evidence
+
+September 29, 2026: consolidated the active interface in
+[`bench.py`](../docs/whitepaper/benchmarks/bench.py), with three short schema-2
+[profiles](../docs/whitepaper/benchmarks/profiles/README.md). The expanded
+matrix is generated and archived at launch. Private Python modules, tests and
+technical guides have separate directories. Older expanded configurations and
+prototype reproduction tools live in `benchmarks/history/`; historical
+optimization artifacts live in `data/research/`. Manuscript checks live in
+`tools/`. All 52 moved historical configuration/research files were compared
+against HEAD and preserved byte-for-byte. Original manuscript source/data
+archives remain intact. No forwarding-script compatibility layer was added;
+exact historical reproduction uses its archived sources.
+
+The [workflow guide](../docs/whitepaper/benchmarks/guides/workflow.md) is the
+launch handoff, including supported variants, dependencies, actual host/session
+notes, pilot review, freeze, separately prepared confirmation sessions, status
+and failure logs, checked reporting, selection/export, bundle regeneration and
+retirement preview. The [extension guide](../docs/whitepaper/benchmarks/guides/extending.md)
+provides a worked workload example and backend/baseline contracts. Freeze and
+production-export gates check source/dependency/compiler commands, policies,
+workloads and independent session labels. Failed attempts remain invalid and
+restart under new names. No full campaign is required for this implementation
+gate, and none was launched.
+
+Validation used macOS 26.6.2 ARM64, the local Rack 2 SDK, pinned FFTW float/double
+libraries and system Accelerate. An isolated tracked-source snapshot at
+`/private/tmp/fourier-fr13-clean-20260929` had an empty Git status during the
+final run (snapshot revision `54f2deb6eaf64411980eba72b9f0f0e9bd936e98`, not a
+project commit). The first cold build exposed a missing link-output directory;
+`mk/rack.mk` now creates it for both native benchmark executables. That failed
+archive and an initial analysis/transition smoke remain retained. The final
+smoke adds all inverse, identity/FIR chain and transform providers explicitly.
+
+Exact final smoke command, from the isolated checkout, with `RACK_DIR` and
+`FFTW_PREFIX` set to the prepared local dependency directories:
+
+```shell
+python3 docs/whitepaper/benchmarks/bench.py run --profile smoke --variant macos --rack-dir "$RACK_DIR" --fftw-prefix "$FFTW_PREFIX" --output .build/fr13-smoke-complete --notes 'Isolated clean checkout FR-13 workflow validation only; no performance claims'
+```
+
+All 80 processes, native preflight, resource probes, numerical/transition
+checks and final artifact validation passed. The complete pipeline took
+47.831 seconds, including 34.973 seconds building and 1.658 seconds in measured
+processes; these are workflow diagnostics, not performance comparisons or
+estimates for full campaigns. `cpu_model` records the sandbox's unavailable
+`sysctl` result rather than inventing a detected CPU. Existing Rack deprecation
+and local FFTW deployment-target warnings remain; older macOS compatibility
+was not established. The retained final campaign is
+`.build/fr13-validation/campaign-final` in the working repository.
+
+Bounded regression and derivation commands, from the repository root:
+
+```shell
+MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
+make -C docs/whitepaper check
+MPLCONFIGDIR="$PWD/.build/matplotlib" .build/paper-report-env/bin/python docs/whitepaper/benchmarks/bench.py report .build/fr13-validation/campaign-final --phase smoke --output .build/fr13-validation/report-verified
+python3 docs/whitepaper/benchmarks/bench.py select .build/fr13-validation/report-verified --fixture --output .build/fr13-validation/selection-verified.json
+python3 docs/whitepaper/benchmarks/bench.py export .build/fr13-validation/selection-verified.json --fixture --output .build/fr13-validation/fixture-verified
+python3 docs/whitepaper/benchmarks/bench.py bundle .build/fr13-validation/campaign-final --selection .build/fr13-validation/selection-verified.json --output .build/fr13-validation/evidence-verified.tar.gz
+python3 docs/whitepaper/benchmarks/bench.py unpack .build/fr13-validation/evidence-verified.tar.gz --output .build/fr13-validation/relocated-verified
+```
+
+All 78 tests passed, including source/compiler/freeze mismatches, incomplete
+or mixed evidence, stale/edited numeric artifacts, fixture-to-production
+rejection, interruption exit 130, safe extraction, relocated rederivation and
+retirement gates. Both denied retirement and successful eligible retirement
+were tested only with temporary synthetic evidence. Paper checks passed all
+31 references, historical hashes, numerical tables and 32768 schedules.
+Reports produced 70 SVG/PNG figure pairs, including explicit unmatched
+attribution controls, numerical/storage and transition response/cost views.
+Visual review covered the generated table and representative cost/age,
+storage/accuracy and transition plots. That review corrected an unlabeled
+sub-epsilon accuracy axis. The expanded fixture exposed LaTeX's float limit;
+exports now bound the float queue with page breaks. The real retirement
+preview exposed repeated large-JSON parsing; it now scans report dependencies
+once with bounded memory, with a chunk-boundary regression test.
+
+`.build/fr13-validation/retirement-plan.json` inventories 16 historical
+pilot/confirmation directories (four pilots and twelve confirmation groups),
+with exact metadata/tree/source/configuration identities and retained uses.
+All have retained references and remain in place. No replacement campaign or
+publication is available to satisfy the separate removal gate. The real
+preview never invokes deletion.
+
+The generated fixture compiled with `pdflatex -no-shell-escape
+-interaction=nonstopmode -halt-on-error fixture.tex`, from
+`.build/fr13-validation/fixture-verified`, producing 52 pages without overflow
+or LaTeX errors. This deliberately exhaustive smoke selection is a tooling
+fixture, not the manuscript's editorial figure selection. Representative
+figure/table pages were visually inspected. The extracted bundle's own CLI
+regenerated reports and fixture exports from its relocated paths:
+
+```shell
+cd .build/fr13-validation/relocated-verified
+python3 tooling/docs/whitepaper/benchmarks/bench.py check campaigns/000
+python3 tooling/docs/whitepaper/benchmarks/bench.py report campaigns/000 --phase smoke --output regenerated --no-plots
+python3 tooling/docs/whitepaper/benchmarks/bench.py export selection.json --fixture --output regenerated-fixture
+```
+
+All six results/accuracy/transition/attribution tables matched the original
+numerical and identity columns exactly (raw-path columns relocate). Bundles
+explicitly omit native executables and SDK/dependency archives, retain their
+identities, and do not pretend to validate omitted bytes. Final figure/export
+and retirement fixes were checked against retained smoke data and synthetic
+fixtures; no additional timing campaign was needed. Python plotting emitted
+existing dependency deprecation warnings only. Local Markdown paths and
+`git diff --check` passed.
+
+Replacement measurement status: NOT RUN. Evidence retirement status: DEFERRED.
+No Rack module integration, full plugin build, manual Rack session, publication
+or manuscript result replacement was performed for FR-13. FR-14 stays open.
 
 ### FR-14: Paper Integration And Completion
 
@@ -1302,16 +1416,16 @@ of running benchmarks, reporting, or completing the handoff.
 - [x] FR-12: Deterministic fixture requests across processing phases produce validated
     generation/cancellation traces and first-correct-publication response,
     error and callback-cost views under explicit comparable control contracts.
-- [ ] FR-13: A researcher can set up a clean checkout, launch and observe a
+- [x] FR-13: A researcher can set up a clean checkout, launch and observe a
     campaign, recover safely from interruption, validate it, regenerate reports,
     export selected numbers/assets to the paper, and package/extract evidence
     using tested documented commands. Fixture/smoke validation and a concrete
     launch handoff suffice; a full measurement campaign is not required to
     mark the tooling complete.
-- [ ] FR-6 and FR-13: Tested attribution tooling separates the practical value
+- [x] FR-6 and FR-13: Tested attribution tooling separates the practical value
     of suspending the FFT from scheduling surrounding work, with explicit
     remaining confounds and evidence identities for each comparison.
-- [ ] FR-10 through FR-13: Tested output generation supplies an
+- [x] FR-10 through FR-13: Tested output generation supplies an
     implementation/provenance/error/storage table; matched workload/cost/age
     table; transform and full-analysis cost versus N; callback tail
     distributions; cost versus spectrum-age plots; equal numerical-coverage
@@ -1323,7 +1437,7 @@ of running benchmarks, reporting, or completing the handoff.
     measurements. Fixture outputs validate generation only. The paper's numeric
     includes and assets have deterministic derivation and traceable selection;
     production export rejects incomplete, smoke, stale or incompatible evidence.
-- [ ] FR-13: Separately invoked retirement tooling previews exact candidates,
+- [x] FR-13: Separately invoked retirement tooling previews exact candidates,
     rejects an unsatisfied gate and records supersession/retained dependencies.
     At handoff, real measurements may remain NOT RUN and cleanup DEFERRED;
     completing tooling never permits removal of still-used evidence.
@@ -1359,7 +1473,7 @@ assumes the default `../..` Rack layout. Substitute the configured SDK directory
 for a different layout; Windows needs its DLL search path configured.
 
 ```shell
-python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
 make test/dsp/test_spectrum_analysis
 make benchmark-paper-build
 DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --verify
@@ -1377,9 +1491,9 @@ host-independent. The combined smoke additionally checks actual native plans.
 The following first-party configuration exists now; use new directories:
 
 ```shell
-python3 docs/whitepaper/benchmarks/run.py .build/paper-inverse-smoke --config docs/whitepaper/benchmarks/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 docs/whitepaper/benchmarks/check.py .build/paper-inverse-smoke
-python3 docs/whitepaper/benchmarks/run.py .build/paper-synthesis-session-01 --profile synthesis --list
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-inverse-smoke --config docs/whitepaper/benchmarks/history/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-inverse-smoke
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-synthesis-session-01 --profile synthesis --list
 ```
 
 The dedicated smoke config contains 48 streaming and eight isolated inverse
@@ -1387,34 +1501,20 @@ workloads; the synthesis factor profile contains 216 streaming workloads.
 Its controls require no analyzer settings and reject live-window/smoothing
 options. Resolve feasible H/N combinations per family before measurement.
 
-FR-10 supplies tracked smoke, pilot, and extension manifests under
-`docs/whitepaper/benchmarks/configs/`. The
-[protocol README](../docs/whitepaper/benchmarks/README.md#external-campaigns-and-reports)
-provides current variant-specific commands, dependency prerequisites and
-resolved counts. Listing the pilot does not measure it. For the full macOS
-variant, with the documented FFTW prefix already prepared:
+The current [workflow entry point](../docs/whitepaper/benchmarks/README.md)
+and [launch handoff](../docs/whitepaper/benchmarks/guides/workflow.md) provide
+copyable setup, pilot, freeze, confirmation, monitoring, validation/export and
+bundle commands. Active schema-2 profiles live in `benchmarks/profiles/`;
+FR-10's expanded configurations are preserved in `benchmarks/history/configs/`.
+Listing a profile resolves its entire matrix without measuring it:
 
 ```shell
-python3 docs/whitepaper/benchmarks/run.py --config docs/whitepaper/benchmarks/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
+python3 docs/whitepaper/benchmarks/bench.py plan --profile pilot --variant macos --output .build/pilot-plan.json
 ```
 
-When the user launches the FR-13 workflow after the readiness gate and host
-preparation, run the pilot using explicit host/session identities, observation
-lengths and host notes. Its retained evidence determines the frozen
-confirmation settings; the long pilot is not a tooling-completion requirement.
-
-Document dependency installation/build commands when versions and integration
-are selected, and record actual host notes with each campaign. Before the final
-campaign, add its frozen configuration and exact commands, including selected
-repetition counts, run lengths, seeds, and session directories. Supply a
-deterministic figure/table generator and its validation command as part of
-implementation. Smoke checks are not publication measurements.
-
-FR-13 must add its exact tested commands and quickstart to the protocol README
-before handoff. Include the complete launch-to-paper path and evidence-bundle
-regeneration commands, with validated sample output and failure handling.
-The existing commands above are building blocks, not a claim that the planned
-workflow, exporter or retirement operation is already implemented.
+Pilot evidence must justify final repetitions, session count, observation
+lengths and matrix decisions. The implementation smoke validates the workflow
+only. FR-14 cannot use its timings as replacement comparison evidence.
 
 ## Review Evidence And Remaining Work
 
@@ -1479,9 +1579,9 @@ FFT arithmetic, layouts, fusion, plan capacity and storage remain explicit
 confounds; this stage makes no causal production-scheduling-overhead claim
 and therefore does not add a same-production-pipeline batch ablation.
 
-[The benchmark guide](../docs/whitepaper/benchmarks/README.md#hybrid-scheduling-attribution)
+[The benchmark guide](../docs/whitepaper/benchmarks/guides/protocol.md#hybrid-scheduling-attribution)
 defines the schedule and reproduction commands.
-[The attribution generator](../docs/whitepaper/benchmarks/hybrid_report.py) checks the
+[The attribution generator](../docs/whitepaper/benchmarks/lib/hybrid_report.py) checks the
 archived campaign before producing JSON and Markdown in a separate directory.
 It requires all six matched controls, preserves process-level cost/tail
 summaries, ages and resource records, and labels four comparison types.
@@ -1491,7 +1591,7 @@ Short smoke runs establish the reporting path, not comparative conclusions.
 
 Validation on the current Apple Silicon host:
 
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: all
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`: all
     27 tests passed. New checks cover every supported power of two, H=1/37/
     257/65536, retained-input wraparound, native-call placement, live caches,
     postprocessing dependencies, zero observed C++ execution allocations,
@@ -1501,13 +1601,13 @@ Validation on the current Apple Silicon host:
     with all providers enabled. Hybrid preflight checks exact paired output,
     the ordinary batch control, and independent numerical references at
     N=128/2048/16384, including long idle quotas and live smoothing.
--   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr6-hybrid-final --config docs/whitepaper/benchmarks/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr6-hybrid-final`: all
+-   `python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr6-hybrid-final --config docs/whitepaper/benchmarks/history/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr6-hybrid-final`: all
     120 runs passed. The matrix spans 20 matched conditions, all six controls,
     callback/throughput passes, startup, live settings, aligned/staggered banks,
     load/cache pressure and callback/sample-rate variations. Paired adapters
     have equal persistent C++ storage and zero observed execution allocations.
--   `python3 docs/whitepaper/benchmarks/hybrid_report.py .build/paper-fr6-hybrid-final .build/paper-fr6-attribution-final`:
+-   `python3 docs/whitepaper/benchmarks/lib/hybrid_report.py .build/paper-fr6-hybrid-final .build/paper-fr6-attribution-final`:
     generated and checked 20 groups and 80 explicitly qualified comparisons.
 -   `make check-build`: five tests passed. `make -j2` and
     `make -C docs/whitepaper check` passed. Local documentation paths/links
@@ -1527,7 +1627,7 @@ packing, real-output factor-of-two correction, natural-order stores, and
 normalized inverse output. The shared adapters supply analysis, periodic
 inverse jobs, and complete overlap-save identity/FIR chains. Independent
 all-output fixtures cover every supported power of two from 128 to 16384.
-See [provider details](../docs/whitepaper/benchmarks/vdsp.md).
+See [provider details](../docs/whitepaper/benchmarks/guides/vdsp.md).
 
 `--enable-vdsp` and `PAPER_VDSP=1` enable the runner and paper executables,
 respectively. Non-macOS opt-in rejects before building; a disabled build
@@ -1550,11 +1650,11 @@ Validation on Apple Silicon/macOS:
 -   `make benchmark-paper-build PAPER_VDSP=1` and
     `DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --verify`: passed,
     including both precisions and matched forward/inverse/complete chains.
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: all
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`: all
     24 tests passed, including independent vDSP fixtures, C++ allocation
     checks, unavailable-platform rejection, and required platform evidence.
--   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr5-vdsp --enable-vdsp --config docs/whitepaper/benchmarks/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr5-vdsp`: all 112
+-   `python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr5-vdsp --enable-vdsp --config docs/whitepaper/benchmarks/history/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr5-vdsp`: all 112
     native/control runs and archived evidence passed. This includes startup,
     smoothing/live analysis, staggered instances, load, and cache pressure.
 -   A separate six-run combined-feature campaign passed with
@@ -1587,7 +1687,7 @@ policy is `FFTW_MEASURE`, one thread, fresh processes, forgotten prior wisdom,
 and restored inputs after planning. Every actual timed/resource instance
 retains its own plan text; process-global wisdom is labeled separately.
 The registered baseline does not silently use the low-level `ESTIMATE` option.
-See [provider details](../docs/whitepaper/benchmarks/fftw.md).
+See [provider details](../docs/whitepaper/benchmarks/guides/fftw.md).
 
 `--fftw-prefix` enables the runner and matching generated C++ inventory;
 `PAPER_FFTW_PREFIX` enables only paper-executable compilation/linking. Without
@@ -1608,17 +1708,17 @@ unknown to the C++ allocation audit. This is not an allocation-free claim.
 
 Validation:
 
--   `python3 docs/whitepaper/benchmarks/build_fftw.py --jobs 2`: fresh pinned
+-   `python3 docs/whitepaper/benchmarks/lib/build_fftw.py --jobs 2`: fresh pinned
     float/double builds passed, with source-tree integrity verified afterward.
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_fftw.py'`:
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_fftw.py'`:
     two tests passed, including 115,200 independent numerical bin checks and
     deliberate stale-source/object isolation. Common protocol and optional
     feature/dependency/plan-policy regression tests also passed.
 -   `make benchmark-paper-build PAPER_FFTW_PREFIX=.build/deps/fftw` and the
     expanded executable `--verify`: passed. Rebuilding without that option
     restored the disabled inventory and rejected a requested FFTW workload.
--   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config docs/whitepaper/benchmarks/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr4-fftw`: all 112
+-   `python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config docs/whitepaper/benchmarks/history/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr4-fftw`: all 112
     native/control runs, actual plan records, resource pairs, and archived
     dependency/source/build evidence passed.
 -   `make check-build` and `git diff --check`: passed. Plugin sources and
@@ -1635,7 +1735,7 @@ analysis, periodic inverse jobs, and complete overlap-save identity/FIR chains.
 The provider uses ordered Rack wrappers and aligned native transfer buffers;
 analysis writes K positive bins, while isolated RFFT reconstructs all N bins
 for the existing full-complex control. Production module sources and plugin
-link dependencies are unchanged. See [provider evidence](../docs/whitepaper/benchmarks/pffft.md)
+link dependencies are unchanged. See [provider evidence](../docs/whitepaper/benchmarks/guides/pffft.md)
 for inspected revisions, hashes, native scratch formulas, and ABI limitations.
 
 The common external driver audits all output values, cadence, startup, live
@@ -1655,8 +1755,8 @@ Validation:
 -   `make benchmark-paper-build` and the executable `--verify`: passed.
     Shared streaming preflight covers small, medium, and maximum sizes,
     non-dividing hops, wraparound, smoothing, and live controls.
--   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr3-pffft --config docs/whitepaper/benchmarks/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    followed by `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr3-pffft`:
+-   `python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr3-pffft --config docs/whitepaper/benchmarks/history/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    followed by `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr3-pffft`:
     all 56 native/control runs and their resource pairs passed.
 -   `make check-build` and `git diff --check`: passed. No interactive Rack
     session or publication-performance campaign was run.
@@ -1667,7 +1767,7 @@ statistical comparisons remain FR-11 work.
 ### Shared Adapter And Evidence Contracts Completion
 
 September 29, 2026: FR-2 is complete. The canonical
-[`backends.json`](../docs/whitepaper/benchmarks/backends.json) registry feeds Python and a
+[`backends.json`](../docs/whitepaper/benchmarks/lib/backends.json) registry feeds Python and a
 generated C++ descriptor table. It declares 28 implemented backends and three
 explicitly unavailable external families. Dispatch, capability validation,
 resolved latency/output contracts, and schema-2 artifact checks use these
@@ -1688,7 +1788,7 @@ checks and offline archive validation.
 
 Validation performed:
 
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: 14 tests
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`: 14 tests
     passed, including standalone C++11 synthesis/reference checks, malformed
     and unavailable capabilities, opaque transforms, incorrect scale/layout,
     missing output/coverage, wrong publication/playback age, changed dependency
@@ -1696,8 +1796,8 @@ Validation performed:
 -   `make benchmark-paper-build` and the expanded executable `--verify`:
     passed. All-bin direct-DFT fixtures and independent analyzer magnitudes
     supplement the 48 matched scalar configurations and synthesis fixtures.
--   `python3 docs/whitepaper/benchmarks/run.py .build/paper-fr2-verified --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
-    and `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr2-verified`: 129 runs
+-   `python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr2-verified --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`
+    and `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr2-verified`: 129 runs
     and 129 pairs of resource reports passed. Each resolved workload agreed
     between C++ and Python. Artifacts are retained in that ignored directory.
 -   `make test/dsp/test_spectrum_analysis`: 1,934,764 assertions in seven cases
@@ -1734,16 +1834,16 @@ Only the first-party baseline acceptance item is complete.
 
 Validation performed:
 
--   `python3 -m unittest discover -s docs/whitepaper/benchmarks -p 'test_*.py'`: nine tests
+-   `python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'`: nine tests
     passed, including standalone C++11 compilation without Rack/Catch2,
     analytical inverse and direct-filter fixtures, deliberate output/scaling
     corruption, latency-contract checks, and missing numerical coverage.
 -   `make benchmark-paper-build` and the expanded `--verify`: passed. Existing
     Rack SDK deprecation warnings remain. This is a benchmark executable
     build, not a plugin build or an interactive host test.
--   `python3 docs/whitepaper/benchmarks/run.py build/paper-synthesis-baseline-verified
+-   `python3 docs/whitepaper/benchmarks/lib/run.py build/paper-synthesis-baseline-verified
     --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2`, followed by
-    `python3 docs/whitepaper/benchmarks/check.py build/paper-synthesis-baseline-verified`:
+    `python3 docs/whitepaper/benchmarks/lib/check.py build/paper-synthesis-baseline-verified`:
     129 runs passed, including 48 new streaming runs and the existing isolated
     inverse passes. The new runs checked 336 publications, 28672 output values,
     and 7168 playback samples. Sources, build flags, raw observations and
@@ -1762,7 +1862,7 @@ changed for this baseline work.
 
 September 29, 2026: Campaign and reporting tooling is implemented under
 `benchmark/`, with no production DSP, module, UI, or plugin dependency changes.
-The [protocol commands](../docs/whitepaper/benchmarks/README.md#external-campaigns-and-reports)
+The [protocol commands](../docs/whitepaper/benchmarks/guides/protocol.md#external-campaigns-and-reports)
 define reproduction, host variants, evidence phases, and statistical limits.
 
 -   Generated smoke/pilot/extensions manifests resolve 156/270/537 workloads
@@ -1800,7 +1900,7 @@ Validation performed on Apple Silicon/macOS:
     rejection, equal-channel counts, offset cadence, provenance separation,
     session weighting, phase rejection, and byte-identical fixture figures.
     The four report tests passed again after final reporting refinements.
--   `python3 docs/whitepaper/benchmarks/campaigns.py --check`: passed. The README's
+-   `python3 docs/whitepaper/benchmarks/lib/campaigns.py --check`: passed. The README's
     `--describe-matrix` command resolves 408 pilot workloads; the same command
     with `external-extensions.json` resolves 875. These commands only list work.
 -   The exact 256-workload smoke command in the protocol README passed,
@@ -1810,11 +1910,11 @@ Validation performed on Apple Silicon/macOS:
     Numerical replay records 1464 publications and 364111 checked output values,
     including 20352 playback samples. First-party transform selected-bin checks
     have their own reports and are additional to these replay counts.
--   `python3 docs/whitepaper/benchmarks/check.py .build/paper-fr10-smoke`: verified all 256
+-   `python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr10-smoke`: verified all 256
     runs, archived sources/dependencies, summaries, contracts, resources and
     hashes. The same command on `.build/paper-fr6-hybrid-final` verified its 120
     historical v1 runs without rewriting that archive.
--   `.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py
+-   `.build/paper-report-env/bin/python docs/whitepaper/benchmarks/lib/report.py
     .build/paper-fr10-smoke --output .build/paper-fr10-report-final --phase smoke`:
     generated 256 evidence rows and 75 SVG/PNG figure pairs. Representative
     analysis, independent-channel, inverse, complete-chain and cost-versus-N
@@ -1912,7 +2012,7 @@ hashed by the new campaign; the failed and corrected campaigns are never pooled.
 The invocation from the repository root is:
 
 ```shell
-caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-pilot-02 --config .build/paper-fr11-host/pilot-eligible.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-02 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929 --notes 'Use the full host, numerical-gate, and provisional-exclusion notes retained in metadata.json'
+caffeinate -i python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr11-pilot-02 --config .build/paper-fr11-host/pilot-eligible.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-02 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929 --notes 'Use the full host, numerical-gate, and provisional-exclusion notes retained in metadata.json'
 ```
 
 The final argument above abbreviates human-readable notes; the actual
@@ -1928,7 +2028,7 @@ three process repetitions each). The report generator validated the campaign
 before emitting 376 evidence rows and 65 SVG/PNG figure pairs:
 
 ```shell
-.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-pilot-02 --output .build/paper-fr11-pilot-02-report --phase pilot
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/lib/report.py .build/paper-fr11-pilot-02 --output .build/paper-fr11-pilot-02-report --phase pilot
 ```
 
 Representative analysis, inverse-job and full-chain figures were visually
@@ -1975,7 +2075,7 @@ September 29, 2026: committed the preceding pilot/reference progress as
 benchmark-only spectrum-level contract. The old pilot failures and provisional
 exclusions above describe the earlier policy and remain preserved.
 
-The [numerical acceptance document](../docs/whitepaper/benchmarks/numerical-accuracy.md)
+The [numerical acceptance document](../docs/whitepaper/benchmarks/guides/numerical-accuracy.md)
 derives the distinction between pointwise and vector-relative error, cites
 benchFFT's primary methodology, specifies exact equations and scope, and
 provides native reproduction commands. Per published channel, both relative
@@ -2035,8 +2135,8 @@ evidence only. The negative-policy fixture was additionally rerun under
 The full macOS pilot was then restored without exclusions and rerun serially:
 
 ```shell
-caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-pilot-03 --config docs/whitepaper/benchmarks/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-03 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929
-.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-pilot-03 --output .build/paper-fr11-pilot-03-report --phase pilot
+caffeinate -i python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr11-pilot-03 --config docs/whitepaper/benchmarks/history/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --phase pilot --host-id m1-pro-16gb-local --session-id fr11-pilot-03 --repeats 3 --hops 128 --frames 128 --step-frames 2 --warm-hops 64 --seed 20260929
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/lib/report.py .build/paper-fr11-pilot-03 --output .build/paper-fr11-pilot-03-report --phase pilot
 ```
 
 The actual invocation also supplied detailed `--notes`, retained in metadata,
@@ -2090,7 +2190,7 @@ measurement sessions, rather than trimming results or reporting tight error
 bars. Timer p99 was 42 ns throughout both pilots; quantization matters for
 very short calls and is never mechanically subtracted.
 
-The frozen [plan](../docs/whitepaper/benchmarks/configs/external-confirmation-plan.json)
+The frozen [plan](../docs/whitepaper/benchmarks/history/configs/external-confirmation-plan.json)
 retains all 408 primary and all 875 extension workloads, partitioned solely by
 observation-length requirements. Its four configuration hashes are fixed before
 confirmation. Each of three sessions uses three process repeats, 64 warmup
@@ -2139,7 +2239,7 @@ For each group, substitute its frozen config, hop count, session label and
 seed into this command from the repository root (metadata retains full notes):
 
 ```shell
-caffeinate -i python3 docs/whitepaper/benchmarks/run.py .build/paper-fr11-confirmation-SS-GROUP --config docs/whitepaper/benchmarks/configs/external-confirmation-GROUP.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase confirmation --host-id m1-pro-16gb-local --session-id fr11-confirmation-SS --repeats 3 --hops GROUP_HOPS --frames 1024 --step-frames 2 --warm-hops 64 --seed SESSION_GROUP_SEED --notes 'Actual preparation, activity, power and session context'
+caffeinate -i python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr11-confirmation-SS-GROUP --config docs/whitepaper/benchmarks/configs/external-confirmation-GROUP.json --enable-vdsp --fftw-prefix .build/deps/fftw --phase confirmation --host-id m1-pro-16gb-local --session-id fr11-confirmation-SS --repeats 3 --hops GROUP_HOPS --frames 1024 --step-frames 2 --warm-hops 64 --seed SESSION_GROUP_SEED --notes 'Actual preparation, activity, power and session context'
 ```
 
 The full command list, invocations, timestamps and preparation snapshots are
@@ -2287,7 +2387,7 @@ or duplicate workloads. Output directories must be new; use a different
 output path when regenerating rather than overwriting retained evidence.
 
 ```shell
-.build/paper-report-env/bin/python docs/whitepaper/benchmarks/report.py .build/paper-fr11-confirmation-[0-9][0-9]-* --output .build/paper-fr11-confirmation-report --phase confirmation
+.build/paper-report-env/bin/python docs/whitepaper/benchmarks/lib/report.py .build/paper-fr11-confirmation-[0-9][0-9]-* --output .build/paper-fr11-confirmation-report --phase confirmation
 python3 .build/paper-fr11-confirmation-control/summarize.py
 ```
 
@@ -2317,7 +2417,7 @@ second measurement campaign or unnecessary raw-data recomputation:
 
 ```shell
 .build/paper-report-env/bin/python .build/paper-fr11-confirmation-control/render_readable.py
-.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks -p test_report.py
+.build/paper-report-env/bin/python -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_report.py
 ```
 
 All 288 SVG/PNG pairs were produced. The tables and cost-versus-length figures

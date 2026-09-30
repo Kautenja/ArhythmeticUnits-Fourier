@@ -148,15 +148,16 @@ benchmark-paper-build: .build/benchmark/rack/paper$(RACK_TEST_SUFFIX) .build/ben
 benchmark-rack-build: benchmark-paper-build
 
 .build/benchmark/rack/paper$(RACK_TEST_SUFFIX): .build/benchmark/paper/benchmark.cpp.o $(PAPER_NATIVE_INPUTS)
+	@mkdir -p $(@D)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
 -include .build/benchmark/paper/benchmark.cpp.d
 
-.build/benchmark/generate-registry$(RACK_TEST_SUFFIX): docs/whitepaper/benchmarks/generate_registry.cpp .build/rack-config
+.build/benchmark/generate-registry$(RACK_TEST_SUFFIX): docs/whitepaper/benchmarks/lib/generate_registry.cpp .build/rack-config
 	@mkdir -p $(@D)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack
 
-.build/benchmark/registry.generated.hpp: docs/whitepaper/benchmarks/backends.json .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) .build/benchmark/paper-config
+.build/benchmark/registry.generated.hpp: docs/whitepaper/benchmarks/lib/backends.json .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) .build/benchmark/paper-config
 	DYLD_LIBRARY_PATH="$(abspath $(RACK_DIR))" LD_LIBRARY_PATH="$(abspath $(RACK_DIR))" .build/benchmark/generate-registry$(RACK_TEST_SUFFIX) $< $@ "$(PAPER_FEATURES)"
 
 .build/benchmark/paper/benchmark.cpp.o: benchmark/paper/benchmark.cpp .build/benchmark/registry.generated.hpp Makefile mk/rack.mk
@@ -168,6 +169,7 @@ benchmark-rack-build: benchmark-paper-build
 	$(CXX) $(CXXFLAGS) $(PAPER_FLAGS) $(PAPER_IDENTITY_FLAGS) -I.build/benchmark -DPAPER_ALLOCATION_AUDIT -c -o $@ $<
 
 .build/benchmark/rack/paper-audit$(RACK_TEST_SUFFIX): .build/benchmark/paper/benchmark-audit.cpp.o $(PAPER_NATIVE_INPUTS)
+	@mkdir -p $(@D)
 	$(CXX) $(filter-out -municode,$(CXXFLAGS)) -o $@ $< -L$(RACK_DIR) -lRack $(PAPER_LIBS)
 
 -include .build/benchmark/paper/benchmark-audit.cpp.d

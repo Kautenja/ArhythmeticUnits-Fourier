@@ -719,7 +719,7 @@ adapters, timing loops, and numerical/cadence checks. Builds are incremental;
 neither mode forces compilation or builds the allocation-audit executable.
 Registry generation, execution, statistics, and baseline comparison are C++.
 Use `make test-benchmark-dev` to check the runner itself; `test-rack` includes
-these checks. See the [development workflow](docs/whitepaper/benchmarks/DEVELOPMENT.md)
+these checks. See the [development workflow](docs/whitepaper/benchmarks/guides/DEVELOPMENT.md)
 for baseline comparison, raw artifacts, filters, and publication boundaries.
 
 These short runs are development feedback. The publication archiver below
@@ -797,7 +797,7 @@ engine or display performance.
 
 #### Publication Experiments
 
-The [publication measurement protocol](docs/whitepaper/benchmarks/README.md) adds
+The [publication measurement protocol](docs/whitepaper/benchmarks/guides/protocol.md) adds
 raw callback/step observations, continuous throughput, matched fixed-cadence
 RFFT controls, scalar/SIMD and module scaling, spectrum-age audits, background
 DSP load, cache pressure, and FFT/RFFT/IFFT phase measurements. It captures
@@ -806,8 +806,8 @@ process observations for later backend comparisons. Run its short validation
 campaign from the repository root:
 
 ```shell
-python3 docs/whitepaper/benchmarks/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
-python3 docs/whitepaper/benchmarks/check.py .build/paper-smoke
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-smoke --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-smoke
 ```
 
 These simulate audio callbacks; compute budget exceedances are not device
@@ -988,7 +988,7 @@ retains pre-integration timing evidence and reproduction sources in an archive.
 It is not a benchmark of the current plugin. Verify that artifact separately:
 
 ```shell
-python3 docs/whitepaper/data/pipeline/check.py
+python3 docs/whitepaper/tools/check_pipeline.py
 ```
 
 ### User Manuals And Build Products

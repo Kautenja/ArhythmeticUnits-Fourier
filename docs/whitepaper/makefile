@@ -8,7 +8,7 @@ include ../latex/publication.mk
 all: pdf
 
 check:
-	$(PYTHON) experiments/check.py
+	$(PYTHON) tools/check_paper.py
 
 arxiv: pdf check
 	$(PYTHON) tools/manuscript.py --archive $(BUILD)/fourier-arxiv-source.tar.gz

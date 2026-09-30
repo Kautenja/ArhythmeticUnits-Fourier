@@ -3,7 +3,7 @@
 C++ workloads comparing Fourier with FFTW, Rack/PFFFT, and Apple
 Accelerate/vDSP. This directory contains the measurement code; campaign
 selection, archiving, statistics, and plots live in
-[the whitepaper tooling](../../docs/whitepaper/benchmarks/README.md).
+[the whitepaper tooling](../../docs/whitepaper/benchmarks/guides/protocol.md).
 
 ## Source Map
 
@@ -40,7 +40,7 @@ From the repository root, with a configured Rack SDK and C++ compiler:
 ```shell
 make -j2 benchmark-paper-build
 DYLD_LIBRARY_PATH="../.." LD_LIBRARY_PATH="../.." .build/benchmark/rack/paper --inventory
-python3 docs/whitepaper/benchmarks/run.py --profile smoke --list
+python3 docs/whitepaper/benchmarks/lib/run.py --profile smoke --list
 ```
 
 These commands build the timing/allocation executables and list workloads;
@@ -78,11 +78,11 @@ Set `PAPER_RUNTIME_PATH` to a writable JSON filename to record coarse process
 phases for an ordinary measurement command. The campaign runner sets this
 automatically; diagnostics and resource probes ignore it. The sidecar keeps
 stdout CSV and stderr numerical reports unchanged. See the
-[runtime diagnostics](../../docs/whitepaper/benchmarks/README.md#campaign-runtime-diagnostics)
+[runtime diagnostics](../../docs/whitepaper/benchmarks/guides/protocol.md#campaign-runtime-diagnostics)
 for phase boundaries and interpretation.
 
 For publication evidence, use the
-[campaign runner](../../docs/whitepaper/benchmarks/README.md#build-and-run) to
+[campaign runner](../../docs/whitepaper/benchmarks/guides/protocol.md#build-and-run) to
 retain source/dependency identities and repeated raw observations. Its report
 scripts derive tables and plots separately. No benchmark command updates the
 paper or its archived results automatically.
@@ -104,11 +104,11 @@ their original coverage. The separate `interactive-v1` suite measures declared
 parameter requests through the production API and prepared PFFFT controls.
 Prepend `--transition interactive-v1 change` (or `control`) to its v2 arguments
 and set `PAPER_TRANSITION_PATH` for the replay sidecar. Prefer its checked
-[campaign manifests](../../docs/whitepaper/benchmarks/README.md#scalar-numerical-coverage-and-interactive-transitions)
+[campaign manifests](../../docs/whitepaper/benchmarks/guides/protocol.md#scalar-numerical-coverage-and-interactive-transitions)
 to hand-written invocations. Dynamic frame ages and response metrics belong
 in their own tables, not the fixed-setting transform rankings.
 
-Use the protocol's [claim-to-evidence mapping and metric definitions](../../docs/whitepaper/benchmarks/README.md#claims-and-presentation)
+Use the protocol's [claim-to-evidence mapping and metric definitions](../../docs/whitepaper/benchmarks/guides/protocol.md#claims-and-presentation)
 when selecting tables or figures. Mean cost, callback tails and algorithmic
 age are separate outcomes; a faster transform does not imply a lower burst
 or newer displayed spectrum. The report retains process/session observations

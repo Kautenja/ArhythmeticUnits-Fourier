@@ -74,7 +74,7 @@ Apple M3 and BlackHole virtual driver; it does not establish physical-interface
 performance or rank our FFT backends.
 
 PFFFT and Apple Accelerate/vDSP are named execution targets alongside FFTW.
-The [external comparison plan](benchmarks/comparisons.md) tracks
+The [external comparison plan](benchmarks/guides/comparisons.md) tracks
 adapter status, workload matching, and eligibility of measurement campaigns.
 The local Rack wrapper was also inspected; it calls PFFFT's real transform
 and exposes both output orders. This establishes availability in the inspected

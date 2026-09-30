@@ -44,7 +44,7 @@ claiming novelty for ordinary caching or ring-index arithmetic.
 -   `make INSTRUMENT=asan-ubsan test/dsp/test_spectrum_analysis`
 -   `make RACK_TEST_INSTRUMENT=asan-ubsan test-spectrum-points`
 -   `make -j2 benchmark-dev-build PAPER_FFTW_PREFIX=.build/deps/fftw PAPER_VDSP=1`
--   Run `docs/whitepaper/benchmarks/configs/host-011.json` through the development runner
+-   Run `docs/whitepaper/benchmarks/history/configs/host-011.json` through the development runner
     with full preflight, five repetitions, 512 hops, and 64 warmup hops.
 -   Record in-app observations, research positioning, failures, rejected
     candidates, exact commands, and measurement limitations before completion.
@@ -306,7 +306,7 @@ local FFTW prefix, and Apple's Accelerate framework available. Source snapshots,
 raw timings, binaries, and full logs remain in `.build/host-011/`. Reproduction
 patches, probes, stock test copies, control CSVs, and compressed descriptive
 results/source identities are preserved in
-[`docs/whitepaper/benchmarks/experiments/host-011`](../../docs/whitepaper/benchmarks/experiments/host-011).
+[`docs/whitepaper/benchmarks/experiments/host-011`](../../docs/whitepaper/data/research/host-011).
 The compact `measurements.json.gz` intentionally excludes per-run raw data and
 Git status; use the ignored full archives for raw-block reanalysis. It retains
 configuration, compiler/environment, preflight, executable/source identities,

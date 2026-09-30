@@ -16,7 +16,7 @@ PAPER = Path(__file__).resolve().parents[1]
 INPUT = re.compile(r'^\\input\{([^}]+)\}\n?', re.MULTILINE)
 
 
-def read_manuscript(directory=PAPER):
+def read_manuscript(directory=PAPER, sources=None):
     """Return the complete source, preserving the included text verbatim."""
     root = directory.resolve()
 
@@ -26,6 +26,8 @@ def read_manuscript(directory=PAPER):
             raise ValueError(f'Input must be a TeX source inside {root}: {path}')
         if path in parents:
             raise ValueError(f'Cyclic manuscript input: {path}')
+        if sources is not None:
+            sources.append(path)
         source = path.read_text()
         # Reject unsupported directives instead of silently exporting a partial
         # manuscript. All project input directives occupy their own line.
@@ -49,6 +51,12 @@ def main():
         member.size = len(source)
         member.mode = 0o644
         archive.addfile(member, io.BytesIO(source))
+        # Generated PNG/PDF figures stay explicit and portable after input expansion.
+        for name in sorted(set(re.findall(r'\\includegraphics(?:\[[^]]*\])?\{([^}]+)\}', source.decode()))):
+            asset = (PAPER/name).resolve()
+            if not asset.is_relative_to(PAPER.resolve()) or asset.suffix.lower() not in ('.png', '.pdf', '.jpg', '.jpeg'):
+                raise ValueError('Figure must be an explicit local image path: '+name)
+            archive.add(asset, arcname=name, recursive=False)
     print(f'Wrote standalone manuscript: {args.archive}')
 
 

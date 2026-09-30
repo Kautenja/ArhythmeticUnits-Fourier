@@ -130,7 +130,7 @@ publication confirmation sessions.
 | `baseline-b` | 47 | 235 | Rebuilt original implementation on the fixed repeat matrix |
 | `sparse-b` | 47 | 235 | Rebuilt selected implementation on the same repeat matrix |
 
-The [repeat matrix](../../docs/whitepaper/benchmarks/configs/optimization-008-repeat.json)
+The [repeat matrix](../../docs/whitepaper/benchmarks/history/configs/optimization-008-repeat.json)
 includes N=128/2048/16384, smoothing off/on, live H=257, scalar double,
 independent scalar/SIMD channels, both headless modules, and unchanged PFFFT
 batch/hybrid controls. The broader A matrix includes additional sizes/hops,

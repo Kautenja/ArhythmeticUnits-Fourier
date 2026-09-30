@@ -81,7 +81,7 @@ were verified byte-for-byte against committed spec 008 before advancing the
 checkout. Prior ignored measurement archives were retained. New raw data,
 manifests, build logs and frozen headers are under `.build/research-009/`.
 
-The retained [matrix](../../docs/whitepaper/benchmarks/configs/research-009.json) contains
+The retained [matrix](../../docs/whitepaper/benchmarks/history/configs/research-009.json) contains
 55 workloads. It extends spec 008's 47-workload repeat matrix with large live
 core/PFFFT/hybrid comparisons and a live H=1024 core case. Each run uses five
 repetitions, 512 measured hops, 64 warmup hops and the default fixed seed.
@@ -133,7 +133,7 @@ The other patches are `butterfly-segments.patch`, `cached-stride.patch`, and
 `baseline-b` and `weighted-fast-b` repeat the same 55 workloads; the latter
 compares with `baseline-b`. Raw observations and rejected variants are kept.
 
-The [differential check](../../docs/whitepaper/benchmarks/experiments/cache-kernel-009/equivalence.cpp)
+The [differential check](../../docs/whitepaper/data/research/cache-kernel-009/equivalence.cpp)
 loads the frozen header under renamed types and compares published bins with
 the candidate. Five lengths (4, 8, 128, 2048, 16384), six hops (1, 3, 37, 257,
 1024, 4096), and all 15 windows cover 450 frames per precision, float/double.
@@ -265,7 +265,7 @@ their likely speedup.
     this research-only delivery; benchmark compilation instantiates Rack code
     but does not substitute for a shipped plugin build or audio-engine test.
 
-The [summary script](../../docs/whitepaper/benchmarks/experiments/cache-kernel-009/summarize.py)
+The [summary script](../../docs/whitepaper/data/research/cache-kernel-009/summarize.py)
 reads completed manifests, rejects mismatched workloads, and retains timing
 values without subtracting timer overhead. `comparison.json` in the local
 archive compares all runs with `baseline-a`; `repeat-comparison.json` compares

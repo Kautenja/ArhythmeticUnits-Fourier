@@ -7,6 +7,17 @@ version 2; they do not measure today's production analyzer. See
 [metadata.json](metadata.json) for full source digests, compiler output,
 timestamps, and data hashes.
 
+## Directory Map
+
+The files at this directory's root are the original campaign described below.
+[pipeline/](pipeline/README.md) contains the separate complete-pipeline study;
+[research/](research/) preserves historical optimization programs, patches and
+observations. [verification-history.md](verification-history.md) records earlier
+manuscript validation. Active benchmark code and configuration live in the
+[benchmark workflow](../benchmarks/README.md); manuscript checkers live in
+[tools/](../tools/README.md). None of these historical archives is a current
+replacement comparison campaign.
+
 ## Provenance
 
 -   Source revision: `b52e49c548ae681ec491c6e8b5ed78e4f92fe34d`.
