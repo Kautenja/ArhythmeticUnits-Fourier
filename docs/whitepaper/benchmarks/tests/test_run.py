@@ -15,10 +15,26 @@ import unittest
 
 from check import check, validate_rows, validate_synthesis_accuracy
 from contracts import SYNTHESIS_BACKENDS, synthesis_contract
-from run import BASE, digest, matrix, summarize
+from run import BASE, digest, matrix, summarize, source_inputs
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_finder_metadata_does_not_change_source_inventory(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ("Makefile", "plugin.json", "src/untracked.hpp", "benchmark/.DS_Store",
+                         "docs/whitepaper/benchmarks/.DS_Store",
+                         "docs/whitepaper/benchmarks/__pycache__/run.pyc"):
+                path = root/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("before")
+            before = {p.relative_to(root).as_posix(): digest(p) for p in source_inputs(root)}
+            self.assertEqual(set(before), {"Makefile", "plugin.json", "src/untracked.hpp"})
+            (root/"benchmark/.DS_Store").write_text("Finder refresh")
+            self.assertEqual(before, {p.relative_to(root).as_posix(): digest(p) for p in source_inputs(root)})
+            (root/"src/untracked.hpp").write_text("changed source")
+            self.assertNotEqual(before, {p.relative_to(root).as_posix(): digest(p) for p in source_inputs(root)})
+
     def test_synthesis_matrix_contracts(self):
         rows = matrix("synthesis")
         self.assertEqual({r["backend"] for r in rows}, SYNTHESIS_BACKENDS)

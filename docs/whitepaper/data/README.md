@@ -15,8 +15,10 @@ The files at this directory's root are the original campaign described below.
 observations. [verification-history.md](verification-history.md) records earlier
 manuscript validation. Active benchmark code and configuration live in the
 [benchmark workflow](../benchmarks/README.md); manuscript checkers live in
-[tools/](../tools/README.md). None of these historical archives is a current
-replacement comparison campaign.
+[tools/](../tools/README.md). The separate
+[comparison-012 handoff](comparison-012/README.md) contains the new replacement
+comparison results, exact source/design records and access to local portable
+evidence bundles. The historical archives above retain their original identities.
 
 ## Provenance
 

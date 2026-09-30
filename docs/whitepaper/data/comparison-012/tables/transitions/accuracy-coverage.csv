@@ -1,0 +1,1 @@
+stratum,config_sha256,backend,session,repeat,precision,n,hop,instances,channels_per_instance,mode,state,status,coverage_policy,accuracy_policy,reference,reference_precision,expected_spectra,checked_spectra,expected_bins,checked_bins,max_relative_l2,max_relative_linf,max_abs_error,absolute_error_units,zero_spectra,legacy_pointwise_failures

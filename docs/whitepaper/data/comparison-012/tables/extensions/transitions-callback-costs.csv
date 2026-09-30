@@ -1,0 +1,1 @@
+stratum,host,config_sha256,backend,precision,session,repeat,suite,control,horizon_samples,rate,block,raw,raw_sha256,transition_sha256,generation,reason,request_count,applied_generation_count,window_start,window_end,callback_indices,observations,mean_ns,p99_ns,observed_max_ns,timer_p99_ns,mean_us,p99_us,observed_max_us,timer_p99_us

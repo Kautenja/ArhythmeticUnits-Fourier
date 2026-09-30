@@ -187,9 +187,11 @@ FR-11 scalar numerical-audit parity, FR-12 parameter transitions and FR-13's
 experiment-to-paper workflow are implemented and smoke-validated. Use the
 [workflow handoff](workflow.md) for the maintained public command sequence,
 including setup, progress/logs, failure recovery, checked exports and bundles.
-[Spec 012](../../../../specs/012-comparison-evidence-and-paper-integration.md)
-now owns pending replacement measurements and paper integration, transferred
-from FR-14. Historical confirmation status does not transfer to new code.
+[Spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
+records the replacement measurements and
+[analysis handoff](../../data/comparison-012/README.md). The user deferred
+manuscript integration to the next agent. Historical confirmation status does
+not transfer to new code.
 Retain earlier results until the
 [replacement and retirement gate](../../../../specs/archive/004-external-fft-comparison.md#replacement-and-retirement-gate)
 passes; new campaigns use separate source identities and output directories.

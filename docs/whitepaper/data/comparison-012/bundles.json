@@ -1,0 +1,54 @@
+{
+  "bundles": [
+    {
+      "bytes": 980567718,
+      "group": "primary",
+      "path": "bundles/primary.tar.gz",
+      "sha256": "225e723a0832829272d9dfc6b48d0c3f4675fbcfb4c45fd914afc7f7f596e83f",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/primary.json"
+    },
+    {
+      "bytes": 364401785,
+      "group": "extensions",
+      "path": "bundles/extensions.tar.gz",
+      "sha256": "b943608715b652eacbc696a27c2b1b98f72af2a459a35696afbe6f75a9a34e0d",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/extensions.json"
+    },
+    {
+      "bytes": 53986305,
+      "group": "short-hop",
+      "path": "bundles/short-hop.tar.gz",
+      "sha256": "a1d833be3441839bb1d58bcef8ef99bc310e6420c0786a305062b333e38331ac",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/short-hop.json"
+    },
+    {
+      "bytes": 77446747,
+      "group": "single-sample",
+      "path": "bundles/single-sample.tar.gz",
+      "sha256": "cd2afc93d8003e7407db1c6648167103d3e1aad30687f9c53efd98cce532e486",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/single-sample.json"
+    },
+    {
+      "bytes": 9322113,
+      "group": "transitions",
+      "path": "bundles/transitions.tar.gz",
+      "sha256": "5863051b142eb4153078bd078f79d18aa0b8e406b460a7124ffc47a7c33e3049",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/transitions.json"
+    },
+    {
+      "bytes": 62558161,
+      "group": "pilots",
+      "path": "bundles/pilots.tar.gz",
+      "sha256": "44654dd074eecccb4fe481b2c3823edc405a3befa5998a5ebcec18adc6ec551e",
+      "storage": "local, ignored by Git; outside make clean build roots",
+      "verification": "verification/pilots.json"
+    }
+  ],
+  "external_deposit": null,
+  "schema": 1
+}

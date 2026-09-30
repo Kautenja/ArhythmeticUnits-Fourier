@@ -23,10 +23,12 @@ The completion evidence below includes 78 tests, 80 native smoke workloads,
 checked fixture export and portable numerical rederivation.
 
 The former FR-14, its final-measurement acceptance gates and evidence-retirement
-execution are transferred to [spec 012](../012-comparison-evidence-and-paper-integration.md).
-They are not claimed complete: replacement measurements remain NOT RUN,
-evidence retirement remains DEFERRED, and the final comparison results still
-need manuscript integration. This archive closes the implementation scope;
+execution are transferred to [spec 012](012-comparison-evidence-and-paper-integration.md).
+At that September 29 closure, replacement measurements were NOT RUN,
+evidence retirement was DEFERRED, and the final comparison results still
+needed manuscript integration. The September 30 replacement campaign and
+results-only handoff are now recorded in spec 012; analysis and manuscript
+writing remain deferred at the user's request. This archive closes the implementation scope;
 it does not certify publication evidence or a finished paper. Unchecked FR-14
 items below are retained as the transferred requirements, and earlier dated
 IN PROGRESS statements describe their historical state.
@@ -47,9 +49,10 @@ and FR-12 are implemented and validated: scalar all-output auditing and
 parameter-transition measurement now share the checked campaign/report path.
 FR-13 tooling is COMPLETE: the [workflow handoff](../../docs/whitepaper/benchmarks/guides/workflow.md)
 covers setup through checked paper export and portable evidence bundles.
-Replacement measurements remain NOT RUN; evidence retirement is DEFERRED.
-FR-14 now belongs to spec 012 and still requires validated replacement
-measurements before final paper completion.
+At the implementation handoff, replacement measurements were NOT RUN and
+evidence retirement was DEFERRED. Spec 012 subsequently recorded the new
+measurement campaign and results handoff. The historical statuses below
+belong to their dated implementation records, not the replacement campaign.
 
 The former FR-11 measurement campaign completed for an older source revision:
 11547 confirmation processes passed across three prepared M1 Pro sessions.
@@ -1212,7 +1215,7 @@ or manuscript result replacement was performed for FR-13. FR-14 stays open.
 
 ### FR-14: Paper Integration And Completion
 
-Transferred, not completed: [spec 012](../012-comparison-evidence-and-paper-integration.md)
+Transferred, not completed: [spec 012](012-comparison-evidence-and-paper-integration.md)
 now owns these requirements and their completion evidence. The unchecked list
 preserves the original handoff; it is outside this archived implementation scope.
 

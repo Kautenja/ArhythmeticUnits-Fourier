@@ -3,10 +3,11 @@
 The completed implementation record lives in
 [Spec 004: External FFT Comparison For The Scheduling Paper](../../../../specs/archive/004-external-fft-comparison.md).
 It preserves the contender shortlist, research questions, adapter requirements,
-measurement contracts and implementation evidence. Active replacement campaigns,
-paper integration and retirement are tracked in
-[spec 012](../../../../specs/012-comparison-evidence-and-paper-integration.md),
-which inherits former FR-14 without claiming its measurements are complete.
+measurement contracts and implementation evidence. Replacement measurements,
+portable evidence and retained historical dependencies are recorded in
+[spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
+and its [results handoff](../../data/comparison-012/README.md). The user narrowed
+that follow-up to results; analysis and manuscript writing remain later work.
 
 Rack/PFFFT, optional FFTW3 and Apple Accelerate/vDSP, and the matched PFFFT
 hybrid are implemented as benchmark-only adapters. KISS FFT (FR-7), Garrido
@@ -18,10 +19,10 @@ implemented. FR-11 scalar numerical auditing, FR-12 parameter-transition
 tooling and FR-13 reproducible workflow are complete. FR-13 delivers tested,
 documented tools to launch and monitor experiments, validate/archive results,
 generate figures and tables, and export numeric includes/assets to the paper.
-It completes with a usable handoff; the user can then run the long campaigns.
-Spec 012 still requires validated replacement measurements. Earlier results keep
-their historical identities until the replacement and retirement gate passes;
-tooling completion alone does not permit deleting them.
+Spec 012 executed the long campaigns across three prepared measurement blocks
+on one macOS ARM64 host. Earlier results retain their historical identities
+and dependencies until the replacement and retirement gate permits removal.
+Neither tooling completion nor the new results alone permits deleting them.
 
 Use the existing [publication protocol](protocol.md) for current build commands
 and measurement semantics. The manuscript's archived results remain unchanged

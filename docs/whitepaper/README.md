@@ -67,9 +67,11 @@ exact reproduction. Historical optimization investigations are retained under
 artifacts, not competing maintained workflow entry points.
 
 The [archived comparison implementation](../../specs/archive/004-external-fft-comparison.md)
-records the completed tooling. [Spec 012](../../specs/012-comparison-evidence-and-paper-integration.md)
-owns pending replacement measurements and final paper integration, transferred
-from FR-14. A smoke report proves tooling, not a speedup. New evidence must
+records the completed tooling. [Spec 012](../../specs/archive/012-comparison-evidence-and-paper-integration.md)
+records the replacement campaign and
+[results handoff](data/comparison-012/README.md), covering forward, inverse and
+complete-chain work. Analysis, writing and manuscript insertion remain for the
+next agent. A smoke report proves tooling, not a speedup. New evidence must
 pass provenance, numerical coverage and session checks before explicit export.
 Hardware-dependent timing replication is different from regenerating statistics
 from retained raw data. [Historical verification notes](data/verification-history.md)

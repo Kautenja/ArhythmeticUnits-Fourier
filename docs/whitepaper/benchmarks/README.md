@@ -32,11 +32,14 @@ build launches a benchmark or replaces its results.
 | [tests/](tests/) | Python tests and small C++ verifier drivers |
 | [history/](history/README.md) | Older configurations and prototype reproduction tooling |
 | [../data/](../data/README.md) | Preserved manuscript evidence and historical research artifacts |
+| [Comparison results](../data/comparison-012/README.md) | Spec 012 replacement measurements and analysis/writing handoff |
 | [../tools/](../tools/) | Manuscript source expansion and consistency checks, not benchmarks |
 
 New runs, resolved plans, freezes, reports, selections and bundles belong in
 an explicit output root, normally `.build/`. Keep that directory when cleaning
-up: the repository's broad `make clean` removes `.build`. Use new names for
+up: the repository's broad `make clean` removes `.build`. Spec 012's verified
+local bundles are additionally preserved outside that root, as documented in
+the results handoff. Use new names for
 reruns; completed and partial evidence are never overwritten or resumed in
 place. See [failure and restart](guides/workflow.md#observe-and-restart).
 

@@ -1,0 +1,1 @@
+stratum,host,config_sha256,backend,precision,session,repeat,suite,control,horizon_samples,rate,block,raw,raw_sha256,transition_sha256,generation,reason,request_sample,application_sample,first_publication_sample,outcome,replaced_by,requested_settings,application_latency_samples,application_latency_ms,first_publication_latency_samples,first_publication_latency_ms

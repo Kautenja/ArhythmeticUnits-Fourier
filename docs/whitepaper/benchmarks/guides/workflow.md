@@ -2,10 +2,13 @@
 
 Run these commands from the repository root. The workflow separates measured
 campaigns, checked reports, reviewed selections, generated paper assets and
-portable audit bundles. It does not publish externally. Replacement measurements
-are **NOT RUN** at this handoff; evidence retirement remains **DEFERRED**.
-Implementation spec 004 is archived. [Spec 012](../../../../specs/012-comparison-evidence-and-paper-integration.md)
-owns the pending campaigns, paper integration and retirement formerly in FR-14.
+portable audit bundles. It does not publish externally. The replacement
+measurements are recorded in the [results handoff](../../data/comparison-012/README.md).
+Evidence retirement remains **DEFERRED** because all inventoried historical
+campaigns have retained dependencies. Implementation spec 004 is archived;
+[spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
+records the results-only follow-up. Analysis and manuscript integration are
+explicitly deferred to the next agent.
 
 ## Prepare The Host
 
@@ -152,7 +155,7 @@ not zeros. Transition figures and CSVs retain event identities and errors.
 
 Export produces `numbers.tex`, `results.tex`, `figures.tex`, selected PNGs and a
 receipt mapping every value to its source. Add the desired literal
-`\input{generated/comparison/results.tex}` etc. during spec 012 editorial integration.
+`\input{generated/comparison/results.tex}` etc. during the later editorial integration.
 Export never rewrites prose or automatically inserts provisional numbers into
 the manuscript. The table retains a workload hash, statistic, units and session counts;
 the receipt/report retain process/session ranges and exact raw identities.
@@ -201,6 +204,6 @@ sessions and a fresh non-fixture publication receipt. Changed candidates and
 unresolved manuscript/spec/test references block removal. Only explicit old
 pilot/confirmation directories beneath `.build` are eligible. Historical
 manuscript data, optimization evidence, dependencies, source inputs and arbitrary
-reports are protected. Retained report/spec references must be resolved during
-spec 012; record removed/retained identities there using the receipt. Nothing
+reports are protected. Retained report/spec references must be resolved before removal. Spec 012 records retained exceptions;
+refresh the inventory after the later manuscript work resolves those uses. Nothing
 is retired by setup, run, report, export or this implementation handoff.

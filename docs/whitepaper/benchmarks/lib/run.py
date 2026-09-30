@@ -30,6 +30,14 @@ BASE = dict(backend="core-float", pass_name="callback", n=2048, hop=1024,
             rate=48000, state="steady", cache_mib=0, callback_offset=0)
 
 
+def source_inputs(root=ROOT):
+    """Include working research sources, excluding interpreter/Finder metadata."""
+    return sorted({p for base in (root/"src", root/"benchmark", root/"test/paper",
+                                  root/"docs/whitepaper/benchmarks") for p in base.rglob("*")
+                   if p.is_file() and "__pycache__" not in p.parts and p.name != ".DS_Store"} |
+                  {root/"Makefile", root/"plugin.json", *root.glob("mk/*.mk")})
+
+
 def workload(**changes):
     return dict(BASE, **changes)
 
@@ -301,12 +309,10 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
     save(output/"metadata.json", metadata)
     runtime.switch("input_hashes")
     # Archive working sources, including uncommitted benchmark development.
-    sources = sorted({p for base in (ROOT/"src", ROOT/"benchmark", ROOT/"test/paper",
-                                     ROOT/"docs/whitepaper/benchmarks") for p in base.rglob("*")
-                      if p.is_file() and "__pycache__" not in p.parts} |
-                     {ROOT/"Makefile", ROOT/"plugin.json", *ROOT.glob("mk/*.mk")})
+    sources = source_inputs()
     # SDK headers/build rules and linked library affect generated code/behavior.
-    sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*") if p.is_file()} |
+    sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*")
+                  if p.is_file() and p.name != ".DS_Store"} |
                  {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
                  {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
     build_inputs = {p: digest(p) for p in sources+sdk+list(external_inputs.values())}

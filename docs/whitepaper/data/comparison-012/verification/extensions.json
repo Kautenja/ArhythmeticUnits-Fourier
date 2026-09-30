@@ -1,0 +1,70 @@
+{
+  "bundle_sha256": "b943608715b652eacbc696a27c2b1b98f72af2a459a35696afbe6f75a9a34e0d",
+  "bundled_tooling_command": [
+    "/opt/homebrew/opt/python@3.14/bin/python3.14",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/spec012/relocated/extensions/tooling/docs/whitepaper/benchmarks/bench.py",
+    "report",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/spec012/relocated/extensions/campaigns/000",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/spec012/relocated/extensions/campaigns/001",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/spec012/relocated/extensions/campaigns/002",
+    "--phase",
+    "confirmation",
+    "--output",
+    "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/spec012/relocated/extensions/regenerated",
+    "--no-plots"
+  ],
+  "campaigns": [
+    {
+      "metadata_sha256": "689f143267dc54426347ba14096ed14c25cba9c31b144de43c91b0eada2cb1fd",
+      "omitted": [
+        "dependencies.tar.gz",
+        "external-dependencies.tar.gz",
+        "paper-audit.bin",
+        "paper.bin"
+      ],
+      "path": "campaigns/000",
+      "phase": "confirmation"
+    },
+    {
+      "metadata_sha256": "f171dd7c92fd2bd852f05df346e36eb28620376a3561ba19fe9d67c9eeb958f1",
+      "omitted": [
+        "dependencies.tar.gz",
+        "external-dependencies.tar.gz",
+        "paper-audit.bin",
+        "paper.bin"
+      ],
+      "path": "campaigns/001",
+      "phase": "confirmation"
+    },
+    {
+      "metadata_sha256": "39707ebb71f81e0374015ea9f0831b3ab255aecdb43a70003963b8eb49d68f98",
+      "omitted": [
+        "dependencies.tar.gz",
+        "external-dependencies.tar.gz",
+        "paper-audit.bin",
+        "paper.bin"
+      ],
+      "path": "campaigns/002",
+      "phase": "confirmation"
+    }
+  ],
+  "compared_csv_rows": {
+    "accuracy-coverage.csv": 2664,
+    "attribution.csv": 792,
+    "implementations.csv": 719,
+    "process-timings.csv": 6471,
+    "results.csv": 719,
+    "transitions-callback-costs.csv": 0,
+    "transitions-publications.csv": 0,
+    "transitions-responses.csv": 0
+  },
+  "csv_field_size_limit_bytes": 16777216,
+  "group": "extensions",
+  "normalized_locations": [
+    "raw",
+    "source_provenance[].directory (verified metadata hash)"
+  ],
+  "notes": "Only raw paths and hash-verified provenance directories normalized; every other CSV value compared exactly. Bundled tooling rederived from relocated raw campaigns. Native/SDK/dependency archive bytes omitted by bundle policy; no timing replication claimed.",
+  "schema": 1,
+  "status": "passed"
+}
