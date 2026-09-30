@@ -81,13 +81,9 @@ horizon is their spacing.
 \subsection{Exact-horizon alternative}
 If an application requires publication exactly every $H$ calls, it can separate
 the frame clock from completion and retain a finished result until its scheduled
-publication. Alternatively, for an ordered sequence of $B$ work units, assign
-call $s\in\{1,\ldots,H\}$ the quota
-\begin{equation}
- q_s=\floor{sB/H}-\floor{(s-1)B/H}.
- \label{eq:balanced}
-\end{equation}
-These quotas sum to $B$ by telescoping; each is either $\floor{B/H}$ or
+publication. Alternatively, apply Equation~\eqref{eq:balanced} to the $B$
+ordered butterfly units in place of the complete pipeline's $W$ units.
+The quotas sum to $B$ by telescoping; each is either $\floor{B/H}$ or
 $\ceil{B/H}$. For $B>0$, the last quota is positive, so the ordered work ends
 on call $H$. Among schedules for $B$ unit-cost operations in $H$ calls, no
 schedule can have a maximum quota smaller than $\ceil{B/H}$, by the pigeonhole
@@ -95,4 +91,3 @@ principle. Equation~\eqref{eq:balanced} attains that lower bound. This elementar
 balanced schedule is not a claimed new scheduling result. The successor applies
 it to a larger work sequence (Section~\ref{sec:one-hop}). Its unit-cost premise
 does not make unequal operations interchangeable in execution time.
-

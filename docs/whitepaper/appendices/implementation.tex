@@ -1,9 +1,10 @@
 \section{Implementation Reference}
 \label{app:implementation}
 This appendix collects supporting transform and table-construction details
-formerly repeated in the module manuals. The signal model, real-spectrum
-reconstruction, and one-hop scheduling argument remain in the main text
-because they define the implementation being evaluated. The user manuals
+formerly repeated in the module manuals. The signal model and one-hop contract
+remain in the main text;
+Appendices~\ref{sec:legacy-transform} and~\ref{app:one-hop} preserve the
+transform derivations and detailed scheduling argument. The user manuals
 cover controls, display interpretation, and practical setting choices.
 
 \subsection{Bit reversal and table reuse}
@@ -62,7 +63,7 @@ butterfly, and reconstruction loops are suspended between work quotas;
 window-cache preparation is included in the pair units. The output and
 smoothing stage follows as described in Section~\ref{sec:one-hop}.
 
-\begin{lstlisting}[caption={Batch reference for the packed real transform. R is the bit-reversal table for M; butterfly updates use Equation~\eqref{eq:butterfly}, and reconstruction uses Equation~\eqref{eq:real} and its endpoint rules.},label={lst:batch-reference}]
+\begin{lstlisting}[float=tbp,caption={Batch reference for the packed real transform. R is the bit-reversal table for M; butterfly updates use Equation~\eqref{eq:butterfly}, and reconstruction uses Equation~\eqref{eq:real} and its endpoint rules.},label={lst:batch-reference}]
 M = N / 2
 for n = 0, ..., M-1:
     z[R[n]] = u[2*n] + i*u[2*n+1]  // u is already windowed
@@ -86,7 +87,7 @@ packing. Tapered windows trade a wider main lobe for different sidelobe
 behavior~\cite{harris1978}; denser FFT bins alone do not remove that tradeoff.
 Production weights use the existing tabulated coherent-gain correction,
 $\widetilde w[n]=w[n]/G_{\mathrm{tab}}$, with the finite-length caveat in
-Section~\ref{sec:legacy-transform}. A frame selects its input endpoint and
+Section~\ref{sec:signal-model}. A frame selects its input endpoint and
 settings once, so later parameter changes cannot mix window functions within
 that frame.
 
@@ -105,7 +106,7 @@ $f_k=k\Delta f$, and $\beta>0$. Define
 \end{align}
 The upper-edge adjustment preserves the nominal frequency ratio before
 rounding to bins. The mean includes both endpoints; this is why the prefix
-formula in Section~\ref{sec:one-hop} uses $P_{h_k+1}$ and divides by
+formula in Appendix~\ref{app:one-hop} uses $P_{h_k+1}$ and divides by
 $h_k-\ell_k+1$. With smoothing disabled, the magnitude passes through
 without this range average. DC has the one-bin interval $[0,0]$.
 

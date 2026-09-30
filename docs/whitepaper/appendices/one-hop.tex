@@ -1,0 +1,134 @@
+\section{One-Hop Scheduling and Implementation Details}
+\label{app:one-hop}
+Section~\ref{sec:one-hop} states the schedule and its observable contract.
+This appendix preserves the dispatch algorithm, proof, worked quotas, input
+lifetime argument, and module-specific processing details.
+
+\subsection{Balanced dispatch and worked quotas}
+Implement Equation~\eqref{eq:balanced} with a quotient/remainder accumulator.
+Quotient and
+remainder $a=\floor{W/H}$ and $r=W\bmod H$ are refreshed at configuration,
+reset, and the transition from a rebuilt window to a clean cache.
+Starting the accumulator $e$ at zero, each sample executes $a$ units plus one
+when $e+r\ge H$, then retains $(e+r)\bmod H$:
+\begin{lstlisting}[float=htbp,language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
+// At a frame boundary: latch settings; compute a = W/H, r = W%H.
+// Each active sample call:
+capture_input();
+if (phase == 0) { latch_input_endpoint(); e = 0; begin_frame(); }
+size_t quota = a;
+e += r;
+if (e >= H) { e -= H; ++quota; }
+for (size_t i = 0; i < quota; ++i) execute_next_unit();
+if (++phase == H) {
+    publish_owned_output(); phase = 0;
+    if (window_was_dirty) use_clean_frame_quota();
+}
+\end{lstlisting}
+
+\begin{proposition}[Exact completion and per-call work]
+For $W>0$ and integer $H\ge1$, the ordered analysis completes on the $H$th
+call, with at most $\ceil{W/H}$ units on any call. For $H=\rho N$ with fixed
+$\rho>0$, this maximum is $O(\log N)$.
+\end{proposition}
+\begin{proof}
+After $s$ calls the accumulator rule has issued
+$sa+\floor{sr/H}=\floor{sW/H}$ units. At $s=H$ this is $W$;
+at $s=H-1$ it is strictly smaller. Each difference is either $a$ or $a+1$.
+Substitution of Equation~\eqref{eq:wholework} gives the asymptotic bound.
+\end{proof}
+For a clean $N=2048,H=1024,o=1$ frame, $W=8194$ and the maximum quota is nine:
+1022 calls execute eight units and two execute nine. With a dirty window,
+$W=11266$: 1022 calls receive eleven units and two receive twelve.
+At most $\ceil{\ceil{W/H}/4}$ preparation pairs execute in a dirty call,
+whereas subsequent stages may execute up to $\ceil{W/H}$ operations.
+For Fourier ($o=2$), the corresponding counts are $W=9219$ for a clean cache
+and $W=12291$ for a dirty cache. Output calls execute at most
+$\ceil{\ceil{W/H}/o}$ bins, limiting the additional concentration of costly
+coordinate mapping during a window rebuild. Reweighting redistributes bursts
+between stages; it does not reduce the transform arithmetic. Dense dispatch skips
+credit over a whole segment, and SIMD butterflies share traversal setup
+within the same quota. The bound includes window/cache
+rebuilds, but excludes construction and host lifecycle callbacks. Constant
+input/control work and frame configuration remain, including an $O(\log N)$
+plan-index calculation. No $O(N)$ boundary pass remains in steady-state engine
+analysis. This count assumes fixed-width scalar/SIMD arithmetic and the bounded
+module output callbacks; the generic API cannot constrain an arbitrary callback.
+It does not assert equal duration across units or bound OS interruptions.
+
+The current implementation also omits multiplication by the exactly unity
+first twiddle in dense SIMD butterfly segments. This reduces arithmetic
+without changing scheduling credit or the dependency order. It is a standard
+FFT simplification, not a new transform algorithm.
+
+\subsection{Retained-input proof and plan lifecycle}
+Incremental packing cannot read a ring that has already overwritten its
+selected samples. With prepared maxima $N_{\max},H_{\max}$, the production
+ring has capacity $C=N_{\max}+H_{\max}$. At selection, the oldest needed sample
+is $N-1$ samples behind the newest. At most $H-1$ new captures occur before
+completion. Its maximum lag is therefore $N+H-2<C$, so it cannot be
+overwritten before its packing unit. This conservative bound remains valid
+when capture pauses. The ring and all transform/output arrays are preallocated;
+no whole-frame capture copy is required.
+
+A maximum-size bit-reversal table serves shorter transforms by right shifts;
+a maximum-size scalar twiddle table serves them by strides (Appendix~\ref{app:implementation}). SIMD lanes share
+those scalar twiddles. Window weights and smoothing endpoints rebuild only in
+the scheduled units that use them. Length changes logically clear input and
+EMA history. Reset cancels partial work and marks partially rebuilt caches
+invalid. Increasing the supported hop during a sample-rate callback can grow
+the ring and allocate; this is outside the allocation-free sample path.
+
+\subsection{Smoothing and output ownership}
+When frequency smoothing is enabled, for magnitudes $a_k=|X[k]|$,
+reconstruction builds $P_0=0$ and
+$P_{k+1}=P_k+a_k$. Inclusive smoothing bounds $[\ell_k,h_k]$ then give
+\begin{equation}
+ v_k=\frac{P_{h_k+1}-P_{\ell_k}}{h_k-\ell_k+1},\qquad
+ y_r[k]=\alpha y_{r-1}[k]+(1-\alpha)v_k.
+\end{equation}
+The octave interval is defined in Appendix~\ref{sec:cost}: endpoints are floored
+to bins; if its upper frequency exceeds Nyquist, it is set to Nyquist and the
+lower endpoint is set to that upper frequency divided by $2^\beta$. With
+frequency smoothing off, $v_k=a_k$ and prefix/band work is skipped. With
+$\alpha=0$, the implementation stores $y_r[k]=v_k$ directly, retaining that
+history for later averaging. When enabled, the full prefix stage precedes output
+because a low bin's interval may require higher bins. These are magnitude
+means, not power means or constant-Q analysis.
+
+For Average control $T>0$ seconds, the retained convention is
+$\alpha=\exp(-10\Delta t/T)$; $T=0$ disables averaging. Spectre uses $\Delta
+t=H/f_s$. The Fourier module uses its Hop control in seconds and truncates
+$\Delta t f_s$ to $H$, retaining a sub-sample quantization difference between
+the control and actual interval. The previous $L/H$ completion bias is removed.
+Window coherent-gain factors and module-specific display scaling are preserved;
+this scheduling change does not redefine amplitude units.
+
+Fourier additionally caches the frequency coordinate and slope gain for each
+bin in engine-owned storage. A geometry change invalidates a prefix counter
+in constant time; each scheduled output computes at most one missing entry.
+Only consecutively initialized entries advance that counter, so cancellation
+cannot expose stale entries. Magnitude scaling still evaluates every current
+value. This uses approximately 64\,KiB at $N_{\max}=16384$, with unchanged
+frame timing and no approximation of the coordinate formulas. Reuse reduces
+steady-state work; changing geometry every frame removes that reuse. These
+engineering changes postdate the report's historical timing campaigns and
+must be measured separately rather than attributed to those data.
+
+Each output unit maps a four-channel bin into the Fourier module's curve
+points, or writes one Spectre column magnitude. Only after all units finish
+does the engine publish the destination. A single-producer/single-consumer
+triple-slot mailbox uses acquire/release atomic exchange to transfer ownership
+of a completed slot and obtain a reusable slot. The consumer holds its slot
+until its next successful exchange; the producer never overwrites that slot. A
+slow consumer may miss intermediate snapshots. The Fourier module has one curve
+mailbox; the Spectre module has one mailbox per history column. Spectre's full
+image history and recoloring belong to the UI, outside the engine schedule.
+
+Freeze semantics remain distinct: the Fourier module stops capture but
+continues analysis of retained input, whereas Spectre pauses both acquisition
+and the schedule and resumes its partial hop. Continuous-input timestamp
+equations do not apply across such pauses. Host sample-rate changes cancel
+partial analysis; Spectre reset still clears and publishes its history columns.
+These lifecycle costs, UI work, other shared controls, and host scheduling
+prevent a broad claim of hard real-time safety.

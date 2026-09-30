@@ -1,0 +1,97 @@
+\section{Transform Derivations and Resumable Traversal}
+\label{sec:legacy-transform}
+The frame and normalization convention is defined in
+Section~\ref{sec:signal-model}. This appendix records the conventional
+transform mathematics and the original state transition used by the reusable
+FFT classes; the complete analysis schedule is in Section~\ref{sec:one-hop}.
+
+\subsection{Resumable complex transform}
+For $N=2^p$, bit reversal places the input in the order required by an iterative
+radix-2 decimation-in-time transform. A stage of span $s=2,4,\ldots,N$ visits
+groups $g=0,s,2s,\ldots,N-s$ and pairs $a=0,\ldots,s/2-1$. One step computes
+\begin{align}
+ e&=c[g+a], & o&=W_N^{aN/s}c[g+a+s/2],\\
+ c[g+a]&\leftarrow e+o, & c[g+a+s/2]&\leftarrow e-o,
+ \label{eq:butterfly}
+\end{align}
+where $W_N=\exp(-j2\pi/N)$. Advancing $a$, then $g$, then $s$ defines a serial
+traversal of the conventional FFT graph. Retaining these three indices is
+sufficient to suspend and resume that traversal. Each stage has $N/2$
+butterflies, so the total count is
+\begin{equation}
+ B_c(N)=\frac{N}{2}\log_2 N.
+ \label{eq:countcomplex}
+\end{equation}
+The coefficient array, twiddle table, and bit-reversal table each occupy
+$O(N)$ storage; the traversal state occupies $O(1)$ storage. Buffer preparation
+copies and permutes the entire frame. Resumability applies to the subsequent
+butterfly traversal, not automatically to that preparation.
+
+\begin{proposition}[Arithmetic-order preservation]
+For a fixed buffered frame and transform configuration, any partition of the
+serial butterfly traversal into finite batches yields the same completed
+coefficient array as uninterrupted traversal, provided every butterfly executes
+exactly once in the original order and no external code mutates the state.
+\end{proposition}
+\begin{proof}
+After buffering, the two traversals have identical coefficients and indices.
+If they agree before a butterfly, Equation~\eqref{eq:butterfly} reads the same
+operands and performs the same updates; the index transition also agrees.
+Induction over $B_c$ establishes equality. A pause changes no state. In floating
+point, bitwise equality additionally assumes the same arithmetic instructions,
+rounding environment, and compiler transformations. The experiments test
+bitwise equality within a single executable rather than asserting it across
+different compilers or FFT libraries.
+\end{proof}
+
+\begin{lstlisting}[float=tbp,language=C++,caption={Simplified state transition corresponding to the original complex FFT. Tables and storage are prepared separately.},label={lst:step}]
+void step() {
+    if (span > N) return;
+    const size_t half = span / 2;
+    const auto even = c[group + pair];
+    const auto odd = multiply(c[group + pair + half],
+                              twiddle[pair * (N / span)]);
+    c[group + pair] = even + odd;
+    c[group + pair + half] = even - odd;
+    if (++pair == half) {
+        pair = 0;
+        group += span;
+        if (group == N) { group = 0; span *= 2; }
+    }
+}
+\end{lstlisting}
+
+\subsection{Real-input packing and reconstruction}
+For even $N$, define $M=N/2$ and pack
+$z[m]=u[2m]+j u[2m+1]$. Let $Z$ be its $M$-point complex transform.
+For $1\le k<M$, with
+$A=Z[k]$ and $D=\overline{Z[M-k]}$, reconstruction is
+\begin{equation}
+ X[k]=\frac{1}{2}\bigl(A+D-jW_N^k(A-D)\bigr),\qquad
+ X[N-k]=\overline{X[k]}.
+ \label{eq:real}
+\end{equation}
+The endpoints are
+$X[0]=\Re Z[0]+\Im Z[0]$ and
+$X[M]=\Re Z[0]-\Im Z[0]$.
+This follows by separating the transforms of the even and odd real samples;
+it is a standard consequence of conjugate symmetry, not a new real FFT.
+
+The resumable inner transform performs
+\begin{equation}
+ B_r(N)=B_c(N/2)=\frac{N}{4}\log_2(N/2)
+ \label{eq:countreal}
+\end{equation}
+butterflies. The original real-FFT class materializes all $N$ output bins, including conjugate
+copies, and reconstructs them in one $O(N)$ loop when the last inner butterfly
+finishes. Thus a real-FFT \code{step()} is not uniformly a single butterfly:
+the completing step also performs reconstruction. The operational distinction
+is essential to the timing model in Appendix~\ref{sec:cost}.
+
+The inverse class uses
+$\operatorname{IFFT}(X)=\overline{\operatorname{FFT}(\overline X)}/N$.
+In the evaluated revision it treats each output normalization as an additional
+resumable step, giving $B_c(N)+N$ steps after buffering. This differs from the
+real forward transform's bulk reconstruction. Neither production visualization
+module uses the inverse transform, and the timing campaign concerns only the
+real forward path.
