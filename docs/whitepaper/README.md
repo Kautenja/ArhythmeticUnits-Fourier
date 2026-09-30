@@ -118,5 +118,5 @@ and the chosen license terms. [Scholar inclusion guidance](https://scholar.googl
 describes discovery requirements; a source archive or citation file alone does
 not establish indexing.
 
-The repository [license](../../LICENSE.md) governs its code and artwork.
+The repository [license](../../LICENSING.md) governs its code and artwork.
 Benchmark provider and redistribution limits are documented with the workflow.

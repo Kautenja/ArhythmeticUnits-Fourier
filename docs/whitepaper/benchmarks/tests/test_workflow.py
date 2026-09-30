@@ -16,7 +16,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from contextlib import redirect_stdout
-from paths import BENCHMARKS
+from paths import ROOT, BENCHMARKS
 from profiles import load, measured
 from contracts import load_registry
 from study import freeze, read_freeze, enforce, confirmations, POLICIES
@@ -177,6 +177,11 @@ class WorkflowTests(unittest.TestCase):
             selection_manifest(root / "report", root / "selection.json", True)
             pack([p], root / "evidence.tar.gz", root / "selection.json")
             manifest = unpack(root / "evidence.tar.gz", root / "elsewhere")
+            for name in ("LICENSE", "LICENSING.md"):
+                for directory in (root / "elsewhere", root / "elsewhere/tooling"):
+                    self.assertEqual(
+                        (directory / name).read_bytes(), (ROOT / name).read_bytes()
+                    )
             relocated = root / "elsewhere/campaigns/000"
             self.assertFalse((relocated / "paper.bin").exists())
             self.assertTrue((relocated / "bundle-omissions.json").exists())

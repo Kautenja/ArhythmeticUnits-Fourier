@@ -71,7 +71,7 @@ identities and must not inherit this source inspection unconditionally.
 No native library source is copied into this repository. Rack's license and
 the PFFFT/FFTPACK UCAR redistribution terms remain attached to their upstream
 files and retained dependency artifacts. This first-party adapter follows
-[Fourier's source license](../../../../LICENSE.md).
+[Fourier's source license](../../../../LICENSING.md).
 
 ## Scratch And Persistent Storage
 

@@ -17,7 +17,7 @@
 // The vector outlines preserve the existing panel lettering and the supplied
 // Brand/MediumWithLogo reference without shipping or parsing panel SVGs.
 // Code is GPL-3.0-or-later; the depicted branding and visual design retain
-// their CC BY-NC-ND 4.0 terms. See LICENSE.md.
+// their CC BY-NC-ND 4.0 terms. See LICENSING.md.
 
 #ifndef ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_PANEL_ARTWORK_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_RACK_EXTENSIONS_PANEL_ARTWORK_HPP_

@@ -13,7 +13,7 @@ SDK_FREE_GOALS += $(foreach goal,$(filter .build/instrumented/%,$(MAKECMDGOALS))
 ifneq ($(strip $(filter-out $(SDK_FREE_GOALS),$(or $(MAKECMDGOALS),all))),)
 FLAGS += -DTEST -Wno-unused-local-typedefs
 SOURCES += $(wildcard src/*.cpp)
-DISTRIBUTABLES += $(wildcard LICENSE*) res presets
+DISTRIBUTABLES += LICENSE LICENSING.md res presets
 RACK_DIR ?= ../..
 
 # Rack's compile.mk hardcodes build/. Supply its object/dependency variables

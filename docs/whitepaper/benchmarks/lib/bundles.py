@@ -79,8 +79,9 @@ def pack(campaigns, output, selection=None):
                 tooling / name,
                 ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
             )
-        shutil.copy2(ROOT / "LICENSE.md", root / "LICENSE.md")
-        shutil.copy2(ROOT / "LICENSE.md", root / "tooling/LICENSE.md")
+        for name in ("LICENSE", "LICENSING.md"):
+            shutil.copy2(ROOT / name, root / name)
+            shutil.copy2(ROOT / name, root / "tooling" / name)
         if selection:
             from publication import checked_report
 

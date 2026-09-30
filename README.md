@@ -7,7 +7,7 @@ and **Spectre**, a spectrogram visualizer.
 
 [![Latest GitHub Release][ReleaseBadge]][LatestRelease]
 [![VCV Library: Rack 2][VCVBadge]][VCVLibrary]
-[![Source License: GPL-3.0-or-later][LicenseBadge]](LICENSE.md)
+[![Source License: GPL-3.0-or-later][LicenseBadge]](LICENSING.md)
 
 **[Get it on VCV Library][VCVLibrary]** ·
 [Fourier manual (PDF)][Fourier] · [Spectre manual (PDF)][Spectre] ·
@@ -143,6 +143,12 @@ keep their embedded module settings.
 
 </details>
 
+## Support
+
+See [SUPPORT.md](SUPPORT.md) for troubleshooting, questions, bug reports,
+and feature requests. Include your Rack and plugin versions, operating
+system, and steps to reproduce a problem.
+
 ## Development
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, architecture,
@@ -151,9 +157,6 @@ builds, tests, benchmarks, and the pull request workflow. The
 [Markdown](docs/style-guides/markdown.md) style guides cover
 coding and documentation conventions. Coding agents should also follow
 [AGENTS.md](AGENTS.md).
-
-Found a problem or have an idea? [Open an issue][issues] with your Rack
-and plugin versions, operating system, and steps to reproduce a bug.
 
 ## Citation
 
@@ -243,7 +246,7 @@ covering transform preparation and lookup tables.
 
 Source code is licensed under **GPL-3.0-or-later**. Module artwork and
 Arhythmetic Units branding have separate **CC BY-NC-ND 4.0** terms.
-See [LICENSE.md](LICENSE.md) for details.
+See [LICENSING.md](LICENSING.md) for details.
 
 [ReleaseBadge]: https://img.shields.io/github/v/release/Kautenja/ArhythmeticUnits-Fourier?label=GitHub%20release
 [LatestRelease]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest
@@ -256,4 +259,3 @@ See [LICENSE.md](LICENSE.md) for details.
 [citation-cff]: CITATION.cff
 [vcv-rack]: https://github.com/VCVRack/Rack
 [catch2]: https://github.com/catchorg/Catch2
-[issues]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/issues

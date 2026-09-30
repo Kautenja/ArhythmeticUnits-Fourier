@@ -10,9 +10,12 @@ and platform limitations used when reviewing changes.
 -   [Build and test](#development-and-testing)
 -   [Choose validation for your change](#choosing-validation)
 -   [Update manual figures](#manual-figures)
+-   [Prepare a release and VCV update](#prepare-a-release-and-vcv-update)
 -   [Submit a pull request](#submit-a-pull-request)
 
 ## Before You Start
+
+For usage questions and troubleshooting, start with [SUPPORT.md](SUPPORT.md).
 
 Search the [existing issues][issues] before reporting a bug or proposing a
 feature. For a bug, include the Rack and plugin versions, operating system,
@@ -1160,7 +1163,7 @@ logs are retained beside the exports. The SVGs contain vector paths,
 including outlined text, so they need no external fonts or raster images;
 edit the TikZ sources and regenerate rather than editing the outlined text.
 Use the PDFs for print placement and the SVGs for web or vector editors.
-Existing [visual-asset license terms](LICENSE.md) still apply.
+Existing [visual-asset license terms](LICENSING.md) still apply.
 
 Review the color and grayscale guides, the bare panels, and both manual
 pages after changing shared primitives. Ensure every callout appears once
@@ -1295,9 +1298,13 @@ updates cancel obsolete PDF builds; tag and release runs are kept separate
 so a tag build cannot cancel release uploads.
 
 Ubuntu installs `texlive-latex-extra`, `texlive-fonts-recommended`,
-`texlive-science`, `latexmk`, `lmodern`, and `poppler-utils`. CI checks that
-all PDFs are nonempty and readable by `pdfinfo`, then saves `Fourier.pdf`,
-`Spectre.pdf`, and `Fourier-whitepaper.pdf` in the `publication-pdfs` workflow
+`texlive-science`, `latexmk`, `lmodern`, `poppler-utils`, and `python3-pypdf`.
+For the current layout, CI checks release tags against `plugin.json` and both
+manual source versions before building. After building, it requires all three
+PDFs, checks page counts, titles, bookmarks, branding, and unresolved references,
+and verifies manual versions, language, and XMP metadata. All PDFs must also
+be nonempty and readable by `pdfinfo`. Validated `Fourier.pdf`, `Spectre.pdf`,
+and `Fourier-whitepaper.pdf` are saved in the `publication-pdfs` workflow
 artifact for 14 days.
 
 Publishing a GitHub release builds from its tag and attaches all three PDFs.
@@ -1312,7 +1319,10 @@ To backfill an existing release, select **Actions > Manuals and white paper
 > Run workflow** and enter its exact tag in `tag`. The workflow must first be
 on the default branch. Sources and Makefiles come from that tag; older tags
 retain their original build behavior, and tags predating the paper upload
-only the two manuals. The release must already exist and allow asset changes.
+only the two manuals. Legacy layouts keep their original version and metadata
+conventions; they require readable, nonempty manuals without imposing the
+current bookmark, XMP, or whitepaper requirements. The release must already
+exist and allow asset changes.
 Reruns replace matching assets without changing release notes or other assets.
 Only the upload job has `contents: write`; builds use read-only repository
 permissions and require no additional secrets. GitHub's built-in token does
@@ -1323,10 +1333,128 @@ Keep generated binaries, object files, PDFs, and build folders out of source
 changes. Bare `make` builds the Rack plugin; tests and benchmarks require
 the explicit targets above.
 
+## Prepare A Release And VCV Update
+
+Release preparation does not publish a GitHub release or notify VCV. Keep the
+changelog entry marked `Unreleased` until choosing a publication date. Commit,
+push, publish, and notify VCV only when explicitly authorized.
+
+Use these permanent links when preparing a release:
+
+-   [Fourier's VCV Library thread, #826](https://github.com/VCVRack/library/issues/826)
+    is the update channel for `ArhythmeticUnits-Fourier`. Reuse this thread;
+    do not create a new issue for each version.
+-   [Fourier's library listing](https://library.vcvrack.com/ArhythmeticUnits-Fourier)
+    shows the distributed plugin. The library's
+    [source revision](https://github.com/VCVRack/library/tree/v2/repos/ArhythmeticUnits-Fourier)
+    records the commit selected by its maintainers.
+-   [GitHub releases](https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases)
+    host the manuals used by `plugin.json`.
+-   [VCV's update instructions](https://github.com/VCVRack/library#pushing-an-update)
+    require a new manifest version and an exact commit hash. Maintainers
+    reopen the thread after an update comment and close it when the build
+    is updated. Posting a comment does not itself publish a library build.
+-   Prior examples: [Fourier 2.1.1](https://github.com/VCVRack/library/issues/826#issuecomment-2719964276),
+    [PotatoChips](https://github.com/VCVRack/library/issues/652), and
+    [RackNES](https://github.com/VCVRack/library/issues/650). Follow the existing
+    short format: version, full commit hash or commit link, and a brief change
+    summary when useful.
+
+For an explicitly authorized release, work from the repository root:
+
+1.  Increment `plugin.json`'s version and align `CHANGELOG.md` and the manual
+    versions. Preserve plugin and module slugs. Follow the
+    [manifest version rules](https://vcvrack.com/manual/Manifest#version).
+2.  Run the applicable checks in
+    [Development And Testing](#development-and-testing),
+    including DSP tests, a Rack plugin build, and affected manual Rack checks.
+    From the repository root, with the configured Rack SDK, C++ toolchain,
+    `jq`, `zstd`, Python 3, and the publication tools installed, run:
+
+    ```shell
+    make -j4 test
+    make -j4 all test-rack
+    make dist
+    make -C docs/manual-fourier
+    make -C docs/manual-spectre
+    make -C docs/whitepaper
+    make -C docs/whitepaper check
+    git diff --check
+    ```
+
+    Inspect the package in `dist/` for the matching `plugin.json`, plugin
+    binary, runtime resources, presets, `LICENSE`, and `LICENSING.md`.
+    Review all three PDFs and perform the applicable
+    [manual Rack checks](#choosing-validation), including existing-patch
+    loading when persistence changes. Confirm code, instrumentation, and
+    publication workflows pass on the intended release revision; use an
+    eligible workflow dispatch or pull request where needed. The Rack CI
+    matrix covers Linux x64, macOS ARM64, and Windows x64, not Intel macOS.
+    Record commands, platforms, SDK versions, results, and skipped checks
+    in release notes or the owning spec. A successful headless suite does
+    not verify interactive display behavior.
+
+    VCV's [plugin toolchain](https://github.com/VCVRack/rack-plugin-toolchain)
+    supports cross-platform build validation; standalone DSP CI alone does
+    not validate the Rack plugin.
+3.  Integrate approved release changes into `main`, which the public
+    documentation links reference. Commit and push the approved changes and
+    a matching `vX.Y.Z` tag at the tested release commit. Verify that the tag
+    resolves to the intended commit and that its
+    `plugin.json` contains version `X.Y.Z`. Do not move a published tag to
+    accommodate a fix; prepare a new version instead.
+4.  Publish the GitHub release and wait for the
+    [manuals workflow](.github/workflows/manuals.yml) to attach `Fourier.pdf`
+    and `Spectre.pdf`, plus `Fourier-whitepaper.pdf`. Check all three downloads
+    and the README and manifest manual links. A regular latest release is
+    needed for the manifest's `/releases/latest/download/` manual links.
+    GitHub publication and VCV Library submission are separate steps.
+5.  Read the latest comments in #826 to avoid duplicate requests. Prepare a
+    comment using the tagged commit, not the current branch tip. Replace
+    `vX.Y.Z` below with the actual release tag. This block only writes a
+    local draft and requires Git, `jq`, and an existing local tag:
+
+    ```shell
+    release_tag=vX.Y.Z
+    release_commit="$(git rev-parse "refs/tags/$release_tag^{commit}")" &&
+    release_version="$(git show "$release_commit:plugin.json" | jq -er '.version')" &&
+    test "$release_tag" = "v$release_version" &&
+    printf 'Updated to %s\n\nCommit: https://github.com/Kautenja/ArhythmeticUnits-Fourier/commit/%s\nRelease: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/tag/%s\n' \
+      "$release_version" "$release_commit" "$release_tag" \
+      > /tmp/fourier-vcv-library-update.md
+    ```
+
+6.  Review the draft and confirm the commit is publicly available. When the
+    user has authorized notifying VCV, post it with an authenticated GitHub
+    CLI session, or paste it into #826:
+
+    ```shell
+    gh issue comment 826 --repo VCVRack/library \
+      --body-file /tmp/fourier-vcv-library-update.md
+    ```
+
+    Comment on the existing thread even if it is closed. Leave reopening
+    and build publication to the VCV maintainers. Report the comment URL
+    as a submission receipt; verify the library listing/revision separately
+    before claiming the release is available in Rack.
+
+No automatic VCV notification is configured. If requested later, trigger it
+after successful stable-release validation and manual uploads, and deduplicate
+comments by version and commit. The workflow's built-in
+[`GITHUB_TOKEN`](https://docs.github.com/en/actions/concepts/security/github_token)
+is restricted to this repository, so it cannot comment in `VCVRack/library`.
+A separate credential would be required. GitHub currently documents
+[fine-grained token limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#fine-grained-personal-access-tokens-limitations)
+for contributing to public repositories where the user is not a member;
+a classic token with `public_repo` scope is one option, subject to the target
+organization's policy. Keep any such token in an Actions secret, never in
+tracked files or chat. Setting `issues: write` in this repository does not
+grant access to VCV's repository.
+
 ## Submit A Pull Request
 
 Preserve file-level attribution and the source and artwork terms in
-[LICENSE.md](LICENSE.md).
+[LICENSING.md](LICENSING.md).
 
 1.  Update affected user documentation, presets, and resources alongside
     behavior changes. Keep unrelated formatting and dependency updates out
