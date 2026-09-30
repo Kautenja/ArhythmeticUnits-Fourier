@@ -219,7 +219,8 @@ int main(int argc, char** argv) {
         bool describe = false, resources = false, provider_info = false;
         if (argc > 2 && std::string(argv[1]).substr(0, 2) == "--" && std::string(argv[1]) != "--transition") {
             describe = std::string(argv[1]) == "--describe";
-            resources = std::string(argv[1]) == "--resources";
+            PaperResources::timed = std::string(argv[1]) != "--resources-untimed";
+            resources = std::string(argv[1]) == "--resources" || !PaperResources::timed;
             provider_info = std::string(argv[1]) == "--provider-info";
             require(describe || resources || provider_info, "Unknown command");
             --argc; ++argv;

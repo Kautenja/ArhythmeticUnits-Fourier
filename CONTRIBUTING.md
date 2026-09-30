@@ -333,6 +333,12 @@ that should survive `make clean`.
 
 ## Development And Testing
 
+For the M1 Pro paper study, see the [offline benchmark launch guide](docs/whitepaper/benchmarks/guides/offline-study.md).
+Preparation uses `make benchmark-study-prepare` and `make benchmark-study-check`;
+performance collection is a separate, user-run `make benchmark-study-run SESSION=pilot-01`
+(or `pilot-02`) after quiet-host preparation.
+
+
 Run the commands below from the repository root. Bare `make` builds the
 Rack plugin; standalone tests and benchmarks require explicit targets.
 `make check-build` uses Python 3 to verify build isolation, incremental

@@ -185,6 +185,17 @@ int main(int argc, char** argv) {
             else throw std::runtime_error("Unknown fixture provider");
             return 0;
         }
+        {
+            const auto before = PaperMeasurement::Clock::counter();
+            PaperResources::timed = false;
+            std::ostringstream discarded;
+            auto* stream = std::cout.rdbuf(discarded.rdbuf());
+            PaperResources::inspect<std::vector<float>>([]() { return new std::vector<float>(16); },
+                [](std::vector<float>& x) { x[0] = 1; }, 1);
+            std::cout.rdbuf(stream); PaperResources::timed = true;
+            require(PaperMeasurement::Clock::counter() == before, "Untimed resource probe read a measurement clock");
+            require(discarded.str().find("\"ns\":null") != std::string::npos, "Untimed resource timing was fabricated");
+        }
         verify_core<float>(); verify_core<double>();
         verify_native<PffftNative<false>>("pffft-native-");
         verify_native<PffftNative<true>>("pffft-native-unordered-");

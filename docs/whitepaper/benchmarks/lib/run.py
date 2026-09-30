@@ -335,6 +335,9 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
                   if p.is_file() and p.name != ".DS_Store"} |
                  {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
                  {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
+    if getattr(args, 'engine_study', False):
+        from prepared import sdk_inputs
+        sdk = sdk_inputs(rack)
     build_inputs = {p: digest(p) for p in sources+sdk+list(external_inputs.values())}
     runtime.switch("build")
     with (output/"build.log").open("w") as log:
@@ -406,17 +409,46 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
         resource = {}
         for label, executable in (("timing", measured_binary), ("allocation", output/"paper-audit.bin")):
             resource[label] = json.loads(subprocess.check_output(
-                [str(executable), "--resources"]+arguments, env=env, text=True))
+                [str(executable), "--resources-untimed" if getattr(args, "prepare_only", False) else "--resources"]+arguments, env=env, text=True))
         filename = f"resources-{index:04d}.json"
         save(output/filename, resource)
         metadata["resources"][str(index)] = filename
+    if getattr(args, 'prepare_only', False):
+        metadata['status'] = 'prepared'
+        metadata['artifact_sha256'] = {p.name: digest(p) for p in output.iterdir() if p.is_file() and p.name != 'metadata.json'}
+        save(output/'metadata.json', metadata)
+        return
+    execute_campaign(args, output, configs, registry, runtime, metadata, env)
+
+
+def validate_engine_execution(data, policy, document, owner):
+    """Cross-check engine JSON against the same protected process timing sidecar."""
+    p = document['profile']; c = dict(p['workload'], callbacks=p['blocks'])
+    rows = document['result']['observations']
+    validate_process(data, policy, c, {'groups': {'callback': {'total_ns': sum(r['duration_ns'] for r in rows)}}},
+                     sleep_owner=owner)
+    for index, (sidecar, row) in enumerate(zip(data['observations'], rows)):
+        if (sidecar['sample'] != index*c['block'] or any(sidecar[k] != row[k]
+                for k in ('samples','release_ns','deadline_ns','wake_ns','start_ns','finish_ns'))):
+            raise ValueError('Engine and execution sidecar timestamps differ')
+
+
+def execute_campaign(args, output, configs, registry, runtime, metadata, env, gate=None, defer_integrity=False):
+    """One shared serial dispatch loop for built or immutable prepared campaigns."""
+    measured_binary = output/'paper.bin'
+    rack = args.rack_dir.resolve()
+    sources = source_inputs()
+    sdk = [rack/name for name in metadata['sdk_sha256']]
+    external_inputs = getattr(args, 'external_inputs', None)
+    if external_inputs is None:
+        external_inputs = fftw_inputs(args.fftw_prefix) if args.fftw_prefix else {}
     jobs = [(repeat, index) for repeat in range(args.repeats) for index in range(len(configs))]
     random.Random(args.seed).shuffle(jobs)
     runtime.switch("metadata_checkpoint")
     save(output/"metadata.json", metadata)
     runtime.switch("host_readiness")
-    metadata["host_before"] = host_snapshot(args.sleep_guard.pid)
-    gate = Gate(args.execution_policy, args.sleep_guard)
+    if not defer_integrity: metadata["host_before"] = host_snapshot(args.sleep_guard.pid)
+    gate = gate or Gate(args.execution_policy, args.sleep_guard)
     metadata["execution_events"] = gate.events
     for ordinal, (repeat, index) in enumerate(jobs):
         runtime.switch("job_dispatch", workload=index, repeat=repeat)
@@ -425,8 +457,11 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
         raw, errors = output/(stem+".csv"), output/(stem+".stderr")
         process_runtime = output/(stem+".runtime.json")
         process_execution = output/(stem+".execution.json")
-        invocation = command(config, measured_binary)
-        print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['backend']} {config['pass_name']}", flush=True)
+        engine = metadata.get('family') == 'engine'
+        invocation = ([str(measured_binary), '--engine', str(output/f'profile-{index:04d}.json')]
+                      if engine else command(config, measured_binary))
+        if engine: raw = output/(stem+'.json')
+        print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['workload']['backend'] if engine else config['backend']} {'engine' if engine else config['pass_name']}", flush=True)
         started = dt.datetime.now(dt.timezone.utc).isoformat()
         metadata["active_job"] = dict(workload=index, repeat=repeat, raw=raw.name, stderr=errors.name)
         save(output/"metadata.json", metadata)
@@ -435,8 +470,11 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
         transition = output/(stem+".transition.json") if config.get("transition_suite") else None
         if transition:
             process_env["PAPER_TRANSITION_PATH"] = str(transition)
-        with raw.open("w") as stdout, errors.open("w") as stderr:
-            if ordinal == 0:
+        if engine:
+            process_env['PAPER_HOST_EXECUTION_PATH'] = str(process_execution)
+            process_env.pop('PAPER_RUNTIME_PATH', None)
+        with raw.open("x") as stdout, errors.open("x") as stderr:
+            if ordinal == 0 and gate.state != "launched":
                 gate.prepared(measured_binary, metadata["binary_sha256"])
                 runtime.switch("stabilization")
                 gate.settle()
@@ -447,19 +485,40 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
                            stdout=stdout, stderr=stderr, check=True)
             args.sleep_guard.check()
         runtime.switch("summarize", workload=index, repeat=repeat)
-        validate_profile(json.loads(process_runtime.read_text()))
-        metadata["runs"].append(dict(workload=index, repeat=repeat, command=invocation,
-                                     started_utc=started, raw=raw.name, stderr=errors.name,
-                                     runtime=process_runtime.name,
-                                     execution=process_execution.name,
-                                     summary=summarize(raw, config)))
-        validate_process(json.loads(process_execution.read_text()), args.execution_policy,
-                         config, metadata["runs"][-1]["summary"], raw, args.sleep_guard.pid)
+        run = dict(workload=index, repeat=repeat, command=invocation, started_utc=started,
+                   raw=raw.name, stderr=errors.name, execution=process_execution.name)
+        if engine:
+            from engine_host import validate as validate_engine
+            document = json.loads(raw.read_text())
+            run['summary'] = validate_engine(document, registry)
+            run['profile'] = f'profile-{index:04d}.json'
+            validate_engine_execution(json.loads(process_execution.read_text()), args.execution_policy,
+                                      document, args.sleep_guard.pid)
+        else:
+            validate_profile(json.loads(process_runtime.read_text()))
+            run.update(runtime=process_runtime.name, summary=summarize(raw, config))
+            validate_process(json.loads(process_execution.read_text()), args.execution_policy,
+                             config, run['summary'], raw, args.sleep_guard.pid)
+        from study_plan import observation_design
+        design_config = (dict(config['workload'], callbacks=config['blocks']) if engine else config)
+        if engine:
+            channels = 4 if config['workload']['backend'].startswith('fourier') else 1
+            publications = sum(sum(p['published_at'] >= document['result']['origin'] for p in node['publications'])
+                               for node in document['result']['replay']['nodes'])*channels
+        else:
+            publications = run['summary'].get('publication_audit_rows', 0)*resolve_contract(config, registry)['channels']
+        if design_config['pass_name'] in ('callback', 'throughput'):
+            run['observation_design'] = observation_design(design_config, publications)
+        metadata['runs'].append(run)
         if transition:
             metadata["runs"][-1]["transition"] = transition.name
         metadata.pop("active_job", None)
         runtime.switch("metadata_checkpoint", workload=index, repeat=repeat)
         save(output/"metadata.json", metadata)
+    if defer_integrity:
+        metadata['status'] = 'recorded'
+        save(output/'metadata.json', metadata)
+        return
     runtime.switch("final_integrity")
     metadata["host_after"] = host_snapshot(args.sleep_guard.pid)
     if metadata["host_before"]["power"] != metadata["host_after"]["power"]:

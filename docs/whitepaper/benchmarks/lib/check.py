@@ -90,7 +90,9 @@ def validate_resources(resource):
             raise ValueError("Empty resource audit")
         for name in ("setup", "execution", "destruction"):
             phase = item[name]
-            if not math.isfinite(phase["ns"]) or phase["ns"] < 0:
+            untimed = item.get('timing_policy') == 'untimed-v1'
+            if (phase['ns'] is not None if untimed else
+                    not isinstance(phase['ns'], (int, float)) or not math.isfinite(phase['ns']) or phase['ns'] < 0):
                 raise ValueError("Invalid resource timing")
             for key in ("allocations", "allocated_bytes", "live_bytes", "peak_bytes"):
                 value = phase[key]

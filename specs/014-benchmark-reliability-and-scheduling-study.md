@@ -1176,3 +1176,40 @@ passed. Planning arithmetic is 959.147 nominal paced audio seconds plus 388
 seconds of process settling and 180 seconds of session settling; this excludes
 planning, warmup, replay, I/O, overruns and teardown and is not a measured runtime.
 No pilot was run. The offline launch implementation is the next phase.
+
+
+### Phase 7 Implementation And Pending Final Preparation: September 30, 2026
+
+`benchmark-study-prepare`, `benchmark-study-check` and `benchmark-study-run`
+now dispatch through the existing benchmark workflow. `run.py` shares its serial
+measurement loop between ordinary built campaigns and immutable prepared stream
+or engine groups. Launch performs no builds. Every group is staged before one
+180-second gate; each process retains the existing one-second settle policy.
+The launcher applies caffeinate, checks AC/power/assertions, records an explicit
+quiet-host declaration, enforces a host-wide lock, preserves failures and raw
+observations, and packages an offline handback with restricted binaries omitted.
+
+The new `--resources-untimed` mode collects allocation/storage information with
+null times and no measurement-clock reads. A C++ synthetic-clock test enforces
+that distinction. Numerical preflight and exact engine-profile replay remain
+untimed. The launcher does not run reports, select winners, update the paper or
+schedule follow-ups. Commands, retained limitations and interruption behavior
+are documented in `guides/offline-study.md`.
+
+Seven offline launch fixtures passed, covering shared stream/engine dispatch,
+fixed repetitions, gate order, offline sockets, declaration, lock contention,
+stale-input rejection, existing-output rejection, failed/interrupted children,
+complete integrity and final archive omissions/checksums. Fourteen existing
+execution fixtures also passed, including caffeinate assertion lifetime and
+power gates. The plugin build succeeded. The full suite and actual network-denied
+preparation/check must still pass before this spec is marked COMPLETE and moved.
+A network-denied sandbox was verified: its attempted loopback connection failed
+with `PermissionError`, independently of the Python fixture socket guard.
+
+
+The final full Python suite passed 126 tests with one optional plotting skip.
+The standalone Make dispatch dry run confirmed launch/check have no compilation
+prerequisites. The offline shared-runner fixtures passed after the final
+publication-coverage metadata adjustment. Implementation is committed before
+preparation so the archived source revision identifies the tested code; final
+spec completion will record the prepared manifest and network-denied checks.

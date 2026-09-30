@@ -6,7 +6,7 @@ include mk/standalone.mk
 
 # Only explicit standalone goals can bypass the SDK. Mixed invocations still
 # load Rack, while standalone flags were captured before plugin.mk modifies them.
-SDK_FREE_GOALS := test test-dsp test-mailbox test-build benchmark benchmark-build clean clean-local check-build
+SDK_FREE_GOALS := benchmark-study-prepare benchmark-study-run benchmark-study-check test test-dsp test-mailbox test-build benchmark benchmark-build clean clean-local check-build
 SDK_FREE_GOALS += $(STANDALONE_TEST_ALIASES) $(STANDALONE_BENCHMARK_ALIASES)
 SDK_FREE_GOALS += $(filter .build/test/standalone/% .build/benchmark/standalone/%,$(MAKECMDGOALS))
 SDK_FREE_GOALS += $(foreach goal,$(filter .build/instrumented/%,$(MAKECMDGOALS)),$(if $(findstring /standalone/,$(goal)),$(goal)))
@@ -41,3 +41,5 @@ clean-local:
 
 check-build:
 	python3 scripts/test-build.py
+
+include mk/study.mk

@@ -1,5 +1,9 @@
 # Benchmark Workflow
 
+For the prepared M1 Pro pilots, use the [offline study guide](guides/offline-study.md).
+It provides preparation/check commands and one command per user-run session.
+No performance collection is part of preparation.
+
 Start here to reproduce or extend the whitepaper's measurements. All commands
 run from the repository root. `bench.py` is the public entry point; it uses the
 existing [C++ measurement suite](../../../benchmark/paper/README.md).

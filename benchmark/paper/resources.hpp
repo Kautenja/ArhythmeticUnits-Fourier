@@ -15,6 +15,7 @@ namespace PaperResources {
 struct Counts { size_t allocations = 0, allocated = 0, live = 0, peak = 0; };
 static Counts counts;
 static bool active = false;
+static bool timed = true;
 #ifdef PAPER_ALLOCATION_AUDIT
 struct Entry { void* pointer = nullptr; size_t bytes = 0; bool used = false; };
 static Entry entries[131072];
@@ -53,7 +54,9 @@ inline void number(size_t value) {
 #endif
 }
 inline void phase(double ns, const Counts& snapshot) {
-    std::cout << "{\"ns\":" << ns << ",\"allocations\":"; number(snapshot.allocations);
+    std::cout << "{\"ns\":";
+    if (timed) std::cout << ns; else std::cout << "null";
+    std::cout << ",\"allocations\":"; number(snapshot.allocations);
     std::cout << ",\"allocated_bytes\":"; number(snapshot.allocated);
     std::cout << ",\"live_bytes\":"; number(snapshot.live);
     std::cout << ",\"peak_bytes\":"; number(snapshot.peak);
@@ -73,21 +76,21 @@ void inspect(Factory factory, Run run, size_t operations) {
         return std::chrono::duration<double, std::nano>(b-a).count();
     };
     reset_phase(); active = true;
-    const auto start = Clock::now();
+    const auto start = (timed ? Clock::now() : Clock::time_point{});
     Object* object = factory();
-    const auto prepared = Clock::now();
+    const auto prepared = (timed ? Clock::now() : Clock::time_point{});
     const auto setup = counts;
     reset_phase();
     run(*object);
-    const auto executed = Clock::now();
+    const auto executed = (timed ? Clock::now() : Clock::time_point{});
     const auto execution = counts;
     active = false;
     const std::string implementation = provider_info(*object, 0);
     active = true;
     reset_phase();
-    const auto teardown_start = Clock::now();
+    const auto teardown_start = (timed ? Clock::now() : Clock::time_point{});
     delete object;
-    const auto destroyed = Clock::now();
+    const auto destroyed = (timed ? Clock::now() : Clock::time_point{});
     const auto teardown = counts;
     active = false;
     std::cout.precision(17);
@@ -97,6 +100,7 @@ void inspect(Factory factory, Run run, size_t operations) {
 #else
     std::cout << "false";
 #endif
+    std::cout << ",\"timing_policy\":\"" << (timed ? "measured-v1" : "untimed-v1") << "\"";
     std::cout << ",\"allocation_scope\":\"C++ new/delete requested bytes only\","
         << "\"native_allocation_bytes\":null,\"stack_scratch_bytes\":null,"
         << "\"unknown_reason\":\"Native allocators, stack and allocator overhead are not intercepted\","
