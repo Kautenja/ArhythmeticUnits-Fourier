@@ -5,12 +5,17 @@ VCV Rack 2, by **Arhythmetic Units**. Compare signals, explore harmonics,
 and watch sound evolve with **Fourier**, a four-input spectrum analyzer,
 and **Spectre**, a spectrogram visualizer.
 
-[![Latest Release][ReleaseBadge]][LatestRelease]
-[![VCV Library][VCVBadge]][VCVLibrary]
+[![Latest GitHub Release][ReleaseBadge]][LatestRelease]
+[![VCV Library: Rack 2][VCVBadge]][VCVLibrary]
+[![Source License: GPL-3.0-or-later][LicenseBadge]](LICENSE.md)
 
 **[Get it on VCV Library][VCVLibrary]** ·
 [Fourier manual (PDF)][Fourier] · [Spectre manual (PDF)][Spectre] ·
 [Changelog](CHANGELOG.md)
+
+Read the [**technical report source and build guide**][report] for the
+analysis algorithms, FFT scheduling, and reproducible experiments.
+[BibTeX citation](docs/whitepaper/CITATION.bib).
 
 ## Fourier: Spectrum Analyzer
 
@@ -79,6 +84,10 @@ are supported; voices within each input are summed into one spectrum.
 
 Context-menu settings support Rack's **Undo** and **Redo**, including
 AC coupling, Fourier's fill and Bezier options, and Spectre's color map.
+
+This README describes the current checkout. VCV Library builds and the
+latest-release PDF manuals can lag behind it; see the [changelog](CHANGELOG.md)
+for unreleased changes.
 
 ## Factory Presets
 
@@ -153,6 +162,13 @@ Spectral Analysis**, explains the implementation, scheduling and latency
 model, prior work, and reproducible experiments. Its README includes build
 instructions for the [LaTeX project](docs/whitepaper/fourier.tex) and its
 self-contained source export.
+
+Release [v2.1.2](https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/tag/v2.1.2)
+includes both user manuals but no whitepaper PDF. Follow the
+[report's build instructions][report] for a local PDF. The
+[publication workflow](.github/workflows/manuals.yml) builds both
+manuals and `Fourier-whitepaper.pdf` and attaches them when a release is
+published.
 
 <details>
 <summary><strong>Citation Formats And Reproducibility</strong></summary>
@@ -229,10 +245,11 @@ Source code is licensed under **GPL-3.0-or-later**. Module artwork and
 Arhythmetic Units branding have separate **CC BY-NC-ND 4.0** terms.
 See [LICENSE.md](LICENSE.md) for details.
 
-[ReleaseBadge]: https://img.shields.io/github/v/release/Kautenja/ArhythmeticUnits-Fourier
+[ReleaseBadge]: https://img.shields.io/github/v/release/Kautenja/ArhythmeticUnits-Fourier?label=GitHub%20release
 [LatestRelease]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest
 [VCVBadge]: https://img.shields.io/badge/VCV-Rack%202-0099dd
 [VCVLibrary]: https://library.vcvrack.com/ArhythmeticUnits-Fourier
+[LicenseBadge]: https://img.shields.io/badge/source%20license-GPL--3.0--or--later-blue
 [Fourier]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf
 [Spectre]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf
 [report]: docs/whitepaper/README.md
