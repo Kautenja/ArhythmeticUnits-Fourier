@@ -82,6 +82,11 @@ struct SpectrumAnalyzer : Module {
     struct DisplaySpectrum {
         std::array<std::vector<Vec>, NUM_CHANNELS> points;
         size_t count = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        // Benchmark-only metadata travels with the same owned snapshot.
+        uint64_t sequence = 0;
+        int64_t endpoint = -1, published_at = -1;
+#endif
         DisplaySpectrum() {
             for (auto& lane : points) lane.resize(MAX_FFT / 2 + 1);
         }
@@ -114,8 +119,16 @@ struct SpectrumAnalyzer : Module {
 
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    uint64_t benchmark_sequence = 0;
+    int64_t benchmark_now = 0, benchmark_endpoint = -1, benchmark_last_capture = -1;
+#endif
 
  public:
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    /// @brief Benchmark replay only, after the engine barrier; never a UI read.
+    uint64_t benchmark_publications() const { return benchmark_sequence; }
+#endif
     /// @brief UI-only: acquire the latest complete spectrum or retain the last one.
     const DisplaySpectrum& consume_display_spectrum() {
         display_spectrum.consume();
@@ -219,6 +232,11 @@ struct SpectrumAnalyzer : Module {
         // Resume analysis and publish an empty display snapshot.
         is_running = true;
         display_spectrum.writable().count = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        display_spectrum.writable().sequence = ++benchmark_sequence;
+        display_spectrum.writable().endpoint = -1;
+        display_spectrum.writable().published_at = benchmark_now;
+#endif
         display_spectrum.publish();
         // Reset hidden menu options.
         is_fill_enabled = false;
@@ -230,6 +248,9 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Respond to a change in sample rate from the engine.
     inline void onSampleRateChange() final {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_last_capture = benchmark_endpoint = -1;
+#endif
         Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
         analysis.reserve_hop(static_cast<size_t>(std::ceil(sample_rate * 0.3f)));
@@ -491,7 +512,13 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Latch controls and distribute all analysis/curve work over one hop.
     inline void process_coefficients(const simd::float_4& input) {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        if (is_running) benchmark_last_capture = benchmark_now;
+#endif
         if (analysis.is_frame_start()) {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+            benchmark_endpoint = benchmark_last_capture;
+#endif
             Fourier::SpectrumSettings settings;
             settings.length = get_window_length();
             settings.hop = get_hop_length();
@@ -517,6 +544,11 @@ struct SpectrumAnalyzer : Module {
         }, is_running);
         if (complete) {
             display_spectrum.writable().count = coordinates.bins;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+            display_spectrum.writable().sequence = ++benchmark_sequence;
+            display_spectrum.writable().endpoint = benchmark_endpoint;
+            display_spectrum.writable().published_at = benchmark_now;
+#endif
             display_spectrum.publish();
         }
     }
@@ -532,6 +564,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Process a sample.
     /// @param args the sample arguments (sample rate, sample time, etc.)
     void process(const ProcessArgs& args) final {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_now = args.frame;
+#endif
         process_run_button();
         process_coefficients(process_input_signal());
         process_lights(args);

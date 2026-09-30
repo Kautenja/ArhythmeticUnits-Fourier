@@ -141,6 +141,10 @@ inline std::vector<Config> builtin(const Options& o) {
                     && std::string(d.id).find("core-matched-") != 0
                     && std::string(d.id) != "core-double") continue;
             Config c = base(); c.backend = d.id;
+            if (std::string(d.operation) == "shipped-default") {
+                c.workload_schema = 3; c.n = d.fixed_n; c.hop = d.fixed_hop;
+                c.window = "flattop"; c.temporal_mode = "module-seconds"; c.active_ports = d.channels;
+            }
             if (boundary == "transform") c.pass = "complete";
             rows.push_back(c);
         }

@@ -1351,6 +1351,37 @@
       "schedule": "balanced",
       "plan": "exact-size native real unordered plus reorder",
       "dependency": "linked Rack/PFFFT"
+    },
+    {
+      "id": "fourier-default",
+      "kind": "fourier",
+      "boundary": "module",
+      "channels": 4,
+      "layout": "display-coordinates",
+      "provider": "rack-module",
+      "dependency": "first-party source and linked Rack",
+      "max_voices": 16,
+      "normalization": "module-display-coordinate-mapping",
+      "operation": "shipped-default",
+      "fixed_n": 2048,
+      "fixed_hop": 1440,
+      "live": false,
+      "smoothing": false
+    },
+    {
+      "id": "spectre-default",
+      "kind": "spectre",
+      "boundary": "module",
+      "layout": "display-magnitudes",
+      "provider": "rack-module",
+      "dependency": "first-party source and linked Rack",
+      "fixed_n": 2048,
+      "fixed_hop": 1024,
+      "max_voices": 16,
+      "plan": "maximum-capacity-2048",
+      "operation": "shipped-default",
+      "live": false,
+      "smoothing": false
     }
   ]
 }

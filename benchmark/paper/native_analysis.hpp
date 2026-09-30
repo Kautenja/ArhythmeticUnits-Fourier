@@ -14,6 +14,7 @@ namespace Paper {
 struct NoStageObserver {
     template<typename Work> void operator()(size_t, size_t, size_t, Work work) { work(); }
 };
+struct NoNativeSink { template<typename T> void operator()(size_t, size_t, T) {} };
 
 /// @brief One retained ring and one provider plan, shared by batch/hybrid modes.
 /// @details W=C*N+1+2*C*K units. Native transform/reorder is one indivisible
@@ -50,6 +51,16 @@ struct NativeAnalysis {
         // Avoid unequal backend-name capacity in the matched storage pair.
         std::string().swap(config.backend);
     }
+    /// @brief Frame-boundary controls for benchmark-only complete module sinks.
+    void set_controls(Fourier::Window::Function next_window, float octave, float next_alpha, size_t rate) {
+        if (function != next_window || float(config.octave) != octave || config.rate != rate) {
+            dirty = true; function = next_window;
+            gain = 1.f/Fourier::Window::coherent_gain(function);
+            half_band = std::pow(2.f, octave/2.f); band_ratio = std::pow(2.f, octave);
+            config.octave = octave; config.rate = rate;
+        }
+        bands = octave > 0; alpha = next_alpha;
+    }
     void prepare(size_t first, size_t count) {
         while (count) {
             const size_t channel = first/n, at = first%n, source = (origin+at)%retained;
@@ -70,7 +81,8 @@ struct NativeAnalysis {
             first += length; count -= length;
         }
     }
-    void outputs(size_t first, size_t count) {
+    template<typename Sink>
+    void outputs(size_t first, size_t count, Sink& sink) {
         while (count) {
             const size_t channel = first/bins_count, at = first%bins_count;
             const size_t length = std::min(count, bins_count-at);
@@ -87,15 +99,18 @@ struct NativeAnalysis {
                 const size_t k = at+i;
                 const T value = bands ? (sums[high[k]+1]-sums[low[k]])/T(high[k]-low[k]+1) : magnitude[first+i];
                 output[first+i] = alpha == 0.f ? value : alpha*output[first+i]+(1.f-alpha)*value;
+                sink(channel, k, output[first+i]);
             }
             first += length; count -= length;
         }
     }
-    template<typename Observer>
-    void process_observed(float value, Observer& observer) {
-        for (size_t channel = 0; channel < channels; ++channel)
-            ring[channel*retained+head] = T(channels == 1 ? value : input_sample(fixtures[channel], sample, limit));
-        head = (head+1 == retained ? 0 : head+1); ++sample;
+    template<typename Input, typename Observer, typename Sink>
+    void process_inputs(Input input, Observer& observer, Sink& sink, bool capture = true) {
+        if (capture) {
+            for (size_t channel = 0; channel < channels; ++channel) ring[channel*retained+head] = T(input(channel));
+            head = (head+1 == retained ? 0 : head+1);
+        }
+        ++sample;
         if (schedule.phase == 0) {
             origin = (head+retained-n)%retained; cursor = 0;
             for (size_t channel = 0; channel < channels; ++channel) prefix[channel*(bins_count+1)] = 0;
@@ -116,7 +131,7 @@ struct NativeAnalysis {
                 case 0: prepare(first, length); break;
                 case 1: kernel.transform(); break;
                 case 2: magnitudes(first, length); break;
-                case 3: outputs(first, length); break;
+                case 3: outputs(first, length, sink); break;
                 }
             });
             cursor += length; quota -= length;
@@ -124,6 +139,11 @@ struct NativeAnalysis {
         schedule.complete = cursor == schedule.work && schedule.phase == delay();
         if (schedule.complete) dirty = false;
         schedule.advance();
+    }
+    template<typename Observer>
+    void process_observed(float value, Observer& observer) {
+        NoNativeSink sink;
+        process_inputs([&](size_t channel) { return channels == 1 ? value : input_sample(fixtures[channel], sample, limit); }, observer, sink);
     }
     void process(float value) { NoStageObserver observer; process_observed(value, observer); }
     size_t delay() const { return schedule.delay(); }

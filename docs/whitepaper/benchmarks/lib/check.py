@@ -293,6 +293,10 @@ def check(directory, report_data=None):
         if (metadata.get("analysis_accuracy_policy") != "spectrum-norms-v1"
                 or metadata.get("scalar_analysis_audit_policy") != "all-publications-v1"):
             raise ValueError("Explicit workloads require complete numerical policies")
+    module_policy = metadata.get("module_accuracy_policy")
+    if module_policy not in (None, "all-module-outputs-v1") or (
+            "benchmark/paper/module_audit.hpp" in metadata["source_sha256"] and module_policy is None):
+        raise ValueError("Missing or unknown complete-module numerical policy")
     scalar_policy = metadata.get("scalar_analysis_audit_policy")
     if scalar_policy not in (None, "all-publications-v1"):
         raise ValueError("Unknown scalar numerical coverage policy")
@@ -383,6 +387,12 @@ def check(directory, report_data=None):
             from native import validate_audit
             validate_audit(report, config, contract)
             validate_analysis_accuracy(report, config, summary["publication_audit_rows"], contract, "spectrum-norms-v1")
+        if contract["boundary"] == "module" and metadata.get("module_accuracy_policy"):
+            from modules import validate as validate_module
+            if metadata["module_accuracy_policy"] != "all-module-outputs-v1":
+                raise ValueError("Unknown module numerical policy")
+            validate_module(json.loads((directory/run["stderr"]).read_text()), config,
+                            summary["publication_audit_rows"], contract)
         if report_data is not None:
             if config.get("workload_schema") == 3:
                 from metrics import read as scheduling_metrics

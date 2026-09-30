@@ -18,9 +18,9 @@ preparation checks before dependent work; retain decisions and validation
 evidence in this spec. Completion ends at the runnable handoff, without
 requiring benchmark numbers, a performance winner, or manuscript changes.
 
-The current implementation request covers Phases 1--3. Their completion
-evidence is recorded below; unchecked phases remain future work. No measurements
-have been collected by the agent. The user prefers strengthening the full paper before
+The current implementation request covers all remaining phases, completed and
+committed sequentially with evidence below. No measurements have been collected
+by the agent. The user prefers strengthening the full paper before
 choosing a venue and retaining the M1 Pro as the primary test platform. A second
 architecture is optional follow-up; cross-architecture claims require actual
 measurements on that architecture.
@@ -315,42 +315,42 @@ under the same declared tasks. No required baseline is omitted for being faster.
 Primary files: [module adapters][modules], `benchmark/paper/benchmark.cpp`,
 benchmark-only Rack-engine integration, and `test/paper/`/`test/rack/` verifiers.
 
-- [ ] Add explicit shipped-default and controlled-comparison module modes.
+- [x] Add explicit shipped-default and controlled-comparison module modes.
       Record actual quantized values after applying controls. Fourier defaults
       include four lanes, N=2048, a nominal 30 ms hop, and Flattop; Spectre
       has N=2048/H=1024. Cover Fourier N=16384 with the nominal 5 ms hop.
       Distinguish active ports from polyphonic voices summed into each port.
-- [ ] Replace selected-bin module checks with an untimed all-output audit of
+- [x] Replace selected-bin module checks with an untimed all-output audit of
       input normalization, DC blocking/gain, spectra, smoothing, coordinate
       mapping, and publication. Use independent expectations where possible;
       checking production output against the same production calculation is
       insufficient. Keep timing free of reference work and audit polling.
-- [ ] Build a headless harness using the actual pinned Rack engine. Include
+- [x] Build a headless harness using the actual pinned Rack engine. Include
       current modules and comparable benchmark-only native/hybrid analyzer
       modules with matched conditioning, display preparation, and publication.
       A trivial-sink native analyzer cannot stand in for a complete module.
-- [ ] Prepare cases with 1/4 engine threads, 1/4/16 analyzers, D=64/256, 48 kHz,
+- [x] Prepare cases with 1/4 engine threads, 1/4/16 analyzers, D=64/256, 48 kHz,
       aligned/staggered phases, and a fixed background-DSP workload sweep.
       D=16 or higher-rate host stress extensions may follow pilot review in a
       later task. Specify identical background workloads across contenders;
       do not equalize total utilization separately and hide extra analyzer cost.
-- [ ] Implement recording of full engine-block duration, aggregate CPU cost,
+- [x] Implement recording of full engine-block duration, aggregate CPU cost,
       hop peaks, publication age, and budget misses. An analyzer-free engine is
       a useful overhead control, not a value automatically subtracted from
       observations. Verify engine barriers, worker policy, lifecycle locking,
       and FPU mode against retained Rack source. Do not assume ideal
       cost/thread-count scaling.
-- [ ] Prepare concurrent single-consumer workloads at representative 30/60 Hz
+- [x] Prepare concurrent single-consumer workloads at representative 30/60 Hz
       rates, with deliberate stalls, and recording for producer impact,
       consumed-spectrum age, skipped updates, and snapshot consistency.
       Validate ownership and snapshot correctness untimed. Preallocate storage;
       do not add a second mailbox consumer or synchronize unsafely through the
       module's other fields. Separate headless consumption from actual rendering.
-- [ ] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
+- [x] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
       transitions. Separate lifecycle allocations and host-lock stalls from
       steady sample processing. Include silence decay under recorded FPU modes.
       Verify single-producer ownership during host-serialized reset/publication.
-- [ ] Use deterministic concurrency tests and the existing mailbox TSan check
+- [x] Use deterministic concurrency tests and the existing mailbox TSan check
       outside timing. An eventual device-underrun claim additionally requires
       a user-run audio-device experiment with recorded device/driver/buffer
       policy and overload telemetry. Device experiments are a later extension;
@@ -619,7 +619,7 @@ Those tasks must not run automatically as part of this preparation spec.
       and failure behavior verified with untimed checks and fixtures.
 - [x] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
 - [x] Phase 3: native and matched scheduling controls numerically validated.
-- [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
+- [x] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
 - [ ] Phase 5: experimental variants prepared or explicitly deferred; no
       measured performance selection required.
@@ -924,3 +924,67 @@ completion diary or mark preparation COMPLETE merely because planning passed.
 [host-snapshot]: ../docs/whitepaper/data/comparison-012/host/pre-confirm-01.json
 [reviews]: ../docs/whitepaper/reviews/2026-09-30-Opus-5-5-M/meta-review.md
 [reliability-chat]: codex://threads/01a0f32a-4bf7-7fd0-bfc2-c641595e07d8
+
+### Phase 4 Implementation: September 30, 2026
+
+Added explicit shipped-default module identities and effective float panel-value
+records. Independent replay checks all active and inactive lanes, input voltage
+sums, AC/DC paths, non-unit gains, spectra, octave/temporal smoothing, Fourier
+coordinates and publication cadence. Controlled Fourier N=16384/H=240 and both
+actual defaults pass. Existing module timings now carry a separate versioned
+module numerical policy; historical artifacts retain their old coverage.
+
+The [engine guide](../docs/whitepaper/benchmarks/guides/engine.md) defines the
+actual pinned Rack `stepBlock` boundary, engine wrappers, native complete-module
+controls, fixed background load, consumer cadence/stalls, allocation replay and
+lifecycle behavior. All engine cases use preallocated observation storage and a
+single mailbox consumer. Held-snapshot tests cover publication and serialized
+reset while another thread owns the previous spectrum. Replay checks every
+published bin and timestamp; consumer hashes check held-buffer stability without
+assuming two FFTW plans reproduce identical rounding.
+
+Source inspection of Rack `8c33d966d329e4a6e354593b2b5f9ac2df5a03bd` confirms
+its per-sample worker barriers, inherited worker scheduling, block mutex/shared
+lifecycle lock, exclusive reset/rate lock and FPU reset. The runtime sidecar
+observes the caller's actual policy; worker FPU/scheduling is source-derived.
+Empty-engine controls, 1/4 workers, 1/4/16 analyzers, D=64/256, alignment and fixed
+0/16/64-filter loads are supported. Engine CPU accounting includes the measured
+loop's workers and consumer; full block observations support budget misses and
+frame-intersection peaks. Consumption ages are bounded using block progress;
+final drain is labeled separately. Lifecycle passes are separate and serial:
+lock acquisition is included, but UI-induced contention is not isolated.
+
+The lifecycle oracle initially advanced Fourier's DC history while frozen.
+Inspection showed conditioning also pauses, while Fourier's analysis continues.
+Correcting that independent model made freeze/resume pass without changing the
+module's DSP behavior or tolerances. Both native controls preserve display
+history on sample-rate change and keep mailbox storage alive through reset.
+
+Validation run (all timing fixtures use synthetic clocks):
+
+```shell
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_workload_controls.py
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_engine_host.py
+CXX='clang++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer' python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_engine_host.py
+make test-rack
+make test-mailbox INSTRUMENT=tsan
+make benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
+make -j2
+git diff --check
+```
+
+The Python suite passed 113 tests with the existing optional plotting skip;
+module fixtures passed five tests; engine fixtures passed four normally and
+under ASan/UBSan. The headless Rack suites and mailbox TSan check passed. The
+plugin and both-provider benchmark builds succeeded. Existing SDK deprecation
+warnings and the local FFTW deployment-target warning remain. No Rack GUI,
+audio device, performance pass, calibration campaign or user pilot was run.
+
+Scope limitations are explicit in the guide: benchmark-only timestamp stores
+add cost; native module shells retain unused production storage; lifecycle
+allocation replay counts C++ allocations only; headless consumers hash values
+rather than render. Source-independent all-output replay and deterministic
+ownership checks satisfy this preparation gate, not a claim of measured speedup
+or complete real-time safety. Phase 6 supplies the focused collection matrix;
+Phase 7 remains responsible for the protected offline launch package.

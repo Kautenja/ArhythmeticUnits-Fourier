@@ -60,6 +60,23 @@ inline std::vector<float> signal() {
     return values;
 }
 
+/// @brief Retain dimensions and requested controls beside the resolved contract.
+inline std::string workload_config_json(const Config& c) {
+    std::ostringstream out;
+    if (c.workload_schema == 3) {
+        auto controls = workload_controls_json(c); controls.pop_back();
+        out << controls << ',';
+    } else out << '{';
+    out << "\"backend\":\"" << c.backend << "\",\"pass_name\":\"" << c.pass
+        << "\",\"alignment\":\"" << c.alignment << "\",\"state\":\"" << c.state
+        << "\",\"n\":" << c.n << ",\"hop\":" << c.hop << ",\"block\":" << c.block
+        << ",\"count\":" << c.count << ",\"load\":" << c.load << ",\"voices\":" << c.voices
+        << ",\"rate\":" << c.rate << ",\"smooth\":" << (c.smooth ? 1 : 0)
+        << ",\"cache_mib\":" << c.cache_mib << ",\"callback_offset\":" << c.callback_offset
+        << ",\"callbacks\":" << c.callbacks << ",\"warm_hops\":" << c.warm_hops << '}';
+    return out.str();
+}
+
 /// @brief Finite binary32 fixtures, bounded by one, shared by every precision.
 /// @details Decay and impulse are one-shot absolute sample events; other signals
 /// repeat the retained 65536-sample sequence. No randomness runs in measurement.

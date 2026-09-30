@@ -43,8 +43,11 @@ def validate(config, descriptor):
         raise ValueError("Invalid temporal smoothing mode/value")
     if not 0 <= alpha(config) < 1:
         raise ValueError("Temporal alpha must remain below one after binary32 conversion")
-    if config["window"] not in ("hann", "boxcar", "blackman-harris") or config["fixture"] not in FIXTURES:
+    if config["window"] not in ("hann", "boxcar", "blackman-harris", "flattop") or config["fixture"] not in FIXTURES:
         raise ValueError("Unknown window/fixture")
+    if descriptor["operation"] == "shipped-default" and (
+            config["window"] != "flattop" or config["octave"] or config["temporal_value"] or config["rate"] != 48000):
+        raise ValueError("Shipped-default module controls must remain at their 48 kHz defaults")
     for key, low, high in (("fixture_seed", 0, 2**32-1), ("decay_samples", 1, 10**9),
                            ("active_ports", 1, descriptor["channels"])):
         if type(config[key]) is not int or not low <= config[key] <= high:

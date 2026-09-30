@@ -47,7 +47,7 @@ mode also covers the matched current-core pair, new PFFFT native batch/hybrid,
 and optional vDSP/FFTW native batch adapters; `--list` states missing providers.
 See [native baselines and matched controls](baselines.md) for their boundaries. Fast is a focused development selection, not a ranking across these
 different channel/module boundaries. The
-full profile contains 218 workloads with Rack/PFFFT alone and 264 with both
+full profile contains 220 workloads with Rack/PFFFT alone and 266 with both
 optional FFTW and vDSP enabled. Its additional sizes and hops provide checks
 outside the fixed tuning set; once used for tuning they are no longer unseen
 validation cases. Keep additional configurations or another host for final

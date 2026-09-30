@@ -24,6 +24,7 @@ template<typename Config> Fourier::Window::Function window_function(const Config
     if (c.workload_schema < 3 || c.window == "hann") return Fourier::Window::Function::Hann;
     if (c.window == "blackman-harris") return Fourier::Window::Function::BlackmanHarris;
     if (c.window == "boxcar") return Fourier::Window::Function::Boxcar;
+    if (c.window == "flattop") return Fourier::Window::Function::Flattop;
     throw std::runtime_error("Unsupported workload window");
 }
 template<typename Config> float octave_width(const Config& c) {
@@ -62,6 +63,8 @@ void validate_workload_controls(const Config& c, const Descriptor& d) {
         check(c.temporal_mode == "module-seconds" && c.temporal_value <= 2.5);
         // These are exact public panel settings; other widths fail explicitly.
         check(c.octave == 0 || c.octave == 1./3 || c.octave == 1 || c.octave == 2);
+        if (std::string(d.operation) == "shipped-default")
+            check(c.window == "flattop" && c.octave == 0 && c.temporal_value == 0 && c.rate == 48000);
     }
 }
 

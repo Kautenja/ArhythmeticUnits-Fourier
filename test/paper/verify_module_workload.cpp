@@ -1,14 +1,17 @@
 // Untimed module controls and active-port/voice wiring; no benchmark launch.
 // Copyright 2026 Arhythmetic Units
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "../../benchmark/paper/modules.hpp"
+#include "../../benchmark/paper/module_audit.hpp"
 using namespace Paper;
 
 template<typename Module>
-void verify(Config c) {
+void verify(Config c, bool ac = true) {
     validate_backend(c);
     Paper::Context context(c.rate);
     Host<Module> host(c);
+    host.module.is_ac_coupled = ac;
+    for (size_t port = 0; port < host.module.inputs.size(); ++port)
+        host.module.params[Module::PARAM_INPUT_GAIN+port].setValue(.25f+.25f*port);
     require(host.module.get_window_function() == window_function(c), "Module window control changed");
     require(std::abs(host.module.get_time_smoothing_alpha()-temporal_alpha(c)) < 1e-6,
         "Module time knob convention changed");
@@ -16,7 +19,13 @@ void verify(Config c) {
         require(host.module.inputs[port].channels == (port < c.active_ports ? int(c.voices) : 0),
             "Active ports/voices were ignored");
     const auto input = signal(c);
-    for (size_t i = 0; i < 2*c.hop; ++i) host.process(input_sample(c, input, i));
+    SynthesisAccuracy accuracy; std::vector<std::string> controls;
+    ModuleAudit<Module> audit(accuracy, controls);
+    for (size_t i = 0; i < 4*c.hop; ++i) {
+        host.process(input_sample(c, input, i));
+        audit(host, input, i);
+    }
+    require(accuracy.analysis.vectors == 4*host.module.inputs.size(), "Missing module output audit");
     host.check();
 }
 int main() {
@@ -25,9 +34,9 @@ int main() {
     c.callbacks = 32; c.window = "blackman-harris"; c.temporal_mode = "module-seconds"; c.temporal_value = .1;
     for (const std::string fixture : {"silence", "noise"}) {
         c.fixture = fixture; c.backend = "fourier"; c.active_ports = 2; c.octave = 1;
-        verify<SpectrumAnalyzer>(c);
+        verify<SpectrumAnalyzer>(c); verify<SpectrumAnalyzer>(c, false);
         c.backend = "spectre"; c.active_ports = 1; c.octave = 0;
-        verify<Spectrogram>(c);
+        verify<Spectrogram>(c); verify<Spectrogram>(c, false);
     }
     std::cout << "Module controls and silence checks passed without timing\n";
 }

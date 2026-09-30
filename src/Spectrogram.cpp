@@ -80,6 +80,9 @@ struct Spectrogram : Module {
     struct DisplayColumn {
         std::array<float, N_FFT / 2 + 1> values{};
         uint64_t revision = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        int64_t endpoint = -1, published_at = -1;
+#endif
     };
 
  private:
@@ -99,11 +102,18 @@ struct Spectrogram : Module {
         new Fourier::DisplayMailbox<DisplayColumn>[N_STFT]};
     /// Monotonic engine sequence for scan-line placement; never serialized.
     uint64_t display_revision = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    int64_t benchmark_now = 0, benchmark_endpoint = -1;
+#endif
 
     /// @brief Publish one column without exposing mutable engine storage.
     void publish_column(size_t index) {
         auto& column = display_columns[index].writable();
         column.revision = ++display_revision;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        column.endpoint = benchmark_endpoint;
+        column.published_at = benchmark_now;
+#endif
         display_columns[index].publish();
     }
 
@@ -239,6 +249,9 @@ struct Spectrogram : Module {
 
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_endpoint = -1;
+#endif
         Module::onReset();
         // Reset instance state of the module and menu preferences.
         is_running = true;
@@ -359,6 +372,10 @@ struct Spectrogram : Module {
     /// @returns The current hop index in [0, N_STFT - 1].
     inline const uint32_t& get_hop_index() const { return hop_index; }
 
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    /// @brief Benchmark replay only, after the engine barrier; never a UI read.
+    uint64_t benchmark_publications() const { return display_revision; }
+#endif
     /// @brief UI-only: acquire a newly published history column, if available.
     const DisplayColumn* consume_display_column(size_t index, bool include_current = false) {
         if (const auto column = display_columns[index].consume()) return column;
@@ -513,6 +530,9 @@ struct Spectrogram : Module {
     /// @brief Write scheduled bins directly into the next history column.
     inline void process_coefficients(float input) {
         if (analysis.is_frame_start()) {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+            benchmark_endpoint = benchmark_now;
+#endif
             Fourier::SpectrumSettings settings;
             settings.length = N_FFT;
             settings.hop = get_hop_length();
@@ -534,6 +554,9 @@ struct Spectrogram : Module {
     /// @brief Process a sample.
     /// @param args the sample arguments (sample rate, sample time, etc.)
     void process(const ProcessArgs& args) final {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_now = args.frame;
+#endif
         // Handle presses to the run button.
         if (run_trigger.process(params[PARAM_RUN].getValue()))
             is_running = !is_running;

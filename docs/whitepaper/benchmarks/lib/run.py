@@ -295,6 +295,7 @@ def run_campaign(args, output, configs, features, external_inputs, registry, pha
         from study import read_freeze
         metadata["study_freeze"] = read_freeze(args.freeze)
     metadata["analysis_accuracy_policy"] = "spectrum-norms-v1"
+    metadata["module_accuracy_policy"] = "all-module-outputs-v1"
     metadata["scalar_analysis_audit_policy"] = "all-publications-v1"
     if any(c.get("transition_suite") for c in configs):
         metadata["transition_policy"] = "fourier-transitions-v1"

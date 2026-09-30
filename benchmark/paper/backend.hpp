@@ -30,6 +30,7 @@ void validate_backend(const Config& c) {
         && (!d.power_of_two || !(c.n&(c.n-1))) && (!d.fixed_n || c.n == d.fixed_n)
         && (!d.fixed_hop || c.hop == d.fixed_hop));
     check(c.voices <= d.max_voices && (!c.smooth || d.smoothing) && (c.state != "live" || d.live));
+    check(std::string(d.operation) != "shipped-default" || c.workload_schema == 3);
     const std::string kind(d.kind), boundary(d.boundary), model(d.step_model);
     if (!c.transition_suite.empty()) {
         check(c.backend == "core-float" || c.backend == "core-double"

@@ -72,6 +72,8 @@ def validate_config(config, registry=None, measurement=False):
         validate_transition_config(config, registry)
     d = descriptor(config["backend"], registry)
     validate_controls(config, d)
+    if d["operation"] == "shipped-default" and config.get("workload_schema") != 3:
+        raise ValueError("Shipped defaults require explicit v3 controls")
     bounds = dict(n=(d["size_min"], d["size_max"]), hop=(1, 65536), block=(1, 65536),
                   count=(1, 64), load=(0, 4096), voices=(1, d["max_voices"]),
                   rate=(8000, 192000), cache_mib=(0, 256), smooth=(0, 1))

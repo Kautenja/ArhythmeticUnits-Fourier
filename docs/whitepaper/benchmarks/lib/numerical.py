@@ -70,7 +70,7 @@ def coverage_tables(data, output):
     rows = []
     for record in data["records"]:
         config, contract = record["config"], record["contract"]
-        if contract["boundary"] != "analysis":
+        if contract["boundary"] not in ("analysis", "module"):
             continue
         for process in record["processes"]:
             accuracy = process.get("accuracy") or {}
@@ -87,6 +87,10 @@ def coverage_tables(data, output):
                 from native import validate_audit
                 validate_audit(accuracy, config, contract)
                 status, coverage_policy = "full; simultaneous channels per instance", "native-all-channels-v1"
+            elif accuracy.get("module_policy"):
+                from modules import validate
+                validate(accuracy, config, publications, contract)
+                status, coverage_policy = "full; independent conditioning and display mapping", "all-module-outputs-v1"
             elif analysis:
                 # These counts were validated by check.py on archive ingestion.
                 # Never confer the new scalar policy on an older native archive.

@@ -26,6 +26,8 @@
 #include "transitions.hpp"
 #include "native_analysis.hpp"
 #include "native_diagnostics.hpp"
+#include "module_audit.hpp"
+#include "engine_host.hpp"
 
 namespace Paper {
 /// @brief Harness/load control, labeled separately from spectral computation.
@@ -172,8 +174,8 @@ void execute(const Config& c, bool provider_info = false, const std::string& dia
         else if (descriptor.channels == 4) stream<Core<simd::float_4>>(c);
         else if (precision == "float") scalar_analysis_stream<float, Core<float>>(c);
         else scalar_analysis_stream<double, Core<double>>(c);
-    } else if (kind == "fourier") stream<Host<SpectrumAnalyzer>>(c);
-    else if (kind == "spectre") stream<Host<Spectrogram>>(c);
+    } else if (kind == "fourier") module_stream<SpectrumAnalyzer>(c);
+    else if (kind == "spectre") module_stream<Spectrogram>(c);
     else if (kind == "fft") {
         if (precision == "float") transform<float, Fourier::OnTheFlyFFT<float>>(c, false, false);
         else transform<double, Fourier::OnTheFlyFFT<double>>(c, false, false);
@@ -193,6 +195,12 @@ void execute(const Config& c, bool provider_info = false, const std::string& dia
 int main(int argc, char** argv) {
     using namespace Paper;
     try {
+        if (argc == 3 && std::string(argv[1]) == "--engine-resources") {
+            const auto json = Development::read_json(argv[2]);
+            std::cout << EngineHost::resources(EngineHost::parse(json.get())) << '\n'; return 0;
+        }
+        if (argc == 3 && (std::string(argv[1]) == "--engine" || std::string(argv[1]) == "--engine-verify"))
+            return EngineHost::run(argv[2], std::string(argv[1]) == "--engine-verify");
         if (argc > 1 && std::string(argv[1]) == "--development")
             return Development::run(argc-2, argv+2, argv[0], [](const Config& c, bool info) { execute(c, info); }, verify_all, []() {
                 verify_analyzer<float>();

@@ -4,6 +4,7 @@
 #ifndef ARHYTHMETIC_UNITS_FOURIER_PAPER_MODULES_HPP_
 #define ARHYTHMETIC_UNITS_FOURIER_PAPER_MODULES_HPP_
 
+#define FOURIER_BENCHMARK_OBSERVABILITY
 #include "../../src/SpectrumAnalyzer.cpp"
 #include "../../src/Spectrogram.cpp"
 #include "protocol.hpp"
@@ -53,7 +54,7 @@ void check(SpectrumAnalyzer& module, size_t n) {
     const auto& snapshot = module.consume_display_spectrum();
     require(snapshot.count == n/2+1, "Wrong module spectrum size");
     // The existing logarithmic display maps zero magnitude to -infinity.
-    // This is a coordinate audit, not the module's pending all-bin oracle.
+    // The separate replay oracle also checks every value against an independent spectrum.
     const bool logarithmic = module.get_magnitude_scale() != MagnitudeScale::Linear;
     for (const auto& lane : snapshot.points)
         for (size_t bin = 0; bin < snapshot.count; ++bin)
@@ -78,13 +79,20 @@ struct Host {
     size_t limit;
     size_t cursor = 0;
     size_t phase = 0, frames = 0;
+    size_t polled_cursor = 0;
+    bool publication_ready = false;
     explicit Host(const Config& c) : config(c), limit(input_limit(c)) {
-        configure(module, c);
-        module.set_window_function(window_function(c));
-        const float octave = octave_width(c);
-        module.set_frequency_smoothing(octave == 0 ? FrequencySmoothing::None :
-            octave == 1 ? FrequencySmoothing::_1_1 : octave == 2 ? FrequencySmoothing::_2_1 : FrequencySmoothing::_1_3);
-        module.set_time_smoothing(c.workload_schema == 3 ? float(c.temporal_value) : c.smooth ? 0.1f : 0.f);
+        if (std::string(backend_descriptor(c.backend).operation) == "shipped-default") {
+            require(c.workload_schema == 3 && c.window == "flattop" && c.octave == 0
+                && c.temporal_value == 0 && c.hop == module.get_hop_length(), "Shipped defaults differ from requested controls");
+        } else {
+            configure(module, c);
+            module.set_window_function(window_function(c));
+            const float octave = octave_width(c);
+            module.set_frequency_smoothing(octave == 0 ? FrequencySmoothing::None :
+                octave == 1 ? FrequencySmoothing::_1_1 : octave == 2 ? FrequencySmoothing::_2_1 : FrequencySmoothing::_1_3);
+            module.set_time_smoothing(c.workload_schema == 3 ? float(c.temporal_value) : c.smooth ? 0.1f : 0.f);
+        }
         for (size_t port = 0; port < module.inputs.size(); ++port) {
             module.inputs[port].channels = c.workload_schema < 3 || port < c.active_ports ? c.voices : 0;
             if (c.workload_schema == 3 && c.fixture == "independent") input_signals.push_back(signal(c, port));
@@ -110,7 +118,13 @@ struct Host {
         phase = (phase+1)%config.hop;
     }
     size_t delay() const { return config.hop-1; }
-    bool published() { return publication.poll(module); }
+    bool published() {
+        if (polled_cursor != cursor) {
+            publication_ready = publication.poll(module);
+            polled_cursor = cursor;
+        }
+        return publication_ready;
+    }
     void barrier() const { observe(module); }
     void check() { Paper::check(module, config.n); }
 };
