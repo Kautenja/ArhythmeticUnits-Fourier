@@ -26,6 +26,11 @@ def alpha(config):
     return float32(math.exp(float32(float32(-10*float32(config["hop"]/config["rate"]))/value))) if value else 0.
 
 
+def completion_horizon(config):
+    divisor = {'native-horizon-quarter-v1': 4, 'native-horizon-half-v1': 2}.get(config.get('experimental_policy'), 1)
+    return (config['hop']+divisor-1)//divisor
+
+
 def validate(config, descriptor):
     if "workload_schema" not in config:
         if FIELDS & config.keys():
@@ -52,7 +57,10 @@ def validate(config, descriptor):
                            ("active_ports", 1, descriptor["channels"])):
         if type(config[key]) is not int or not low <= config[key] <= high:
             raise ValueError("Invalid explicit control: " + key)
-    if (config["experimental_policy"] != "existing" or config["execution_regime"] not in ("continuous", "paced")
+    experimental = config["experimental_policy"]
+    supported = experimental == "existing" or (descriptor['kind'] == 'native-analysis' and descriptor['schedule'] == 'balanced'
+        and experimental in ('native-horizon-quarter-v1', 'native-horizon-half-v1'))
+    if (not supported or config["execution_regime"] not in ("continuous", "paced")
             or (config["execution_regime"] == "paced" and config["pass_name"] != "callback")):
         raise ValueError("Unavailable experimental/execution policy")
     if config["fixture"] == "independent" and descriptor["channels"] == 1:

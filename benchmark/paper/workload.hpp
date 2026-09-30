@@ -37,6 +37,14 @@ template<typename Config> float temporal_alpha(const Config& c) {
     return c.temporal_value == 0 ? 0.f : std::exp(-10.f*(float(c.hop)/c.rate)/float(c.temporal_value));
 }
 
+/// @brief Fixed native completion horizon; ceil division preserves 1 <= Hc <= H.
+/// Capture and endpoint cadence continue over the full hop, including idle calls.
+template<typename Config> size_t completion_horizon(const Config& c) {
+    const size_t divisor = c.experimental_policy == "native-horizon-quarter-v1" ? 4
+        : c.experimental_policy == "native-horizon-half-v1" ? 2 : 1;
+    return (c.hop+divisor-1)/divisor;
+}
+
 template<typename Config, typename Descriptor>
 void validate_workload_controls(const Config& c, const Descriptor& d) {
     if (c.workload_schema == 2) return;
@@ -54,7 +62,9 @@ void validate_workload_controls(const Config& c, const Descriptor& d) {
     check(c.fixture == "mixed" || c.fixture == "silence" || c.fixture == "decay" ||
         c.fixture == "impulse" || c.fixture == "dc" || c.fixture == "nyquist" ||
         c.fixture == "off-bin" || c.fixture == "weak" || c.fixture == "noise" || c.fixture == "independent");
-    check(c.experimental_policy == "existing" && (c.execution_regime == "continuous" ||
+    check((c.experimental_policy == "existing" || (kind == "native-analysis" && std::string(d.schedule) == "balanced"
+        && (c.experimental_policy == "native-horizon-quarter-v1" || c.experimental_policy == "native-horizon-half-v1")))
+        && (c.execution_regime == "continuous" ||
         (c.execution_regime == "paced" && c.pass == "callback")));
     check(c.active_ports >= 1 && c.active_ports <= size_t(d.channels));
     check(boundary == "module" || c.active_ports == size_t(d.channels));

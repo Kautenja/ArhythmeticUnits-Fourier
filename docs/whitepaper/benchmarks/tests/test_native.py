@@ -89,6 +89,25 @@ class NativeTests(unittest.TestCase):
                 changed = copy.deepcopy(report); changed["analysis"]["values"] -= 1
                 with self.assertRaises(ValueError): validate_synthesis_accuracy(changed, config, summary["publication_audit_rows"], self.registry, "spectrum-norms-v1")
 
+    def test_completion_horizons_keep_cadence_and_all_channel_coverage(self):
+        for backend in ('pffft-native-hybrid-float', 'vdsp-native4-hybrid-float', 'fftw-native4-hybrid-float'):
+            if not self.registry[backend]['available']: continue
+            for policy, delay in (('native-horizon-quarter-v1', 9), ('native-horizon-half-v1', 18)):
+                config = dict(self.config(backend), experimental_policy=policy)
+                contract = resolve_contract(config, self.registry)
+                self.assertEqual(contract['publication_delay_samples'], delay)
+                result = self.invoke('stream', backend, policy)
+                raw = self.root/'raw.csv'; raw.write_text(result.stdout)
+                summary, _ = read_observations(raw, config, self.registry)
+                report = json.loads(result.stderr)
+                validate_synthesis_accuracy(report, config, summary['publication_audit_rows'], self.registry, 'spectrum-norms-v1')
+                validate_audit(report, config, contract)
+                trace = json.loads(self.invoke('trace', backend, policy).stdout)
+                validate_diagnostic(trace, self.registry, allow_fixture=True)
+                self.assertEqual(trace['contract']['publication_delay_samples'], delay)
+                self.assertTrue(all(e['sample'] % config['hop'] <= delay for e in trace['events']))
+                for info in report['provider_instances']: validate_provider_info(info, self.registry[backend], config)
+
     def test_diagnostics_preserve_units_and_use_fake_clock_only(self):
         backend = "pffft-native-hybrid-float"
         trace = json.loads(self.invoke("trace", backend).stdout)

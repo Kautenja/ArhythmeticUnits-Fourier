@@ -16,20 +16,21 @@ namespace Paper {
 /// @brief Fixed-cadence batch or balanced execution of a known work sequence.
 /// @details Work units can include bulk buffer calls; this is not a WCET model.
 struct FrameSchedule {
-    size_t hop, work, base, remainder, phase = 0, error = 0;
+    size_t hop, horizon, work, base, remainder, phase = 0, error = 0;
     bool batch, complete = false;
-    FrameSchedule(const Config& c, size_t units) : hop(c.hop), work(units),
-        base(units/c.hop), remainder(units%c.hop),
+    FrameSchedule(const Config& c, size_t units) : hop(c.hop), horizon(completion_horizon(c)), work(units),
+        base(units/horizon), remainder(units%horizon),
         batch(std::string(backend_descriptor(c.backend).schedule) == "immediate") {}
     size_t quota() {
         complete = false;
         if (batch) return phase == 0 ? work : 0;
+        if (phase >= horizon) return 0;
         error += remainder;
-        const size_t extra = error >= hop;
-        if (extra) error -= hop;
+        const size_t extra = error >= horizon;
+        if (extra) error -= horizon;
         return base + extra;
     }
-    size_t delay() const { return batch ? 0 : hop-1; }
+    size_t delay() const { return batch ? 0 : horizon-1; }
     void advance() { phase = (phase+1)%hop; }
 };
 

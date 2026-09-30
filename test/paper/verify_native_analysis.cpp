@@ -14,7 +14,53 @@ Config configuration(const std::string& backend) {
 }
 
 template<typename Kernel>
+void verify_horizons(const std::string& name) {
+    using T = typename Kernel::Scalar;
+    for (size_t hop : {1u, 37u, 257u, 65536u}) for (const std::string policy : {"native-horizon-quarter-v1", "native-horizon-half-v1"}) {
+        Config c = configuration(name+"hybrid-"+(sizeof(T) == 4 ? "float" : "double"));
+        c.workload_schema = 3; c.hop = hop; c.callbacks = (4*hop+c.block-1)/c.block; c.active_ports = Kernel::channels;
+        c.fixture = Kernel::channels == 4 ? "independent" : "noise";
+        c.octave = 1./3; c.temporal_value = .8; c.experimental_policy = policy;
+        c.window = hop == 1 ? "boxcar" : hop == 37 ? "hann" : hop == 257 ? "blackman-harris" : "flattop";
+        validate_backend(c);
+        Config immediate = c; immediate.backend = name+"batch-"+(sizeof(T) == 4 ? "float" : "double");
+        immediate.experimental_policy = "existing";
+        NativeAnalysis<Kernel> batch(immediate), tested(c);
+        const auto input = signal(c); std::vector<T> expected(tested.output.size());
+        const size_t total = std::max(size_t(3*hop), 2*c.n);
+        AnalysisAccuracy comparison;
+        for (size_t s = 0; s < total; ++s) {
+            PaperResources::reset_phase(); PaperResources::active = true;
+            batch.process(input_sample(c, input, s)); tested.process(input_sample(c, input, s));
+            PaperResources::active = false;
+            require(PaperResources::counts.allocations == 0, "Horizon sample work allocated");
+            if (batch.published()) expected = batch.output;
+            require(tested.published() == (s%hop == completion_horizon(c)-1), "Horizon cadence changed");
+            if (tested.published()) for (size_t channel = 0; channel < Kernel::channels; ++channel) {
+                const size_t begin = channel*tested.bins_count;
+                const std::vector<T> reference(expected.begin()+begin, expected.begin()+begin+tested.bins_count);
+                comparison.compare(reference, [&](size_t k) { return tested.output[begin+k]; }, s-tested.delay(), channel);
+            }
+        }
+        require(comparison.vectors, "Missing horizon outputs");
+        // Cancellation/reconfiguration is explicit reconstruction, never an
+        // in-flight denominator mutation. Change H/Hc while the old cache is dirty.
+        std::unique_ptr<NativeAnalysis<Kernel>> cancelled(new NativeAnalysis<Kernel>(c));
+        cancelled->process(0);
+        c.hop = 41; c.experimental_policy = policy == "native-horizon-quarter-v1" ? "native-horizon-half-v1" : "native-horizon-quarter-v1";
+        cancelled.reset(new NativeAnalysis<Kernel>(c));
+        SynthesisAccuracy accuracy; std::vector<std::string> providers;
+        NativeAudit<Kernel> audit(c, accuracy, providers);
+        for (size_t sample = 0; sample < 4*c.hop; ++sample) {
+            cancelled->process(input_sample(c, input, sample)); audit(*cancelled, input, sample);
+        }
+        require(accuracy.analysis.vectors == 4*Kernel::channels, "Missing reset/horizon replay");
+    }
+}
+
+template<typename Kernel>
 void verify_native(const std::string& name) {
+    verify_horizons<Kernel>(name);
     using T = typename Kernel::Scalar;
     for (size_t hop : {1u, 37u, 257u, 65536u}) {
         Config c = configuration(name+"batch-"+(sizeof(T) == 4 ? "float" : "double"));
@@ -97,12 +143,14 @@ template<typename Kernel> void emit(const Config& c, const std::string& mode) {
 
 int main(int argc, char** argv) {
     try {
-        if (argc == 3) {
+        if (argc == 3 || argc == 4) {
             Config c = configuration(argv[2]); c.workload_schema = 3;
+            if (argc == 4) c.experimental_policy = argv[3];
             require(std::string(backend_descriptor(c.backend).precision) == "float", "Fixture CLI supports float; direct audits cover both precisions");
             c.active_ports = backend_descriptor(c.backend).channels;
             c.fixture = c.active_ports == 4 ? "independent" : "noise";
             const std::string mode(argv[1]);
+            validate_backend(c);
             if (mode == "stream") { c.state = "steady"; c.count = 2; c.alignment = "staggered"; c.callback_offset = 3; c.warm_hops = 2; }
             if (c.backend.find("pffft-native-unordered") == 0) emit<PffftNative<true>>(c, mode);
             else if (c.backend.find("pffft") == 0) emit<PffftNative<false>>(c, mode);

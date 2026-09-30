@@ -136,3 +136,6 @@ retains the sleep/power guard separately. Retain those files and source/build id
 when interpreting a diagnostic. The study's final prepared offline launcher
 and pilot selections remain later phases; none of these preparation checks
 collects performance results or updates the paper.
+
+Native hybrid completion-horizon controls and explicit candidate deferrals are
+listed in [Scheduling Experiment Readiness](scheduling-experiments.md).

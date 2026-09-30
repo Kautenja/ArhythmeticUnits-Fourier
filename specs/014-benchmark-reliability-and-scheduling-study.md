@@ -367,33 +367,33 @@ following in order; record readiness or a reasoned deferral for each. Performanc
 evaluation, weight tuning, tradeoff curves, and winner selection happen after
 the user returns measurements. Missing candidates limit later claims.
 
-- [ ] Native sub-FFT scheduling: bounded native leaves, scheduled twiddles,
+- [x] Native sub-FFT scheduling: bounded native leaves, scheduled twiddles,
       permutations, reconstruction, and postprocessing. Include all copies and
       scratch costs; an opaque leaf is indivisible. Prepare a small predeclared
       leaf-size sweep against whole-native-FFT hybrid and butterfly scheduling
       without assuming either wins.
-- [ ] Completion horizon: decouple H_c from H; test H/4, H/2, H, and immediate
+- [x] Completion horizon: decouple H_c from H; test H/4, H/2, H, and immediate
       execution where supported. Define rounding for non-divisible H and
       1 <= H_c <= H. Preserve endpoint cadence, capture during idle phases,
       latching, cancellation, ownership, and publication at t_r+H_c-1.
       Update C++/Python delay contracts and ring-lifetime reasoning. Merely
       changing the quota denominator is not a complete implementation.
-- [ ] Stage weights: expose preparation, reconstruction/magnitude, output,
+- [x] Stage weights: expose preparation, reconstruction/magnitude, output,
       and dirty-band weight sweeps with scalar/SIMD and real module sinks.
       Disclose earlier M1 Pro tuning from [spec 010][weight-spec]. Specify
       tuning and held-out sizes, hops, and states before measurement. Defer
       tuning decisions; observed p99 will not establish a WCET bound.
-- [ ] Kernel variants: use source inspection or existing profiles to prepare
+- [x] Kernel variants: use source inspection or existing profiles to prepare
       ring-index arithmetic, scalar butterfly segmentation,
       magnitude/reconstruction, and coordinate-mapping experiments separately.
       Do not convert magnitude smoothing to power smoothing, change
       coherent gain, or add signal-dependent shortcuts without a distinct
       contract. Capture before/after builds and test each change independently.
-- [ ] Extend deterministic tests for zero-work calls, quotas crossing stages,
+- [x] Extend deterministic tests for zero-work calls, quotas crossing stages,
       sparse/dense paths, wraparound, H=1, H>N, changing H/H_c, all windows,
       DC/Nyquist, independent lanes, reset mid-cache-rebuild, and unchanged
       numerical/publication behavior where the contract promises it.
-- [ ] Keep credit and time models separate. The reviewer-proposed bound
+- [x] Keep credit and time models separate. The reviewer-proposed bound
       `c0 + kappa * ceil(W/H)` does not follow from weights when an entire
       weighted operation executes on its first credit. For dirty N=4, H=16,
       o=1, W=15, a one-credit call can execute a weight-four operation. Any
@@ -621,7 +621,7 @@ Those tasks must not run automatically as part of this preparation spec.
 - [x] Phase 3: native and matched scheduling controls numerically validated.
 - [x] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
-- [ ] Phase 5: experimental variants prepared or explicitly deferred; no
+- [x] Phase 5: experimental variants prepared or explicitly deferred; no
       measured performance selection required.
 - [ ] Phase 6: pilot profiles and future confirmation policy prepared and
       fixture-validated; no campaign executed by the agent.
@@ -988,3 +988,48 @@ rather than render. Source-independent all-output replay and deterministic
 ownership checks satisfy this preparation gate, not a claim of measured speedup
 or complete real-time safety. Phase 6 supplies the focused collection matrix;
 Phase 7 remains responsible for the protected offline launch package.
+
+### Phase 5 Implementation: September 30, 2026
+
+[Scheduling Experiment Readiness](../docs/whitepaper/benchmarks/guides/scheduling-experiments.md)
+records each candidate's readiness or reasoned deferral. Native hybrid scalar
+and true four-channel pipelines now accept fixed completion horizons
+`native-horizon-half-v1` and `native-horizon-quarter-v1`. Their H_c values use
+ceiling division, preserve 1 <= H_c <= H, and publish at jH+H_c-1. Existing
+full-hop and immediate backends complete the comparison. Idle calls continue
+capture, frames retain N+H input storage, and temporal smoothing keeps the
+original hop cadence. Both C++ and Python contracts, diagnostics, and numerical
+coverage recognize the policies. Other backends reject them explicitly.
+
+An in-flight H/H_c mutation is deliberately not exposed. Destruction and
+reconstruction cancel the old frame and reset caches; fixtures exercise that
+boundary with changed H/H_c while the old cache is incomplete. Tests also cover
+H=1, H>N, non-divisible H, wraparound, all supported v3 windows, zero-work idle
+calls, stage crossings and every lane/bin. The underlying production DSP and
+module schedules retain their existing behavior.
+
+Native leaves, new stage weights, and separate ring/butterfly/magnitude/coordinate
+kernel variants are explicitly deferred, with their required follow-up contracts
+and limits on paper claims documented. Efficient native and horizon comparisons
+are ready first; there is no evidence yet to justify tuning those additional
+implementations. The guide discloses spec 010's earlier M1 Pro tuning and gives
+predeclared tuning/held-out dimensions for a later weights/leaves study. This
+satisfies the phase's permitted readiness-or-deferral gate, not an assertion
+that every candidate was implemented. The weighted-operation counterexample
+remains explicit: credit quotas alone imply no wall-time or WCET bound.
+
+Validation run:
+
+```shell
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests
+CXX='clang++ -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer' python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_native.py
+make test/dsp/test_spectrum_analysis
+make benchmark-paper-build PAPER_VDSP=1 PAPER_FFTW_PREFIX=.build/deps/fftw
+git diff --check
+```
+
+The Python suite passed 114 tests with one optional plotting skip. All five
+native fixture tests passed normally and under ASan/UBSan, including horizon
+coverage and unchanged existing synthesis/analysis paths. The DSP suite passed
+2,180,346 assertions in 13 cases. Both-provider executables built successfully.
+All recording tests used synthetic clocks; no timings or winners were collected.

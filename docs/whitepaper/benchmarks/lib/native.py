@@ -2,6 +2,7 @@
 # Copyright 2026 Arhythmetic Units
 # SPDX-License-Identifier: GPL-3.0-or-later
 import math
+from workloads import completion_horizon
 
 
 def exact(actual, expected):
@@ -19,7 +20,7 @@ def validate_info(info, descriptor, config):
     expected = dict(analysis_pipeline="native-segments-v1", channels=channels, native_batch_channels=channels,
                     natural_frequency_output=True, channel_endpoints="simultaneous per instance; jH",
                     task_units=channels*n+1+2*channels*(n//2+1), retained_input_samples_per_channel=n+config["hop"],
-                    publication_delay_samples=0 if descriptor["schedule"] == "immediate" else config["hop"]-1,
+                    publication_delay_samples=0 if descriptor["schedule"] == "immediate" else completion_horizon(config)-1,
                     initial_cache="dirty; rebuild in first frame")
     if any(not exact(info.get(k), v) for k, v in expected.items()) or not info.get("layout_policy") or not info.get("limitations"):
         raise ValueError("Native layout/schedule/storage contract mismatch")
@@ -77,12 +78,13 @@ def validate_diagnostic(data, registry=None, allow_fixture=False):
     if data["checked_samples"] != publications*contract["channels"]*(c["n"]//2+1):
         raise ValueError("Missing diagnostic numerical outputs")
     lengths = [contract["channels"]*c["n"], 1]+[contract["channels"]*(c["n"]//2+1)]*2
+    horizon = completion_horizon(c)
     work = sum(lengths); cursor = stage = 0; expected = []
     for sample in range(total):
         phase = sample%hop
         if phase == 0: cursor = stage = 0
         quota = (work if phase == 0 else 0) if descriptor["schedule"] == "immediate" else (
-            (phase+1)*work//hop-phase*work//hop)
+            (min(phase+1, horizon)*work//horizon-min(phase, horizon)*work//horizon))
         while quota:
             count = min(quota, lengths[stage]-cursor)
             expected.append(dict(sample=sample, stage=stage, first=cursor, count=count))

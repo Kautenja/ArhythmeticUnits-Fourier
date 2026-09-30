@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 import json
 from pathlib import Path
-from workloads import validate as validate_controls, contract_fields
+from workloads import validate as validate_controls, contract_fields, completion_horizon
 
 
 def load_registry(path=None, features=()):
@@ -122,7 +122,7 @@ def resolve_contract(config, registry=None):
     steps = butterflies+(n if model == "radix2-inverse" else 0) if model in ("radix2-real", "radix2-complex", "radix2-inverse") else None
     delay = 0
     if d["schedule"] == "balanced":
-        delay = hop-1
+        delay = completion_horizon(config)-1
     elif d["schedule"] == "legacy-budget":
         work = n//4*((n//2).bit_length()-1)
         quota = (work+hop-1)//hop

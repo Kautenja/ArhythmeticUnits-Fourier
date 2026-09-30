@@ -69,7 +69,7 @@ BackendContract backend_contract(const Config& c) {
     result.outputs = c.n/2+1;
     result.center = (c.n-1)/2.;
     result.origin = "input frame endpoint";
-    if (schedule == "balanced") result.delay = c.hop-1;
+    if (schedule == "balanced") result.delay = completion_horizon(c)-1;
     if (schedule == "legacy-budget") {
         size_t work = 0;
         for (size_t n = c.n/2; n > 1; n /= 2) work += c.n/4;
