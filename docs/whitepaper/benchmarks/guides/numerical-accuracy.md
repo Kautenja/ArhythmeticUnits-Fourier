@@ -113,4 +113,4 @@ DYLD_LIBRARY_PATH=../.. .build/paper-numerical-policy/verify-streams > .build/pa
 ```
 
 This is an untimed correctness experiment. Host-specific results and full
-pilot revalidation belong to [spec 004](../../../../specs/004-external-fft-comparison.md).
+pilot revalidation now belong to [spec 012](../../../../specs/012-comparison-evidence-and-paper-integration.md).

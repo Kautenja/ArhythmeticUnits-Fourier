@@ -137,7 +137,7 @@ for the real transform are derived from the stated DFT convention.
 Historical campaigns remain historical. This literature pass runs no new
 benchmark and does not promote superseded external comparisons into current
 evidence; the replacement gates belong to
-[Spec 004](../../specs/004-external-fft-comparison.md).
+[Spec 004](../../specs/archive/004-external-fft-comparison.md).
 
 ## Venue Implications
 

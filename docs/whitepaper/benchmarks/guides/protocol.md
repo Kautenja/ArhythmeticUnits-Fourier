@@ -16,13 +16,13 @@ protocol's C++ adapters and checks, retain raw observations, and compare
 matching baselines. The Python runner described here remains the publication
 archiver with fresh-process, resource-audit, and source/dependency archives.
 
-The [external comparison spec](../../../../specs/004-external-fft-comparison.md)
+The [external comparison spec](../../../../specs/archive/004-external-fft-comparison.md)
 records the selected FFTW, Rack/PFFFT, and Apple Accelerate/vDSP baselines,
 implementation status, acceptance checks, and intended publication tables and
 figures. All three providers are implemented as benchmark-only adapters;
 FFTW and macOS vDSP require explicit opt-in.
 KISS FFT and academic overlap-reuse adapters are
-[deferred for the current paper](../../../../specs/004-external-fft-comparison.md#optional-contender-decision);
+[deferred for the current paper](../../../../specs/archive/004-external-fft-comparison.md#optional-contender-decision);
 the decision records the evidence limits and conditions for reopening them.
 
 ## Layout
@@ -182,23 +182,18 @@ sessions. Record power, thermal state, host activity and ordering context in
 `--notes`. Labels alone cannot prove independence. The matrix inventory and
 input configuration hash are archived with every campaign. The historical
 FR-11 confirmation and its source identities are recorded in the
-[owning spec](../../../../specs/004-external-fft-comparison.md#fr-11-confirmation-evidence).
-The current plan adds FR-11 scalar numerical-audit parity and FR-12 parameter
-transitions. FR-13 will package the reproducible launch/observe/validate/report/
-paper-export workflow, test it with fixtures and short smoke runs, and provide
-copyable commands for the user to run the full experiments. This workflow and
-exporter are planned work; the commands below describe today's building blocks.
-FR-13 can complete at tooling handoff. Measurement status remains separate,
-and FR-14 cannot complete without real validated replacement campaigns.
-Historical confirmation status does not transfer to new code.
-Retain earlier results until FR-13's
-[replacement and retirement gate](../../../../specs/004-external-fft-comparison.md#replacement-and-retirement-gate)
+[owning spec](../../../../specs/archive/004-external-fft-comparison.md#fr-11-confirmation-evidence).
+FR-11 scalar numerical-audit parity, FR-12 parameter transitions and FR-13's
+experiment-to-paper workflow are implemented and smoke-validated. Use the
+[workflow handoff](workflow.md) for the maintained public command sequence,
+including setup, progress/logs, failure recovery, checked exports and bundles.
+[Spec 012](../../../../specs/012-comparison-evidence-and-paper-integration.md)
+now owns pending replacement measurements and paper integration, transferred
+from FR-14. Historical confirmation status does not transfer to new code.
+Retain earlier results until the
+[replacement and retirement gate](../../../../specs/archive/004-external-fft-comparison.md#replacement-and-retirement-gate)
 passes; new campaigns use separate source identities and output directories.
-Completing the tooling does not trigger cleanup. The handoff must document
-clean-checkout prerequisites, progress/logs, interruption handling, deterministic
-paper table/figure/numeric imports, reproducibility bundles and extending the
-suite as a future baseline; no private scripts or manual numeric transcription
-should be needed for routine use.
+Completing or archiving the implementation spec does not trigger cleanup.
 
 Generate checked evidence tables and scientific SVG/PNG figures in a separate,
 new directory. Matplotlib is an optional reporting dependency, isolated from
@@ -775,7 +770,7 @@ relative L2 and Linf errors against the existing analysis budgets, preserving
 all former pointwise violations as diagnostics. Measured adapters are unchanged.
 The historical FR-11 pilot's reference/policy failures and their resolution
 remain recorded
-in the [owning spec](../../../../specs/004-external-fft-comparison.md#fr-11-pilot-evidence).
+in the [owning spec](../../../../specs/archive/004-external-fft-comparison.md#fr-11-pilot-evidence).
 
 Before a campaign, the executable checks matched scalar frame outputs and
 publication delays across 48 scalar configurations against both controls

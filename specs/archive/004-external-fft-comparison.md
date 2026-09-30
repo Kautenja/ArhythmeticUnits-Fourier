@@ -7,13 +7,37 @@ CPU, storage, completion-latency, and sample-delivery costs, including cases
 where batch processing is preferable. The Rack analyzer is an application
 case study, not the boundary of the reusable framework's evaluation.
 
-Status: IN PROGRESS
+Status: COMPLETE
 
 Created: September 29, 2026
 
+Completed and archived: September 29, 2026
+
+## Closure And Follow-Up
+
+Closed at the user's request after the FR-13 implementation handoff. FR-1
+through FR-6 and FR-10 through FR-13 are implemented and verified; FR-7 through
+FR-9 remain intentional optional-contender deferrals. Implementation commit:
+`22bb390` (`Consolidate whitepaper benchmark workflow and complete FR-13`).
+The completion evidence below includes 78 tests, 80 native smoke workloads,
+checked fixture export and portable numerical rederivation.
+
+The former FR-14, its final-measurement acceptance gates and evidence-retirement
+execution are transferred to [spec 012](../012-comparison-evidence-and-paper-integration.md).
+They are not claimed complete: replacement measurements remain NOT RUN,
+evidence retirement remains DEFERRED, and the final comparison results still
+need manuscript integration. This archive closes the implementation scope;
+it does not certify publication evidence or a finished paper. Unchecked FR-14
+items below are retained as the transferred requirements, and earlier dated
+IN PROGRESS statements describe their historical state.
+
+Archive validation: paper artifact checks, local link/anchor checks and
+`git diff --check` passed. No timing campaign or evidence deletion was run
+as part of this administrative closure.
+
 This spec supersedes the detailed plan formerly in
-[`docs/whitepaper/benchmarks/guides/comparisons.md`](../docs/whitepaper/benchmarks/guides/comparisons.md).
-The [protocol README](../docs/whitepaper/benchmarks/guides/protocol.md) defines current measurement
+[`docs/whitepaper/benchmarks/guides/comparisons.md`](../../docs/whitepaper/benchmarks/guides/comparisons.md).
+The [protocol README](../../docs/whitepaper/benchmarks/guides/protocol.md) defines current measurement
 semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
@@ -21,10 +45,11 @@ under the [optional contender decision](#optional-contender-decision).
 FR-10's campaign/report tooling is implemented and smoke-validated. New FR-11
 and FR-12 are implemented and validated: scalar all-output auditing and
 parameter-transition measurement now share the checked campaign/report path.
-FR-13 tooling is COMPLETE: the [workflow handoff](../docs/whitepaper/benchmarks/guides/workflow.md)
+FR-13 tooling is COMPLETE: the [workflow handoff](../../docs/whitepaper/benchmarks/guides/workflow.md)
 covers setup through checked paper export and portable evidence bundles.
 Replacement measurements remain NOT RUN; evidence retirement is DEFERRED.
-FR-14 requires validated replacement measurements before final paper completion.
+FR-14 now belongs to spec 012 and still requires validated replacement
+measurements before final paper completion.
 
 The former FR-11 measurement campaign completed for an older source revision:
 11547 confirmation processes passed across three prepared M1 Pro sessions.
@@ -45,20 +70,20 @@ implementation/integration step followed by a benchmark implementation step.
 Short smoke runs validate the tooling during development; comparative metric
 gathering follows FR-13's documented workflow on a prepared host, after the
 implementation gate. Individual implementation FRs, including FR-13's tested
-tooling and handoff, can complete before that campaign. This spec remains in
-progress until the replacement results and paper pass.
+tooling and handoff, can complete before that campaign. The active follow-up
+spec 012 remains open until the replacement results and paper pass.
 
 ## Benchmark Layout Refactor
 
 September 29, 2026: the measurement suite now lives in a flat
-[`benchmark/paper/`](../benchmark/paper/README.md), with first-party workloads
+[`benchmark/paper/`](../../benchmark/paper/README.md), with first-party workloads
 in `fourier.hpp`, headless module cases in `modules.hpp`, and one adapter header
 per external library. The command-line entry point is `benchmark.cpp`.
 Template workloads still compile together; timed operations, protocol arguments,
 backend IDs, raw records, numerical budgets, and executable paths are preserved.
 
 Campaign scripts, configurations, provider notes, and historical experiments
-moved to [`docs/whitepaper/benchmarks/`](../docs/whitepaper/benchmarks/guides/protocol.md).
+moved to [`docs/whitepaper/benchmarks/`](../../docs/whitepaper/benchmarks/guides/protocol.md).
 Standalone numerical verifier programs moved to `test/paper/`, outside Catch2
 suite discovery. Source archiving includes the relocated tooling; the artifact
 checker accepts both old and new archived registry paths. Development source
@@ -125,7 +150,7 @@ answer the current questions; the FR-7--FR-9 deferrals still apply.
     deadline evidence. A rare FFT burst can fall above p99, so retain maxima,
     counts, replay coverage, and full distributions alongside it.
 
-The [claim-to-evidence map](../docs/whitepaper/benchmarks/guides/protocol.md#claims-and-presentation)
+The [claim-to-evidence map](../../docs/whitepaper/benchmarks/guides/protocol.md#claims-and-presentation)
 connects the intended questions to figures and comparison boundaries. Its
 methodology references include [Kalibera and Jones](https://kar.kent.ac.uk/33611/)
 on levels of repetition and uncertainty,
@@ -209,12 +234,12 @@ performed for this requirement update.
 
 The reviewed checkout is `4e58290`. Its relevant improvements are:
 
--   [`SpectrumAnalysis`](../src/dsp/spectrum_analysis.hpp) schedules packing,
+-   [`SpectrumAnalysis`](../../src/dsp/spectrum_analysis.hpp) schedules packing,
     windowing, butterflies, positive-bin reconstruction, prefix sums, smoothing,
     and output over exactly one hop. Cache rebuilding is scheduled; retained
     input, prepared plans, cancellation, and output ownership are explicit.
     The original frame-sized boundary passes have been addressed in production.
--   The [publication driver](../benchmark/paper/benchmark.cpp) measures production
+-   The [publication driver](../../benchmark/paper/benchmark.cpp) measures production
     cores, actual headless modules, and fixed-cadence legacy controls. It adds
     callback observations, separate throughput passes, analyzer alignment/load,
     startup/live/cache-pressure cases, and FFT/RFFT/IFFT phase measurements.
@@ -222,7 +247,7 @@ The reviewed checkout is `4e58290`. Its relevant improvements are:
 -   The runner retains raw observations, source archives, build commands,
     dependency hashes, order, and numerical reports. Its artifact validator
     independently recomputes summaries and checks completeness.
--   The [manuscript](../docs/whitepaper/fourier.tex) now relates the work to
+-   The [manuscript](../../docs/whitepaper/fourier.tex) now relates the work to
     time-distributed transforms, overlap reuse, visualizer latency, practical
     backends, numerical error, and measurement methodology. Historical and
     prototype timings are explicitly separated from production behavior.
@@ -270,7 +295,7 @@ waveform against direct filtering rather than reporting only frame completion.
 ## First-Party Evidence Pathways
 
 Forward, inverse, and complete-chain baselines are required before external
-comparisons. The [protocol](../docs/whitepaper/benchmarks/guides/protocol.md#inverse-and-end-to-end-baselines)
+comparisons. The [protocol](../../docs/whitepaper/benchmarks/guides/protocol.md#inverse-and-end-to-end-baselines)
 documents the implemented semantics and reproduction commands.
 
 | Family | Implemented Baseline | Required External Comparison |
@@ -281,7 +306,7 @@ documents the implemented semantics and reproduction commands.
 | Spectral analyzer | Existing production core, same-arithmetic legacy controls, and actual headless modules | Existing matched analysis contract; module costs remain separately labeled |
 
 The new benchmark-only implementation is in
-[`synthesis.hpp`](../benchmark/paper/synthesis.hpp). Its logic and independent
+[`synthesis.hpp`](../../benchmark/paper/synthesis.hpp). Its logic and independent
 verifier need no Rack types; the shared campaign executable still links Rack
 for its module workloads. Both modes preserve the current transform APIs'
 bulk buffering. Preparation inside the chain must be counted even if it is
@@ -776,7 +801,7 @@ mantissa widths expose platforms where long double equals double. The new
 `spectrum-norms-v1` tolerances. Historical scalar archives stay preflight-only;
 existing native and independent-channel all-output audits stay distinct.
 
-The [transition contract](../docs/whitepaper/benchmarks/guides/transitions.md) declares
+The [transition contract](../../docs/whitepaper/benchmarks/guides/transitions.md) declares
 latest-pending-request replacement in the benchmark host, frame-boundary
 application in the production API, uninterrupted active frames, logical input
 and EMA reset on length changes, and retained history for other settings.
@@ -948,7 +973,7 @@ outside individual measured intervals; counts, scheduling, provider planning,
 numerical references, tolerances and raw observation formats are unchanged.
 No production DSP code changed, and no execution-time reduction is claimed.
 
-The [runtime diagnostic command](../docs/whitepaper/benchmarks/guides/protocol.md#campaign-runtime-diagnostics)
+The [runtime diagnostic command](../../docs/whitepaper/benchmarks/guides/protocol.md#campaign-runtime-diagnostics)
 prints seconds and percentages from retained data. It preserves unclassified
 work and failed-process time explicitly. Old archives need no new fields.
 Failed/interrupted campaigns retain invalid status and elapsed phases rather
@@ -1075,8 +1100,8 @@ measurements remain open.
 #### Workflow Completion Evidence
 
 September 29, 2026: consolidated the active interface in
-[`bench.py`](../docs/whitepaper/benchmarks/bench.py), with three short schema-2
-[profiles](../docs/whitepaper/benchmarks/profiles/README.md). The expanded
+[`bench.py`](../../docs/whitepaper/benchmarks/bench.py), with three short schema-2
+[profiles](../../docs/whitepaper/benchmarks/profiles/README.md). The expanded
 matrix is generated and archived at launch. Private Python modules, tests and
 technical guides have separate directories. Older expanded configurations and
 prototype reproduction tools live in `benchmarks/history/`; historical
@@ -1086,11 +1111,11 @@ against HEAD and preserved byte-for-byte. Original manuscript source/data
 archives remain intact. No forwarding-script compatibility layer was added;
 exact historical reproduction uses its archived sources.
 
-The [workflow guide](../docs/whitepaper/benchmarks/guides/workflow.md) is the
+The [workflow guide](../../docs/whitepaper/benchmarks/guides/workflow.md) is the
 launch handoff, including supported variants, dependencies, actual host/session
 notes, pilot review, freeze, separately prepared confirmation sessions, status
 and failure logs, checked reporting, selection/export, bundle regeneration and
-retirement preview. The [extension guide](../docs/whitepaper/benchmarks/guides/extending.md)
+retirement preview. The [extension guide](../../docs/whitepaper/benchmarks/guides/extending.md)
 provides a worked workload example and backend/baseline contracts. Freeze and
 production-export gates check source/dependency/compiler commands, policies,
 workloads and independent session labels. Failed attempts remain invalid and
@@ -1187,6 +1212,10 @@ or manuscript result replacement was performed for FR-13. FR-14 stays open.
 
 ### FR-14: Paper Integration And Completion
 
+Transferred, not completed: [spec 012](../012-comparison-evidence-and-paper-integration.md)
+now owns these requirements and their completion evidence. The unchecked list
+preserves the original handoff; it is outside this archived implementation scope.
+
 - [ ] Obtain the user-run replacement campaigns through the FR-13 workflow,
     verify the fresh pilot/freeze rationale, all required independent sessions,
     numerical/transition coverage and reproducibility bundle, and record
@@ -1203,7 +1232,7 @@ or manuscript result replacement was performed for FR-13. FR-14 stays open.
     do not present a measured-subset frontier as a global optimum. Update citations
     consistently; an unfavorable supported result still satisfies this spec.
 - [ ] Pass artifact checks, the paper build, and PDF review; record evidence
-    here and archive the completed spec only after all required criteria pass.
+    in spec 012 and archive that follow-up only after all required criteria pass.
 
 ## Shared Contracts
 
@@ -1501,8 +1530,8 @@ workloads; the synthesis factor profile contains 216 streaming workloads.
 Its controls require no analyzer settings and reject live-window/smoothing
 options. Resolve feasible H/N combinations per family before measurement.
 
-The current [workflow entry point](../docs/whitepaper/benchmarks/README.md)
-and [launch handoff](../docs/whitepaper/benchmarks/guides/workflow.md) provide
+The current [workflow entry point](../../docs/whitepaper/benchmarks/README.md)
+and [launch handoff](../../docs/whitepaper/benchmarks/guides/workflow.md) provide
 copyable setup, pilot, freeze, confirmation, monitoring, validation/export and
 bundle commands. Active schema-2 profiles live in `benchmarks/profiles/`;
 FR-10's expanded configurations are preserved in `benchmarks/history/configs/`.
@@ -1579,9 +1608,9 @@ FFT arithmetic, layouts, fusion, plan capacity and storage remain explicit
 confounds; this stage makes no causal production-scheduling-overhead claim
 and therefore does not add a same-production-pipeline batch ablation.
 
-[The benchmark guide](../docs/whitepaper/benchmarks/guides/protocol.md#hybrid-scheduling-attribution)
+[The benchmark guide](../../docs/whitepaper/benchmarks/guides/protocol.md#hybrid-scheduling-attribution)
 defines the schedule and reproduction commands.
-[The attribution generator](../docs/whitepaper/benchmarks/lib/hybrid_report.py) checks the
+[The attribution generator](../../docs/whitepaper/benchmarks/lib/hybrid_report.py) checks the
 archived campaign before producing JSON and Markdown in a separate directory.
 It requires all six matched controls, preserves process-level cost/tail
 summaries, ages and resource records, and labels four comparison types.
@@ -1627,7 +1656,7 @@ packing, real-output factor-of-two correction, natural-order stores, and
 normalized inverse output. The shared adapters supply analysis, periodic
 inverse jobs, and complete overlap-save identity/FIR chains. Independent
 all-output fixtures cover every supported power of two from 128 to 16384.
-See [provider details](../docs/whitepaper/benchmarks/guides/vdsp.md).
+See [provider details](../../docs/whitepaper/benchmarks/guides/vdsp.md).
 
 `--enable-vdsp` and `PAPER_VDSP=1` enable the runner and paper executables,
 respectively. Non-macOS opt-in rejects before building; a disabled build
@@ -1687,7 +1716,7 @@ policy is `FFTW_MEASURE`, one thread, fresh processes, forgotten prior wisdom,
 and restored inputs after planning. Every actual timed/resource instance
 retains its own plan text; process-global wisdom is labeled separately.
 The registered baseline does not silently use the low-level `ESTIMATE` option.
-See [provider details](../docs/whitepaper/benchmarks/guides/fftw.md).
+See [provider details](../../docs/whitepaper/benchmarks/guides/fftw.md).
 
 `--fftw-prefix` enables the runner and matching generated C++ inventory;
 `PAPER_FFTW_PREFIX` enables only paper-executable compilation/linking. Without
@@ -1735,7 +1764,7 @@ analysis, periodic inverse jobs, and complete overlap-save identity/FIR chains.
 The provider uses ordered Rack wrappers and aligned native transfer buffers;
 analysis writes K positive bins, while isolated RFFT reconstructs all N bins
 for the existing full-complex control. Production module sources and plugin
-link dependencies are unchanged. See [provider evidence](../docs/whitepaper/benchmarks/guides/pffft.md)
+link dependencies are unchanged. See [provider evidence](../../docs/whitepaper/benchmarks/guides/pffft.md)
 for inspected revisions, hashes, native scratch formulas, and ABI limitations.
 
 The common external driver audits all output values, cadence, startup, live
@@ -1767,7 +1796,7 @@ statistical comparisons remain FR-11 work.
 ### Shared Adapter And Evidence Contracts Completion
 
 September 29, 2026: FR-2 is complete. The canonical
-[`backends.json`](../docs/whitepaper/benchmarks/lib/backends.json) registry feeds Python and a
+[`backends.json`](../../docs/whitepaper/benchmarks/lib/backends.json) registry feeds Python and a
 generated C++ descriptor table. It declares 28 implemented backends and three
 explicitly unavailable external families. Dispatch, capability validation,
 resolved latency/output contracts, and schema-2 artifact checks use these
@@ -1862,7 +1891,7 @@ changed for this baseline work.
 
 September 29, 2026: Campaign and reporting tooling is implemented under
 `benchmark/`, with no production DSP, module, UI, or plugin dependency changes.
-The [protocol commands](../docs/whitepaper/benchmarks/guides/protocol.md#external-campaigns-and-reports)
+The [protocol commands](../../docs/whitepaper/benchmarks/guides/protocol.md#external-campaigns-and-reports)
 define reproduction, host variants, evidence phases, and statistical limits.
 
 -   Generated smoke/pilot/extensions manifests resolve 156/270/537 workloads
@@ -2075,7 +2104,7 @@ September 29, 2026: committed the preceding pilot/reference progress as
 benchmark-only spectrum-level contract. The old pilot failures and provisional
 exclusions above describe the earlier policy and remain preserved.
 
-The [numerical acceptance document](../docs/whitepaper/benchmarks/guides/numerical-accuracy.md)
+The [numerical acceptance document](../../docs/whitepaper/benchmarks/guides/numerical-accuracy.md)
 derives the distinction between pointwise and vector-relative error, cites
 benchFFT's primary methodology, specifies exact equations and scope, and
 provides native reproduction commands. Per published channel, both relative
@@ -2190,7 +2219,7 @@ measurement sessions, rather than trimming results or reporting tight error
 bars. Timer p99 was 42 ns throughout both pilots; quantization matters for
 very short calls and is never mechanically subtracted.
 
-The frozen [plan](../docs/whitepaper/benchmarks/history/configs/external-confirmation-plan.json)
+The frozen [plan](../../docs/whitepaper/benchmarks/history/configs/external-confirmation-plan.json)
 retains all 408 primary and all 875 extension workloads, partitioned solely by
 observation-length requirements. Its four configuration hashes are fixed before
 confirmation. Each of three sessions uses three process repeats, 64 warmup

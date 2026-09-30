@@ -47,7 +47,7 @@ The archive command does not submit or publish anything.
 | [data/](data/README.md) | Immutable manuscript campaigns and historical research |
 | [tools/](tools/README.md) | Manuscript checks and source expansion |
 | `.build/` | Local PDF, fixture and reproduction outputs |
-| `generated/` | Explicitly exported, checked replacement assets when FR-14 integrates them |
+| `generated/` | Explicitly exported, checked replacement assets for paper integration |
 
 ## Measurements And Reproduction
 
@@ -66,9 +66,10 @@ exact reproduction. Historical optimization investigations are retained under
 [data/research/](data/research/). Their one-off programs are archived research
 artifacts, not competing maintained workflow entry points.
 
-The [comparison specification](../../specs/004-external-fft-comparison.md)
-tracks implementation, user-run measurements and final paper integration
-separately. A smoke report proves tooling, not a speedup. New evidence must
+The [archived comparison implementation](../../specs/archive/004-external-fft-comparison.md)
+records the completed tooling. [Spec 012](../../specs/012-comparison-evidence-and-paper-integration.md)
+owns pending replacement measurements and final paper integration, transferred
+from FR-14. A smoke report proves tooling, not a speedup. New evidence must
 pass provenance, numerical coverage and session checks before explicit export.
 Hardware-dependent timing replication is different from regenerating statistics
 from retained raw data. [Historical verification notes](data/verification-history.md)
@@ -84,7 +85,7 @@ For source-only TeX reorganizations, compare before/after rendered pages, text,
 metadata and references and compile the extracted export.
 
 Paper export writes separate table/macro/figure includes and a provenance
-receipt. Editorial insertion and interpretation belong to FR-14; export never
+receipt. Editorial insertion and interpretation belong to spec 012; export never
 rewrites prose or historical results. Included generated receipts are checked
 for freshness. Retain source selections and evidence bundles with published
 claims; do not transcribe numeric results manually.

@@ -4,7 +4,7 @@
 `rack::dsp::RealFFT` and `rack::dsp::ComplexFFT` wrappers; it does not change
 Fourier, Spectre, the plugin dependency graph, or their transform choices.
 The owning work and completion evidence are in
-[spec 004](../../../../specs/004-external-fft-comparison.md).
+[spec 004](../../../../specs/archive/004-external-fft-comparison.md).
 
 ## Scope And Canonical Layout
 
