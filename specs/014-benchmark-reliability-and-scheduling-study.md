@@ -1,9 +1,9 @@
-# Benchmark Reliability And Scheduling Study
+# Benchmark Reliability And Scheduling Preparation
 
-Strengthen the analyzer code package and its measurements so the full paper
-can explain when scheduling improves host behavior, what it costs, and which
-execution granularity is useful. Better numbers mean more reliable and
-informative evidence; favorable timings are not a completion requirement.
+Prepare validated benchmark implementations and simple offline launch commands
+for the user to collect reliable measurements on a quiet laptop. The intended
+evidence will support the full paper's discussion of scheduling, cost, and
+execution granularity. Collecting and interpreting it are separate follow-ups.
 
 Status: PLANNED
 
@@ -11,17 +11,33 @@ Created: September 30, 2026
 
 ## Goal And Execution Boundary
 
-Extend the existing benchmark workflow, evaluate focused implementation
-variants, collect controlled M1 Pro evidence, and revise the full technical
-report around the results that survive. Work through the numbered phases
-below. Finish each phase's acceptance checks before dependent work; retain
-decisions and execution evidence in this spec.
+Extend the existing benchmark workflow, implement focused experimental
+variants, verify their correctness, and deliver a prepared local package with
+the exact commands the user needs to launch measurements. Finish each phase's
+preparation checks before dependent work; retain decisions and validation
+evidence in this spec. Completion ends at the runnable handoff, without
+requiring benchmark numbers, a performance winner, or manuscript changes.
 
-The current request creates and commits this specification only. Its unchecked
+The current request updates and commits this specification only. Its unchecked
 items are future work, not completed implementation or measurements. The user
 prefers strengthening the full paper before choosing a venue and retaining the
 M1 Pro as the primary test platform. A second architecture is optional follow-up;
 cross-architecture claims require actual measurements on that architecture.
+
+Implementation of this spec authorizes builds, dependency preparation, untimed
+correctness/allocation/concurrency checks, and tests using synthetic timing
+records, fake clocks, or stub measurement processes. It does not authorize the
+agent to launch performance measurements, including development benchmarks,
+timed smoke tests, pilots, calibration campaigns, or confirmation runs. Adapt
+tests that currently enter real timing loops to use those test seams before
+running them. Ordinary test-runner elapsed-time output is not benchmark evidence.
+
+The user launches every measurement session after disconnecting networking,
+turning off Bluetooth, and closing agents and other unnecessary applications.
+The agent does not remain active to monitor the campaign. Once the user returns
+the output, a separate task can inspect it, prepare any pilot-backed confirmation
+freeze, and later integrate adequate evidence into the paper. Neither that
+follow-up nor production optimization promotion is a completion gate here.
 
 The study follows [spec 012's evidence handoff][evidence-spec] and
 [spec 013's manuscript integration][paper-spec]. It uses the existing
@@ -122,8 +138,10 @@ Behavior examples:
     run on a worker with suitable buffering; do not claim engine-thread
     execution is necessary or universally superior without comparing it.
 -   Public deposition, submission, push, and release are separate actions.
-    Prepare reproducible artifacts locally; do not invent public availability
-    or a DOI. Venue formatting and acceptance promises are outside scope.
+    Prepare reproducible launch inputs locally; do not invent collected data,
+    public availability, or a DOI. New measurement collection, results analysis,
+    manuscript revision, venue formatting, and acceptance promises are outside
+    this implementation's scope.
 
 ## Phase 1: Establish Reliable Measurement Boundaries
 
@@ -146,7 +164,7 @@ under `docs/whitepaper/`.
       Missing or prematurely ended protection fails the run's integrity check;
       retain its observations and failure record without promoting it to valid
       confirmation evidence.
-- [ ] Run the primary M1 Pro study on AC power with Low Power Mode disabled.
+- [ ] Require the user's M1 Pro sessions to use AC power with Low Power Mode off.
       Verify and record power source and effective power settings separately
       from sleep assertions; flag any change during the session. `caffeinate`
       does not disable Low Power Mode, fix CPU frequency, or prevent thermal
@@ -162,26 +180,32 @@ under `docs/whitepaper/`.
       and calibration work. Deliberate warmup follows the declared steady-state
       protocol; startup remains a separate cold-analysis workload. Do not assume
       a quiet interval before compilation establishes either condition.
-- [ ] Begin pilots with at least 180 seconds of settling after session
-      preparation. Record timestamped host observations and calibrations near
-      timing; use pilots to freeze measurable start/flag conditions. Absence of
-      a thermal warning is not a temperature or frequency measurement. Bound
-      gate waiting and retain failure/timeout evidence without killing services
-      or repeatedly restarting until a favorable run appears.
+- [ ] Configure pilot launches with at least 180 seconds of settling after
+      session preparation. Implement timestamped host observations and
+      calibration recording; later pilot review will freeze measurable
+      start/flag conditions. Absence of a thermal warning is not a temperature
+      or frequency measurement. Bound gate waiting and retain failure/timeout
+      evidence without killing services or repeatedly restarting until a
+      favorable run appears.
 - [ ] Support unattended serial execution without active interactive
       agent/editor work, builds, tests, or reporting during the campaign.
-      Document the launch handoff; unavailable isolation remains a limitation.
-      Do not automatically change system settings or terminate user processes.
+      Require fully local launch inputs and no network access, downloads,
+      dependency resolution, remote logging, or agent connection. Document the
+      user's manual preparation: networking disconnected, Bluetooth off, agents
+      stopped, and unnecessary applications closed. Record verified state and
+      user declarations separately; disconnected radios alone do not prove an
+      idle host. Do not change those settings or terminate processes on behalf
+      of the user.
 - [ ] For paced runs, retain scheduled release, actual start, and finish times;
       distinguish compute duration, wake-up lateness, and release-to-finish
       deadline misses. Use absolute deadlines and an explicit overrun policy:
       preserve logical sample order, never silently drop or rebase late work.
       Label catch-up execution. Include deliberately interleaved DSP in timing;
       keep synthetic cache-conditioning cost separately identified.
-- [ ] Measure throughput in multiple sufficiently long chunks with original
-      ordering retained. Use pilot drift and timer observations to select chunk
-      duration, warmup, calibration placement, and pacing duration. Do not
-      subtract timer overhead or time every butterfly in the primary loop.
+- [ ] Implement configurable throughput chunks with original ordering retained.
+      Prepare explicit initial duration, warmup, calibration-placement, and
+      pacing policies for later pilot review. Do not subtract timer overhead
+      or time every butterfly in the primary loop.
 - [ ] Record pre/post calibration and available host-state evidence. Keep all
       slow runs. A predeclared flag policy supports sensitivity analysis, not
       retrospective deletion or unsupported E-core/preemption attribution.
@@ -191,10 +215,9 @@ under `docs/whitepaper/`.
       become valid confirmation evidence. Test pacing arithmetic/overruns with
       deterministic clock fixtures separately from hardware smoke execution.
 
-Gate: a short unpaced and paced smoke can be reproduced with verified sleep
-protection and power settings, explicit timing boundaries, no hidden work
-after stabilization, and complete failure records.
-No publication rerun starts before this gate.
+Gate: untimed checks and fake-clock/stub-process tests verify sleep protection,
+power checks, pacing, stabilization order, and complete failure records. The
+user's smoke/pilot launch is prepared; no real timing run is needed to pass.
 
 ## Phase 2: Workload Controls, Metrics, And Audits
 
@@ -227,10 +250,10 @@ the backend registry, and their existing verifier/test directories.
       they are not actual device deadlines. Do not pool channels or callbacks
       as independent process/session replicates. Any confidence intervals must
       respect temporal clustering and state their limited same-host scope.
-- [ ] Reanalyze existing raw evidence without rerunning timings: headline
-      values, hop peaks, phase imbalance, slow hybrid process, maxima, and
-      exceedances. Keep inverse/chain misses in their own comparison boundary.
-      Do not attribute interruptions from a host snapshot alone.
+- [ ] Use retained raw evidence as regression fixtures for headline values,
+      hop peaks, phase imbalance, slow hybrid processes, maxima, and exceedances.
+      Keep inverse/chain misses in their own comparison boundary. New research
+      interpretation belongs to the follow-up after user measurements.
 - [ ] Allow small explicit-workload profiles without appending an entire
       preset. Revise fast development coverage to include efficient macOS
       native analysis when enabled, SIMD, and representative module work;
@@ -252,7 +275,8 @@ Primary files: `benchmark/paper/{external,vdsp,pffft,fftw,hybrid,fourier,channel
       efficient retained-input access, provider-appropriate window/packing,
       conversion, magnitude, and output kernels. Preserve mathematical scaling
       and audit floating-point differences independently. Inspect generated
-      code or profiles before attributing cost to a source-level loop.
+      code or retained profiles when choosing variants. Defer claims about
+      their actual cost until the user supplies measurements.
 - [ ] For PFFFT, evaluate unordered output only with correct natural-frequency
       mapping wherever bands or display bins require it. Charge every necessary
       reorder/conversion/store to the declared boundary. Retain the existing
@@ -263,16 +287,17 @@ Primary files: `benchmark/paper/{external,vdsp,pffft,fftw,hybrid,fourier,channel
       counts alone do not establish equivalent output semantics.
 - [ ] Add an efficient hybrid with contiguous stage-segment dispatch and a
       matched batch mode sharing its kernels and storage. Retain the old hybrid
-      pair; report whether its per-element dispatch inflated surrounding cost.
+      pair so later measurements can test its per-element dispatch overhead.
 - [ ] Add a matched batch/distributed pair using the current core's arithmetic,
       layout, cache policy, and output contract. Existing legacy controls also
       change layout and boundary work, so do not substitute them for this pair.
       Factor only the needed execution seam; avoid a general scheduler framework
       or a copied production implementation that can silently diverge.
 - [ ] Add diagnostic stage-cost measurements and untimed operation traces.
-      Instrumented results explain mechanisms; primary results use unchanged
-      uninstrumented timing boundaries. Report instrumentation overhead and
-      avoid summing isolated stage times as if they reproduce integrated cost.
+      Prepare instrumentation-overhead controls; primary measurement paths
+      retain uninstrumented timing boundaries. Defer running these diagnostics
+      to the user, and do not sum stage times as if they reproduce integrated
+      cost.
 - [ ] Verify every new backend with all-output references, frame-retention and
       publication checks, cold/live cache cases, allocation probes, and explicit
       opaque-provider limitations before its first performance pilot.
@@ -299,19 +324,21 @@ benchmark-only Rack-engine integration, and `test/paper/`/`test/rack/` verifiers
       current modules and comparable benchmark-only native/hybrid analyzer
       modules with matched conditioning, display preparation, and publication.
       A trivial-sink native analyzer cannot stand in for a complete module.
-- [ ] Start with 1/4 engine threads, 1/4/16 analyzers, D=64/256, 48 kHz,
+- [ ] Prepare cases with 1/4 engine threads, 1/4/16 analyzers, D=64/256, 48 kHz,
       aligned/staggered phases, and a fixed background-DSP workload sweep.
-      Add D=16 or higher rates as declared stress extensions after the pilot.
-      Freeze identical background workloads across contenders; do not equalize
-      total utilization separately and hide extra analyzer cost.
-- [ ] Measure full engine-block duration, aggregate CPU cost, hop peaks,
-      publication age, and budget misses. An analyzer-free engine is a useful
-      overhead control, not a value automatically subtracted from observations.
-      Verify engine barriers, worker policy, lifecycle locking, and FPU mode
-      against retained Rack source. Do not assume ideal cost/thread-count scaling.
-- [ ] Exercise a concurrent single consumer at representative 30/60 Hz rates,
-      with deliberate stalls. Measure producer impact, consumed-spectrum age,
-      skipped updates, and snapshot consistency. Preallocate diagnostic storage;
+      D=16 or higher-rate host stress extensions may follow pilot review in a
+      later task. Specify identical background workloads across contenders;
+      do not equalize total utilization separately and hide extra analyzer cost.
+- [ ] Implement recording of full engine-block duration, aggregate CPU cost,
+      hop peaks, publication age, and budget misses. An analyzer-free engine is
+      a useful overhead control, not a value automatically subtracted from
+      observations. Verify engine barriers, worker policy, lifecycle locking,
+      and FPU mode against retained Rack source. Do not assume ideal
+      cost/thread-count scaling.
+- [ ] Prepare concurrent single-consumer workloads at representative 30/60 Hz
+      rates, with deliberate stalls, and recording for producer impact,
+      consumed-spectrum age, skipped updates, and snapshot consistency.
+      Validate ownership and snapshot correctness untimed. Preallocate storage;
       do not add a second mailbox consumer or synchronize unsafely through the
       module's other fields. Separate headless consumption from actual rendering.
 - [ ] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
@@ -319,38 +346,42 @@ benchmark-only Rack-engine integration, and `test/paper/`/`test/rack/` verifiers
       steady sample processing. Include silence decay under recorded FPU modes.
       Verify single-producer ownership during host-serialized reset/publication.
 - [ ] Use deterministic concurrency tests and the existing mailbox TSan check
-      outside timing. If claiming device underrun reduction, additionally run
-      an audio-device experiment with recorded device/driver/buffer policy and
-      overload telemetry. Headless exceedances alone support no audible claim.
+      outside timing. An eventual device-underrun claim additionally requires
+      a user-run audio-device experiment with recorded device/driver/buffer
+      policy and overload telemetry. Device experiments are a later extension;
+      headless exceedances alone support no audible claim.
 
-Gate: correct complete modules and pinned Rack-engine comparisons run at
-defaults and demanding settings, with host overhead and consumer behavior
-explicitly separated from the core microbenchmark.
+Gate: complete modules and pinned Rack-engine workloads pass untimed correctness
+and ownership checks at defaults and demanding settings. Recording paths are
+tested using fixtures; host performance measurement remains user-owned.
 
-## Phase 5: Scheduling And Kernel Research
+## Phase 5: Prepare Scheduling And Kernel Experiments
 
-These are benchmark-only candidates first. Evaluate the following in order;
-record a concrete result or a reasoned deferral for each before closing the
-phase. Missing candidates limit claims about optimal granularity.
+These are benchmark-only candidates. Implement and numerically validate the
+following in order; record readiness or a reasoned deferral for each. Performance
+evaluation, weight tuning, tradeoff curves, and winner selection happen after
+the user returns measurements. Missing candidates limit later claims.
 
 - [ ] Native sub-FFT scheduling: bounded native leaves, scheduled twiddles,
       permutations, reconstruction, and postprocessing. Include all copies and
-      scratch costs; an opaque leaf is indivisible. Sweep a small predeclared
-      set of leaf sizes. Compare against whole-native-FFT hybrid and butterfly
-      scheduling without assuming either wins.
+      scratch costs; an opaque leaf is indivisible. Prepare a small predeclared
+      leaf-size sweep against whole-native-FFT hybrid and butterfly scheduling
+      without assuming either wins.
 - [ ] Completion horizon: decouple H_c from H; test H/4, H/2, H, and immediate
       execution where supported. Define rounding for non-divisible H and
       1 <= H_c <= H. Preserve endpoint cadence, capture during idle phases,
       latching, cancellation, ownership, and publication at t_r+H_c-1.
       Update C++/Python delay contracts and ring-lifetime reasoning. Merely
       changing the quota denominator is not a complete implementation.
-- [ ] Stage weights: evaluate preparation, reconstruction/magnitude, output,
-      and dirty-band costs with scalar/SIMD and real module sinks. Disclose
-      earlier M1 Pro tuning from [spec 010][weight-spec]. Use held-out sizes,
-      hops, and states after choosing weights; observed p99 is not a WCET bound.
-- [ ] Profile-directed kernel work: investigate ring-index arithmetic, scalar
-      butterfly segmentation, magnitude/reconstruction, and coordinate mapping
-      separately. Do not convert magnitude smoothing to power smoothing, change
+- [ ] Stage weights: expose preparation, reconstruction/magnitude, output,
+      and dirty-band weight sweeps with scalar/SIMD and real module sinks.
+      Disclose earlier M1 Pro tuning from [spec 010][weight-spec]. Specify
+      tuning and held-out sizes, hops, and states before measurement. Defer
+      tuning decisions; observed p99 will not establish a WCET bound.
+- [ ] Kernel variants: use source inspection or existing profiles to prepare
+      ring-index arithmetic, scalar butterfly segmentation,
+      magnitude/reconstruction, and coordinate-mapping experiments separately.
+      Do not convert magnitude smoothing to power smoothing, change
       coherent gain, or add signal-dependent shortcuts without a distinct
       contract. Capture before/after builds and test each change independently.
 - [ ] Extend deterministic tests for zero-work calls, quotas crossing stages,
@@ -363,18 +394,21 @@ phase. Missing candidates limit claims about optimal granularity.
       o=1, W=15, a one-credit call can execute a weight-four operation. Any
       replacement cost model must account for indivisible boundary operations,
       dispatch/configuration overhead, and its explicit cost assumptions.
-      Validate predictions on held-out workloads without calling them WCET.
+      Prepare held-out workloads for later validation of predictions without
+      calling them WCET.
 
-Gate: candidate tradeoff curves and numerical/scheduling evidence support
-selection or rejection. A result favoring efficient batch or hybrid is valid.
+Gate: prepared candidates pass numerical/scheduling checks, deferred candidates
+are documented, and the user can collect every planned comparison. No timing
+result or optimization selection is required.
 
-## Phase 6: Pilot, Freeze, And Confirm On The M1 Pro
+## Phase 6: Prepare The M1 Pro Study Plan
 
-The primary host is the existing 10-core, 16 GiB M1 Pro. Record actual OS,
-compiler, SDK, provider, power, and scheduling state for each new campaign.
-Do not inherit the old campaign's software versions or host preparation claims.
+The primary host is the existing 10-core, 16 GiB M1 Pro. The prepared package
+must capture actual OS, compiler, SDK, and provider identities; the user-run
+launcher will capture current power and scheduling state. Do not inherit the
+old campaign's software versions or host preparation claims.
 
-Use the following focused study groups rather than a full Cartesian product:
+Prepare the following focused groups rather than a full Cartesian product:
 
 | Group | Initial Pilot Coverage | Main Question |
 | --- | --- | --- |
@@ -385,85 +419,128 @@ Use the following focused study groups rather than a full Cartesian product:
 | Host | Phase 4 thread/count/block/load/consumer cases | Does reducing bursts improve available host capacity? |
 | Stress | Non-divisible hops, cold/live caches, silence decay, lifecycle events | Which limits or regressions constrain the recommendation? |
 
-- [ ] Before the pilot, state hypotheses and primary outcomes for each group.
-      Before confirmation, freeze practical thresholds in absolute time,
-      miss-rate or sustainable fixed-load terms, together with an acceptable
-      spectrum-age/cost budget. Define outcomes before seeing confirmation;
-      avoid a decision based only on a favorable relative p99 reduction.
-- [ ] Run at least two separately prepared pilot sessions for the primary
-      comparisons. Review drift, multimodality, timer resolution, phase
-      coverage, numerical errors, run duration, and disk/runtime requirements.
-      Resolve implementation errors before freezing; preserve failed attempts.
-- [ ] Freeze small explicit profiles, observation lengths, fresh-process
+- [ ] Write hypotheses, primary outcomes, initial observation lengths, process
       repetitions, allowed session order seeds, flagging policy, aggregation,
-      and stopping rules. Start from at least three confirmation sessions on
-      separate days and five fresh processes per primary cell per session;
-      pilot variability may require more. Short development repetitions are
-      not substitutes. Record any scientifically justified design change.
-- [ ] Make session order independently randomized within a frozen, recorded
-      seed policy. The current freeze fixes a seed; extend validation to permit
-      the predeclared session seeds while keeping workload membership and all
-      measurement semantics fixed. Do not bypass freeze checks to change order.
-- [ ] Size observation windows for the reported statistic. Retain effective
-      hop counts, duration, quantile ranks, and process/session variation;
-      hundreds of hops do not establish a precise rare-event probability.
-      Keep descriptive tails when available observations cannot support more.
-- [ ] Measure serially using Phase 1 preparation. No sources, dependencies,
-      profiles, or instrumentation change during a freeze. Changes require a
-      new pilot/freeze for affected comparisons, never metadata relabeling.
-- [ ] Complete the frozen matrix, including unfavorable cells. Distinguish
-      integrity failure from a valid but disturbed observation. Keep unfiltered
-      primary summaries and predeclared sensitivity views; no winner-based
-      early stopping, best-run selection, or silent omission.
+      and stopping rules into explicit versioned profiles. Prepare candidate
+      practical thresholds in absolute time, miss-rate or sustainable fixed-load
+      terms, together with spectrum-age/cost budgets. These are study-design
+      inputs, not conclusions about expected performance.
+- [ ] Prepare commands for at least two separately prepared user-run pilot
+      sessions covering all required groups. Resolve implementation errors
+      using correctness tests before handoff. Preserve all attempts; pilots
+      will later inform drift, multimodality, resolution, phase coverage,
+      duration, and storage decisions. No pilot run is required to close this
+      preparation spec.
+- [ ] Preserve the pilot-backed confirmation boundary. The initial package
+      collects pilots; it must not fabricate a confirmation freeze without
+      measurements or automatically promote pilot observations. After the user
+      returns pilots, a separate analysis task can propose a freeze and supply
+      confirmation commands for the user. Plan for at least three confirmation
+      sessions on separate days and five fresh processes per primary cell per
+      session, subject to the later pilot review. That decision and those runs
+      are outside this spec's completion requirements.
+- [ ] Extend freeze validation to support a predeclared, recorded session-seed
+      policy while preserving workload membership and measurement semantics.
+      Test it against synthetic pilot records. The existing fixed-seed freeze
+      must not be bypassed, and fixture data must never qualify as real evidence.
+- [ ] Make observation lengths configurable and retain effective hop counts,
+      duration, quantile ranks, and process/session variation. Test summaries
+      and inadequate-sample reporting using fixtures; hundreds of hops do not
+      establish a precise rare-event probability.
+- [ ] Enforce serial measurement of unchanged prepared artifacts. Changes to
+      source, dependencies, profiles, or instrumentation invalidate the relevant
+      preparation and any later freeze. Implement clear errors and new-output
+      requirements instead of silently rebuilding or relabeling observations.
+- [ ] Preserve every planned cell and slow observation. Implement completeness
+      and integrity checks that distinguish a failed run from a disturbed but
+      valid observation. No best-run selection, winner-based early stopping,
+      silent omissions, or performance-driven automatic retries.
 
-Gate: checked, complete same-host confirmation evidence answers the declared
-questions. If no practical benefit survives, narrow the paper rather than
-manufacturing a favorable workload or requesting more hardware automatically.
+Gate: checked profiles, resolved workloads, immutable prepared identities, and
+fixture-tested recording policies are ready for user collection. No measured
+pilot, confirmation freeze, or statistical result is required.
 
-## Phase 7: Evidence Handoff, Paper, And Production Disposition
+## Phase 7: Offline Launch Package And User Handoff
 
-- [ ] Create a new versioned data handoff with compact tables, raw bundles,
-      exact measured source, dependency/SDK identities, profiles/freezes,
-      observation policy, diagnostics, and explicit redistribution omissions.
-      Preserve raw bundles outside directories removed by ordinary clean rules.
-- [ ] Verify fresh extraction and deterministic statistical rederivation using
-      bundled tooling. Generate every selected number/plot with a receipt.
-      Review timeline, cost/peak/age, phase, process-variation, and host-load
-      figures. Do not hand-edit generated TeX/SVG assets.
-- [ ] Audit each headline against task equivalence, numerical coverage,
-      uncertainty, timing regime, and practical threshold. Explain native or
-      hybrid wins, extra cost, latency, storage, and unresolved disturbances.
-- [ ] Revise the full paper around application requirements, prior-work delta,
-      whole-pipeline mechanism, experimental questions, results, and a usable
-      decision rule. Keep historical/inverse/chain detail in clearly identified
-      appendices where useful. Consolidate repeated caveats without removing
-      qualifications necessary to interpret individual comparisons.
-- [ ] Recheck cited primary sources and notation. Exact-hop contracts and
-      standard mailbox ownership alone do not establish algorithmic novelty.
-      Do not transplant unverified reviewer speedups, latency lower bounds,
-      perceptual thresholds, or optimality claims. Build and visually review
-      the full manuscript and portable source export before final delivery.
-- [ ] Record production disposition separately: retain current behavior,
-      promote a verified optimization, or defer a candidate. Experimental
-      superiority does not automatically change plugin defaults. Any promotion
-      needs compatibility checks, DSP/SIMD tests, Rack build, relevant manual
-      checks, and fresh measurements if its integrated path differs from the
-      measured candidate. Publication-only success is not product integration.
-- [ ] Prepare local deposit-ready artifacts and document the remaining external
-      publication steps. Public upload or submission requires its own request.
-      Archive this spec as COMPLETE only after required phases and the full
-      report are verified; record deliberate research deferrals and claim limits.
+Primary files: the existing Make/benchmark entry points, workflow library,
+benchmark profiles, and their tests/documentation. Extend those components;
+the convenience targets below must not introduce a second campaign engine.
 
-## Validation Commands
+- [ ] Add `make benchmark-study-prepare` to prepare all required groups in one
+      operation. Resolve dependencies while connectivity is available, build
+      executables, run untimed correctness checks, archive source/dependency
+      identities, and save an explicit launch manifest. Preparation never
+      invokes a timing pass, calibration benchmark, or implicit smoke campaign.
+      Record unavailable providers as errors for required comparisons.
+- [ ] Add `make benchmark-study-run SESSION=pilot-01` as the user entry point.
+      Resolve groups, profiles, binary paths, host identity, order seed, output
+      paths, and recording policy from the prepared manifest. Require an
+      explicit, fresh session label. The target must have no build prerequisite
+      and no network operation; absent, stale, or incompatible preparation is
+      an actionable failure, never an automatic rebuild or dependency download.
+- [ ] Have that launch apply `/usr/bin/caffeinate -is` automatically, retain its
+      assertions for the entire runner and its children, check readiness,
+      perform the declared stabilization wait, and execute groups serially.
+      Any expensive verification precedes settling. Keep deliberate per-process
+      setup and warmup within the declared Phase 1 policy. The user must not
+      need to assemble flags, manually time a sleep interval, or keep an agent
+      connected. Do not create a recurring task or remote monitor.
+- [ ] Keep campaign outputs outside normal clean/build directories, defaulting
+      to `~/Fourier-benchmarks/spec014/SESSION/`. Expand and print the actual
+      absolute location. Retain raw observations, complete/failed status,
+      prepared manifest, workload/seed policy, checksums, numerical audits,
+      logs, and source/dependency identities needed for later analysis. Preserve
+      failed/interrupted directories and reject collisions; never delete or
+      overwrite an earlier session to retry it.
+- [ ] Provide a short quiet-host checklist: connect AC, disable Low Power Mode,
+      keep the lid open, disconnect Wi-Fi/Ethernet/other network connections,
+      turn off Bluetooth, stop agents, and close unnecessary applications.
+      Use the built-in keyboard/trackpad or wired controls as needed. Launch
+      from a standalone terminal after closing Codex and other agent hosts,
+      then leave the machine alone. Record user-declared isolation separately
+      from observable host state, and never claim that all OS activity ceased.
+      The launcher must not toggle radios, modify power settings, kill services,
+      or require the internet to validate readiness.
+- [ ] Print local progress/status at boundaries outside measured loops and a
+      final result-directory path. Once timing ends, write an offline handback
+      archive with its checksum and a concise README. Include everything needed
+      for the follow-up except documented restricted SDK/provider binaries.
+      Do not render reports, select favorable rows, rewrite the paper, or start
+      another independent session automatically. No upload is required.
+- [ ] Add `make benchmark-study-check` to test launch dispatch, stale-input
+      rejection, sleep-assertion lifetime, quiet-gate ordering, offline operation,
+      argument forwarding, output collisions, interrupted children, and final
+      packaging using fake clocks, fixture records, and stub measurement
+      processes. Untimed real numerical/concurrency checks remain separate.
+      Distinguish synthetic artifacts unmistakably from measured campaigns.
+- [ ] With dependencies already available locally, validate preparation and
+      fixture-based launch checks with network calls blocked and no connected
+      agent service required. Confirm that missing dependencies produce
+      preparation instructions, not a fetch during launch. Document any untested
+      real-host measurement behavior; obtaining actual performance numbers is
+      the user's task.
+- [ ] Deliver the exact repository path, successful preparation/check commands,
+      manifest identity, copyable session launches, expected output/archive
+      paths, completion/failure markers, and interruption instructions. Provide
+      workload counts and labeled planning estimates; do not invent a measured
+      runtime. Tell the user which archive to return once agents can be reopened.
+
+Gate: the user can disconnect, close agents, and launch each independent session
+with one short command against a fully prepared local package. All preparation
+and untimed/fixture checks pass. Archive this spec as COMPLETE at that handoff,
+recording any deliberate candidate deferrals and unverified timing behavior;
+do not wait for measurements, interpretation, paper changes, or publication.
+
+## Validation And Final Launch Commands
 
 Run commands from the repository root. The [contributor guide][contributing]
 and [workflow][workflow] specify the Rack SDK, compiler, optional providers,
-Python plotting environment, and TeX prerequisites. These commands describe
-future implementation validation, not checks performed while writing this spec.
-Run only relevant suites while iterating; run the full applicable gates before
-measurement. Tests, builds, reports, and sanitizers must not overlap timing.
+Python, and existing prerequisites. During implementation, use only correctness
+and fixture checks: no real benchmark run is authorized by this spec. Audit
+any changed test path before running it; replace entry into real timing loops
+with a fake clock or stub process. Do not weaken numerical checks to avoid work.
 
-### Existing Checks
+### Existing Preparation Checks
 
 ```shell
 python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p 'test_*.py'
@@ -480,92 +557,71 @@ git diff --check
 
 Run `make test/dsp/test_spectrum_analysis INSTRUMENT=asan-ubsan` for relevant
 memory/lifecycle changes. Provider skips are reported, not counted as passes;
-the M1 Pro confirmation requires the selected macOS providers to be available.
-Rack/manual/device checks record actual versions, settings, and observations
-here; an automated DSP pass is not a successful interactive session.
+required macOS providers must be available in the prepared package. A passing
+DSP test is not a successful Rack build, manual session, or benchmark. These
+are future implementation commands, not claims of execution while editing the
+spec. Documentation-only changes use link, command, and diff checks.
 
-### Planned Study Commands
+### Required Simple Command Interface
 
-Phase 2 will add versioned, explicit-workload profiles named
-`reliability-smoke.json`, `reliability-baselines.json`,
-`reliability-granularity.json`, `reliability-modules.json`, and
-`reliability-host.json` under `docs/whitepaper/benchmarks/profiles/`.
-These files do not exist at spec creation. The following uses the existing
-public CLI after those profiles and Phase 1's internal stabilization gate
-are implemented. Each profile declares its fixture/measurement phase; a smoke
-profile must never be relabeled as a pilot or confirmation.
+The following Make targets are requirements to implement; they do not exist at
+this spec revision. Do not execute or present them as available until their
+implementation and preparation checks pass. Exact profile filenames, resolved
+workload lists, paths, and source identities belong in the generated manifest
+and handoff README so the user's commands can stay short.
 
-All macOS timing launches below use the system `caffeinate` utility. Apply the
-same wrapper to development/Catch2 and Rack-host benchmark commands used in
-this study. Run on AC power with Low Power Mode off, keep the lid open, and
-allow the wrapped runner to complete before closing its terminal. During
-preparation, retain `pmset -g batt`, `pmset -g custom`, and `pmset -g assertions`
-output, plus `pmset -g` for effective settings, to establish power source,
-settings, and the wrapper's active assertions. Capture initial snapshots before
-the stabilization gate; repeat after timing while the wrapped runner is still
-active. Keep probes outside measured loops. Follow Phase 1's lifetime and
-power-change checks.
+The agent prepares the package while dependencies and build tools are available:
 
 ```shell
-python3 docs/whitepaper/benchmarks/bench.py setup --variant macos --build
-python3 docs/whitepaper/benchmarks/bench.py plan --profile docs/whitepaper/benchmarks/profiles/reliability-smoke.json --variant macos --output .build/spec014-smoke-plan.json
-/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-smoke.json --variant macos --output .build/spec014-smoke
-python3 docs/whitepaper/benchmarks/bench.py check .build/spec014-smoke
-/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-01 --host m1-pro-16gb-local --session spec014-pilot-01
-/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-pilot-02 --host m1-pro-16gb-local --session spec014-pilot-02
-python3 docs/whitepaper/benchmarks/bench.py check .build/spec014-pilot-01 .build/spec014-pilot-02
-python3 docs/whitepaper/benchmarks/bench.py estimate .build/spec014-pilot-01 .build/spec014-pilot-02
-python3 docs/whitepaper/benchmarks/bench.py report .build/spec014-pilot-01 .build/spec014-pilot-02 --phase pilot --output .build/spec014-pilot-report
+make benchmark-study-prepare
+make benchmark-study-check
 ```
 
-The two pilot launches above occur in separate prepared sessions, not one
-unattended command block. Capture truthful host notes and automated metadata.
-Freeze only after recording the Phase 6 design decision; the rationale below
-identifies that decision and is not a replacement for the recorded evidence.
+The final handoff must give the absolute repository path and instruct the user
+to open a standalone terminal there, apply the quiet-host checklist, and launch:
 
 ```shell
-python3 docs/whitepaper/benchmarks/bench.py freeze .build/spec014-pilot-01 .build/spec014-pilot-02 --profile docs/whitepaper/benchmarks/profiles/reliability-baselines.json --variant macos --output .build/spec014-baselines-freeze.json --rationale 'Spec 014 Phase 6 decision and checked pilot report record thresholds, durations, repetitions, session ordering, and retained cells.'
-/usr/bin/caffeinate -is python3 docs/whitepaper/benchmarks/bench.py run --freeze .build/spec014-baselines-freeze.json --variant macos --output .build/spec014-confirm-01 --host m1-pro-16gb-local --session spec014-confirm-01
+make benchmark-study-run SESSION=pilot-01
 ```
 
-Repeat that launch on separate days with `confirm-02` and `confirm-03` output
-and session names, using the implemented frozen order-seed policy. Use fresh
-paths for failed restarts and new freezes for other groups or revisions. Update
-this section with exact additional CLI arguments if implementation adds them;
-never imply an unimplemented flag was executed. After all sessions pass:
+After that session finishes, in a separate prepared session:
 
 ```shell
-python3 docs/whitepaper/benchmarks/bench.py check .build/spec014-confirm-01 .build/spec014-confirm-02 .build/spec014-confirm-03
-python3 docs/whitepaper/benchmarks/bench.py report .build/spec014-confirm-01 .build/spec014-confirm-02 .build/spec014-confirm-03 --phase confirmation --output .build/spec014-report
-python3 docs/whitepaper/benchmarks/bench.py select .build/spec014-report --output .build/spec014-selection.json
-python3 docs/whitepaper/benchmarks/bench.py export .build/spec014-selection.json --output docs/whitepaper/generated/comparison-014
-python3 docs/whitepaper/benchmarks/bench.py check-export docs/whitepaper/generated/comparison-014
-python3 docs/whitepaper/benchmarks/bench.py bundle .build/spec014-confirm-01 .build/spec014-confirm-02 .build/spec014-confirm-03 --selection .build/spec014-selection.json --output .build/spec014-evidence.tar.gz
-python3 docs/whitepaper/benchmarks/bench.py unpack .build/spec014-evidence.tar.gz --output .build/spec014-rederived
-make -C docs/whitepaper arxiv
+make benchmark-study-run SESSION=pilot-02
 ```
 
-Review the selection before export. Follow the extracted bundle's README to
-rederive statistics and compare against the checked originals. Preserve a
-verified copy of the new bundle outside `.build` before cleaning. After paper
-integration, extract its source archive into an empty directory and run:
+Each command covers all required pilot groups from the prepared manifest and
+applies `caffeinate -is` internally. These examples are user commands, never
+agent validation steps. The final handoff should contain no long per-backend
+CLI sequence, dependency installation, plotting step, or manual profile edits.
+The user can reconnect and reopen an agent after collection to return the
+printed archives. A second independently prepared session must not be simulated
+by looping over two labels in the same launch.
 
-```shell
-latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' -interaction=nonstopmode -halt-on-error fourier.tex
-```
+### Follow-Up After The User Returns Results
+
+Separate future work will check the returned evidence, assess pilot stability,
+choose practical thresholds and adequate durations, and prepare any required
+confirmation freeze and user launch commands. After sufficient evidence is
+returned, it can compare cost/peak/age tradeoffs, retain unfavorable results,
+produce checked figures/tables and portable evidence, revise the full paper,
+and decide whether a verified optimization merits production integration.
+Those tasks must not run automatically as part of this preparation spec.
 
 ### Completion Checklist
 
-- [ ] Phase 1: sleep protection, power settings, preparation, stabilization,
-      pacing, and diagnostic boundaries verified.
-- [ ] Phase 2: explicit workloads, new metrics, backward compatibility, and
-      audits verified.
-- [ ] Phase 3: efficient native and matched scheduling controls numerically validated.
-- [ ] Phase 4: complete module, Rack-engine, consumer, and stress comparisons verified.
-- [ ] Phase 5: research candidates evaluated or explicitly deferred with claim limits.
-- [ ] Phase 6: preregistered practical criteria and complete controlled
-      confirmation retained.
-- [ ] Phase 7: portable evidence, revised full paper, and production disposition verified.
+- [ ] Phase 1: sleep protection, power/isolation checks, stabilization, pacing,
+      and failure behavior verified with untimed checks and fixtures.
+- [ ] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
+- [ ] Phase 3: native and matched scheduling controls numerically validated.
+- [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
+      correctness/ownership checks passed.
+- [ ] Phase 5: experimental variants prepared or explicitly deferred; no
+      measured performance selection required.
+- [ ] Phase 6: pilot profiles and future confirmation policy prepared and
+      fixture-validated; no campaign executed by the agent.
+- [ ] Phase 7: offline package, simple launch targets, handback format, and
+      exact user commands delivered; no paper integration required.
 
 ## Execution Evidence
 
@@ -585,9 +641,17 @@ examples. Verified option semantics against the installed `caffeinate(8)` and
 campaign or machine power-setting change was performed for this documentation
 update.
 
+September 30, 2026: narrowed implementation to benchmark preparation and a
+user-run offline handoff. Replaced measurement, confirmation-result, and paper
+completion gates with untimed/fixture validation and planned simple Make
+targets. Retained mandatory `caffeinate`, power checks, settling, and data
+integrity requirements. Repository links, shell-example syntax, existing
+command references, and `git diff --check` passed. The new Make targets remain
+unimplemented requirements; no benchmark was launched or code changed.
+
 Record subsequent phase dates, decisions, exact commands/results, artifact
 locations, manual checks, and limitations here. Do not create a separate
-completion diary or mark the research complete merely because planning passed.
+completion diary or mark preparation COMPLETE merely because planning passed.
 
 [evidence-spec]: archive/012-comparison-evidence-and-paper-integration.md
 [paper-spec]: archive/013-comparison-paper.md
