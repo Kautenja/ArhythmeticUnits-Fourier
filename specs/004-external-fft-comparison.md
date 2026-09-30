@@ -18,26 +18,34 @@ semantics. FR-1 through FR-6 are implemented, including Rack/PFFFT, optional
 FFTW/vDSP, inverse and complete-chain baselines, and the matched hybrid
 comparison. FR-7 through FR-9 are explicitly deferred for the current paper
 under the [optional contender decision](#optional-contender-decision).
-FR-10's campaign/report tooling is implemented and smoke-validated. FR-11 is
-complete: all 11547 confirmation processes passed across three prepared M1 Pro
-sessions, with validated tables, figures, and matched attribution under
-[confirmation evidence](#fr-11-confirmation-evidence). FR-12 manuscript
-integration remains outstanding. The initial numerical acceptance issue,
-provisional coverage, and versioned policy correction remain recorded under
-[pilot evidence](#fr-11-pilot-evidence).
-Implementation smoke checks do not constitute publication comparison evidence.
-The [pre-campaign publication audit](#pre-campaign-publication-audit) below
-records later benchmark corrections and the scope of the next measurement
-run. The completed FR-11 results describe their archived revision, not these
-updated adapters or the current production code.
+FR-10's campaign/report tooling is implemented and smoke-validated. New FR-11
+requires equal per-run scalar numerical auditing; new FR-12 implements and
+validates parameter-transition measurement. FR-13 packages these into a
+reproducible experiment-to-paper workflow and hands the launch commands to
+the user. Its tooling can complete before the user runs the long campaigns.
+FR-14 requires validated replacement measurements before final paper completion.
+
+The former FR-11 measurement campaign completed for an older source revision:
+11547 confirmation processes passed across three prepared M1 Pro sessions.
+Its [confirmation evidence](#fr-11-confirmation-evidence) and
+[pilot evidence](#fr-11-pilot-evidence) remain historical records under their
+original numbering and artifact names. They do not validate the updated
+pipeline or supply replacement paper metrics. Keep them until
+the [replacement and retirement gate](#replacement-and-retirement-gate) passes;
+no results are deleted by this planning change.
+
+The [pre-campaign publication audit](#pre-campaign-publication-audit) records
+the benchmark corrections motivating the new requirements. Implementation
+smoke checks do not constitute publication comparison evidence.
 
 Complete implementation, correctness checks, and benchmark tooling first.
 Each framework or algorithm has its own functional requirement (FR), with an
 implementation/integration step followed by a benchmark implementation step.
-Short smoke runs validate the tooling during development; all comparative
-metric gathering, including the pilot, waits until FR-11's final measurement
-phase on a prepared host. Individual implementation FRs can complete before
-that phase; this spec remains in progress until the results and paper pass.
+Short smoke runs validate the tooling during development; comparative metric
+gathering follows FR-13's documented workflow on a prepared host, after the
+implementation gate. Individual implementation FRs, including FR-13's tested
+tooling and handoff, can complete before that campaign. This spec remains in
+progress until the replacement results and paper pass.
 
 ## Benchmark Layout Refactor
 
@@ -74,7 +82,7 @@ Validation on macOS ARM64 (no timing campaign):
     `git diff --check` passed.
 
 No production DSP changes, plugin build, manual Rack session, new measurements,
-or manuscript result updates were part of this refactor. FR-12 remains open.
+or manuscript result updates were part of this refactor. FR-14 remains open.
 
 ## Pre-Campaign Publication Audit
 
@@ -125,9 +133,11 @@ bias, and [benchFFT](https://www.fftw.org/accuracy/method.html) on independent
 references and relative vector errors. The protocol does not claim to
 implement their entire methodologies or benchFFT's arbitrary-precision oracle.
 
-### Remaining Claim-Dependent Gaps
+### Gaps Promoted To Required Work
 
-Two extensions would be substantive new work rather than minor audit fixes:
+The audit identified two substantive extensions. Both are now required in
+FR-11 and FR-12 before the replacement campaign, rather than conditional
+follow-ups:
 
 1.  A comparative numerical-accuracy ranking of scalar core/legacy against
     native providers requires equal per-run coverage. Scalar rows currently
@@ -135,16 +145,17 @@ Two extensions would be substantive new work rather than minor audit fixes:
     rows also replay every published output with norm checks. Suggested fix:
     add the shared untimed output audit to scalar core/legacy dispatch and
     validate its archive policy before including those rows in an accuracy
-    ranking. Until then, state the coverage and claim tested accuracy, not
-    numerical superiority. Large-frame binary64 references and weak-bin
-    diagnostics also remain explicit limitations.
+    ranking. This also strengthens the claim of performance without lost
+    accuracy; it does not require claiming numerical superiority. Until FR-11
+    passes, report the existing coverage differences. Large-frame binary64
+    references and weak-bin diagnostics remain explicit limitations.
 2.  A measured claim about arbitrary control-response latency requires
     timestamped requests at multiple processing phases, including length/hop
     changes and rapid replacement, with first-correct-publication age,
     transient error, cancellation, and callback-tail evidence. Existing live
     cases change window/band settings at frame boundaries with fixed N/H/rate.
-    Suggested fix: a focused transition experiment if this becomes a headline
-    claim; production regression tests alone are not a latency comparison.
+    FR-12 supplies this focused transition experiment for ordinary interactive
+    changes; production regression tests alone are not a latency comparison.
 
 Neither gap invalidates the scoped cost/burst/age comparisons. Battery savings,
 cross-architecture generalization, ML feature quality, device underruns and
@@ -177,10 +188,21 @@ No production DSP edits, plugin build, manual Rack check, or new comparative
 metrics belong to this audit. For the next run, freeze the updated measured
 source/dependencies and selected manifests together, retain a short pilot to
 check duration/timer resolution and variability, then gather fresh independent
-sessions. Preserve native-batch wins and unfavorable regimes in FR-12. Do not
-pool these new runs with FR-11's older implementation stratum or infer a
-speedup from a changed benchmark. FR-12 remains unfinished pending fresh
-evidence selection, manuscript integration, and reproducibility packaging.
+sessions after FR-11 and FR-12 pass. Preserve native-batch wins and unfavorable
+regimes in FR-14. Do not pool new runs with the former FR-11 implementation
+stratum or infer a speedup from a changed benchmark. FR-14 remains unfinished
+pending fresh evidence selection, manuscript integration, and reproducibility
+packaging.
+
+The subsequent planning revision adds FR-11/FR-12, assigns the reproducible
+workflow and handoff to FR-13 and final evidence integration to FR-14, and
+reopens all replacement-measurement acceptance items. FR-13 completion means
+tested tools and a usable runbook; the long measurement campaign and actual
+retirement have separate statuses. Planning-only validation passed local
+path/anchor checks, contiguous FR-1 through FR-14 headings, pending new/reopened checklists,
+`make -C docs/whitepaper check`, and `git diff --check`. No implementation,
+DSP test run, Rack build/session, benchmark campaign, or result deletion was
+performed for this requirement update.
 
 ## Review Of The Current Work
 
@@ -398,12 +420,12 @@ not a missing inverse-transform baseline.
     methods. No global best-transform, smallest-memory or universal real-time
     claim is supported by these deferrals.
 -   Keep the existing overlap-reuse citations and complementary-experiment
-    discussion. FR-12 must state that these alternatives were not measured.
+    discussion. FR-14 must state that these alternatives were not measured.
     If the intended claims broaden, reopen FR-9 (and FR-8 where relevant)
     before freezing that broader campaign. A reviewer can require more evidence;
     this scope decision is not a publication-acceptance guarantee.
--   Proceed to FR-10, then the FR-11 pilot and confirmation campaign, then
-    FR-12 integration. Resolve four-channel comparability, supported double
+-   Complete FR-10 through FR-12, then FR-13's reproducible workflow and
+    user-run pilot/confirmation, then FR-14 integration. Resolve four-channel comparability, supported double
     workloads, report fixtures and provenance first. Do not replace this work
     with more library implementations or choose exclusions from favorable
     timing results. Future scope changes need their own recorded rationale.
@@ -419,7 +441,7 @@ Implement the required FRs in order, completing each candidate's integration
 and correctness checks before its benchmark wiring. FR-1 records completed
 baseline work; FR-2 supplies shared protocol support. FR-3 through FR-6 are
 required contenders/experiments. FR-7 through FR-9 retain the reserve and
-academic scope above: record inclusion or deferral before FR-11, and complete
+academic scope above: record inclusion or deferral before FR-13, and complete
 both steps for any included candidate. An unchecked optional FR does not block
 measurement when its deferral and reason are recorded. Do not add candidates
 mid-campaign based on favorable timings; later additions need a new campaign.
@@ -446,7 +468,7 @@ to every candidate without duplicating them in each checklist.
     and throughput passes, explicit latency contracts, and artifact checks.
 - [x] Supply the synthesis smoke configuration and factor profile; pass short
     replay/artifact checks. Evidence is recorded below. Final measurements
-    for these controls remain part of FR-11.
+    for these controls remain part of FR-13.
 
 ### FR-2: Shared Adapter And Evidence Contracts
 
@@ -549,7 +571,8 @@ to every candidate without duplicating them in each checklist.
     checker contracts. The indivisible FFT call has no constant-cost butterfly
     interpretation or work-count timing guarantee.
 - [x] Pass numerical, cadence, and smoke/artifact checks across the planned
-    workload range. Build the attribution report path now; measure it in FR-11.
+    workload range. Build the attribution report path now; measure it through
+    the FR-13 workflow after handoff.
 
 ### FR-7: KISS FFT (Optional)
 
@@ -628,25 +651,224 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 - [x] Record exact reproduction commands and supply the tooling evidence for
     the readiness gate below. Final counts/durations remain pilot decisions.
 
-### FR-11: Final Metric Gathering
+### FR-11: Equal Per-Run Numerical Auditing
 
-- [x] After the readiness gate passes, prepare otherwise idle measurement
-    hosts and record power/thermal conditions, host activity, toolchain,
-    dependency identity, and session/order policy. Build before timed passes.
-- [x] Run and retain the focused pilot below for all included candidates and
-    controls. Use variability, timer resolution, and tail-event counts to
-    justify the final matrix, repetitions, session count, and duration.
-- [x] Freeze the confirmation configurations and exact commands, then run
-    serially across independent sessions with all artifact checks passing.
-    Preserve cases favoring batch and report missing hardware explicitly.
-- [x] Collect the required cost, tail, storage, error, completion/publication,
-    and sample-delivery metrics. Generate validated reports without conflating
-    workload families, time origins, or simulated deadlines with device data.
+Status: NOT STARTED. Extends scalar coverage without changing production DSP
+or timing the numerical reference. Existing preflight checks remain required.
 
-### FR-12: Paper Integration And Completion
+#### Implementation And Integration
 
-- [ ] Integrate FR-11's generated tables/figures into the paper, pin the measured
-    revision, and preserve historical campaigns and their interpretation.
+- [ ] Add independent all-output auditing to the untimed replay of every
+    supported scalar production and legacy batch/incremental analysis case,
+    in float and double. Match its exact input bytes, window, frame endpoints,
+    startup padding, smoothing history, and supported live-setting semantics.
+    Audit every instance and every publication; preserve the existing native,
+    scheduled, and independent-four-channel coverage.
+- [ ] Reuse the versioned numerical policy and report its reference precision,
+    relative L2/Linf and maximum absolute error, exact-silence checks,
+    non-finite rejection, and weak-bin diagnostics. Do not relax tolerances to
+    obtain a pass or use a tested backend as its own oracle. Account explicitly
+    for existing interval/window arithmetic differences without changing the
+    measured implementation to match a reference.
+- [ ] Extend dispatch, numerical records, artifact validation, and reporting
+    together. Record expected/checked spectra and bins, with full coverage
+    required for every included scalar configuration. Old archives retain
+    their original policy and preflight-only status; never retroactively mark
+    them as equally audited. Reference execution and diagnostics remain outside
+    timed loops and resource probes.
+
+#### Benchmark Implementation And Acceptance
+
+- [ ] Cover all supported analysis lengths and precisions, smoothing off/on,
+    startup/steady/live states, non-dividing hops, ring wraparound, multiple
+    instances, and both callback/throughput passes. Supplement the campaign's
+    common deterministic input with independent silence, impulse, DC/Nyquist,
+    off-bin tones, seeded noise, and weak-signal fixtures where needed.
+- [ ] Add negative fixtures for a corrupted published bin, missing or duplicate
+    publication, wrong settings/history, non-finite output, and omitted or
+    truncated numerical coverage. The checker must fail these cases; valid
+    archived preflight-only records must remain readable with their limitation.
+- [ ] Generate a fixture-based accuracy/coverage table with consistent units
+    and policy identifiers across the compared scalar and native rows. Demonstrate
+    that validation does not enter measured cost. Build with the supported
+    compiler arithmetic flags, run the validation commands below, and retain
+    smoke evidence. No numerical superiority or performance ranking is needed
+    to complete this FR.
+
+### FR-12: Parameter-Transition Evidence
+
+Status: NOT STARTED. Implement and validate measurement of ordinary interactive
+changes through existing analyzer APIs. Deterministic fixtures and short smoke
+runs complete this FR; comparative transition metrics come from the user-run
+FR-13 workflow.
+This extends benchmarks without redesigning production control semantics or
+requiring audio-rate modulation.
+
+#### Implementation And Integration
+
+- [ ] Define a deterministic event contract recording requested configuration,
+    request sample, acceptance/application sample, configuration generation,
+    represented frame endpoint, and publication sample. Specify the existing
+    latch, cancellation, coalescing, input-history, zero-padding and smoothing
+    behavior before constructing the reference. A deferred/replaced request
+    must be distinguishable from an applied request or a missing response.
+- [ ] Exercise requests at a frame boundary, early/middle/late in processing,
+    and immediately before publication. Include FFT-length increases/decreases
+    (for example 2048 to 16384 and back), hop increases/decreases, window and
+    frequency/time-smoothing changes, no-op requests, and a short sequence that
+    replaces a pending request before completion. Use supported rates and hop
+    capacities; this requirement does not add host sample-rate/reset callbacks
+    or display-geometry changes to the timed comparison.
+- [ ] Use the existing measurement harness for timed transition windows and
+    a separate deterministic replay for all-output correctness and lifecycle
+    traces. Charge actual configuration, cancellation, cache rebuilding and
+    output work in the declared boundary. Declare plan/buffer preparation and
+    memory policy; do not hide transition work as untimed setup. Any required
+    allocation or unsupported operation must be reported explicitly.
+- [ ] Include production scalar analysis and matched scheduled/native controls
+    for their supported transitions. Match inputs and requests, and document
+    differing application/retention policies. Compare latency only when the
+    requested result and time origins agree; do not delay a native result to
+    manufacture parity or silently omit unsupported cases. Keep headless
+    modules, display consumption and actual audio devices separate.
+
+#### Benchmark Implementation And Acceptance
+
+- [ ] Retain request-to-application and request-to-first-correct-publication
+    latency in samples and milliseconds, each accepted generation's numerical
+    errors, cancellations/replacements, stale or mixed-generation outputs, and
+    explicit no-response outcomes within a declared observation horizon.
+    A complete spectrum must belong to one configuration. Document whether
+    retaining the last complete old spectrum while pending is allowed.
+- [ ] Retain raw callback durations around each event and summarize mean,
+    p99 and observed maximum with transition counts, window definitions and
+    timer controls. Include an otherwise identical no-change control, preserve
+    per-process/session variation, and keep algorithmic response latency
+    distinct from wall-clock/UI latency and simulated budget exceedances.
+- [ ] Add deterministic tests for correct first-publication identity and age,
+    replacement/cancellation, retained/reset history, and rejection of wrong
+    generations, mixed bins, missing events/publications and non-finite outputs.
+    Produce a checked transition manifest and human-readable response/cost/error
+    tables or plots. Run validation and smoke checks before gathering metrics
+    through the FR-13 workflow; an unfavorable measured response remains valid evidence.
+
+### FR-13: Reproducible Experiment Workflow And Handoff
+
+Tooling status: REOPENED; awaiting FR-11 and FR-12.
+Replacement measurement status: NOT RUN.
+Evidence retirement status: DEFERRED.
+
+Deliver a documented workflow that another researcher can run from a clean
+checkout, reproduce the paper's derived outputs from an evidence bundle, and
+extend as a baseline for future experiments. Reuse the existing C++ suite,
+runner, checker and report generators; consolidate any required one-off
+analysis scripts into maintained repository tools. Completion is the tested
+workflow plus a concrete launch handoff. Do not require the implementing agent
+to execute the full pilot/confirmation campaign before completing this FR.
+
+#### Reproducible Tooling And Documentation
+
+- [ ] Provide a single documented workflow entry point or a small stable set
+    of commands for setup/preflight, inventory/dry-run, smoke, pilot, frozen
+    confirmation sessions, status/logs, validation, reporting, paper export,
+    and evidence packaging. Commands must run without chat context, local
+    helper scripts, hand-edited measurements, or the author's home-directory
+    paths. Reuse the existing timing harness rather than creating another.
+- [ ] Document supported platforms and explicit Rack-only/portable/macOS
+    provider variants, SDK/compiler/Python/plot/TeX prerequisites, pinned
+    dependency acquisition/build commands and licenses, environment setup,
+    and output layout. Detect missing requested providers and incompatible
+    settings before starting. Distinguish tested platforms from prospective
+    support and record framework components that cannot be redistributed.
+- [ ] Supply versioned workload/transition manifests, seeds, configurable
+    output roots and host/session notes, and a resolved workload inventory.
+    Expose smoke versus paper scale and how to estimate time/disk needs from
+    the pilot. Document how pilot variation, timer resolution and tail counts
+    determine the confirmation freeze; do not silently treat old settings as
+    validated for new code. Record source/dependency/build/policy identities
+    and refuse incompatible pooling or overwrite of existing evidence.
+- [ ] Make user-launched runs observable through terminal progress, current
+    workload/session/repetition, completed/failed counts and retained logs,
+    with documented exit codes, interruption and safe restart/resume behavior.
+    Any resume must verify provenance/configuration and retain failed or partial
+    attempts; restarting in a new directory is an acceptable documented policy.
+    Build before measurement, run timed jobs serially, and keep progress I/O
+    outside measured intervals. Session labels must represent actual sessions,
+    not an automated loop falsely claiming independent machine conditions.
+- [ ] Turn checked raw archives into human-readable CSV/Markdown tables and
+    SVG/PNG figures for cost, callback tails, storage, accuracy, attribution,
+    spectrum/delivery age and parameter response. Preserve units, coverage,
+    uncertainty and unfavorable outcomes. Allow report regeneration without
+    rerunning measurements or requiring the original absolute artifact paths.
+- [ ] Provide an explicit paper-export step driven by a versioned selection
+    manifest. Map each selected table, figure and numeric claim/macro to its
+    workload, source archive, statistic, units and intended manuscript include
+    path. Generate LaTeX table/macro includes and figure assets consumed by the
+    paper build; eliminate manual numeric transcription. Validate completeness,
+    phase, provenance and freshness before export. Reject smoke, fixture,
+    partial, mixed or stale evidence for production paper destinations; keep
+    smoke export tests in a clearly labeled temporary fixture document.
+    Generated assets must not rewrite editorial prose or historical results.
+    Ordinary paper builds/checks must not launch benchmarks or fetch new
+    results automatically; measurement and export are explicit commands.
+- [ ] Package the sources/configurations, numerical policy, dependency identity,
+    raw observations, logs, checker/report/export versions, selection manifest,
+    commands and checksums needed to audit a published result. Document how to
+    regenerate outputs and rerun on another host, distinguishing deterministic
+    derivation from hardware-dependent timing replication. Do not claim identical
+    timings across machines or promise redistribution of opaque libraries.
+- [ ] Document adding a workload/backend and comparing a compatible future
+    baseline without changing the frozen paper profile. Include small worked
+    examples, schema/units, numerical acceptance and unsupported cases, required
+    regression checks, and rules for separating revisions and experimental
+    variants. No bespoke assistant-written script should be needed for routine
+    reruns, figure regeneration or a supported new workload.
+- [ ] Inventory superseded results and provide a separately invoked retirement
+    operation with a non-destructive preview, exact candidate identities,
+    dependency checks and supersession receipt. Test the
+    [replacement and retirement gate](#replacement-and-retirement-gate) in
+    temporary fixtures. A benchmark launch or report command must never purge
+    older evidence automatically; actual retirement remains deferred until
+    real replacement evidence qualifies.
+
+#### Validation, Handoff And Completion
+
+- [ ] Verify the documented path from a fresh checkout or equivalent isolated
+    clean environment, using a small smoke run plus fixture evidence. Exercise
+    setup/preflight, launch/progress, interruption/restart policy, artifact
+    checking, deterministic reports, fixture paper export/build, and package
+    extraction/regeneration under a different directory. Record the host and
+    commands actually tested; validate optional-provider paths where available.
+- [ ] Add negative checks for missing/corrupt runs, changed sources or manifest,
+    mixed phases/sessions, incomplete numerical/transition coverage, stale paper
+    assets, fixture-to-production export, and premature evidence deletion.
+    The quick validation path must be bounded and must not launch a full paper
+    campaign as a side effect. Verify representative generated figures visually.
+- [ ] Give the user exact copyable setup, pilot-launch, freeze, per-session
+    confirmation-launch, progress/log, validate/report, paper-export/build and
+    bundle commands, with required inputs, output paths and expected success
+    markers. Explain what to do after each phase and which steps need an idle
+    machine. The user should be able to watch execution and finish the workflow
+    without another implementation request or recovering commands from chat.
+- [ ] Mark FR-13 tooling COMPLETE only after these deliverables pass. Record
+    measurement status separately as NOT RUN, PARTIAL or VALIDATED, and
+    retirement as DEFERRED or completed with retained exceptions. A handoff or
+    smoke report does not create paper evidence or close FR-14. Leave all old
+    results intact at handoff unless a real replacement has already passed
+    the retirement gate.
+
+### FR-14: Paper Integration And Completion
+
+- [ ] Obtain the user-run replacement campaigns through the FR-13 workflow,
+    verify the fresh pilot/freeze rationale, all required independent sessions,
+    numerical/transition coverage and reproducibility bundle, and record
+    replacement measurement status VALIDATED. The implementing agent need not
+    run those campaigns as part of FR-13, but the paper cannot complete without
+    real validated measurements. Resolve actual retirement eligibility then.
+- [ ] Integrate only FR-13's replacement comparison tables/figures into the
+    paper and pin the measured revision. Preserve separately cited historical
+    experiments and the compact supersession record required by FR-13;
+    remove obsolete preliminary claims under the retirement gate.
 - [ ] Report benefits, regressions, crossover regimes, numerical accuracy,
     confounds, uncertainty, and measured platform scope. Explicitly delimit
     unmeasured overlap-reuse alternatives under the optional contender decision;
@@ -723,14 +945,15 @@ Unchecked implementation work below is conditional, not a readiness blocker.
 
 ## Implementation Readiness Gate
 
-Before FR-11 starts, FR-1 through FR-6 and FR-10 must be complete, and each
-optional FR must either pass both steps or have a recorded deferral. FR-7
-through FR-9 now satisfy this decision requirement through the
+Before measurements through the FR-13 workflow start, FR-1 through FR-6 and FR-10 through FR-12
+must be complete, and each optional FR must either pass both steps or have a
+recorded deferral. FR-7 through FR-9 now satisfy this decision requirement through the
 [recorded deferrals](#optional-contender-decision); they are not implemented.
-FR-10 now supplies the campaign/report tooling evidence below. Require independent correctness
-checks, supported-host builds, verified smoke artifacts, resolved workload
-inventories, explicit dependency/setup/storage/latency
-contracts, and tested report generation. No speedup or final metric is needed
+FR-10 supplies the existing campaign/report tooling evidence below; FR-11 and
+FR-12 must extend and revalidate it for the new records and workloads. Require
+independent correctness checks, supported-host builds, verified smoke
+artifacts, resolved workload inventories, explicit dependency/setup/storage/
+latency contracts, and tested report generation. No speedup or final metric is needed
 to pass this gate. A short run that emits timing fields validates mechanics;
 its measurements cannot establish a ranking or enter the final paper.
 
@@ -743,7 +966,11 @@ Do not mix pre-fix and post-fix observations into one confirmation campaign.
 
 ## Final Measurement Sequence
 
-The following sequence belongs entirely to FR-11, after implementation:
+FR-13 must implement and document the following sequence for the user to run
+after handoff. Completing its tools does not assert that this sequence ran.
+Track replacement measurements separately; validated completion is required
+by FR-14. Inventory and label older evidence before starting, retaining it
+until step 5:
 
 1.  **Focused pilot:** Start with N=2048/4096/16384, H=1024, blocks of 16/64/256,
     48 kHz, float, one analyzer, steady state, smoothing off/on, and separate
@@ -752,15 +979,18 @@ The following sequence belongs entirely to FR-11, after implementation:
     configuration and report the workload count. Inspect timer resolution and
     session variability before choosing repetitions. Include inverse jobs and
     both overlap-save controls as separate families; do not combine their costs
-    or time origins in a single ranking.
+    or time origins in a single ranking. Require FR-11 coverage for all scalar
+    analysis rows and a focused pilot of FR-12's declared transitions.
 2.  **Focused extensions:** Use the implemented sweeps for N=128, H=257,
     96 kHz, 1/4/16 analyzers, aligned/staggered phases, fixed background load,
     and startup/live/cache pressure. Resolve valid family-specific combinations.
     Include callback-origin offsets where needed: analyzer staggering alone
     does not vary every relationship between the callback grid and frame
     schedule. Include equal four-channel work for `core-simd4` and a separate
-    supported-backend double sweep. Any reduction from the planned matrix
-    needs an explicit rationale; do not select only favorable results.
+    supported-backend double sweep. Include the FR-12 phase/settings sweep
+    as a separate transition family, with unchanged controls and explicit
+    observation horizons. Any reduction from the planned matrix needs an
+    explicit rationale; do not select only favorable results.
 3.  **Frozen confirmation:** Include the full-batch/hybrid/resumable attribution
     comparison and repeat the frozen matrix across independent sessions. Use
     at least three sessions as an initial coverage floor, with final run lengths
@@ -769,9 +999,15 @@ The following sequence belongs entirely to FR-11, after implementation:
     cross-architecture claims. Missing hardware limits claims; it does not
     justify invented data.
 4.  **Validated reporting:** Generate FR-10's tables/figures from checked final
-    artifacts for FR-12. Preserve prior archives and distinguish pilot, smoke,
-    and confirmation evidence. New academic/worker/host questions discovered
-    here are follow-on campaigns, not prerequisites for this implementation.
+    artifacts for FR-14, including comparable numerical coverage and transition
+    response/cost/error views. Distinguish pilot, smoke, and confirmation
+    evidence, retaining prior archives until the retirement gate passes.
+    New academic/worker/host questions discovered here are follow-on campaigns,
+    not prerequisites for this implementation.
+5.  **Evidence retirement:** Apply the replacement and retirement gate below,
+    remove eligible obsolete results, and verify the remaining evidence and
+    references. Do not remove retained baselines merely because the new run
+    is faster or slower.
 
 Measure serially on otherwise idle hosts; never run compilation or other
 benchmarks concurrently. Record power/thermal conditions, host activity,
@@ -786,6 +1022,48 @@ observation windows. Never pool callbacks as independent experimental repeats
 or treat a quantile based on too few tail observations as precise. Keep timer
 controls; do not mechanically subtract them or driver overhead. Call simulated
 budget exceedances by that name, not audio underruns or worst-case bounds.
+
+### Replacement And Retirement Gate
+
+The user requested that the earlier measurement results be replaced, with
+purging deferred until they are safe to retire. FR-13 supplies and tests this
+operation, but its tooling completion does not satisfy the gate. Actual
+retirement follows real replacement validation, normally after the user-run
+campaign. It is not an immediate cleanup action or an automatic side effect
+of running benchmarks, reporting, or completing the handoff.
+
+1.  **Inventory before replacement:** List exact obsolete candidate paths,
+    phase, measured source/dependency identity, available manifest hashes,
+    derived reports, and references that still consume them. Include the
+    former FR-11 pilot and confirmation evidence; do not assume a directory
+    prefix identifies only disposable data. Keep artifacts and historical
+    metric sections intact while FR-11/FR-12 and replacement runs are pending.
+2.  **Validate the replacement:** Fresh FR-13 campaigns must pass raw-artifact,
+    numerical-coverage, transition-contract, source/provenance and report checks.
+    Verify that the frozen matrix is complete, unfavorable cases remain,
+    figures/tables regenerate, and the replacement raw data plus measured
+    sources/dependencies and commands are preserved independently of the old
+    result directories. A successful process exit or smoke run is insufficient.
+3.  **Resolve retained uses:** Identify every old figure, table, manuscript
+    claim, optimization baseline, test fixture or reproduction command that
+    still depends on a candidate. Replace or remove obsolete preliminary
+    references where appropriate. Keep any evidence still needed for a retained
+    claim; FR-14 may finish resolving manuscript dependencies later. Do not
+    delete manuscript-backed historical experiments, numerical-policy decisions,
+    required source/configuration fixtures, unrelated optimization evidence,
+    dependency installations or user patches as part of this purge.
+4.  **Retire only eligible results:** Once the preceding checks pass, remove
+    the explicitly inventoried obsolete files/directories and their obsolete
+    metric summaries in this spec. Preserve a compact supersession record here
+    with former paths/identities/hashes, reason for retirement, replacement
+    campaign/report identities, and any retained exceptions. Do not fabricate
+    hashes for unavailable artifacts, relabel old runs as new runs, or rewrite
+    Git history to erase the research trail. No additional confirmation is
+    required by this spec for cleanup within this requested, verified scope.
+5.  **Check after cleanup:** Revalidate replacement reports and local links,
+    paths and manuscript artifact checks. Record actual removals and retained
+    dependencies. If a dependency is unresolved, retain that artifact with its
+    reason; the new campaign can still supply the paper's current comparison.
 
 ## Outputs And Acceptance Criteria
 
@@ -804,22 +1082,43 @@ budget exceedances by that name, not audio underruns or worst-case bounds.
 - [x] FR-2: Runner/checker regressions reject wrong scaling/layout, missing
     outputs, wrong publication age, unsupported configurations, altered
     dependencies, duplicate/missing runs, and invalid timing values.
-- [x] FR-11: A retained pilot justifies the final matrix, repetitions, session
-    count, and observation duration. A frozen confirmation campaign follows the
-    pilot; cases favoring batch processing remain in the reported matrix.
-- [x] FR-6 and FR-11: The hybrid comparison separates the practical value of
-    suspending the FFT from scheduling the surrounding work, with remaining
-    confounds stated.
-- [x] FR-10 and FR-11: Generated outputs include an
+- [ ] FR-11: Every included scalar analysis run has checked all-output numerical
+    coverage under the shared policy, with comparable error/coverage reports,
+    negative validation fixtures and correctly labeled historical records.
+- [ ] FR-12: Deterministic fixture requests across processing phases produce validated
+    generation/cancellation traces and first-correct-publication response,
+    error and callback-cost views under explicit comparable control contracts.
+- [ ] FR-13: A researcher can set up a clean checkout, launch and observe a
+    campaign, recover safely from interruption, validate it, regenerate reports,
+    export selected numbers/assets to the paper, and package/extract evidence
+    using tested documented commands. Fixture/smoke validation and a concrete
+    launch handoff suffice; a full measurement campaign is not required to
+    mark the tooling complete.
+- [ ] FR-6 and FR-13: Tested attribution tooling separates the practical value
+    of suspending the FFT from scheduling surrounding work, with explicit
+    remaining confounds and evidence identities for each comparison.
+- [ ] FR-10 through FR-13: Tested output generation supplies an
     implementation/provenance/error/storage table; matched workload/cost/age
     table; transform and full-analysis cost versus N; callback tail
-    distributions; and cost versus spectrum-age plots. Inverse and
+    distributions; cost versus spectrum-age plots; equal numerical-coverage
+    tables; and parameter-transition response/cost/error views. Inverse and
     complete-chain panels report release/completion and sample delivery latency,
     respectively, with their independent numerical evidence. Each output
     identifies its campaign and includes uncertainty or variation appropriate
     to that statistic. No upstream performance chart substitutes for these
-    measurements.
-- [ ] FR-12: The paper reports benefits, regressions, crossover regimes,
+    measurements. Fixture outputs validate generation only. The paper's numeric
+    includes and assets have deterministic derivation and traceable selection;
+    production export rejects incomplete, smoke, stale or incompatible evidence.
+- [ ] FR-13: Separately invoked retirement tooling previews exact candidates,
+    rejects an unsatisfied gate and records supersession/retained dependencies.
+    At handoff, real measurements may remain NOT RUN and cleanup DEFERRED;
+    completing tooling never permits removal of still-used evidence.
+- [ ] FR-14 evidence gate: A fresh retained pilot justifies the final matrix,
+    repetitions, session count and duration. Actual frozen confirmation and
+    transition campaigns pass all coverage/provenance checks, including cases
+    favoring batch. Record replacement measurements VALIDATED and execute
+    eligible retirement with any necessary retained exceptions.
+- [ ] FR-14: The paper reports benefits, regressions, crossover regimes,
     accuracy, limitations, and measured platform scope. Its tables/figures and
     citation metadata are updated consistently; build, artifact checks, and PDF
     review pass. An unfavorable result still satisfies this spec if supported.
@@ -856,6 +1155,11 @@ git diff --check
 
 The Python suite now compiles the host-independent synthesis verifier using
 `CXX` (default `c++`) and C++11. It does not need Rack or Catch2 for that check.
+FR-11/FR-12 must register their new regression fixtures in this existing test
+discovery and extend `--verify` as appropriate. Before marking either complete,
+record its exact smoke-manifest, artifact-check and report-generation commands
+here using implemented paths, including optional-provider build flags. The
+current commands alone do not prove the planned extensions exist or pass.
 The following first-party configuration exists now; use new directories:
 
 ```shell
@@ -880,9 +1184,10 @@ variant, with the documented FFTW prefix already prepared:
 python3 docs/whitepaper/benchmarks/run.py --config docs/whitepaper/benchmarks/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
 ```
 
-Only in FR-11, after the readiness gate and host preparation, run the pilot
-using explicit host/session identities, observation lengths, and host notes.
-Its retained evidence determines the frozen confirmation settings.
+When the user launches the FR-13 workflow after the readiness gate and host
+preparation, run the pilot using explicit host/session identities, observation
+lengths and host notes. Its retained evidence determines the frozen
+confirmation settings; the long pilot is not a tooling-completion requirement.
 
 Document dependency installation/build commands when versions and integration
 are selected, and record actual host notes with each campaign. Before the final
@@ -891,7 +1196,20 @@ repetition counts, run lengths, seeds, and session directories. Supply a
 deterministic figure/table generator and its validation command as part of
 implementation. Smoke checks are not publication measurements.
 
+FR-13 must add its exact tested commands and quickstart to the protocol README
+before handoff. Include the complete launch-to-paper path and evidence-bundle
+regeneration commands, with validated sample output and failure handling.
+The existing commands above are building blocks, not a claim that the planned
+workflow, exporter or retirement operation is already implemented.
+
 ## Review Evidence And Remaining Work
+
+The dated records below preserve the requirement numbering used when the
+experiments ran: historical FR-11 means metric gathering (now FR-13), and
+historical FR-12 means paper integration (now FR-14). Their completion states,
+campaign paths, hashes and measured results are historical, not acceptance
+evidence for the new FR-11/FR-12 or the reopened FR-13. Keep these records
+until the replacement and retirement gate permits removing obsolete summaries.
 
 ### Requirement Breakdown
 
@@ -1305,6 +1623,10 @@ retained pilot and run on prepared hosts. FR-12 integrates final evidence.
 
 ## FR-11 Pilot Evidence
 
+Historical measurement-stage record; this is not the new numerical-auditing
+FR-11. Superseded for current comparison metrics and retained pending FR-13's
+replacement and retirement gate. Original artifact names and commands follow.
+
 September 29, 2026: FR-10 was committed as `1f88307`. The user requested that
 FR-11 start while the laptop was otherwise idle. The host is an Apple M1 Pro
 with 10 logical CPUs and 16 GiB RAM, running macOS 26.6.2 (25G83), on AC power
@@ -1533,6 +1855,10 @@ running at the end of this work.
 
 ## FR-11 Confirmation Freeze
 
+Historical freeze for the former measurement FR-11. It is not the frozen
+matrix for the reopened FR-13; updated numerical and transition workloads need
+a new pilot and freeze. Retained pending the replacement and retirement gate.
+
 September 29, 2026: committed numerical-policy resolution as `ef7beca`.
 The complete 875-workload extension pilot then passed all 2625 runs and
 artifact checks in `.build/paper-fr11-extension-pilot`. Its preparation
@@ -1610,6 +1936,11 @@ pass their checks will confirmation tables, scientific figures and matched
 hybrid attribution be generated for FR-12.
 
 ## FR-11 Confirmation Evidence
+
+Historical completion for the former measurement FR-11. These results do not
+complete the new numerical-auditing FR-11 or validate replacement campaigns
+through the FR-13 workflow.
+Retained pending the replacement and retirement gate; do not pool with new runs.
 
 September 29, 2026: all 12 frozen campaigns completed and passed the runner's
 full artifact checker. All 1283 configurations have three process repeats in

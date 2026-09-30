@@ -1,8 +1,9 @@
 # Analysis Numerical Acceptance
 
 `spectrum-norms-v1` defines the benchmark-only processed-spectrum acceptance
-policy introduced after the first FR-11 pilot. It changes validation and
-reporting, not measured FFT providers, pipeline arithmetic, or Rack modules.
+policy introduced after the first historical FR-11 measurement pilot. It
+changes validation and reporting, not measured FFT providers, pipeline
+arithmetic, or Rack modules.
 It is an engineering error budget, not a floating-point error theorem.
 
 ## Motivation And Scope

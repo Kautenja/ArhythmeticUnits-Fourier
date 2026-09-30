@@ -131,11 +131,25 @@ final configuration. Non-smoke execution requires explicit `--host-id` and
 Use a stable host identity and distinct labels for actual independent
 sessions. Record power, thermal state, host activity and ordering context in
 `--notes`. Labels alone cannot prove independence. The matrix inventory and
-input configuration hash are archived with every campaign. The completed
+input configuration hash are archived with every campaign. The historical
 FR-11 confirmation and its source identities are recorded in the
 [owning spec](../../../specs/004-external-fft-comparison.md#fr-11-confirmation-evidence).
-Later revisions require separately identified evidence; confirmation status
-does not transfer to new code.
+The current plan adds FR-11 scalar numerical-audit parity and FR-12 parameter
+transitions. FR-13 will package the reproducible launch/observe/validate/report/
+paper-export workflow, test it with fixtures and short smoke runs, and provide
+copyable commands for the user to run the full experiments. This workflow and
+exporter are planned work; the commands below describe today's building blocks.
+FR-13 can complete at tooling handoff. Measurement status remains separate,
+and FR-14 cannot complete without real validated replacement campaigns.
+Historical confirmation status does not transfer to new code.
+Retain earlier results until FR-13's
+[replacement and retirement gate](../../../specs/004-external-fft-comparison.md#replacement-and-retirement-gate)
+passes; new campaigns use separate source identities and output directories.
+Completing the tooling does not trigger cleanup. The handoff must document
+clean-checkout prerequisites, progress/logs, interruption handling, deterministic
+paper table/figure/numeric imports, reproducibility bundles and extending the
+suite as a future baseline; no private scripts or manual numeric transcription
+should be needed for routine use.
 
 Generate checked evidence tables and scientific SVG/PNG figures in a separate,
 new directory. Matplotlib is an optional reporting dependency, isolated from
@@ -393,7 +407,7 @@ analysis. It covers N=128/2048/16384, H=1/37/257/1024/65536, startup,
 steady/live smoothing, aligned/staggered banks, background load, cache pressure,
 and different callback sizes/sample rates. Numerical/schedule fixtures also
 cover all eight supported powers of two. This matrix checks implementation
-coverage; it is not the FR-11 pilot or confirmation campaign.
+coverage; it is not a publication pilot or confirmation campaign under FR-13.
 
 The [attribution generator](hybrid_report.py) validates the archived campaign
 before producing JSON and Markdown outside its evidence directory. It requires
@@ -710,7 +724,8 @@ already rounded frame bytes; small sizes retain direct DFT sums. The versioned
 [numerical acceptance policy](numerical-accuracy.md) checks each spectrum's
 relative L2 and Linf errors against the existing analysis budgets, preserving
 all former pointwise violations as diagnostics. Measured adapters are unchanged.
-FR-11's initial reference/policy failures and their resolution remain recorded
+The historical FR-11 pilot's reference/policy failures and their resolution
+remain recorded
 in the [owning spec](../../../specs/004-external-fft-comparison.md#fr-11-pilot-evidence).
 
 Before a campaign, the executable checks matched scalar frame outputs and
