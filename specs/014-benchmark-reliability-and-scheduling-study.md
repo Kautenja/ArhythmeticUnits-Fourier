@@ -346,7 +346,7 @@ benchmark-only Rack-engine integration, and `test/paper/`/`test/rack/` verifiers
       Validate ownership and snapshot correctness untimed. Preallocate storage;
       do not add a second mailbox consumer or synchronize unsafely through the
       module's other fields. Separate headless consumption from actual rendering.
-- [x] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
+- [ ] Add controlled reset, freeze/resume, sample-rate, window, band, and geometry
       transitions. Separate lifecycle allocations and host-lock stalls from
       steady sample processing. Include silence decay under recorded FPU modes.
       Verify single-producer ownership during host-serialized reset/publication.
@@ -619,7 +619,7 @@ Those tasks must not run automatically as part of this preparation spec.
       and failure behavior verified with untimed checks and fixtures.
 - [x] Phase 2: explicit workloads, metrics, compatibility, and audits verified.
 - [x] Phase 3: native and matched scheduling controls numerically validated.
-- [x] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
+- [ ] Phase 4: module, Rack-engine, consumer, and stress workloads prepared and
       correctness/ownership checks passed.
 - [x] Phase 5: experimental variants prepared or explicitly deferred; no
       measured performance selection required.
@@ -1033,3 +1033,73 @@ native fixture tests passed normally and under ASan/UBSan, including horizon
 coverage and unchanged existing synthesis/analysis paths. The DSP suite passed
 2,180,346 assertions in 13 cases. Both-provider executables built successfully.
 All recording tests used synthetic clocks; no timings or winners were collected.
+
+### Phase 6 Preparation Blocker: September 30, 2026
+
+The autonomous implementation stopped at a real numerical gate failure. This
+spec remains **IN PROGRESS** and must not be archived or handed off as a ready
+measurement package. Phases 6 and 7 are incomplete. The extended decay check
+also reopens Phase 4's stress acceptance item; its earlier bounded checks still
+passed, but did not reach the failing amplitude range.
+
+The draft [pilot design](../docs/whitepaper/benchmarks/profiles/study-014.json)
+and pure `study_plan.py` resolver retain 194 cells / 388 fresh processes per
+session across seven groups, two explicit order seeds, candidate practical
+thresholds, fixed stopping/retention rules and descriptive quantile ranks.
+Five long module-decay cases remain in the plan rather than being omitted to
+make it pass. The design is explicitly `readiness: blocked`. These are draft
+planning inputs, not a prepared manifest, confirmation freeze or launch promise.
+Confirmation-seed enforcement, immutable artifact preparation and the offline
+launch package have not been implemented in this phase.
+
+The new [long-decay reproducer profile](../docs/whitepaper/benchmarks/profiles/engine/long-decay-regression.json)
+passes finite input for 4096 samples and then silence, with actual Rack FPU
+reset and all-output replay. It is an untimed correctness check. Under the
+existing `spectrum-norms-v1` limit of 0.0003:
+
+| Complete Path | First Failing Publication Frame | Relative L2 | Relative Linf |
+| --- | --- | --- | --- |
+| Fourier default | 106560 | 0.01066863 | 0.01652446 |
+| Fourier native vDSP hybrid | 109440 | 0.01066863 | 0.01652446 |
+| Fourier native FFTW hybrid | 106560 | 0.01066863 | 0.01652446 |
+| Spectre default | 194560 | 0.00032711 | 0.00017642 |
+| Spectre native PFFFT hybrid | 109568 | 0.01066863 | 0.01652446 |
+
+These are sample coordinates and numerical errors, not benchmark durations.
+The complete stdout/stderr failure summaries and binary/Rack/source identities
+are retained in [failure-evidence.json](../docs/whitepaper/benchmarks/tests/fixtures/decay/failure-evidence.json).
+No numerical tolerance was widened and no failing observation was excluded.
+
+The isolated [magnitude reproducer](../test/paper/reproduce_tiny_magnitude.cpp)
+confirms one cause: Rack's SIMD complex `abs` calls its `hypot`, implemented as
+`sqrt(a*a+b*b)`. Under ARM64 FPU control 16777216 (flush-to-zero), finite normal
+inputs `(1e-25,1e-25)` produce zero, while a binary64 reference gives
+`1.414213590008923e-25`, also a normal binary32 magnitude. Intermediate squaring
+underflows. PFFFT/FFTW benchmark magnitude adapters also use direct squares.
+The exact contribution of underflow, transform rounding and the near-zero
+reference policy to every complete path, especially scalar Spectre, is not yet
+isolated. This is not evidence of an audible defect or ordinary-amplitude error.
+
+From the repository root, reproduce the failing correctness gate with the
+both-provider build from Phase 5:
+
+```shell
+DYLD_LIBRARY_PATH=../.. .build/benchmark/rack/paper --engine-verify docs/whitepaper/benchmarks/profiles/engine/long-decay-regression.json
+c++ -std=c++11 -O3 -funsafe-math-optimizations -I../../include -I../../dep/include test/paper/reproduce_tiny_magnitude.cpp -L../.. -lRack -o /tmp/fourier-tiny-magnitude
+DYLD_LIBRARY_PATH=../.. /tmp/fourier-tiny-magnitude
+python3 -m unittest discover -s docs/whitepaper/benchmarks/tests -p test_study_plan.py
+```
+
+Both reproducer commands deliberately exit 1 on the observed failure. The two
+pure planning tests pass. The Phase 5 full suite remains 114 passing tests and
+one optional plotting skip; it did not include this newly extended decay gate.
+No performance campaign was launched.
+
+Before continuing, establish a documented tiny-signal/FTZ contract and either
+fix the applicable magnitude calculations under a distinct, validated behavior
+change or retain their underflow as an explicit numerical limitation with a
+separate stress reporting contract. Investigate scalar Spectre independently.
+Preserve the old/new identities if arithmetic changes. Do not silently loosen
+the relative norm gate, shorten the decay, disable Rack's FPU policy, or drop
+these cells. Then rerun the complete decay oracles, finish Phase 6's seed and
+integrity policies, and implement Phase 7's user-owned offline launch package.
