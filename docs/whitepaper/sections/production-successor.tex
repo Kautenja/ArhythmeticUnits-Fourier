@@ -1,21 +1,19 @@
-\section{Production Successor: Complete Analysis in One Hop}
+\section{Complete Analysis over One Hop}
 \label{sec:one-hop}
-The production \code{SpectrumAnalysis<T>} replaces the modules' original
-completion-driven loop with one ordered sequence per frame. It computes the
-same windowed transform and magnitude processing while omitting unused
-conjugate bins. The Fourier module instantiates four independent SIMD channels;
-the Spectre module uses scalar samples. The current implementation also
-weights window-cache rebuilding and Fourier's coordinate output as described
-below. The historical timing
-campaigns retained in this report predate that integration; their measurements
-must not be attributed to the revised scheduler.
+The analyzer maintains one ordered work sequence and one publication boundary
+per frame. It schedules windowing and packing, butterflies, positive-bin
+reconstruction, magnitude processing, and per-bin output on the engine thread.
+Every stage preserves the dependencies of uninterrupted evaluation; pausing
+changes the placement of work, not the selected signal frame. Unused conjugate
+bins are omitted. The shared \code{SpectrumAnalysis<T>} implementation supports
+scalar samples and independent SIMD channels with the same scheduling contract.
 
 \subsection{Dependency order and work bound}
 Let $M=N/2$, $K=M+1$, and $B=(M/2)\log_2 M$. Table~\ref{tab:units} defines
 the operations in each stage. Let $p=4$ while rebuilding window coefficients
 and $p=1$ for a clean window cache. Let $o$ be the compile-time output weight:
 one by default, or two for Fourier's four-channel coordinate mapping. The
-ordered scheduling sequence has length
+ordered scheduling sequence consumes $W$ credits, where
 \begin{equation}
  W=pM+B+(1+o)K=\frac{N}{4}\log_2(N/2)+\frac{(p+1+o)N}{2}+1+o.
  \label{eq:wholework}
@@ -24,9 +22,9 @@ All packing completes before any butterfly, all butterflies before any
 reconstruction, and the complete prefix sum before any range smoothing. A
 sample quota may cross stage boundaries. The dependency graph is unchanged
 when execution pauses; it therefore admits the same induction argument as
-the butterfly traversal in Appendix~\ref{sec:legacy-transform}. This is an argument about preserving operations for
-a chosen implementation, not bitwise identity to older code with different
-twiddle precision or compiler transformations.
+the butterfly traversal in Appendix~\ref{sec:legacy-transform}. Arithmetic-order
+preservation applies to pauses within this implementation; it does not imply
+bitwise identity to other FFT kernels or compiler configurations.
 
 \input{tables/production-work-units.tex}
 
@@ -35,32 +33,43 @@ For call $s\in\{1,\ldots,H\}$, assign the quota
  q_s=\floor{sW/H}-\floor{(s-1)W/H}.
  \label{eq:balanced}
 \end{equation}
-The cumulative work after $s$ calls is $\floor{sW/H}$, so completion is
-exactly on call $H$, with at most $\ceil{W/H}$ units per call. For
-$H=\rho N$ with fixed $\rho>0$, this is $O(\log N)$. A quotient/remainder
-accumulator implements the rule without per-sample division. This elementary
-balanced schedule is not a new scheduling result; its use here includes the
-complete dependency-ordered analysis. Appendix~\ref{app:one-hop} preserves
-the dispatch listing, proof, and clean/dirty-cache examples.
+The cumulative credit count after $s$ calls is $\floor{sW/H}$. Credits are
+exhausted and the frame is published on call $H$, with at most
+$\ceil{W/H}$ credits per call. Weighted operations execute at their first
+credit; later credits can be bookkeeping only, so arithmetic may finish before
+publication. For $H=\rho N$ with fixed $\rho>0$, this is $O(\log N)$. A quotient/remainder
+accumulator implements the rule without per-sample division. The quota is an
+elementary balanced schedule applied to the complete dependency-ordered
+analysis. Appendix~\ref{app:one-hop} preserves the dispatch listing, proof,
+and clean/dirty-cache examples.
 
-The bound includes scheduled window/cache rebuilds and bounded module output
-callbacks. Construction and host lifecycle callbacks are excluded; constant
-input/control work and an $O(\log N)$ plan-index calculation remain. No
-$O(N)$ boundary pass remains in steady-state engine analysis. Reweighting
-redistributes work but does not make units equal in duration, constrain an
-arbitrary user callback, or bound operating-system interruptions.
+For fixed $W,H$, any $D$ consecutive active sample calls consume at most
+$\ceil{DW/H}$ credits, including intervals that cross frame boundaries.
+This follows by telescoping the quota differences and relates sample-level
+accounting to a host block. It applies per analyzer, without configuration
+changes, reset, or pauses; it is not a duration bound.
+
+The per-call bound includes scheduled window/cache rebuilds and bounded module
+output callbacks. Construction and host lifecycle callbacks are excluded; constant
+input/control work and an $O(\log N)$ plan-index calculation remain. Decomposing
+every stage into bounded operations removes $O(N)$ boundary passes from
+steady-state engine analysis; the quota distributes those operations.
+Reweighting changes placement but does not equalize operation costs, constrain
+an arbitrary user callback, or bound operating-system interruptions.
 
 \subsection{Retained samples, plans, and publication time}
 Let the frame endpoint be $t_r=rH$, counting continuously captured samples
 from zero. Frame selection occurs on call $t_r$, and the last scheduling
 credit and publication occur on call $t_r+H-1$. The last actual output may
-precede its final credit; it remains private until publication. Consequently
+precede its final credit; it remains private until publication. The nominal
+sample-index ages at publication are therefore
 \begin{equation}
  A_{\mathrm{newest}}=(H-1)/f_s,\qquad
  A_{\mathrm{mid}}=((N-1)/2+H-1)/f_s.
  \label{eq:wholeage}
 \end{equation}
-Successive publications are exactly $H$ samples apart. This convention differs
+These ages do not include elapsed computation or display delay. Successive
+publications are exactly $H$ samples apart. This convention differs
 from the original next-call publication in Equation~\eqref{eq:age}. Startup
 uses zero padding; a full first window is not awaited. With changing hops the
 endpoints satisfy $t_{r+1}=t_r+H_r$, and each frame uses its latched $H_r$.

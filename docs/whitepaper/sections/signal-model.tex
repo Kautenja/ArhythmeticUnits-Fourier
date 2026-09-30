@@ -1,7 +1,11 @@
-\section{Signal Model}
+\section{Signal and Execution Model}
 \label{sec:signal-model}
-Let $x[n]$ be a real discrete-time signal sampled at $f_s$ Hz. A frame whose
-newest sample is $x[t_r]$ is
+Let $x[n]$ be a real signal sampled at $f_s$ Hz. A sample call advances one
+engine sample; a host callback can render $D$ such samples. These are distinct
+measurement boundaries. A hop $H$ specifies the interval between selected
+frame endpoints, not the host callback size. The transform length $N\ge4$ is
+a power of two, and $H\ge1$ is an integer. With continuously captured input
+and fixed hop, the frame endpoint is $t_r=rH$. The selected window is
 \begin{equation}
  u_r[m]=x[t_r-N+1+m]w[m],\qquad 0\le m<N,
 \end{equation}
@@ -12,6 +16,11 @@ where $w$ is an analysis window. Its unnormalized forward transform is
 \end{equation}
 The associated bin frequency is $kf_s/N$. Deferring computation changes when
 $X_r$ becomes available; it does not change which samples enter this sum.
+Sample-index age measures the distance from a specified frame timestamp to
+publication, converted to seconds using $f_s$. It excludes wall-clock
+computation, device buffering, and display consumption. In particular, a
+transform computed in its endpoint's sample call has zero endpoint-to-publication
+age but nonzero execution time.
 
 For amplitude calibration, the finite-window coherent gain is
 $G_c=N^{-1}\sum_m w[m]$. An isolated interior bin-centered real sinusoid can be
@@ -25,8 +34,7 @@ The original FFT campaign uses explicit rectangular and periodic Hann samples
 and does not certify display calibration. The pipeline campaign instead uses
 a coherent-gain-normalized periodic Hann window.
 
-The transform length is a power of two, with $N\ge4$, and $H\ge1$ is the
-integer hop in sample calls. Real-input packing uses $M=N/2$ complex samples;
+Real-input packing uses $M=N/2$ complex samples;
 the analyzer retains $K=M+1$ nonnegative-frequency bins, including DC and
 Nyquist. The standard radix-2 traversal requires
 $B=B_r(N)=(N/4)\log_2(N/2)$ butterflies. Appendix~\ref{sec:legacy-transform}

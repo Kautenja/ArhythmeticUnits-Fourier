@@ -1,26 +1,23 @@
 \begin{abstract}
-A Fourier transform that is inexpensive in aggregate can still impose an
-undesirable burst on a real-time audio engine. This report studies two
-successive schedulers in an open-source spectral analysis plugin for VCV Rack.
-The original design distributes butterflies
-but retains linear preparation and reconstruction bursts and may restart frames
-before its requested horizon. The production successor orders packing,
-windowing, butterflies, positive-bin reconstruction, magnitude smoothing, and
-display preparation into a single resumable work sequence. An integer balanced
-quota completes that sequence in exactly one hop. We derive its work count,
-publication latency, retained-input capacity, and ownership requirements.
-Reproducible scalar experiments characterize the original transform and compare
-complete-pipeline prototypes. In one representative prototype workload, the
-median observed 64-sample block maximum falls from 24.625 to 4.875 microseconds
-without the extra latency of a four-hop overlapped schedule. These observations
-motivated the one-hop implementation; they are not timings of the integrated
-plugin. Regression tests separately exercise the production scalar/SIMD paths,
-exact cadence, cancellation, and allocation-free live configuration. The
-contribution is a scheduling and implementation study within established
-time-distributed FFT work, not a new factorization. Balanced work counts remove
-frame-sized boundary passes but do not imply equal call duration or hard
-real-time guarantees.
+A spectral analyzer can be inexpensive in aggregate yet impose concentrated
+work on an audio engine. This paper studies cooperative scheduling of a
+complete windowed-analysis pipeline on the engine thread. The design orders
+input packing, windowing, FFT butterflies, positive-bin reconstruction,
+magnitude smoothing, and output preparation into bounded operations. A balanced
+integer quota distributes their scheduling credits over one hop, and a complete
+spectrum is published at the hop boundary. We specify the resulting work-count
+bound, sample-index age, retained-input capacity, and output ownership contract.
+A scalar and four-channel SIMD implementation supports live configuration
+without whole-frame boundary passes in the sample path. The evaluation design
+separates controlled changes in work placement from comparisons with optimized
+FFT implementations, considering aggregate cost, callback-duration tails,
+storage, and publication age together. Archived scalar and prototype campaigns
+provide historical design evidence; final production comparisons remain to be
+integrated. The contribution is an implementation and evaluation study within
+established time-distributed FFT research. Bounded operations and exact
+publication cadence establish a scheduling contract, while their practical
+value depends on measured costs and acceptable spectrum age; they do not
+establish a hard execution-time bound.
 \end{abstract}
 \noindent\textbf{Keywords:} fast Fourier transform; short-time Fourier transform;
 cooperative scheduling; real-time audio; spectral analysis; VCV Rack.
-

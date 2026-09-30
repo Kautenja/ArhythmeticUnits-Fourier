@@ -9,10 +9,10 @@ included by [fourier.tex](../fourier.tex) and its standalone source export.
 The main text follows the problem, closest prior work, frozen-frame signal
 model, legacy motivation, and complete one-hop design before the experimental
 methods and results. It retains the dependency order, total work and quota
-equations, exact completion bound, publication ages, retained-input capacity,
-and output ownership contract. The benchmark methods and results remain in
-place for evidence updates; moving theory does not reclassify historical
-measurements as production results.
+equations, exact publication bound, publication ages, retained-input capacity,
+and output ownership contract. The main evaluation design defines comparison
+contracts and evidence requirements. Historical methods and results remain in
+the appendices, separate from pending production confirmation.
 
 References precede a page break into the appendices, making the main narrative
 boundary visible in the PDF. The main text summarizes the supporting arguments
@@ -29,6 +29,10 @@ and links to their full derivations here.
     [implementation reference](implementation.tex): Dispatch listing, quota
     examples and proof, ring lifetime, table reuse, smoothing, caches,
     and lifecycle behavior.
+-   [Original experimental method](experimental-method.tex),
+    [FFT results](original-results.tex), and
+    [prototype evaluation](prototype-evaluation.tex): Complete historical
+    campaigns, including their original tables, figures, and limitations.
 -   [Extended related work](related-work.tex) and
     [evaluation agenda](evaluation-agenda.tex): Detailed comparisons and
     proposed experiments, with their original citations and limitations.

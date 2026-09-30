@@ -1,38 +1,39 @@
 \section{Related Work and Positioning}
 \label{sec:related}
-Time-distributed FFT computation predates this implementation. Lo and Lee
-schedule butterfly work during acquisition and also combine scheduling with
+Time-distributed FFT execution has a substantial history. Lo and Lee construct
+butterfly work during acquisition and also combine scheduling with recursive
 reuse across shifted frames~\cite{lo1998,lo1999,lomoving1999}. In convolution,
-Bor\ss{} distributes partition work across processing cycles and staggers
-filter schedules~\cite{borss2009}; Hurchalla distributes FFT processor and
-memory load across incoming blocks on one thread~\cite{hurchalla2010}.
-These are precedents for controlling bursts rather than only aggregate cost.
-Our analyzer instead selects a complete window before processing it and
-retains those samples while packing incrementally.
+Bor\ss{} distributes partition work and staggers filter schedules to control
+combined load~\cite{borss2009}, while Hurchalla distributes transform work
+across incoming blocks on one thread~\cite{hurchalla2010}. Battenberg and
+Avi\v{z}ienis schedule forward transforms, spectral products, and inverse
+transforms across callbacks, using FFTW for leaf transforms and comparing
+cooperative with preemptive execution~\cite{battenberg2011}. Thus both complete
+processing chains and optimized transform kernels have precedents within
+cooperative scheduling. Wefers treats manual preemption and transform
+subdivision more broadly~\cite{wefers2015}; suspension granularity remains an
+implementation choice rather than an inherent advantage of butterfly-level
+execution.
 
-Battenberg and Avi\v{z}ienis distribute forward transforms, spectral products,
-and inverse transforms across callbacks, and compare cooperative with
-preemptive execution~\cite{battenberg2011}. Scheduling a whole processing
-chain therefore also has precedent. Wefers discusses such manual preemption
-and FFT subdivision more broadly~\cite{wefers2015}. The present contribution
-is the analysis and implementation of an exact-hop windowed-analysis sequence,
-including retained-input capacity, cancellation, and output ownership. It
-claims neither a new FFT factorization nor the invention of time distribution.
+For spectral visualization, Pr\r{u}\v{s}a and Holighaus use a worker thread
+and distinguish computation, polling, and repaint delay~\cite{prusa2016}.
+Their filter-bank representation differs from the fixed-window FFT considered
+here, but the separation of execution context and visible-output latency is
+directly relevant. Sliding, hopping, and feedforward transforms offer another
+dimension of choice: reuse across overlapping
+windows~\cite{lyons2021,park2014,garrido2016}. Frequency-domain kernels can
+support tapered windows in such methods~\cite{rafii2018,eleftheriadis2023}.
+Overlap reuse and time distribution can be combined; they are not mutually
+exclusive alternatives. Our implementation selects a complete window and
+starts a fresh transform for each frame.
 
-Pr\r{u}\v{s}a and Holighaus provide a worker-thread alternative for spectral
-visualization and distinguish analysis delay from polling and repaint
-delay~\cite{prusa2016}. Sliding, hopping, and feedforward methods instead reuse
-work across windows~\cite{lyons2021,park2014,garrido2016}; frequency-domain
-window kernels can make that reuse compatible with tapered
-windows~\cite{rafii2018,eleftheriadis2023}. Our scheduler starts a fresh
-transform for each selected frame. Comparing these alternatives requires
-matching the requested bins, hop, window, normalization, and numerical behavior;
-lower aggregate arithmetic alone does not establish smaller processing bursts.
-
-FFTW, Rack's PFFFT wrapper, and Apple Accelerate/vDSP are relevant optimized
-batch baselines~\cite{frigo2005,pffft,vdsp}. The original scalar FFT campaign holds
-the transform implementation fixed to examine work placement. Neither archived
-campaign measures those libraries or establishes a performance ranking
-against them. Appendix~\ref{app:related-work} preserves the full literature
-comparison, including transform foundations, overlap reuse, traversal choices,
-and library-specific matching requirements.
+Within this literature, the present study specifies the execution contract of
+a complete windowed analyzer: allocation of work over an exact hop, retention
+of selected input, cancellation, and ownership of published output. FFTW,
+Rack's PFFFT wrapper, and Apple Accelerate/vDSP provide relevant optimized
+batch baselines~\cite{frigo2005,pffft,vdsp}. A fair comparison must match input
+frames, requested bins, window and normalization, output processing, and
+numerical acceptance, while recording differences in layout and execution
+context. Section~\ref{sec:evaluation} separates scheduling controls from these
+practical implementation comparisons. Appendix~\ref{app:related-work} retains
+the detailed literature comparison.

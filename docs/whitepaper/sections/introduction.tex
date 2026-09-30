@@ -1,44 +1,48 @@
 \section{Introduction}
-A real-time audio system must complete the work associated with an audio buffer
-before the next buffer is required. A spectral analyzer participates in this
-constraint even when it produces no audio output: computation performed on the
-engine thread competes with oscillators, filters, and other processors. The
-relevant resource is therefore not only transforms per second, but also how
-transform work is distributed across the host's processing intervals.
+Spectral analysis shares an audio engine's processing budget even when it
+produces no audio output. An analyzer that consumes little CPU time on average
+can still concentrate window preparation, transformation, and display-data
+processing into a single host callback. Conversely, spreading those operations
+can add dispatch cost and delay the spectrum. For interactive audio software,
+the relevant objective is therefore a joint constraint on aggregate cost,
+processing bursts, and the age of the information delivered to the application.
 
-A conventional batch FFT interface accepts a complete frame and returns a
-complete spectrum. Such an interface is appropriate when the call fits the
-available budget, or when a worker thread can perform the analysis with an
-acceptable publication delay. A sample-based plugin may instead benefit from
-retaining an unfinished transform and performing a small amount of it whenever
-the host processes another sample. This makes scheduling visible at the DSP
-interface without introducing an additional thread.
-The practical question is when spreading complete analysis over a hop reduces
-callback peaks enough to justify its total CPU cost and additional spectrum age.
+This paper asks how to schedule complete windowed analysis on an existing
+engine thread while making those tradeoffs explicit. A batch FFT is an
+appropriate baseline when its call fits the available budget. A worker thread
+can move analysis away from that thread when asynchronous delivery is
+acceptable. Cooperative execution offers another choice: retain the state of
+an unfinished analysis and advance it on successive engine sample calls.
+No additional thread is required, but the application must account for all
+stages and preserve the selected input until it is consumed.
 
-The implementation studied here belongs to the Arhythmetic Units Fourier plugin
-for VCV Rack. The plugin contains a spectrum analyzer module named Fourier and
-a spectrogram module named Spectre. These are software product names; the
-mathematical terms Fourier transform and Fourier analysis retain their
-conventional meanings. The Fourier module computes four independent spectra
-using SIMD lanes; the Spectre module maintains a scalar spectrogram history.
-Their current shared analyzer schedules the complete engine-side analysis over
-one exact hop. The earlier resumable real FFT remains available as a reusable
-DSP component and as the baseline examined here.
+Making the FFT resumable is insufficient on its own. A butterfly budget can
+leave frame-sized packing, reconstruction, and output passes at the boundaries.
+Furthermore, restarting as soon as a transform completes can change the frame
+interval even when the requested computation horizon is unchanged. These
+observations motivate a dependency-ordered sequence for the complete analyzer
+and a publication clock independent of early arithmetic completion.
+The approach builds on time-distributed transforms and cooperative processing
+chains; its contribution is the explicit contract for this windowed analyzer,
+not a new FFT factorization.
 
-This report makes three contributions: a derivation of the original scheduler's
-completion/cadence mismatch and residual bursts; a dependency-ordered one-hop
-design covering the complete analysis path and buffer lifetime; and executable
-correctness checks with controlled scalar measurements informing that design.
-We make no claim to a new FFT factorization, the invention of time distribution,
-or a general performance advantage over optimized transform libraries.
+We specify the work-credit bound, exact publication cadence, input-retention
+requirement, cancellation behavior, and ownership of completed output. We also
+define comparisons that distinguish distributing a fixed implementation from
+choosing a different FFT or processing layout. This distinction matters because
+a lower callback tail can coexist with higher total cost, and an optimized
+batch implementation can outperform a finely scheduled one. The empirical
+question is which workloads justify the additional state and spectrum age,
+rather than whether suspension is universally preferable.
 
-The original DSP campaign used revision \code{b52e49c548ae}; its exact
-experiment and header sources are archived with recorded SHA-256 digests.
-Sections~\ref{sec:method} and~\ref{sec:legacy-results} retain that campaign's
-methods and results. Section~\ref{sec:one-hop} describes the production
-successor at revision \code{9e43231}; Section~\ref{sec:pipeline-evaluation}
-reports a separate pre-integration prototype campaign. Keeping these artifacts
-distinct prevents historical timings from being attributed to the current
-plugin. Appendices preserve the transform derivations, legacy analysis,
-implementation listings, extended literature review, and evaluation agenda.
+The implementation is the shared analyzer in the Fourier spectrum analyzer
+and Spectre spectrogram modules for VCV Rack. Fourier processes four independent
+channels in SIMD lanes; Spectre uses scalar samples. The design described here
+matches production revision \code{785446a5b2f9}, including weighted preparation
+and output credits. Each timing campaign identifies its own measured sources;
+that implementation description does not transfer historical timings to the
+current code. Section~\ref{sec:evaluation} defines the production comparison
+protocol. Section~\ref{sec:historical-evidence} summarizes the available
+historical evidence, with full methods and results in the appendices. Final
+production comparisons remain pending, so performance rankings and operating
+recommendations are not conclusions of this revision.

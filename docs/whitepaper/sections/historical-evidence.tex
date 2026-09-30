@@ -1,0 +1,29 @@
+\section{Historical Evidence and Scope}
+\label{sec:historical-evidence}
+Two archived campaigns motivate the design without constituting production
+confirmation. The original FFT study holds its scalar transform implementation
+and requested frame cadence fixed while comparing immediate and incremental
+execution. Its numerical checks support the tested transforms and schedules;
+its timings locate residual preparation and reconstruction bursts and show why
+a percentile alone can miss work occurring less than once per hundred sample
+calls. Appendix~\ref{sec:method} records its host, compiler, workloads, and
+within-session resampling; Appendix~\ref{sec:legacy-results} retains every
+reported numerical and timing summary. Those statistical choices apply only
+to that campaign.
+
+The separate complete-pipeline prototype study compares a one-hop serial
+schedule with boundary bursts and a four-hop overlapped schedule
+(Appendix~\ref{sec:pipeline-evaluation}). It illustrates that lower observed
+block maxima can coexist with higher aggregate cost. The one-hop design also
+avoids the additional $3H$ samples of age required by that overlapped
+prototype. Some comparisons change storage and arithmetic as well as work
+placement, so they do not identify scheduling overhead in isolation.
+The selected timing examples, complete ranges, and production regression
+record remain with their original evidence in the appendix.
+
+Neither campaign measures the current weighted scheduler against optimized
+libraries, concurrent display consumption, or a running audio device. The
+production comparisons in Section~\ref{sec:evaluation} must supply their own
+validated source identities, workload coverage, numerical audits, and session
+observations. Historical data and implementation tests cannot establish a
+current backend ranking or an audio-deadline guarantee.

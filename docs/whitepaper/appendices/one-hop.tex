@@ -9,7 +9,7 @@ Implement Equation~\eqref{eq:balanced} with a quotient/remainder accumulator.
 Quotient and
 remainder $a=\floor{W/H}$ and $r=W\bmod H$ are refreshed at configuration,
 reset, and the transition from a rebuilt window to a clean cache.
-Starting the accumulator $e$ at zero, each sample executes $a$ units plus one
+Starting the accumulator $e$ at zero, each sample consumes $a$ credits plus one
 when $e+r\ge H$, then retains $(e+r)\bmod H$:
 \begin{lstlisting}[float=htbp,language=C++,caption={Balanced one-hop dispatch. execute\_next\_unit retains stage and traversal state; output stays private until publication.},label={lst:whole-hop}]
 // At a frame boundary: latch settings; compute a = W/H, r = W%H.
@@ -26,20 +26,20 @@ if (++phase == H) {
 }
 \end{lstlisting}
 
-\begin{proposition}[Exact completion and per-call work]
-For $W>0$ and integer $H\ge1$, the ordered analysis completes on the $H$th
-call, with at most $\ceil{W/H}$ units on any call. For $H=\rho N$ with fixed
-$\rho>0$, this maximum is $O(\log N)$.
+\begin{proposition}[Exact publication and per-call credits]
+For $W>0$ and integer $H\ge1$, the scheduler exhausts its credits and
+publishes on the $H$th call, with at most $\ceil{W/H}$ credits on any call.
+For $H=\rho N$ with fixed $\rho>0$, this maximum is $O(\log N)$.
 \end{proposition}
 \begin{proof}
 After $s$ calls the accumulator rule has issued
-$sa+\floor{sr/H}=\floor{sW/H}$ units. At $s=H$ this is $W$;
+$sa+\floor{sr/H}=\floor{sW/H}$ credits. At $s=H$ this is $W$;
 at $s=H-1$ it is strictly smaller. Each difference is either $a$ or $a+1$.
 Substitution of Equation~\eqref{eq:wholework} gives the asymptotic bound.
 \end{proof}
 For a clean $N=2048,H=1024,o=1$ frame, $W=8194$ and the maximum quota is nine:
-1022 calls execute eight units and two execute nine. With a dirty window,
-$W=11266$: 1022 calls receive eleven units and two receive twelve.
+1022 calls consume eight credits and two consume nine. With a dirty window,
+$W=11266$: 1022 calls receive eleven credits and two receive twelve.
 At most $\ceil{\ceil{W/H}/4}$ preparation pairs execute in a dirty call,
 whereas subsequent stages may execute up to $\ceil{W/H}$ operations.
 For Fourier ($o=2$), the corresponding counts are $W=9219$ for a clean cache
@@ -54,7 +54,7 @@ input/control work and frame configuration remain, including an $O(\log N)$
 plan-index calculation. No $O(N)$ boundary pass remains in steady-state engine
 analysis. This count assumes fixed-width scalar/SIMD arithmetic and the bounded
 module output callbacks; the generic API cannot constrain an arbitrary callback.
-It does not assert equal duration across units or bound OS interruptions.
+It does not assert equal duration across credits or bound OS interruptions.
 
 The current implementation also omits multiplication by the exactly unity
 first twiddle in dense SIMD butterfly segments. This reduces arithmetic

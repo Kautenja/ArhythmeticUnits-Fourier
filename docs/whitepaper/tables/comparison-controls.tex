@@ -1,0 +1,20 @@
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.29\linewidth}>{\raggedright\arraybackslash}p{0.35\linewidth}>{\raggedright\arraybackslash}p{0.27\linewidth}@{}}
+\toprule
+Comparison & Shared work & Interpretation \\
+\midrule
+Legacy batch / incremental & Same real FFT, frame copy, full reconstruction,
+and output processing & Placement of the legacy FFT's work. \\
+PFFFT scheduled batch / hybrid & Same arithmetic, task dispatch, plans,
+caches, and retained input & Placement of native FFT and surrounding work. \\
+Production core / native analysis & Matched input frames and required
+outputs; different implementations & Practical cost, burst, storage,
+and age tradeoff. \\
+\bottomrule
+\end{tabular}
+\caption{Comparison roles. Legacy controls use fixed frame cadence rather than
+the original modules' immediate restart. Native analysis includes PFFFT,
+FFTW, and vDSP where supported.}
+\label{tab:controls}
+\end{table}

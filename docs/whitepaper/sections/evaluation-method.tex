@@ -1,0 +1,95 @@
+\section{Evaluation Design}
+\label{sec:evaluation}
+The implemented comparison protocol separates work placement, practical
+implementation cost, and output correctness. It evaluates aggregate cost,
+callback durations, storage, and publication age together: reducing a burst
+can require more total work or an older spectrum. The final production
+workload matrix, measurement hosts, repetition counts, and comparative results
+remain pending. The historical campaigns reported separately below and in the
+appendices document earlier implementations, rather than this protocol's
+confirmation results.
+
+\subsection{Comparisons and matched workloads}
+Table~\ref{tab:controls} distinguishes controlled scheduling comparisons from
+comparisons between implementations. The native hybrid retains an indivisible
+PFFFT call while scheduling its surrounding preparation and output stages.
+It tests how much work can be distributed without suspending the FFT itself.
+Comparing it with the production core also changes transform layout, fused
+operations, plan capacity, storage, and band-index arithmetic. That comparison
+therefore measures a practical tradeoff, not an isolated dispatch overhead.
+
+\input{tables/comparison-controls.tex}
+
+Matched scalar analysis workloads use common float input bytes containing DC, two
+tones, and deterministic noise; double-precision adapters promote those same
+bytes. They select the same frame endpoints and produce $K=N/2+1$ magnitudes.
+Stationary settings use coherent-gain-normalized periodic Hann windows, with
+smoothing disabled or one-third-octave averaging and temporal coefficient
+$\alpha=0.8$. Live-cache workloads alternate Hann/Blackman--Harris windows and
+frequency-smoothing settings at frame boundaries. Startup, parameter transitions,
+and independent four-channel workloads retain separate identities.
+
+Timing includes input retention, windowing, transformation, required output
+conversion, smoothing, and output stores. Fixture generation, plan/storage
+construction, and warmup are excluded; startup omits warmup but still excludes
+construction. Headless module measurements additionally include module input
+handling, controls, display-coordinate preparation, and publication. They have
+no display consumer, graphics loop, Rack engine worker, or audio device, and
+remain separate from magnitude-only core comparisons.
+
+\subsection{Timing and publication age}
+A continuous throughput pass estimates aggregate cost; a separate pass records
+each synchronous simulated callback. A monotonic clock measures elapsed wall
+time, including preemption. Empty timer intervals are retained without
+subtraction, and observation storage and CSV serialization remain outside
+timing. Streaming cost is nanoseconds per engine sample for all configured
+instances and included background DSP; isolated transform cost is nanoseconds
+per transform. Callback p99 and observed maximum are reported in microseconds,
+alongside block size, sample rate, observation counts, and simulated audio span.
+
+For a callback of $D$ samples, its nominal interval is $D/f_s$ seconds.
+Exceeding that interval in this synchronous harness is a compute-budget
+exceedance, not a measured audio underrun. Sparse FFT bursts may escape p99;
+maxima and per-process distributions are retained. An observed maximum is not
+a worst-case execution-time bound~\cite{wilhelm2008}.
+
+An untimed replay checks actual publication indices against each adapter's
+frame contract. Spectrum-center age adds $(N-1)/2$ samples to the delay from
+frame endpoint to publication. Core publication adds $H-1$ samples; immediate
+batch publication adds zero. Callback-end visibility adds the remaining samples
+in that block. Inverse jobs instead use release-to-publication delay, and
+filtering chains use input-to-delivery delay. These algorithmic quantities
+exclude screen repaint delay and smoothing response; replay does not measure
+timing-dependent consumer contention.
+
+\subsection{Correctness and evidence gates}
+Independent replay checks every published bin of each audited analysis
+instance, with explicit expected and observed publication/output counts.
+The reference uses a binary64 FFT for large frames and direct DFT sums for
+small frames, on the same rounded windowed input, followed by independent
+band sums and temporal averaging. Binary64 is not an arbitrary-precision
+oracle. For actual and reference processed magnitude vectors $a,r$, both
+$\|a-r\|_2/\|r\|_2$ and $\|a-r\|_\infty/\|r\|_\infty$ must not exceed
+$3\times10^{-4}$ for float or $10^{-10}$ for double. Each denominator belongs
+to that frame and channel; zero reference requires exactly zero output.
+Non-finite values fail. These are engineering acceptance budgets, not
+per-bin relative-error guarantees; weak-bin diagnostics are preserved.
+
+Pilots determine observation duration and repetition counts before confirmation.
+The freeze records workloads, sources, dependencies, compiler settings, seeds,
+and numerical policies. Confirmation reporting requires at least three
+separately prepared sessions per workload; fresh processes within a session
+are repeated measurements, not independent host sessions. Costs average
+processes within sessions, then weight session means equally. Callback p99
+uses nearest-rank process quantiles, medians within sessions, and the median
+of session medians. Session ranges are descriptive, with no pooled callbacks
+or inferential confidence intervals. Replication does not eliminate setup or
+layout bias~\cite{kalibera2013,mytkowicz2009}.
+
+Checked archives retain raw observations, numerical coverage, commands,
+host/session notes, source and dependency identities, and artifact hashes.
+Different hosts, build settings, or measured source/dependency identities
+form separate reporting strata.
+Setup and storage probes remain distinct from timed execution; unavailable
+native-library storage stays explicitly unknown. Only validated confirmation
+evidence is eligible for export into the paper's comparative tables.

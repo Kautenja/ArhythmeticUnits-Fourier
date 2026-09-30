@@ -1,33 +1,32 @@
-\section{Engineering Implications and Limits}
-Resumable analysis trades additional state and publication delay for control
-over when engine-thread work executes. It is useful only if reduced bursts
-justify the total CPU cost and spectrum age in the intended host. An optimized
-batch transform may already fit the callback budget; a worker can move analysis
-off the engine thread, and a sliding formulation may suit a small set of
-frequently updated bins. Comparisons must match input windows, output
-processing, and cadence, and report publication delay alongside engine cost.
+\section{Discussion and Limits}
+The design establishes a publication cadence and a bound on scheduling credits,
+not a performance ordering. Its usefulness depends on whether distributing work
+reduces callback tails enough to justify total cost, storage, and spectrum age.
+If a native batch transform fits the available budget, the additional traversal
+state may offer little benefit. A worker is a viable alternative when the host
+permits asynchronous analysis; overlap reuse may be useful when windows overlap
+heavily or only selected bins are required. These choices need matched
+measurements rather than a ranking inferred from operation counts.
 
-The quota bounds scheduled work counts, not execution time. Window preparation,
-butterflies, and output mapping have unequal costs, and the fixed weights do
-not eliminate those differences. The historical measurements do not evaluate
-the production weighting policy. Observed timing maxima also do not establish
-a safe worst-case bound~\cite{wilhelm2008}. The scheduler finishes each quota
-before advancing its logical hop; a late host call therefore preserves that
-logical sequence but does not rescue an audio deadline.
+The evaluation must retain unfavorable workloads and distinguish attribution
+from practical comparison. A matched scheduling pair identifies the effect of
+work placement within that pair. A core-versus-library comparison also changes
+arithmetic, layout, and storage, so a difference cannot be assigned entirely
+to suspension. A small or absent effect is informative. Callback p99, observed
+maximum, aggregate cost, and sample-index age answer different questions;
+none alone establishes suitability for an interactive application.
 
-Device callbacks accumulate many sample calls and other engine work, so host
-load and coincident analyzer phases matter. Publication is also only one stage
-of visualization latency~\cite{prusa2016}: exact-hop output does not guarantee
-equally spaced screen updates or bound display age. Missed audio deadlines,
-missed requested publications, and snapshots superseded by a slow display are
-distinct outcomes. The archived campaigns do not measure this end-to-end path.
+The present evidence is historical and limited to one host and compiler.
+Independent direct-DFT checks cover small transforms; larger historical checks
+establish scheduling equivalence. The new protocol adds independent numerical
+replay and explicit comparison contracts, but implementation of that protocol
+is not completed measurement evidence. Final workload selection, repetitions,
+host descriptions, and comparative results remain to be integrated. Worker,
+overlap-reuse, and end-to-end audio-device comparisons are not evaluated here.
+Appendix~\ref{app:evaluation-agenda} retains possible extensions.
 
-The evidence is limited to one host and compiler, few repetitions, same-session
-resampling, and no optimized-library baseline or end-to-end Rack workload.
-Independent direct-transform checks cover only small sizes; large-size checks
-establish schedule equivalence. The timing campaigns do not test non-power-of-two
-lengths, inverse applications, concurrent display consumption, or calibration
-of every window and display setting. Production regression tests are separate
-from timing evidence. Appendix~\ref{app:evaluation-agenda} retains the detailed
-proposals for matched backends, overlap reuse, numerical error, host contention,
-statistical replication, and work granularity; these remain proposed comparisons.
+Even with a bounded quota, unequal operation costs, cache effects, preemption,
+and other engine work determine elapsed callback time. A delayed call still
+executes its logical quota; the schedule does not recover the missed deadline.
+Likewise, producer publication does not guarantee display consumption or repaint
+cadence. A slow display may intentionally skip snapshots.
