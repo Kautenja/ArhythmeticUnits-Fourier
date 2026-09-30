@@ -1238,8 +1238,8 @@ observations. The offline check passed seven launch fixtures, fourteen execution
 fixtures and two immutable-study policy fixtures, then verified the manifest.
 
 The package is preserved as `.build/study-014/verified-before-archive` while
-archive links are updated. A fresh final package at `.build/study-014/prepared`
-will capture those documentation bytes; its manifest identity and final check
+archive links are updated. The fresh final package at `.build/study-014/prepared`
+captures those documentation bytes; its manifest identity and final check
 are recorded below. This refresh runs the same preparation-only commands.
 
 The absolute repository is
@@ -1273,3 +1273,36 @@ warnings remain; compatibility with older macOS releases is unverified. Native
 leaves, new weights and separate performance-kernel candidates remain explicitly
 deferred. Paper figures, conclusions, confirmation selection and publication
 are subsequent work after the user returns real observations.
+
+
+### Final Immutable Package: September 30, 2026
+
+The refreshed preparation and `benchmark-study-check` both passed with OS-level
+network access denied. The final package is:
+
+```text
+/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/study-014/prepared
+```
+
+Its manifest ID is
+`a53795c22f18c1aa20fb1cf54e08a3f8a14a3fef896aafdd90ce6f7bf29d34a4`.
+The archived build source revision is
+`b2641cc46ffe57d938c54567f367a00df1f30e3b`, with a clean working tree at preparation.
+The package records Apple M1 Pro, arm64, macOS 26.6.2 and Python 3.14.2.
+The final primary executable SHA256 is
+`f73bac410ca7ac0fe3c32712149a8c8595d9d7f8bbf7318646535986e4bc6d0d`;
+the allocation executable SHA256 is
+`f9c09297d80f008eb68edfd2ce10d1cafd6394364bf5e28a04687c08f9aa6942`.
+
+All 97 distinct stream checks and 94 exact engine/lifecycle replays passed again.
+The final offline check passed its seven launch fixtures, fourteen execution
+fixtures and two study-policy fixtures and authenticated the final manifest.
+The full suite ran 126 tests (125 passed, one optional plotting skip). Repository
+links and `git diff --check` passed. This final evidence-only spec update does
+not change any prepared source, dependency, profile, executable or launch byte.
+The prepared manifest was revalidated after the update.
+
+The two user-run commands and output/archive paths above are now ready. No
+performance observations were collected during either preparation. This spec
+is COMPLETE and archived; only the explicitly deferred experiments and later
+user measurement/analysis work remain outside its completed scope.
