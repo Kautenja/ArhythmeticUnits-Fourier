@@ -1,174 +1,109 @@
 \section{Results}
-\label{sec:comparison-results}
-The measurements support three findings. Placement substantially changes the
-typical burst of a fixed implementation. Native kernels change the cost of
-obtaining that reduction. And complete host behavior depends on
-synchronization, alignment, and release timing as well as on analyzer cost.
+\label{sec:results}
+\subsection{Distribution reduces bursts, with overhead}
+Table~\ref{tab:conference-baselines} isolates work placement and compares
+native alternatives. Distributing the matched scalar implementation reduces
+the typical hop peak from \StudyBatchPeak{} to
+\StudyCorePeak\,$\mu$s, a factor of \StudyPlacementRatio. Aggregate
+instrumented cost rises from \StudyBatchCost{} to
+\StudyCoreCost\,ns/sample, an increase of about 18\%. The same FFT
+arithmetic is being performed in smaller pieces; the result is less
+concentrated execution rather than less total work.
 
-\subsection{Placement and native implementation cost}
-Table~\ref{tab:study-baselines} reports the scalar reference shape. Matched
-distribution reduces the median per-hop peak from \StudyBatchPeak{} to
-\StudyCorePeak\,$\mu$s, a factor of \StudyPlacementRatio, while cost rises
-from \StudyBatchCost{} to \StudyCoreCost\,ns per engine sample. Across all
-three baseline lengths, all four matched implementation families, and both
-sessions, the distributed or hybrid path has the lower session hop-peak
-summary in \StudyPlacementSigns{} of \StudyPlacementComparisons{} comparisons.
-This is descriptive sign consistency over dependent cells; it is neither a
-significance test nor a ranking of unrelated kernels.
+\input{generated/paper-study/conference-baselines.tex}
 
-\input{generated/paper-study/baselines.tex}
+All three native hybrids also lower the peak relative to their own batch
+paths. PFFFT, for example, moves from \StudyPffftBatchPeak{} to
+\StudyPffftHybridPeak\,$\mu$s while cost rises from
+\StudyPffftBatchCost{} to \StudyPffftHybridCost\,ns/sample. Native hybrids
+can therefore recover much of the burst reduction with lower aggregate cost
+than the custom distributed transform. The fully distributed path has the
+lowest typical peak at this scalar configuration, but it has the highest
+cost. There is no single winner on both measures.
 
-Native kernels lower the price of a similar reduction. The PFFFT hybrid costs
-\StudyPffftHybridCost\,ns/sample with an \StudyPffftHybridPeak\,$\mu$s hop
-peak, against \StudyPffftBatchCost\,ns/sample and \StudyPffftBatchPeak\,$\mu$s
-for its matched batch path; vDSP and FFTW supply further tradeoff points.
-Figure~\ref{fig:study-tradeoff} shows every process at this shape. A small
-peak does not imply minimal aggregate work, and the variation between sessions
-is shown rather than folded into a single score per provider. Redistributing
-work changes dispatch, vector-call sizes, and locality, so even matched
-arithmetic need not produce identical elapsed cost.
+Across the campaign's three baseline lengths, four implementation families,
+and two sessions, the distributed or hybrid member has the lower session
+hop-peak summary in all 24 comparisons. These are related observations on one
+machine, not 24 independent replications. Moreover, every typical peak in
+Table~\ref{tab:conference-baselines} is small relative to the
+1,333\,$\mu$s block budget. This experiment establishes the scheduling
+effect; complete-host measurements determine whether the saved headroom is
+substantial in a patch.
 
-\input{generated/paper-study/tradeoff.tex}
+\subsection{A shorter schedule delivers earlier, larger bursts}
+A native hybrid can finish within $H$, $H/2$, or $H/4$ sample calls, then
+only capture input until the next frame endpoint. Table~\ref{tab:conference-horizons}
+shows this tradeoff for four-channel vDSP analysis at a larger transform and
+shorter hop. Reducing the completion interval from 240 to 60 calls cuts
+endpoint-to-publication age from 4.98 to 1.23\,ms. The typical peak rises
+from \StudyHorizonFullPeak{} to
+\StudyHorizonQuarterPeak\,$\mu$s, approaching the batch peak of
+125\,$\mu$s. The unchanged native transform remains indivisible; the
+surrounding work becomes more densely packed.
 
-At this shape even the scalar batch path uses only a few percent of its
-1,333\,$\mu$s block budget. The reference exists to isolate work placement;
-its practical significance must be judged at the complete-module and host
-boundaries below. Callback p99 and retained maxima also differ markedly from
-the median hop peak: the per-hop statistic keeps sparse frame work visible,
-whereas maxima retain interruptions and other excursions. None of these
-statistics is a safe execution-time bound.
+\input{generated/paper-study/conference-horizons.tex}
 
-\subsection{Completion horizon and four-channel analysis}
-The native horizon sweep makes publication age an explicit design variable
-(Table~\ref{tab:study-horizons}). At the demanding controlled shape
-$N=16384$, $H=240$, contracting the four-channel vDSP hybrid's horizon from
-$H$ to $H/2$ to $H/4$ cuts endpoint age from 4.98 to 2.48 to 1.23\,ms while
-raising its median hop peak from \StudyHorizonFullPeak{} to
-\StudyHorizonHalfPeak{} to \StudyHorizonQuarterPeak\,$\mu$s. Because the
-native FFT remains indivisible, a shorter horizon packs the surrounding stages
-more densely without distributing the transform itself. Behavior at small
-sizes and for other kernels need not be monotonic; all 39 granularity cells
-are retained in the accompanying data.
+This configuration also shows a limit of the custom FFT. Its four-channel SIMD
+path costs \StudySimdExtremeCost\,ns/sample with a
+\StudySimdExtremePeak\,$\mu$s typical peak. The full-hop vDSP hybrid
+costs \StudyHorizonFullCost\,ns/sample with a
+\StudyHorizonFullPeak\,$\mu$s peak. Here the native hybrid is better on
+both recorded measures. The benefit of interrupting every butterfly therefore
+depends on transform size, hop, channel organization, and native kernel cost.
 
-\input{generated/paper-study/horizons.tex}
+\subsection{The effect survives one host configuration}
+With four aligned Fourier modules on one Rack engine thread, the distributed
+implementation has a \StudyHostCorePeak\,$\mu$s typical hop peak,
+compared with \StudyHostBatchPeak\,$\mu$s for native vDSP batch and
+\StudyHostHybridPeak\,$\mu$s for the vDSP hybrid
+(Table~\ref{tab:conference-host}). These occupy approximately 15\%, 67\%,
+and 32\% of the block budget. Unlike the scalar comparison, the difference
+is a substantial fraction of the time available to the rest of the patch.
+The cost is higher aggregate processing: production uses
+\StudyHostCoreCost\,ns/sample, versus \StudyHostBatchCost{} for batch and
+\StudyHostHybridCost{} for hybrid. Both distributed paths also defer
+publication by nearly the 30\,ms hop.
 
-At the same four-channel shape, the SIMD production core has a
-\StudySimdExtremePeak\,$\mu$s peak at \StudySimdExtremeCost\,ns/sample,
-against \StudyHorizonFullPeak\,$\mu$s at \StudyHorizonFullCost\,ns/sample for
-the full-hop vDSP hybrid. Here the native hybrid is better on both recorded
-cost and typical peak. Channel-level SIMD therefore does not by itself give
-the production core an advantage over batched native channels; which approach
-wins depends on shape and kernel. These controlled rows omit module
-conditioning and display conversion.
+\input{generated/paper-study/conference-host.tex}
 
-\subsection{Shipped defaults and demanding module settings}
-Table~\ref{tab:study-modules} measures actual module calls with paced
-releases. With its defaults, Fourier's hop peak is
-\StudyModuleDefaultPeak\,$\mu$s, \StudyModuleDefaultBudgetPercent\% of the
-block budget. At $N=16384$ with a 5\,ms hop, the complete four-port module
-reaches \StudyModuleExtremePeak\,$\mu$s, or
-\StudyModuleExtremeBudgetPercent\%. Enabling both smoothing modes raises this
-to \StudyModuleBothPeak\,$\mu$s (\StudyModuleBothBudgetPercent\%), with
-\StudyModuleBothComputeMisses{} compute-budget exceedances and
-\StudyModuleBothMisses{} late releases in 3,840 blocks. The hardest shipped
-setting is thus a materially different regime from both the scalar reference
-and the defaults.
+With four engine threads and four aligned modules, the typical peaks converge
+to about 100--115\,$\mu$s. Rack synchronizes its workers between
+samples~\cite{rackengine}, but the experiment cannot isolate that cost from
+core placement or power-state effects. The empty four-thread engine itself
+consumes about three CPU-seconds per second of nominal audio, indicating that
+its workers remain active between paced releases. The one-thread engine can
+sleep. The contrast therefore changes more than available parallelism.
 
-\input{generated/paper-study/modules.tex}
+Alignment also matters. With sixteen modules on four threads, production's
+typical peak is \StudyHostManyCorePeak\,$\mu$s, compared with
+\StudyHostManyBatchPeak\,$\mu$s for aligned vDSP batch. Staggering the
+batch modules lowers their peak to
+\StudyHostStaggerBatchPeak\,$\mu$s. Phase distribution can reduce the
+coincidence of complete transforms without making them resumable, although an
+individual module cannot generally choose the phases of unrelated modules.
 
-Using one active port does not make Fourier a scalar analyzer: its four-lane
-analysis still runs, and additional voices are summed into each port's lane
-rather than becoming separate FFT channels. The table therefore captures
-control and input costs and does not imply a fourfold saving when three ports
-are unpatched. No paced native complete-module comparison was collected at the
-extreme shape, and the continuous native core results cannot fill that gap.
-These settings expose a limitation of the production path; they are not
-evidence that an alternative would eliminate its missed releases.
+Lower typical peaks do not establish better deadline reliability. In the
+one-thread, four-module comparison, production, vDSP batch, and hybrid miss
+18, 20, and 38 synthetic releases respectively, across 16,384 blocks per row.
+With sixteen aligned modules on four threads, production misses 19 releases
+and vDSP batch misses none. Empty-engine controls also have late releases.
+Wake delays, interruptions, and backlog remain relevant even when the normal
+processing burst is much smaller than the deadline.
 
-\subsection{Actual Rack engine, alignment, and missed releases}
-Four aligned Fourier modules on one engine thread produce a large difference
-in concentration (Table~\ref{tab:study-host}). Production's typical hop peak
-of \StudyHostCorePeak\,$\mu$s uses \StudyHostCoreBudgetPercent\% of the
-budget, against \StudyHostBatchPeak\,$\mu$s (\StudyHostBatchBudgetPercent\%)
-for vDSP batch and \StudyHostHybridPeak\,$\mu$s
-(\StudyHostHybridBudgetPercent\%) for the vDSP hybrid. The price is aggregate
-block wall cost: \StudyHostCoreCost{} versus \StudyHostBatchCost{} and
-\StudyHostHybridCost\,ns/sample, respectively. In this regime the burst
-reduction frees a substantial fraction of the block for other work, rather
-than shaving a few microseconds from an otherwise idle callback.
+\subsection{Operating and numerical limits remain visible}
+Direct paced calls to a default Fourier module have a typical peak of
+\StudyModuleDefaultPeak\,$\mu$s. At $N=16384$ with a 5\,ms hop, the
+four-port module reaches \StudyModuleExtremePeak\,$\mu$s; enabling both
+smoothing modes raises this to \StudyModuleBothPeak\,$\mu$s and produces
+196 compute-budget exceedances in 3,840 blocks. Scheduling distributes the
+work but cannot make arbitrarily demanding settings affordable. No paced
+native complete-module control was collected at this extreme configuration.
 
-\input{generated/paper-study/host.tex}
-
-Four engine threads change the picture. With four aligned modules, the three
-paths converge to typical hop peaks of 100--115\,$\mu$s
-(Figure~\ref{fig:study-host}), and the empty four-thread engine has a much
-larger callback p99 than the one-thread control. Rack's per-sample barriers
-and worker dispatch are a plausible mechanism, but these runs do not separate
-that cost from CPU placement or power-state effects, and the synchronization
-code alone does not establish it. Table~\ref{tab:study-host-accounting} adds
-an important observation: the empty four-thread engine consumes about
-\StudyEmptyCpuCores{} CPU-seconds per second of nominal audio, consistent with
-workers spinning between releases, and its process CPU stays near that level
-when analyzers are present. The one-thread engine, by contrast, can sleep
-between releases. Moving to four threads therefore changes the activity and
-potential power-state regime as well as the available parallelism. We report
-this as the observed behavior of the pinned headless engine, not as an
-isolated measurement of barrier overhead.
-
-\input{generated/paper-study/host-accounting.tex}
-
-\input{generated/paper-study/host-figure.tex}
-
-With 16 aligned modules on four threads, production's typical peak is
-\StudyHostManyCorePeak\,$\mu$s against \StudyHostManyBatchPeak\,$\mu$s for
-vDSP batch, and staggering the native instances lowers the batch peak to
-\StudyHostStaggerBatchPeak\,$\mu$s. Staggering is thus a practical
-alternative whenever frame phases can be chosen. The predeclared sweep of 0,
-16, and 64 background modules with four staggered analyzers did not reach a
-repeatable saturation point, and its latency summaries are not monotonic in
-the number of background modules. We retain those cells but do not treat the
-background-module count as a calibrated CPU load.
-
-Release misses call for a stronger qualification. On one thread with four
-modules, production and vDSP batch have \StudyHostCoreMisses{} and
-\StudyHostBatchMisses{} late releases despite very different typical peaks,
-and the vDSP hybrid has \StudyHostHybridMisses. The corresponding FFTW batch
-row has \StudyHostFftwBatchMisses, but that provider-specific outcome does not
-demonstrate a general benefit of scheduling. With 16 aligned modules,
-production has \StudyHostManyCoreMisses{} late releases while vDSP batch has
-none in these runs, and even empty-engine controls miss releases. These counts
-are observations under synthetic pacing and include wake delay and backlog.
-They support comparisons of headroom and concentration; they do not establish
-fewer audio underruns or a stable ordering of rare-event reliability.
-
-\subsection{Consumer age and numerical limits}
-Table~\ref{tab:study-consumer} reports the headless consumer. At 60\,Hz,
-production and the full-hop vDSP hybrid have median endpoint-age bounds of
-38--40\,ms, against 8--10\,ms for native batch. The difference, about one
-30\,ms hop, matches the publication contract. At 30\,Hz, or with polling
-stalls, some complete Fourier snapshots are superseded before they are read:
-correct ownership protects the data a consumer holds, but it does not
-guarantee that the consumer sees every frame. Logical age bounds do not
-measure screen refresh, perceptual acceptability, or real-time freshness
-during a backlog.
-
-\input{generated/paper-study/consumer.tex}
-
-All numerical replays pass their declared policies
-(Table~\ref{tab:study-numerical}), including non-power-of-two hops, high
-overlap, weak and decaying input, silence, and complete-module lifecycle
-changes. Preparing the study exposed premature underflow in naively squared
-magnitudes, and the measured source uses scaled magnitudes in both production
-and native paths. Long decays still reach the flagged FTZ/display tail, where
-observed relative error can reach one, so the ordinary relative budgets do not
-extend to that region. Retaining the tail with its absolute diagnostics is
-more informative than labeling the entire decay uniformly accurate.
-
-\input{generated/paper-study/numerical.tex}
-
-Lifecycle replays check freeze and resume, window and band changes, geometry
-changes, reset, and sample-rate changes separately from the stationary
-comparisons. These mutations occur between engine blocks, and their durations
-and allocation probes are recorded outside ordinary block intervals. The study
-thus verifies serialized lifecycle behavior; it does not show that arbitrary
-concurrent control changes, or all host callbacks, are allocation-free.
+All numerical replays pass their declared acceptance policies. The largest
+ordinary float relative vector errors are below $4.1\times10^{-5}$, against
+a $3\times10^{-4}$ budget. These results include high overlap,
+non-power-of-two hops, silence, and serialized lifecycle changes. Relative
+error can reach one in the separately flagged long-decay tail; that region
+is covered only by its absolute floor. The tests substantiate the implemented
+analysis within those policies, not uniform relative accuracy for every weak
+spectral component.

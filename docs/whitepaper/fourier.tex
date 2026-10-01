@@ -1,39 +1,26 @@
-% Manuscript entry point; content and typography live in the included sources.
-% Compile with make; make arxiv exports one self-contained TeX source.
-\documentclass[11pt,letterpaper]{article}
+% Conference-length manuscript. Build and export through the Make targets.
+% The longer version 4 report is retained separately in report-v4.tex.
+\documentclass[10pt,letterpaper,twocolumn]{article}
 \input{preamble.tex}
 \input{generated/paper-study/macros.tex}
-\title{\textbf{Whole-Pipeline Scheduling\\for Real-Time Spectral Analysis}}
-\author{Christian Kauten\\[2pt]\normalsize Arhythmetic Units\\\normalsize\href{mailto:arhythmetic.units@gmail.com}{\nolinkurl{arhythmetic.units@gmail.com}}}
-\paperstatus{Preprint \textperiodcentered{} manuscript version 4 \textperiodcentered{} September 30, 2026\\Not peer reviewed}
+\title{\textbf{Scheduling FFT-Based Spectral Analysis\\in the Audio Processing Loop}}
+\author{Christian Kauten\\Arhythmetic Units\\\small\href{mailto:arhythmetic.units@gmail.com}{arhythmetic.units@gmail.com}}
+\date{October 1, 2026\quad /\quad Preprint, manuscript version 5}
 
 \begin{document}
-\maketitle
+\twocolumn[\maketitle
 \input{sections/abstract.tex}
-\keywords{short-time Fourier transform; cooperative scheduling; real-time audio;
-spectrum analysis; execution granularity; VCV Rack}
-\vspace{10pt}
+\par\vspace{0.7em}
+\noindent\textbf{Keywords:} FFT; spectral analysis; cooperative scheduling;
+real-time audio; VCV Rack.\par\vspace{1.4em}
+]
 \input{sections/introduction.tex}
 \input{sections/related-work.tex}
-\input{sections/signal-model.tex}
-\input{sections/legacy-motivation.tex}
-\input{sections/production-successor.tex}
+\input{sections/method.tex}
+\input{sections/implementation.tex}
 \input{sections/evaluation-method.tex}
 \input{sections/comparison-results.tex}
-\FloatBarrier
 \input{sections/engineering-limits.tex}
 \input{sections/conclusion.tex}
-\clearpage
 \input{bibliography.tex}
-\clearpage
-\appendix
-\input{appendices/transform.tex}
-\input{appendices/original-scheduling.tex}
-\input{appendices/original-pipeline.tex}
-\input{appendices/one-hop.tex}
-\input{appendices/implementation.tex}
-\input{appendices/related-work.tex}
-\FloatBarrier
-\input{appendices/evaluation-agenda.tex}
-\input{appendices/reproducibility.tex}
 \end{document}

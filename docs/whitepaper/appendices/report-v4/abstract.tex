@@ -1,0 +1,28 @@
+\begin{abstract}
+Spectral analyzers in audio hosts run on the engine thread even when they
+produce only display data, so a frame's windowing, transform, and magnitude
+processing can land in a single sample call. We present an exact-hop execution
+contract that spreads the complete analysis---window preparation, FFT
+butterflies, magnitude processing, smoothing, and output---over the sample
+calls of one hop. The contract bounds the logical work in each call, retains
+the selected input while capture continues, publishes on a frame clock that is
+independent of arithmetic completion, and transfers complete spectra through
+an owned mailbox. A descriptive study of 776 fresh processes in two sessions
+on one Apple M1 Pro separates work placement from native FFT-kernel choice and
+measures complete modules inside VCV Rack's engine. For scalar
+$N=4096$, $H=1024$ analysis in 64-sample blocks, distributing a fixed
+implementation reduces the median per-hop peak block time from
+\StudyBatchPeak{} to \StudyCorePeak\,$\mu$s at \StudyPlacementCostRatio{}
+times the instrumented aggregate cost. With four aligned four-channel modules
+on one engine thread, the production pipeline, a native vDSP batch path, and a
+native hybrid have typical hop peaks of \StudyHostCorePeak,
+\StudyHostBatchPeak, and \StudyHostHybridPeak\,$\mu$s---%
+\StudyHostCoreBudgetPercent\%, \StudyHostBatchBudgetPercent\%, and
+\StudyHostHybridBudgetPercent\% of the block budget---while the two
+distributed paths add about 30\,ms of logical publication age. Native hybrids
+and shorter completion horizons offer intermediate tradeoffs. Multithreaded
+engine overhead and release lateness, however, keep lower burst peaks from
+translating reliably into fewer missed deadlines. The result is an
+analysis-specific scheduling contract and a measured basis for choosing
+execution granularity, not a universal performance ranking.
+\end{abstract}

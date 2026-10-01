@@ -1,4 +1,4 @@
-# Build the standalone report without running experiments.
+# Build the conference paper without running experiments.
 .PHONY: all check arxiv
 .DEFAULT_GOAL := all
 TEX_SOURCE := fourier.tex

@@ -1,14 +1,13 @@
-% Typography and layout for the standalone preprint.
+% Two-column preprint layout, following the repository's RackNES example.
+% This is not a venue template; submission formatting remains venue-specific.
 \usepackage[T1]{fontenc}
 \usepackage{newtxtext}
 \usepackage[varqu,varl,scaled=0.95]{zi4}
-\usepackage{amsmath,amssymb,amsthm}
+\usepackage{amsmath,amssymb}
 \usepackage{newtxmath}
-\usepackage[letterpaper,margin=1in,headsep=18pt]{geometry}
+\usepackage[letterpaper,margin=0.75in]{geometry}
 \usepackage{microtype}
 \usepackage{booktabs,array}
-\usepackage{flafter}
-\usepackage{placeins}
 \usepackage{xcolor}
 \usepackage{graphicx}
 \usepackage{tikz}
@@ -16,60 +15,29 @@
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepackage{listings}
-\usepackage{enumitem}
 \usepackage{fancyhdr}
-\usepackage[font=small,labelfont=bf,labelsep=period,skip=6pt]{caption}
-\usepackage[explicit]{titlesec}
+\usepackage[font=small,labelfont=bf,labelsep=period,skip=5pt]{caption}
+\usepackage{titlesec}
 \usepackage{url}
 \definecolor{ink}{HTML}{214E70}
 \definecolor{accent}{HTML}{B85C38}
 \definecolor{pale}{HTML}{F3F5F7}
 \usepackage[colorlinks=true,linkcolor=ink,citecolor=ink,urlcolor=ink]{hyperref}
-\hypersetup{pdftitle={Whole-Pipeline Scheduling for Real-Time Spectral Analysis},pdfauthor={Christian Kauten},pdfsubject={Preprint on whole-pipeline scheduling, exact-hop publication, and execution granularity for real-time spectral analysis},pdfkeywords={FFT, STFT, cooperative scheduling, real-time audio, spectrum analysis, VCV Rack}}
-
-% Section headings: numbered, bold, compact.
-\titleformat{\section}{\normalfont\large\bfseries}{\thesection}{0.8em}{#1}
-\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{0.8em}{#1}
-\titleformat{name=\section,numberless}{\normalfont\large\bfseries}{}{0pt}{#1}
-\titleformat{name=\subsection,numberless}{\normalfont\normalsize\bfseries}{}{0pt}{#1}
-\titlespacing*{\section}{0pt}{2.0ex plus .6ex minus .2ex}{1.0ex plus .2ex}
-\titlespacing*{\subsection}{0pt}{1.6ex plus .5ex minus .2ex}{0.6ex plus .2ex}
-
-% Running heads; the first page uses the plain style.
+\hypersetup{pdftitle={Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop},pdfauthor={Christian Kauten},pdfsubject={Conference-length preprint on distributing FFT-based analysis across audio samples},pdfkeywords={FFT, spectral analysis, cooperative scheduling, real-time audio, VCV Rack}}
+\setlength{\columnsep}{0.25in}
+\setlength{\headheight}{14pt}
+\setlength{\emergencystretch}{1.5em}
+\titleformat{\section}{\large\bfseries\raggedright}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries\raggedright}{\thesubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{2.2ex plus 0.5ex minus 0.2ex}{1ex}
+\titlespacing*{\subsection}{0pt}{1.7ex plus 0.4ex minus 0.2ex}{0.7ex}
+\raggedbottom
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\footnotesize\textsc{Kauten}\quad\textperiodcentered\quad\textsc{Whole-Pipeline Scheduling for Real-Time Spectral Analysis}}
-\fancyhead[R]{\footnotesize\textsc{Preprint}}
-\fancyfoot[C]{\small\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\fancypagestyle{plain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}\fancyfoot[C]{\small\thepage}}
-\setlength{\headheight}{14pt}
-\setlength{\emergencystretch}{2em}
-\setlist{nosep}
-\setlist[itemize]{leftmargin=1.5em,topsep=3pt,itemsep=2pt}
-
-% Preprint title block: rules, title, author, and status line.
-\makeatletter
-\newcommand{\paperstatus}[1]{\gdef\@paperstatus{#1}}
-\renewcommand{\maketitle}{%
-  \thispagestyle{plain}%
-  \begin{center}
-  {\color{black!70}\hrule height 1.2pt}\vspace{14pt}
-  {\LARGE\bfseries\@title\par}\vspace{12pt}
-  {\color{black!70}\hrule height 0.4pt}\vspace{14pt}
-  {\large\@author\par}\vspace{8pt}
-  {\small\@paperstatus\par}
-  \end{center}\vspace{6pt}}
-\renewenvironment{abstract}{%
-  \begin{center}\small\bfseries Abstract\end{center}\vspace{-4pt}
-  \small\list{}{\leftmargin=2.5em\rightmargin=2.5em\listparindent=1.2em\parsep=0pt}\item\relax}
-  {\endlist}
-\makeatother
-\newcommand{\keywords}[1]{\par\vspace{6pt}\noindent\hspace{2.5em}\parbox{\dimexpr\linewidth-5em}{\small\textbf{Keywords:} #1}\par}
-
-\newtheorem{proposition}{Proposition}
+\fancyhead[L]{\small\textsc{Scheduling Spectral Analysis}}
+\fancyhead[R]{\small Preprint / October 2026}
+\fancyfoot[C]{\thepage}
 \newcommand{\code}[1]{\texttt{#1}}
 \newcommand{\ceil}[1]{\left\lceil #1\right\rceil}
 \newcommand{\floor}[1]{\left\lfloor #1\right\rfloor}
-\newcommand{\repo}{\url{https://github.com/Kautenja/ArhythmeticUnits-Fourier}}
-\lstset{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{ink}\bfseries,commentstyle=\color{black!55},stringstyle=\color{accent},backgroundcolor=\color{pale},frame=single,rulecolor=\color{black!15},breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,tabsize=4,captionpos=b,xleftmargin=0.5em,xrightmargin=0.5em}
+\lstset{basicstyle=\ttfamily\footnotesize,keywordstyle=\color{ink}\bfseries,commentstyle=\color{black!55},backgroundcolor=\color{pale},frame=single,rulecolor=\color{black!15},breaklines=true,columns=fullflexible,keepspaces=true,showstringspaces=false,tabsize=2,xleftmargin=0.3em,xrightmargin=0.3em}

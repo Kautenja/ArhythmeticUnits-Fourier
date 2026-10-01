@@ -5,7 +5,7 @@ Use `make -C docs/whitepaper check` or `arxiv` from the repository root.
 
 -   `study_import.py` validates original spec 014 sessions and derives compact
     evidence without executing a benchmark.
--   `study_paper.py` generates/checks the current tables, macros, vector figures
+-   `study_paper.py` generates/checks the conference and retained-report tables, macros, vector figures
     and full-grid process/session CSVs; use `--check` for read-only validation.
 -   `comparison_paper.py` generates or checks the historical spec 012 tables,
     vector figures, numeric macros and provenance from committed evidence.

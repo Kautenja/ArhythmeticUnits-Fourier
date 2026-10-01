@@ -25,7 +25,7 @@ keywords:
   - C++
 preferred-citation:
   type: report
-  title: "Whole-Pipeline Scheduling for Real-Time Spectral Analysis"
+  title: "Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop"
   authors:
     - family-names: Kauten
       given-names: Christian
@@ -33,7 +33,7 @@ preferred-citation:
   institution:
     name: Arhythmetic Units
   year: 2026
-  month: 9
-  version: "3"
+  month: 10
+  version: "5"
   url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper"
-  notes: "Manuscript version 4; not yet deposited on arXiv"
+  notes: "Manuscript version 5; not yet deposited on arXiv"

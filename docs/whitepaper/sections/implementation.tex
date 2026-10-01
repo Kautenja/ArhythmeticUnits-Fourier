@@ -1,0 +1,42 @@
+\section{Implementation in VCV Rack}
+\label{sec:implementation}
+The method is implemented by the header-only C++ class
+\code{SpectrumAnalysis<T>} and used by two modules in the Arhythmetic Units
+plugin. Fourier displays four spectra, using the four lanes of Rack's SIMD
+sample type as independent channels. Spectre displays a scalar spectrogram.
+Neither module has an audio output, but both analyze input on the engine
+thread. The scheduling code depends on arithmetic operations on \code{T},
+not on Rack or its graphics API.
+
+Storage and maximum-size twiddle and permutation tables are prepared before
+sample processing. Smaller transforms reuse those tables by changing indices
+and strides. Window coefficients are cached and rebuilt incrementally after
+a relevant setting change. The scalar path retains the ordinary butterfly
+traversal; dense SIMD work is dispatched in contiguous segments within the
+same sample quota to reduce repeated setup. This preserves the scheduling
+bound without requiring a function dispatch for every individual butterfly.
+
+At each frame boundary the modules latch analysis settings. Length changes
+invalidate input and averaging history logically; reset or sample-rate changes
+cancel partial analysis. Smoothing and display-coordinate caches rebuild in
+scheduled per-bin operations. Steady-state analysis and live window, length,
+and smoothing changes use prepared storage. Increasing the sample rate can
+require growing Fourier's input ring in the host's sample-rate callback;
+that lifecycle operation is outside the per-sample guarantee.
+
+Publishing a spectrum must not reintroduce a large copy or expose unfinished
+data to the display. Each bin is written into producer-owned storage. At
+completion, a single-producer/single-consumer mailbox exchanges ownership using
+acquire/release atomics. The UI keeps its current slot while the engine fills
+another. Fourier publishes a completed curve; Spectre publishes completed
+history columns and constructs its image on the UI thread. A slow consumer
+can miss intermediate updates, but it does not observe a partially written
+spectrum. This ownership rule is separate from the arithmetic schedule.
+
+The deployed defaults also make the latency choice concrete. Fourier uses
+$N=2048$ and a 30\,ms hop ($H=1440$ at 48\,kHz); Spectre uses $N=2048$
+and $H=1024$. Both default to a flattop window. The schedule adds nearly one
+hop before publication, not one hop of audio output latency: these modules
+produce display data only. Display polling and rendering add further delay.
+The study below measures processing and logical publication age; it does not
+evaluate the perceptual acceptability of that display response.

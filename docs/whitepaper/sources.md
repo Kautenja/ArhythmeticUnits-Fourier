@@ -225,3 +225,24 @@ The pinned Rack `Engine.cpp` was inspected locally: per-frame worker barriers,
 block-level `yieldWorkers()` and worker-loop behavior, revision
 `8c33d966d329e4a6e354593b2b5f9ac2df5a03bd`. Engine CPU observations are reported
 separately from the inferred explanation involving spinning and power state.
+
+## Version 5 Conference Rewrite
+
+October 1, 2026: the short paper selects fourteen references supporting the
+resumable FFT, spectral-analysis context, native controls, and experimental
+method. The full bibliography and wider literature discussion remain with
+[report v4](report-v4.tex). The rewrite makes no new priority claim.
+
+The layout follows the locally available
+[RackNES paper](https://github.com/Kautenja/RackNES/tree/master/whitepaper):
+10-point type, two columns, letter paper and 0.75-inch margins. The GitHub
+browser fetch failed; its adjacent checkout supplied the inspected source.
+Battenberg and Avizienis's author-hosted paper and FFTW's official paper were
+reopened during the rewrite. Direct requests for the Lo/Lee DOI and Hurchalla
+AES page failed; the limited claims and prior checks recorded above were
+retained. No unavailable full-text implementation details were inferred.
+
+The performance argument continues to use the validated spec 014 evidence,
+not the historical spec 012 campaign described above. Three compact tables
+are regenerated from the same cells and aggregation as the extended report.
+No measurement, archived numerical result, or process summary was changed.

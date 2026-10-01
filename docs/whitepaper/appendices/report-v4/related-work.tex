@@ -1,0 +1,52 @@
+\section{Related Work and Positioning}
+\label{sec:related}
+Time-distributed FFT execution has a substantial history. Lo and Lee construct
+butterfly work during acquisition and also combine scheduling with recursive
+reuse across shifted frames~\cite{lo1998,lo1999,lomoving1999}. In convolution,
+Bor\ss{} distributes partition work and staggers filter schedules to control
+their combined load~\cite{borss2009}, while Hurchalla distributes transform
+work across incoming blocks on one thread~\cite{hurchalla2010}. Battenberg and
+Avi\v{z}ienis schedule forward transforms, spectral products, and inverse
+transforms across callbacks, use FFTW for the leaf transforms, and compare
+cooperative with preemptive execution~\cite{battenberg2011}. Complete
+processing chains and optimized transform kernels thus both have precedents
+within cooperative scheduling. Wefers treats manual preemption and transform
+subdivision more broadly~\cite{wefers2015}, making clear that suspension
+granularity is an implementation choice rather than an inherent advantage of
+butterfly-level execution. Liu, Yan, and Zou study time-distributed FFT and
+inverse FFT execution for online control~\cite{liu2017}. We therefore claim
+neither transform suspension nor cooperative processing chains as new
+principles.
+
+For spectral visualization, Pr\r{u}\v{s}a and Holighaus use a worker thread
+and distinguish computation, polling, and repaint delay~\cite{prusa2016}.
+Their filter-bank representation differs from the fixed-window FFT considered
+here, but their separation of execution context from visible-output latency
+is directly relevant. Sliding, hopping, and feedforward transforms offer a
+different dimension of choice: reuse of work across overlapping
+windows~\cite{lyons2021,park2014,garrido2016}, which frequency-domain kernels
+can extend to tapered windows~\cite{rafii2018,eleftheriadis2023}. Overlap
+reuse and time distribution are complementary rather than mutually exclusive.
+Our implementation selects a complete window and starts a fresh transform for
+each frame.
+
+Partitioned convolution makes the tradeoff between latency and cost explicit
+in a different application: Gardner combines fast convolution with low
+input/output delay, Garcia optimizes nonuniform filter partitions for a
+specified delay, and Wefers and Vorl\"ander optimize uniform FFT partition
+sizes~\cite{gardner1995,garcia2002,wefers2011}. These precedents motivate
+treating execution granularity as a design variable; this paper introduces no
+new convolution algorithm.
+
+\input{tables/contribution-delta.tex}
+
+The present study specializes that scheduling perspective to windowed
+analysis (Table~\ref{tab:contribution-delta}): preparation and the
+magnitude, smoothing, and display stages belong inside the contract;
+exact-hop publication is independent of rounding in the work quota; and
+matched controls distinguish placement from kernel choice. FFTW, Rack's
+PFFFT wrapper, and Apple's Accelerate/vDSP provide practical native
+alternatives~\cite{frigo2005,pffft,vdsp}. A headless evaluation inside Rack's
+engine then tests whether differences in local concentration survive the host
+boundary. Appendix~\ref{app:related-work} gives a broader comparison with the
+literature.

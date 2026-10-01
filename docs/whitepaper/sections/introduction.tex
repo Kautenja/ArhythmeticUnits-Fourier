@@ -1,61 +1,56 @@
 \section{Introduction}
-A spectral analyzer shares its host's audio budget even when it produces no
-audio. Its average cost may be small, yet a straightforward implementation
-concentrates window preparation, the transform, and display-data processing
-into whichever sample call completes a frame. VCV Rack makes the consequence
-concrete: modules process one sample at a time, and the engine's worker
-threads synchronize between samples~\cite{rackengine}, so one long call can
-hold up every worker. Whether reducing that concentration improves the
-behavior of a whole block, however, also depends on the engine's own
-synchronization overhead and on the rest of the patch.
+A spectrum analyzer need not generate audio to interfere with audio
+processing. If its FFT runs on the audio engine thread, the engine must finish
+that work before it can deliver the next block of sound. Computing a spectrum
+only a few dozen times per second can make the average cost look modest while
+leaving occasional blocks much more expensive than their neighbors. Several
+analyzers updating together can compound the burst.
 
-Several execution strategies are available. A batch FFT on the engine thread
-minimizes state and can exploit optimized kernels. A worker thread moves the
-computation elsewhere, at the cost of a capture, queueing, and ownership
-policy. When an application controls the relative phases of several
-analyzers, staggering them reduces coincident frame work. Cooperative
-execution offers a further choice: retain an unfinished analysis and advance
-it during successive sample calls. It is most relevant when a producer must
-maintain an exact-hop spectral history independently of a display that polls
-intermittently. For a latest-frame visualizer that tolerates dropped analyses,
-computing on the UI thread is also reasonable; that is a different delivery
-contract.
+This is the problem that motivated Fourier, a spectrum analyzer for the VCV
+Rack modular synthesizer. Rack invokes a module's processing function once
+per sample~\cite{rack}. The FFT was therefore built to advance a little on
+each invocation: execute some butterflies, save the current position, and
+resume when the next sample arrives. Analysis remains in the ordinary
+processing loop. The display receives the completed spectrum later, while
+audio processing continues between pieces of the transform.
 
-Making only the FFT resumable is not enough. Frame-sized packing,
-reconstruction, and output passes remain at its boundaries, and restarting
-each transform as soon as the previous one finishes ties the frame cadence to
-rounding in the butterfly quota. We instead schedule one dependency-ordered
-sequence that covers the whole analyzer, and we drive publication from a frame
-clock that is independent of when the arithmetic finishes. This report
-contributes:
-\begin{itemize}
-\item an explicit execution contract for work credits, exact-hop publication,
-retention of the selected input, cancellation, and ownership of complete
-spectra (Section~\ref{sec:one-hop});
-\item matched batch/distributed controls and native-layout batch/hybrid
-alternatives that separate work placement from FFT-kernel choice
-(Section~\ref{sec:evaluation});
-\item a same-host study of native completion horizons, shipped module
-defaults, and paced execution through Rack's actual multithreaded engine
-(Section~\ref{sec:comparison-results}).
-\end{itemize}
+The distinction is between the amount of work and when that work happens.
+A conventional radix-2 FFT takes $O(N\log N)$ operations for $N$ samples.
+Making it resumable does not reduce that count. It makes the computation
+available for scheduling over an interval in which the application can afford
+to wait for the result. Spectral visualization is a natural application:
+its output is a sequence of display updates rather than an audio sample that
+must be returned immediately. Whether the added delay is acceptable still
+depends on the desired display response.
 
-The evidence supports a qualified conclusion. Distributing a fixed scalar
-implementation substantially reduces its typical per-hop peak. Native hybrid
-pipelines can combine small peaks with much lower total cost than
-butterfly-level scheduling. Inside the complete host, however,
-synchronization and release lateness can dominate, and a smaller local burst
-does not by itself mean fewer missed releases. The practical contribution is
-therefore a measured way to choose execution granularity and publication age,
-with analyzer-level and host-level outcomes kept distinct.
+Scheduling butterflies alone is insufficient. Windowing and arranging the
+input, reconstructing a real spectrum, computing magnitudes, and preparing
+output can each leave a large loop at a frame boundary. The implementation
+studied here distributes those operations too. It selects a frame, preserves
+its input while new samples arrive, advances the analysis in dependency order,
+and publishes the completed result at the end of a fixed number of calls.
+Figure~\ref{fig:schedule} illustrates this change in execution.
 
-The implementation serves two VCV Rack modules: the Fourier spectrum analyzer,
-which processes four independent SIMD channels, and the scalar Spectre
-spectrogram. Section~\ref{sec:related} positions the work and
-Section~\ref{sec:signal-model} fixes notation. Section~\ref{sec:legacy-motivation}
-explains why scheduling only the FFT falls short, and Section~\ref{sec:one-hop}
-states the contract. Sections~\ref{sec:evaluation}
-and~\ref{sec:comparison-results} describe the study and its results, and
-Section~\ref{sec:discussion} discusses design guidance and limits. The
-appendices collect derivations, an analysis of the original scheduler, and
-implementation details.
+There is a competing advantage to doing the work at once: optimized FFT
+libraries use vectorization and carefully organized memory access. A custom
+resumable transform may give up some of that efficiency. A useful evaluation
+must therefore ask both whether distribution reduces bursts within the same
+implementation and whether the resulting tradeoff remains worthwhile against
+native libraries. Comparing only a custom batch FFT with its incremental
+version would answer the first question but leave the second open.
+
+This paper makes three contributions. It presents an implementable schedule
+for complete windowed analysis within a sample-processing loop; explains its
+work bound, input lifetime, and publication delay; and measures the tradeoff
+in controlled analysis and complete Rack modules. The method uses established
+FFT mathematics and cooperative scheduling. Its contribution is their
+application to the complete analyzer and the evidence needed to judge that
+choice, rather than a new Fourier transform or a claim that distribution is
+always faster.
+
+The results support a focused conclusion: distributing analysis can buy
+substantial processing headroom in burst-heavy configurations, but that
+headroom has costs in total work and result age. Native batch and hybrid
+implementations remain useful alternatives. Host scheduling also matters:
+lower typical processing peaks did not consistently produce fewer late blocks
+in the measured system.

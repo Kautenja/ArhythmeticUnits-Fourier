@@ -1,0 +1,148 @@
+\section{Scheduling the Analysis}
+\label{sec:method}
+\subsection{Frames and processing calls}
+Let $x[n]$ be a real signal sampled at $f_s$\,Hz. The analyzer uses a
+power-of-two transform length $N$ and an integer hop $H\ge1$, the number of
+samples between successive frame endpoints. Frame $r$ ends at $t_r=rH$ and
+contains
+\begin{equation}
+ u_r[m]=x[t_r-N+1+m]w[m],\quad 0\le m<N,
+ \label{eq:frame}
+\end{equation}
+where $w[m]$ is the selected window, including any fixed gain normalization.
+Its spectrum is
+\begin{equation}
+ X_r[k]=\sum_{m=0}^{N-1}u_r[m]e^{-j2\pi km/N}.
+ \label{eq:dft}
+\end{equation}
+Deferring computation changes when this result is available, not the samples
+in the sum. In particular, later input must not overwrite a sample before the
+scheduled windowing operation has read it.
+
+A \emph{sample call} advances the engine by one sample. A \emph{block}
+contains $D$ such calls and is the unit delivered by the audio host. The hop
+and block size need not match or divide one another. At 48\,kHz, a block of
+64 samples has a time budget of 1.333\,ms; a hop of 1024 samples gives
+21.33\,ms between spectra. These are different clocks: distributing a frame
+over its hop can move work out of one block and into subsequent blocks.
+
+\input{figures/sample-schedule.tex}
+
+\subsection{A resumable FFT}
+An iterative radix-2 FFT traverses stages, groups within a stage, and pairs
+within a group. A butterfly reads two coefficients, multiplies one by a
+precomputed twiddle factor, and replaces the pair by their sum and difference.
+Saving the current stage, group, and pair is enough to resume the traversal.
+The coefficient array remains in place between calls. Pausing introduces no
+new transform mathematics: when resumed, the next butterfly sees the same
+operands that an uninterrupted traversal would have produced.
+
+For real input, pair the windowed samples as
+$z[m]=u_r[2m]+j u_r[2m+1]$ and compute an $M=N/2$ point complex FFT.
+Standard real-spectrum reconstruction then produces the $K=M+1$ bins from
+DC through Nyquist~\cite{sorensen1987}. The complex traversal contains
+\begin{equation}
+ B=\frac{M}{2}\log_2 M=\frac{N}{4}\log_2(N/2)
+ \label{eq:butterflies}
+\end{equation}
+butterflies. The traversal indices require constant storage; the coefficient
+and lookup arrays require $O(N)$ storage. Any partition of this ordered
+traversal preserves the result within the same arithmetic implementation.
+This does not imply bitwise agreement with a different FFT library.
+
+\subsection{Include the work around the FFT}
+The analyzer divides each frame into four stages
+(Table~\ref{tab:stages}). First, it windows pairs of retained input samples
+and stores them in the FFT's permuted order. Next, it executes the
+butterflies. It then reconstructs positive-frequency bins and computes their
+magnitudes. Finally, it applies enabled smoothing and emits display data one
+bin at a time. Each stage finishes before the next begins; a sample call can
+cross a stage boundary if it has work left to do.
+
+\input{tables/scheduled-stages.tex}
+
+Frequency smoothing uses prefix sums of the magnitudes. Once those sums are
+complete, the mean over any contiguous bin range needs two prefix reads and
+a subtraction rather than a loop over that range. Temporal smoothing updates
+one stored value per bin. Thus neither form of smoothing adds an unscheduled
+whole-spectrum pass on the publication call. The display callback must also
+perform bounded work per bin; an arbitrary expensive callback would defeat
+the schedule.
+
+To account for operations with different costs, the implementation assigns
+integer \emph{credits}. Most operations use one credit. Rebuilding window
+coefficients uses $p=4$ credits per input pair, compared with $p=1$ when the
+cache is ready. Output uses $o=2$ credits per bin for Fourier's four-channel
+display conversion and $o=1$ otherwise. A weighted operation executes at its
+first credit; the remaining credits defer later work. These are engineering
+weights, not measurements of equal execution time. The total is
+\begin{equation}
+ W=pM+B+(1+o)K.
+ \label{eq:work}
+\end{equation}
+The weights affect where work falls within the hop without changing the
+computed spectrum or the chosen publication time.
+
+\subsection{An exact completion schedule}
+Number a frame's sample calls $s=1,\ldots,H$, starting with the call that
+captures its endpoint. Assign call $s$ the quota
+\begin{equation}
+ q_s=\floor{\frac{sW}{H}}-\floor{\frac{(s-1)W}{H}}.
+ \label{eq:quota}
+\end{equation}
+The cumulative count after $s$ calls is $\floor{sW/H}$, so all $W$ credits
+have been consumed after exactly $H$ calls. Every call receives either
+$\floor{W/H}$ or $\ceil{W/H}$ credits. An integer quotient and remainder
+implement the rule without dividing on every sample:
+\begin{lstlisting}
+// Once per frame configuration:
+base = W / H; remainder = W % H;
+// At frame start: error = 0.
+// On each sample call:
+quota = base;
+error += remainder;
+if (error >= H) { error -= H; ++quota; }
+advance_analysis(quota);
+if (++phase == H) { publish(); phase = 0; }
+\end{lstlisting}
+Here \code{advance\_analysis} consumes credits in the stage order above,
+preserving the current stage and its cursor. Input capture occurs on every
+call, including calls whose quota is zero. Publication waits for the fixed
+boundary even if the last weighted operation has already executed.
+
+For a clean scalar frame with $N=4096$ and $H=1024$, $W=17410$:
+1022 calls consume 17 credits and two consume 18. For fixed configuration,
+any 64 consecutive calls consume at most
+$\ceil{64W/H}=1089$ credits, including blocks that cross a frame boundary.
+More generally, when $H$ is proportional to $N$, the maximum per-sample
+quota grows as $O(\log N)$ while a batch frame still requires
+$O(N\log N)$ work at once. The schedule bounds operation counts, not
+elapsed time: instruction costs, memory effects, and operating-system
+interruptions are outside that arithmetic statement.
+
+Keeping the frame clock separate from arithmetic completion is essential.
+A fixed rounded quota such as $\ceil{B/H}$ butterflies per call can finish
+early. Restarting immediately would change the actual update rate and any
+smoothing calibrated to it. Equation~\eqref{eq:quota} distributes the
+remainder across the intended interval and retains the requested cadence.
+
+\subsection{Input lifetime and result delay}
+The frame selected at $t_r$ is published at $t_r+H-1$. Measured from its
+newest sample, the delay is therefore
+\begin{equation}
+ A_{\mathrm{endpoint}}=(H-1)/f_s.
+ \label{eq:age}
+\end{equation}
+Measured from the window center, add $(N-1)/(2f_s)$. For the 4096-point,
+1024-hop example at 48\,kHz, these ages are 21.31 and 63.97\,ms,
+respectively. Even an immediate batch transform has the window-center age;
+distribution adds the time spent advancing the frame. These are logical
+sample-clock ages, excluding computation time, audio buffering, and repaint.
+
+A preallocated input ring with capacity $N_{\max}+H_{\max}$ retains every
+selected sample until analysis finishes. At most $H-1$ later samples arrive
+before publication, so the oldest sample of the $N$-sample frame cannot be
+overwritten. Windowing can therefore proceed incrementally without a bulk
+frame copy. The first frames use zero padding for input that predates startup.
+With fixed settings, only one frame is in progress and successive results are
+published exactly $H$ samples apart.

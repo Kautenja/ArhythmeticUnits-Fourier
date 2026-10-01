@@ -1,0 +1,17 @@
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}p{0.22\linewidth}p{0.55\linewidth}r@{}}
+\toprule
+Stage & One operation & Credits \\
+\midrule
+Prepare & Window, pack, and permute an input pair & $pM$ \\
+Transform & Execute one complex butterfly & $B$ \\
+Magnitude & Reconstruct one bin; compute magnitude and optional prefix sum & $K$ \\
+Output & Smooth one bin and write its display data & $oK$ \\
+\bottomrule
+\end{tabular}
+\caption{Scheduled stages for real input. $M=N/2$ pairs and $K=M+1$ bins
+are processed in order. The last column gives the total credits per stage;
+$p$ and $o$ are preparation and output weights.}
+\label{tab:stages}
+\end{table}

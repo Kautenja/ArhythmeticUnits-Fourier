@@ -1,17 +1,18 @@
 \section{Conclusion}
-Complete windowed analysis can advance over an exact hop as one bounded
-sequence covering preparation, transform, magnitude processing, smoothing, and
-publication. Whole-pipeline accounting removes the boundary bursts and cadence
-error of FFT-only scheduling, while input retention and mailbox ownership
-protect the analyzed samples and the published spectra.
+A spectrum analyzer can spread its FFT across the audio processing loop by
+saving traversal state and resuming on successive sample calls. Scheduling
+windowing, magnitudes, smoothing, and output in the same way brings the
+complete analysis under one schedule. A balanced integer quota completes
+each analysis over a chosen hop and makes the added publication delay explicit.
 
-A descriptive study separates this contract from implementation cost. Matched
-scheduling reduces typical hop peaks, and native hybrids and shorter
-completion horizons offer different tradeoffs between cost and age. With four
-aligned Rack modules on one engine thread, the production pipeline
-substantially reduces block concentration relative to native batch execution.
-Synchronization, staggering, and release lateness nevertheless reshape
-host-level outcomes, and missed releases give no consistent reliability
-ranking. Execution granularity should therefore be chosen against measured
-complete-path headroom and age requirements; broader platform and
-audio-device claims require further measurement.
+The measured benefit is smaller processing bursts, with costs in overhead and
+result age. Matched controls establish the placement effect; native controls
+and Rack measurements show when it matters and when a hybrid is preferable.
+The central lesson is to evaluate total cost, peak block time, and spectrum
+age together when choosing how an analyzer should share an audio engine.
+
+\section*{Availability}
+Source, compact evidence, build instructions, and the separately retained
+technical derivations are available in the
+\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper}{Fourier repository}.
+This manuscript is a preprint and has not been peer reviewed by a venue.

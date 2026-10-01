@@ -1,149 +1,95 @@
 \section{Experimental Method}
 \label{sec:evaluation}
-The study asks three questions. How much of a burst reduction comes from work
-placement within a fixed implementation? How does that choice interact with
-native kernels and the completion horizon? And does it improve
-complete-module behavior under Rack's sample-synchronous engine? The questions
-and the workload matrix were recorded before collection. The analysis is a
-\emph{descriptive pilot study}: it reports what was observed and does not
-select a winner and then confirm it.
+The evaluation asks two questions: does spreading a fixed implementation
+reduce processing bursts, and how does that tradeoff compare with native
+FFT-based analysis inside a real host engine? We use the retained study
+collected on September 30, 2026: two separately prepared sessions on one Apple
+M1 Pro laptop running macOS 26.6.2, with Apple Clang 21.0.0. The measured C++ uses the Rack build flags, including \code{-O3} and
+\code{-funsafe-math-optimizations}; dependency identities and complete compile
+commands are archived. Both sessions use the same executable and sources. Each planned configuration was
+run in two fresh processes per session, giving four processes per comparison
+row. The complete campaign contains 194 planned cells and 776 processes,
+including scaling, numerical stress, and lifecycle cases beyond the selections
+reported here.
 
-\subsection{Host, sessions, and workload boundaries}
-Two separately prepared sessions ran on September 30, 2026 (local time) on one
-Apple M1 Pro laptop with macOS 26.6.2 and Apple Clang 21.0.0, using the same
-executable and archived sources. The operator reported disconnecting
-networking and Bluetooth and closing agents and unnecessary applications. The
-runner required AC power with Low Power Mode off, held \code{caffeinate -is}
-assertions, settled for 180 seconds after staging, and settled each fresh
-process for one second before warmup. Snapshots taken before and after each
-session confirm the power and sleep assertions. They also show residual macOS
-service activity, including \code{sandboxd} and Spotlight indexing, and cannot
-rule out interference during any particular interval.
+\subsection{Comparisons and workloads}
+The \emph{matched batch} and \emph{matched distributed} controls use the same
+scalar implementation, storage, arithmetic, and frame endpoints. Batch spends
+all credits in the endpoint call; distributed spends them according to
+Equation~\eqref{eq:quota}. This isolates placement within the implementation.
 
-Each session ran 194 planned cells twice, each time in a fresh process, for
-776 processes in total. Three bridge cells repeat across groups, leaving 191
-unique configurations. Group order was fixed, and process order within each
-group followed predeclared session seeds. Every process and every slow
-interval is retained. Table~\ref{tab:study-design} summarizes the seven
-groups. Setup, plan creation, correctness replay, storage probes, and output
-serialization all fall outside the timed block intervals.
+The native controls use PFFFT, FFTW, or vDSP for the transform. Each provider
+has a batch path and a \emph{hybrid}: the hybrid distributes input preparation
+and output processing but executes the native FFT and any required reordering
+as one indivisible call. Within each provider, the two paths share retained
+input, windowing, magnitude calculation, and smoothing. Native layouts are
+used directly where possible. vDSP uses vectorized preparation and batched
+four-channel transforms; FFTW uses reusable real plans, including batched
+plans for four channels, with single-threaded \code{FFTW\_MEASURE} planning
+and no imported wisdom. Plan creation occurs before measurement.
 
-\input{generated/paper-study/design.tex}
+Controlled comparisons use 48\,kHz input, 64-sample blocks, a Hann window,
+and no smoothing unless stated otherwise. The main scalar comparison uses
+$N=4096$, $H=1024$. A four-channel comparison uses $N=16384$, $H=240$
+and varies the hybrid's completion interval while keeping the hop fixed.
+These calls feed a controlled output sink. They measure complete analysis,
+but omit module input conditioning and display conversion.
 
-The stream harness times either complete analysis calls feeding a controlled
-sink or the modules' actual \code{process()} paths, including input
-conditioning and display-data conversion. Fourier's shipped defaults use four
-SIMD lanes, $N=2048$, a 30\,ms hop ($H=1440$ at 48\,kHz), and a flattop
-window; Spectre's use scalar samples, $N=2048$, $H=1024$, and a flattop
-window. Unless stated otherwise, controlled scalar comparisons use a Hann
-window, $H=1024$, no smoothing, and $D=64$. Every table and figure states
-which boundary it measures.
+Host comparisons run complete Fourier modules through Rack's
+\code{stepBlock()} entry point, including worker synchronization. Native
+controls replace the analysis inside the same module shell, retaining input
+conditioning, display conversion, and publication. The reported host rows use
+Fourier's defaults, one or four engine threads, and four or sixteen modules.
+Aligned modules share frame endpoints; staggered modules start at different
+phases. No background modules or display consumer are active in these rows.
+The host is paced at the nominal block period; controlled analysis runs
+continuously. Results from those different execution regimes are not treated
+as interchangeable timings.
 
-The host group drives the pinned Rack engine's actual \code{stepBlock()},
-including worker synchronization, with one or four engine threads; 0, 1, 4,
-or 16 analyzers; and 0, 16, or 64 deterministic background modules. These form
-a structured set of combinations rather than a full factorial design. Native
-module controls replace only the analysis inside the same module shell,
-keeping input conditioning, display conversion, and mailbox publication. They
-also retain some unused production storage, so their footprint does not
-represent the memory requirement of an optimized replacement. An optional
-concurrent headless consumer copies and checksums snapshots at 30 or 60\,Hz,
-with declared stalls; it neither draws a window nor drives an audio interface.
+\subsection{Measurements and replication}
+We measure the duration of each whole processing block. To keep sparse FFT
+bursts visible, the primary statistic takes the longest block intersecting
+each complete frame-to-frame hop, then reports the median of those maxima.
+We call this the \emph{typical hop peak}. A block crossing a hop boundary
+counts in both intervals. The same full-hop interval is used for immediate
+and delayed publication. Thus a batch method is not favored merely because
+it publishes sooner, and a rare frame boundary does not disappear beneath a
+callback percentile.
 
-\subsection{Matched controls and native layouts}
-The matched first-party batch and distributed controls share one scalar
-analysis implementation, its arithmetic, and its storage, so they isolate
-placement more cleanly than any comparison across FFT libraries. Each native
-batch/hybrid pair likewise shares one retained-input, window, magnitude,
-smoothing, and output path. Batch runs the whole sequence immediately; hybrid
-distributes the surrounding stages but executes the transform and its
-reordering as one indivisible native call. The native pipelines read
-contiguous ring segments and use native output layouts, avoiding per-element
-ring-modulo arithmetic and conversion to a canonical complex layout. vDSP
-uses vectorized windowing and packing and batched four-channel transforms.
-FFTW uses reusable real plans, including \code{plan\_many} for four channels,
-created in each fresh process by single-threaded \code{FFTW\_MEASURE} planning
-without imported wisdom. PFFFT uses its ordered packed spectrum. All paths
-compute magnitudes with an explicitly scaled norm to avoid premature underflow
-when squaring. These are strong native controls, but they do not exhaust every
-provider-specific optimization.
+Aggregate cost is the sum of instrumented block wall times divided by engine
+samples, in ns/sample. It includes dispatch, timing overhead, and
+interruptions; it is not an independently measured throughput or CPU
+utilization figure. A \emph{compute-budget exceedance} occurs when a timed
+block takes longer than $D/f_s$. A \emph{release miss} occurs when the paced
+host finishes after its scheduled deadline, including wake lateness and any
+backlog. Neither statistic is an audio-device underrun count.
 
-The granularity group holds the frame hop fixed and varies the native
-completion horizon over $H_c\in\{H,\ceil{H/2},\ceil{H/4}\}$. Publication
-occurs at endpoint age $H_c-1$, after which the pipeline only captures input
-until the next endpoint. This trades latency against the density of
-surrounding-stage work without subdividing the native FFT. Native sub-FFT
-leaves and new stage weights were deliberately deferred and have no measured
-evidence here. The production weights, $p=4$ for window rebuilds and $o=2$
-for Fourier output, were tuned in earlier engineering experiments on the same
-M1 Pro, and band-cache rebuilding runs inside output units without additional
-weight. The study therefore does not independently validate those weights.
+Every process warms up for 16 nominal hops. Setup, correctness replay, and
+result serialization are outside the timed blocks. Within each session we
+average the two process costs and take the median of their hop-peak
+summaries; the published result weights the two sessions equally. Bracketed
+ranges show the two session summaries, not confidence intervals. We retain
+all processes and slow observations. With two sessions on one machine,
+treating individual blocks as independent replicates would overstate the
+evidence~\cite{kalibera2013}.
 
-\subsection{Timing, replication, and age}
-Stream groups execute blocks back to back. The host group releases blocks on
-an absolute periodic schedule with period $D/f_s$ and does not reset the
-release origin after an overrun. A monotonic clock records wake, start, and
-finish times separately. Threads inherit the default scheduling policy; no
-core affinity, frequency lock, or real-time priority was applied. Stream
-processes inherit and record their floating-point control state, while the
-actual Rack engine applies its own per-block FPU policy. Empty-timer
-observations are retained without subtraction, and reported values are
-rounded to about three significant figures.
+The operator prepared the machine offline, on AC power with Low Power Mode
+disabled, and closed unnecessary applications. Pre/post snapshots still show
+macOS service activity. No affinity, frequency lock, or real-time thread
+priority was applied. Timings therefore describe this host and build under
+the recorded conditions rather than worst-case execution time.
 
-The primary burst statistic is the median \emph{per-hop peak block time}: for
-each complete interval from one frame endpoint to the next, take the longest
-duration of any whole block that intersects it. Unlike a callback percentile,
-this statistic always captures a batch burst, however rare such bursts are
-among all callbacks. A block that spans two hops counts toward both, and no
-sub-block costs are imputed. Engine peaks use actual replay endpoints and the
-full hop for both immediate and delayed publication. Lifecycle sequences are
-excluded from this stationary statistic. Callback p99, maxima, and counts of
-blocks exceeding $D/f_s$ are reported as secondary observations.
+\subsection{Numerical verification}
+Every measured path has a separate output replay checked against a direct
+DFT at small lengths and a separately structured double-precision FFT at
+larger lengths. Complete-module references also model input conditioning and
+display conversion. Relative vector $\ell_2$ and $\ell_\infty$ errors must
+stay within $3\times10^{-4}$ for float or $10^{-10}$ for double; a zero
+reference requires zero output. Long module decays have a separately flagged
+region affected by flush-to-zero and display mapping, checked against an
+explicit absolute floor and excluded from relative-accuracy claims.
 
-Stream cost is the sum of instrumented block wall times divided by the number
-of engine samples. It therefore includes timer, dispatch, and interruption
-effects; the design has no separate untimed throughput pass. Host results also
-record process-wide user-plus-system CPU time over the measurement interval,
-including workers, pacing overhead, and any headless consumer. CPU time and
-block wall time are distinct quantities. A \emph{release miss} means that a
-block finished after its synthetic release deadline, including wake lateness
-and accumulated backlog. A \emph{compute-budget exceedance} means that the
-timed block alone exceeded $D/f_s$. Neither is an audio-device underrun.
-
-For each cell, costs are averaged over the two processes within a session,
-and burst quantiles take the median of the two process summaries. Tables
-report the midpoint of the two session summaries, their range where
-indicated, and the largest retained observation. There are only two session
-replicates, both on the same date and host, and callbacks, hops, analyzers,
-and channels are dependent observations. We therefore report descriptive
-variation rather than confidence intervals, rare-event probabilities, or
-worst-case execution-time claims~\cite{kalibera2013,mytkowicz2009,wilhelm2008}.
-
-Publication age is measured in logical engine samples from the frame
-endpoint; center age adds $(N-1)/2$. Consumer age is bracketed by the
-completed-block watermarks observed around each copy, leaving one block of
-uncertainty. Final drains are excluded from ordinary consumer ages. These
-sample-clock ages are not wall-clock freshness during an overrun, and they
-exclude repaint.
-
-\subsection{Numerical and provenance checks}
-Every session passed checks of archive and artifact hashes, the exact
-declared matrix and process order, execution sidecars, and a numerical replay
-of every output. The independent references are direct DFTs at small lengths
-and a separately structured binary64 FFT at larger lengths; module replays
-also model DC conditioning and display conversion. Relative $\ell_2$ and
-$\ell_\infty$ errors of each magnitude vector must not exceed
-$3\times10^{-4}$ in float or $10^{-10}$ in double, and a zero reference
-requires zero output. These are engineering acceptance budgets, not
-guarantees for every weak bin.
-
-A long complete-module decay fixture separately flags the region affected by
-Rack's flush-to-zero behavior and Fourier's display mapping. It applies the
-predeclared \code{module-decay-ftz-v1} absolute floor, retains every vector,
-and excludes flagged vectors from relative-accuracy claims. The floor is an
-engineering allowance, not a proven error bound. The distinction matters
-because relative error can reach one in that tail while absolute error stays
-below the floor. Native allocators are opaque to the separate C++ allocation
-probe, so their storage and allocation calls are not observed.
-Appendix~\ref{app:reproducibility} identifies the raw evidence and the
-deterministic publication tools.
+The source archive, compact evidence, process summaries, and deterministic
+table generator are retained with the paper. Its build reads those results;
+it does not run a new benchmark. The original raw sessions remain local,
+so the repository is not presented as a public raw-data deposit.

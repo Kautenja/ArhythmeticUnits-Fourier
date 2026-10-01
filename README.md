@@ -176,9 +176,9 @@ coding and documentation conventions. Coding agents should also follow
 
 ## Citation
 
-The [technical report][report], **Whole-Pipeline Scheduling for Real-Time
-Spectral Analysis**, explains the implementation, scheduling and latency
-model, prior work, and reproducible experiments. Its README includes build
+The [technical report][report], **Scheduling FFT-Based Spectral Analysis
+in the Audio Processing Loop**, explains the implementation, scheduling and
+latency model, prior work, and reproducible experiments. Its README includes build
 instructions for the [LaTeX project](docs/whitepaper/fourier.tex) and its
 self-contained source export.
 
@@ -199,12 +199,12 @@ supplies the same report entry.
 ```bibtex
 @techreport{kauten2026fourier,
   author      = {Kauten, Christian},
-  title       = {Whole-Pipeline Scheduling for Real-Time Spectral Analysis},
+  title       = {Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop},
   institution = {Arhythmetic Units},
   year        = {2026},
-  month       = sep,
+  month       = oct,
   type        = {Technical report},
-  note        = {Manuscript version 4; not yet deposited on arXiv},
+  note        = {Manuscript version 5; not yet deposited on arXiv},
   url         = {https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper},
 }
 ```

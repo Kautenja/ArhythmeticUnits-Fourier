@@ -1,73 +1,54 @@
-\section{Discussion and Limits}
-\label{sec:discussion}
-\subsection{Choosing execution granularity}
-The results suggest a practical procedure. Start with native batch execution
-under the required complete-path semantics: if its per-hop peaks fit the
-analysis budget and fresh output matters, immediate execution is a strong
-choice. If aligned releases consume too much headroom, try staggering or a
-native hybrid, and shorten the hybrid's horizon when age matters. Choose
-butterfly-level scheduling when its measured complete-path behavior meets a
-requirement that the coarser alternatives do not, at an acceptable total cost.
+\section{Discussion and Limitations}
+The useful design choice is how much result delay to exchange for a smaller
+processing burst. For a visualizer whose native batch analysis comfortably
+fits the host budget, the added state and overhead of a resumable transform
+may be unnecessary. When several transforms coincide or one transform
+occupies a large share of the block, distribution can leave substantially more
+headroom. The one-thread Rack result demonstrates that regime, while the
+native hybrid results show that scheduling the surrounding stages may already
+be sufficient.
 
-This is an empirical design rule, not a deadline guarantee. The four-module,
-one-thread result is the clearest practical case: relative to vDSP batch, the
-production path reduces typical block concentration from about two-thirds of
-the budget to about 15\%. Yet the native hybrid is competitive in several
-controlled shapes, and the multithreaded engine changes the ranking. The
-execution contract remains useful across all of these choices, but
-performance cannot be inferred from the number of resumable butterflies alone.
-Because Rack's CPU meter reflects aggregate cost, a path with smaller bursts
-can still appear more expensive to a user.
+The FFT kernel and the scheduling policy should therefore be chosen together.
+An efficient native kernel reduces total work, but an indivisible call sets
+a lower limit on how finely that work can be spread. A resumable kernel gives
+more control over placement, but repeated indexing, dispatch, and smaller
+memory operations can cost more. The measured four-channel example shows that
+a sufficiently efficient native hybrid can beat a fully distributed kernel
+even on peak time. This is why operation-count bounds and timing measurements
+answer different questions.
 
-Publication age is an explicit cost. A 30\,ms hop adds about 1.8 frames of a
-60\,Hz display before polling and repaint, although that arithmetic does not
-establish a perceptual threshold. For latest-frame visualization, a UI or
-worker thread may be preferable; for exact-hop producer history, such a design
-must specify its capture, queueing, overflow, and ownership policy. Spectre's
-history storage and per-column mailboxes serve a different consumer contract
-from Fourier's latest curve. These alternatives deserve measurement at
-equivalent boundaries before broader recommendations are made.
+The delay also belongs in the design decision. A frame timestamp identifies
+the analyzed signal, not when the user sees it. In the retained headless
+consumer experiment at 60\,Hz, default Fourier snapshots have median
+endpoint-age bounds of 38--40\,ms for production and the full-hop hybrid,
+versus 8--10\,ms for native batch. That roughly 30\,ms difference matches
+the schedule; it excludes repaint. Slower or stalled consumers skip some
+published frames. No listening, interaction, or visual-response study was
+performed, so acceptable display latency remains an application requirement.
 
-\subsection{What the evidence can establish}
-Native layouts, actual module and engine processing, and a concurrent consumer
-connect the controlled analyzer to its host. Both pilots, however, used one
-M1 Pro, one binary, one compiler, and one date. This is an early Apple Silicon
-laptop, neither the base M1 nor a lower performance bound for Apple hardware.
-Replication on independent days, with independent builds, and on other
-architectures remains outstanding.
+The evidence has three main limits. First, both sessions were collected on
+one machine, binary, and date, with residual operating-system activity. Their
+ranges describe repeatability under those conditions, not portability or
+rare-event probabilities. Second, the engine was driven by a synthetic release
+schedule without a physical audio device or GUI rendering. Release misses
+cannot be interpreted as audible dropouts. Third, the evaluation compares a
+specific resumable radix-2 implementation with specific native adapters. It
+does not test a background analysis worker, sliding-spectrum reuse, or native
+sub-FFT leaves, and it does not establish an optimal granularity.
 
-Careful setup and power and sleep checks coexist with residual OS activity.
-Snapshots cannot identify the cause of an individual outlier; longer compute
-paths may be more exposed to interruption, but that mechanism was not
-isolated. Maxima and session ranges retain those observations. The fixed group
-order also confounds workload family with time and possible thermal drift.
+The implementation has corresponding boundaries. Credits are not equal-time
+units, and their weights were tuned during earlier engineering on the same
+machine. Lifecycle callbacks, UI work, other shared controls, and external
+interruptions fall outside the per-sample accounting. Input retention and
+mailbox ownership solve particular data-lifetime problems; they do not make
+the entire plugin a hard real-time system. The result is a bounded schedule
+for the ordinary analysis path, with measured rather than guaranteed
+execution times.
 
-The stream study lacks a separate throughput pass, a matched comparison of
-paced and continuous execution at identical boundaries, core-placement
-calibration, and a thread-policy sweep. Because four-thread engine workers
-consume substantial CPU even in an empty graph, changes with thread count
-cannot be attributed to parallel analysis alone. The background sweep did not
-locate a saturation threshold, and the extreme module settings lack matched
-paced native controls. These gaps limit causal and reliability claims, even
-though every reported comparison is traceable to retained data. Headless
-consumption verifies copying, ownership, and logical age; device underruns,
-GUI load, and repaint are outside its scope. Native allocator internals remain
-opaque, and the unused module storage retained by the native controls
-precludes a ranking by total memory.
-
-\subsection{Scope of the contribution}
-The analytical result bounds credits for a complete dependency-ordered
-analyzer. The conditional operation-cost bound explains how weights could be
-chosen, whereas the measurements test implementations on one host; cache
-effects, unequal unit costs, interrupts, and unrelated engine work separate
-these two claims. The empirically tuned weights and the unweighted band-cache
-rebuild are implementation choices, not a proof of time balance.
-
-Time-distributed transforms and cooperative processing chains precede this
-work. The specific contribution is to combine analysis-tail accounting,
-exact-hop cadence, input lifetime, cancellation, and output ownership in one
-contract, and to evaluate it with comparisons that expose placement, kernel,
-and host effects. Native sub-FFT leaves could improve the tradeoff and remain
-the most important unmeasured granularity. Inverse synthesis and long-filter
-convolution need their own bounded preparation and delivery stages, and this
-analysis-only study makes no performance claim for them.
+These limits suggest a direct next experiment: compare batch, hybrid, and
+fully distributed analysis under matched complete-module workloads on several
+hosts and architectures, including demanding smoothing settings and actual
+audio-device deadlines. Shorter completion intervals and native FFT leaves
+could then be selected against explicit peak-cost and display-age targets.
+The present evidence is sufficient to motivate that comparison without
+assuming its outcome.

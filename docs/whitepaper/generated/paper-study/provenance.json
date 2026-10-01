@@ -1,12 +1,15 @@
 {
   "aggregation": "two process means/medians within session; equal session weight; descriptive only",
   "evidence_sha256": "2fef03b4fc760560b1a1cd273caa3d3bce8e64200b250aed93d5b7a55f5a5af1",
-  "generator_sha256": "70517061dd57dc4612cf9cbe29aa8b65cae74d52da49593e3047b610dce9d6ce",
+  "generator_sha256": "4acbe192b00669ffa74ba0c51a869d6b243b0851e099b60c4a5fe5aaaf9ab50c",
   "outputs": {
     "all-cells.csv": "0ae1602a4085ced77d9f64829849316d43367b9b022629861a5f40bebec49d00",
     "all-processes.csv": "3b0ff6b73f46ead93db611ccfe508efde1632757754e6342cb5b721e097bd458",
     "all-sessions.csv": "b11baca98bbec46f15fbab6f6c4c3f4ab4ebe6660431c87ebe60a196dadddca5",
     "baselines.tex": "cc2a50aa1a40cde1948089dd728c7a5d3bd25373a0e6f9a6f368ebdbc2bd831c",
+    "conference-baselines.tex": "c370a6a43d54c9b36797db0ae1052699eb2690aaf0b005ec502e5973b8008100",
+    "conference-horizons.tex": "1dcd3a32b0ed4cff34a811de94985a0a5a67a1577cc5aefdf987decacd27d03a",
+    "conference-host.tex": "b309aa4c87fa05fe32d987afc21b608856cfc69dcb85d040ee1dfff61fcd59c6",
     "consumer.tex": "eda9afadd1b6c6dff10146fc807aa974ae18b789d2930b2d28ec6fcfbe747f72",
     "design.tex": "dfb8d22e57407b654ba0960fce6954f3efa4f8e6dbdcf9982384694fca8eda9f",
     "horizons.tex": "416b8dbd7600b8c0d5e84cf6063a58f5f98a594fc558d21a37d9076e24d610f9",

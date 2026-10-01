@@ -1,28 +1,22 @@
 \begin{abstract}
-Spectral analyzers in audio hosts run on the engine thread even when they
-produce only display data, so a frame's windowing, transform, and magnitude
-processing can land in a single sample call. We present an exact-hop execution
-contract that spreads the complete analysis---window preparation, FFT
-butterflies, magnitude processing, smoothing, and output---over the sample
-calls of one hop. The contract bounds the logical work in each call, retains
-the selected input while capture continues, publishes on a frame clock that is
-independent of arithmetic completion, and transfers complete spectra through
-an owned mailbox. A descriptive study of 776 fresh processes in two sessions
-on one Apple M1 Pro separates work placement from native FFT-kernel choice and
-measures complete modules inside VCV Rack's engine. For scalar
-$N=4096$, $H=1024$ analysis in 64-sample blocks, distributing a fixed
-implementation reduces the median per-hop peak block time from
-\StudyBatchPeak{} to \StudyCorePeak\,$\mu$s at \StudyPlacementCostRatio{}
-times the instrumented aggregate cost. With four aligned four-channel modules
-on one engine thread, the production pipeline, a native vDSP batch path, and a
-native hybrid have typical hop peaks of \StudyHostCorePeak,
-\StudyHostBatchPeak, and \StudyHostHybridPeak\,$\mu$s---%
-\StudyHostCoreBudgetPercent\%, \StudyHostBatchBudgetPercent\%, and
-\StudyHostHybridBudgetPercent\% of the block budget---while the two
-distributed paths add about 30\,ms of logical publication age. Native hybrids
-and shorter completion horizons offer intermediate tradeoffs. Multithreaded
-engine overhead and release lateness, however, keep lower burst peaks from
-translating reliably into fewer missed deadlines. The result is an
-analysis-specific scheduling contract and a measured basis for choosing
-execution granularity, not a universal performance ranking.
+\noindent
+An FFT-based spectrum analyzer can be inexpensive on average yet concentrate
+most of its work in one audio-processing call. This paper describes how to
+spread that work across successive sample calls without a separate analysis
+thread. A resumable radix-2 FFT preserves its traversal state between calls;
+windowing, spectrum reconstruction, smoothing, and output preparation are
+scheduled alongside it. Each frame completes over one chosen update interval,
+with a bounded operation count per call and an explicit delay before the
+spectrum becomes available. We implement the method in two VCV Rack
+visualizers and evaluate it using matched batch controls and optimized native
+FFT libraries. In a scalar 4096-point comparison, distributing the same
+implementation reduces the typical peak block time from
+\StudyBatchPeak{} to \StudyCorePeak\,$\mu$s while increasing aggregate
+instrumented cost by 18\%. With four aligned analyzers on one Rack engine
+thread, the distributed implementation reduces the corresponding peak from
+\StudyHostBatchPeak\,$\mu$s for native vDSP batch processing to
+\StudyHostCorePeak\,$\mu$s, at the cost of more work and about 30\,ms of
+additional publication delay. The measurements demonstrate a useful tradeoff
+between processing bursts, total cost, and result latency; they do not show a
+consistent reduction in missed deadlines.
 \end{abstract}

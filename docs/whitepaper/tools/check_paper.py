@@ -124,7 +124,7 @@ for work in range(1,257):
         assert sum(quotas) == work and quotas[-1] > 0
         assert max(quotas) == math.ceil(work/horizon)
 
-title = 'Whole-Pipeline Scheduling for Real-Time Spectral Analysis'
+title = 'Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop'
 assert f'pdftitle={{{title}}}' in tex
 printed_title = re.search(r'\\title\{\\textbf\{(.*?)\}\}', tex, re.DOTALL).group(1)
 assert ' '.join(printed_title.replace(r'\\', ' ').split()) == title
@@ -134,9 +134,13 @@ for path in [ROOT / 'README.md', PAPER / 'README.md']:
     assert title in ' '.join(path.read_text().split()), path
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
 assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
-assert 'manuscript version 4' in tex
+assert 'manuscript version 5' in tex
 for path in [ROOT / 'CITATION.cff', ROOT / 'README.md', PAPER / 'CITATION.bib']:
-    assert 'Manuscript version 4' in path.read_text(), path
+    assert 'Manuscript version 5' in path.read_text(), path
+assert r'\documentclass[10pt,letterpaper,twocolumn]{article}' in tex
+assert r'\appendix' not in tex
+assert not any('appendices' in source.relative_to(PAPER).parts
+               for source in manuscript_sources)
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')
 
 # The prototype campaign is separate from the original FFT campaign and from
@@ -157,6 +161,8 @@ for mode, title in [('legacy', 'Legacy'), ('stage_burst', 'Stage bursts'),
             f' & {min(maxima):.3f}--{max(maxima):.3f} & {age}')
     assert line in historical_tex, line
 
+# The detailed clean/dirty examples remain in the separately retained report.
+schedule_details = (PAPER / 'appendices/one-hop.tex').read_text()
 # Verify both clean and dirty whole-pipeline examples independently.
 for weight, output_weight, work, lower, extra in [
         (1, 1, 8194, 8, 2), (4, 1, 11266, 11, 2),
@@ -186,5 +192,15 @@ for weight, output_weight, work, lower, extra in [
         assert done == (phase + 1) * work // horizon
     assert packed == pairs and emitted == bins
     assert counts.count(lower) == horizon - extra and counts.count(lower + 1) == extra
-    assert f'W={work}' in tex
+    assert f'W={work}' in schedule_details
 print('Passed: prototype table, frame ages, and clean/dirty whole-pipeline schedule examples.')
+
+# Check the conference paper's worked example and its block bound.
+work, horizon = 2048 + 1024 * 11 + 2 * 2049, 1024
+quotas = [(s * work) // horizon - ((s - 1) * work) // horizon
+          for s in range(1, horizon + 1)]
+assert work == 17410 and quotas.count(17) == 1022 and quotas.count(18) == 2
+assert max(sum((quotas * 2)[s:s + 64]) for s in range(horizon)) == 1089
+for value in ('W=17410', '1022 calls', '1089'):
+    assert value in tex, value
+print('Passed: two-column conference source, supplement exclusion, and worked scheduling example.')
