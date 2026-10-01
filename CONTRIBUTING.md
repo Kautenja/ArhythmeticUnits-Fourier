@@ -1333,7 +1333,8 @@ Full PDFs build when a release is published or the workflow is dispatched.
 Leave `tag` blank to validate the selected branch without uploading anything;
 enter an existing release tag only to rebuild and replace its PDF assets.
 Ubuntu installs `texlive-latex-extra`, `texlive-fonts-extra` (for New TX and
-Inconsolata), `texlive-fonts-recommended`, `texlive-science`, `latexmk`,
+Inconsolata), `texlive-fonts-recommended`, `texlive-plain-generic` (for New TX's
+`binhex` dependency), `texlive-science`, `latexmk`,
 `lmodern`, `poppler-utils`, and `python3-pypdf`.
 For the current layout, CI checks release tags against `plugin.json` and both
 manual source versions before building. After building, it requires all three
