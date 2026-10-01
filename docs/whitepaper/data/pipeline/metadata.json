@@ -1,0 +1,77 @@
+{
+  "started_utc": "2026-09-29T01:51:37.982594+00:00",
+  "git_head": "ef0c2d815cb1ad42b1872f9bccb0b31c9771efdd",
+  "git_status": "?? specs/002-complete-analysis-pipeline.md\n?? test/dsp/test_analysis_pipeline.cpp\n?? whitepaper/experiments/pipeline/",
+  "compiler": "Apple clang version 21.0.0 (clang-2100.1.1.101)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "source_sha256": {
+    "whitepaper/experiments/pipeline/legacy.hpp": "43d815869cccdbc614197cfba78e0bf0ee273d0b2339422d8f28e41995ff066a",
+    "whitepaper/experiments/pipeline/pipeline.hpp": "4e7c6c1e9fd6fa1c5f411889f04574792274d068626c33c741aa390687bbedc4",
+    "whitepaper/experiments/pipeline/baseline.cpp": "abdd488f0a89a12531b28844c8d72c0b64cf466af918a363d6ffda05cf1bac70",
+    "whitepaper/experiments/pipeline/measure.cpp": "25937b7302add0adfa0bacf7bb30609591e4a90a2c93956b0be37668fa416eed",
+    "whitepaper/experiments/pipeline/run.py": "09d0e76307935b76de7672a4a130df9d0c34850e4d1b133055dc9a2b071e1bcd",
+    "src/dsp/circular_buffer.hpp": "46203e327b31fbb6bfc7120184df00a0466e4d70df904d2c251a25ab6ab2035c",
+    "src/dsp/color_map.hpp": "3471ae2b64d5416f417cf68bfc430abc4fa4e24bb321008b683863f72107eea4",
+    "src/dsp/constants.hpp": "6aa872a5e9df84597e6229bb0c944f9b7cc3f7e79b15e217c950de9b31239c46",
+    "src/dsp/dc_blocker.hpp": "8cf7624142188e6e4812f08a9d1fbf292c9dd00ff2d9787ad522751bdcc76f24",
+    "src/dsp/dft.hpp": "c9cd05dff3dc1c8d683018b2cd11a8ab5b5258befcd1cd7e90abbe41179ffc3c",
+    "src/dsp/eurorack.hpp": "7b8f2f5371893a641b4f8d10114b995803d8bb24a332d94f37c1b2efc3198e57",
+    "src/dsp/fft.hpp": "96875e92a91dd4e02e7dae6a162165b2a098f82ea8df934f858bab204e9a44eb",
+    "src/dsp/math.hpp": "192bb625084b373ef01bd2c249c64f21237751551629d1cea73ce222c543cbc0",
+    "src/dsp/threshold_trigger.hpp": "094056b3c1ef377fa4fa6d8973fbc397d38895e1490b8ab544c9ab8a3fca0548",
+    "src/dsp/trigger_divider.hpp": "7b2bf946a015270acab9990bdf069671d2cf8c6467c7c4c0e67c11f7c2dfff50",
+    "src/dsp/western_scale.hpp": "b6ffe5140876d5a51294b939126e7e9b22e3982d34c3a87f2bcc435e19b37061",
+    "src/dsp/window.hpp": "3fb32dc4a35ab851310d2a1fa4da7b0299313a0701abedbd70a7bd45bd990e90",
+    "src/rack_extensions/display_mailbox.hpp": "0035349837a4969c773c91bfb7586bb7eb5a558e66e2194934ead462871702e3",
+    "test/dsp/test_analysis_pipeline.cpp": "5d3cad860eb5619d4a036736d049eca31a826fc855ed241be44df3b5e0e3a73a",
+    "SConstruct": "4433b6f33c4e16ea0955c5a2951af272e964ff963d7edb48a9262f6d67107ff8"
+  },
+  "repetitions": 12,
+  "baseline_repetitions": 9,
+  "measured_frames": 64,
+  "warmup_hops": 20,
+  "baseline_warmup_frames": 16,
+  "mode_order": "Four modes rotated by repetition; each position occurs three times in twelve repetitions.",
+  "scope": "Single scalar analyzer. Exact cadence adapters; magnitude snapshots. No Rack, actual audio callbacks, UI mapping, external FFT, or concurrent timing consumer.",
+  "cpu": "Apple M1 Pro",
+  "memory_gib": 16,
+  "compile_commands": [
+    [
+      "g++",
+      "-std=c++11",
+      "-O3",
+      "-DNDEBUG",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-Isrc",
+      "whitepaper/experiments/pipeline/baseline.cpp",
+      "-o",
+      "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/whitepaper/build/pipeline/baseline"
+    ],
+    [
+      "g++",
+      "-std=c++11",
+      "-O3",
+      "-DNDEBUG",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-Isrc",
+      "whitepaper/experiments/pipeline/measure.cpp",
+      "-o",
+      "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/whitepaper/build/pipeline/measure"
+    ]
+  ],
+  "clock": {
+    "empty_timer_median_ns": 41,
+    "empty_timer_p99_ns": 42
+  },
+  "finished_utc": "2026-09-29T01:52:15.218131+00:00",
+  "data_sha256": {
+    "baseline.csv": "91858e0adedbf8136ba5d25993145b89ce400150d9a5f229b40399a6a387e444",
+    "timing.csv": "c9108a00eb0ecb115bdc6f1735fcf88d33a87d5fd25ea93957799f7962bdacaf",
+    "summary.json": "9e01c120077ca94a2f12ce206a4ebb282ce74fd1de8d2c81269e36f48eee45a7",
+    "verification.txt": "17d7898b438bc703e34a1daa3b4cc010068509a10858f9f13894271184e4c9ce"
+  }
+}

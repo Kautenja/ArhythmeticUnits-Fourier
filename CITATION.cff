@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use the Arhythmetic Units Fourier plugin or its scheduling analysis, please cite the technical report below. Link to the GitHub code artifact and identify the software version or commit used; no separate software citation is needed."
+type: software
+title: "Fourier Plugin: Spectrum Analysis and Spectrogram Visualization for VCV Rack"
+abstract: >-
+  Fourier is an Arhythmetic Units plugin for VCV Rack containing the Fourier
+  spectrum analyzer and Spectre spectrogram visualizer. It provides incremental
+  Fourier transforms, window functions, time and frequency smoothing, and
+  reusable C++ digital signal processing components.
+authors:
+  - family-names: Kauten
+    given-names: Christian
+repository-code: "https://github.com/Kautenja/ArhythmeticUnits-Fourier"
+version: "2.2.0"
+date-released: "2026-09-30"
+license: GPL-3.0-or-later
+keywords:
+  - digital signal processing
+  - spectrum analysis
+  - spectrogram
+  - fast Fourier transform
+  - short-time Fourier transform
+  - modular synthesis
+  - VCV Rack
+  - C++
+preferred-citation:
+  type: report
+  title: "Whole-Pipeline Scheduling for Real-Time Spectral Analysis"
+  authors:
+    - family-names: Kauten
+      given-names: Christian
+      affiliation: Arhythmetic Units
+  institution:
+    name: Arhythmetic Units
+  year: 2026
+  month: 9
+  version: "3"
+  url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper"
+  notes: "Manuscript version 4; not yet deposited on arXiv"

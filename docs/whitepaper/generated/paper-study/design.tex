@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrll@{}}
+\toprule
+Group & Cells & Execution & Blocks/process \\
+\midrule
+Baselines & 24 & continuous & 4096 \\
+Granularity & 39 & continuous & 960--4096 \\
+Scaling & 16 & continuous & 1024--16384 \\
+Modules & 9 & paced & 960--5760 \\
+Stress & 12 & continuous & 1028--16384 \\
+Host & 83 & paced & 1024--4096 \\
+Lifecycle & 11 & continuous & 1024--16384 \\
+\bottomrule
+\end{tabular}
+\caption{Predeclared pilot matrix: two sessions and two fresh processes per cell per session. Stream groups use 256 nominal hops, except Stress (128); host uses 262,144 engine samples. Lifecycle includes separate 65,536-sample event sequences and 1,048,576-sample decays. Each process has 16 warmup hops; host warmup rounds up to whole blocks. Three repeated bridge cells retain their group identities.}
+\label{tab:study-design}
+\end{table}

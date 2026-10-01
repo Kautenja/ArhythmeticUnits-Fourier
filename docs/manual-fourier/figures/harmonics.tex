@@ -1,0 +1,19 @@
+% Ideal relative partial amplitudes, independent of module UI and FFT results.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+\foreach \origin/\title/\mode in {0/Saw/1,4.5/Square/2,9/Triangle/3} {
+  \begin{scope}[shift={(\origin,0)}]
+    \node[anchor=west,font=\small\bfseries,text=fourierAccent] at (0,2.25) {\title};
+    \draw[->,panelMuted] (0,0)--(3.85,0);
+    \draw[->,panelMuted] (0,0)--(0,1.85);
+    \foreach \n in {1,...,7} {
+      \pgfmathsetmacro{\amp}{\mode==1 ? 1/\n : (mod(\n,2)==0 ? 0 : (\mode==2 ? 1/\n : 1/(\n*\n)))}
+      \draw[fourierAccent,line width=1.2pt] (\n*.45,0)--(\n*.45,\amp*1.65);
+      \fill[fourierAccent] (\n*.45,\amp*1.65) circle[radius=.035];
+    }
+    \node[below] at (.45,0) {$f_0$};
+    \node[below] at (1.35,0) {$3f_0$};
+    \node[below] at (2.25,0) {$5f_0$};
+    \node[below] at (3.15,0) {$7f_0$};
+  \end{scope}
+}
+\end{tikzpicture}

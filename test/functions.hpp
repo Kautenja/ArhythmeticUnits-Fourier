@@ -14,7 +14,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "dsp/math/functions.hpp"
+#include <cmath>
+#include <complex>
+#include <vector>
+#include "dsp/constants.hpp"
+#include "dsp/math.hpp"
 
 #ifndef ARHYTHMETIC_UNITS_TEST_FUNCTIONS_HPP_
 #define ARHYTHMETIC_UNITS_TEST_FUNCTIONS_HPP_
@@ -32,7 +36,7 @@ std::vector<T> generate_sinusoid(T frequency, T sample_rate, size_t num_samples)
     // Create a vector to store the samples in
     std::vector<T> wave(num_samples);
     for (size_t i = 0; i < wave.size(); i++)  // Iterate over the samples
-        wave[i] = sin(T(2) * Math::pi<T>() * frequency * T(i) / T(sample_rate));
+        wave[i] = sin(T(2) * Fourier::pi<T>() * frequency * T(i) / T(sample_rate));
     return wave;
 }
 
@@ -80,7 +84,7 @@ template<typename T>
 std::vector<T> amplitude2decibels(const std::vector<std::complex<T>>& input) {
     std::vector<T> output(input.size());
     for (std::size_t i = 0; i < input.size(); i++)
-        output[i] = Math::amplitude2decibels(input[i].real());
+        output[i] = Fourier::amplitude2decibels(input[i].real());
     return output;
 }
 
@@ -88,7 +92,7 @@ template<typename T>
 std::vector<T> amplitude2decibels(const std::vector<T>& input) {
     std::vector<T> output(input.size());
     for (std::size_t i = 0; i < input.size(); i++)
-        output[i] = Math::amplitude2decibels(input[i]);
+        output[i] = Fourier::amplitude2decibels(input[i]);
     return output;
 }
 

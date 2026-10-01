@@ -1,0 +1,154 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{arhythmetic-manual}[2026/09/29 Arhythmetic Units user manuals]
+
+% Shared publication design. Original branding and artwork retain LICENSING.md terms.
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=manual,prefix=manual@}
+\DeclareStringOption[Module]{moduleName}
+\DeclareStringOption[0.0.0]{version}
+\DeclareStringOption[2368A0]{accent}
+\ProcessKeyvalOptions*
+\newcommand{\manualname}{\manual@moduleName}
+\newcommand{\manualversion}{\manual@version}
+\edef\manualaccenthex{\manual@accent}
+
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[scaled=.95]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\RequirePackage{amsmath,amssymb,microtype}
+\input{glyphtounicode}
+\pdfgentounicode=1
+\RequirePackage[table]{xcolor}
+\definecolor{manualAccent}{HTML}{\manualaccenthex}
+\definecolor{manualInk}{HTML}{24313D}
+\definecolor{manualMuted}{HTML}{65717C}
+\definecolor{manualRule}{HTML}{CCD3D9}
+% Preserve the original manuals' gray cover stock and full-color identity.
+\definecolor{manualCover}{RGB}{202,202,202}
+\RequirePackage{graphicx,tikz}
+\RequirePackage{booktabs,tabularx}
+\RequirePackage{enumitem}
+\RequirePackage{siunitx}
+\RequirePackage[margin=1in,headheight=22pt,headsep=20pt,footskip=30pt]{geometry}
+\RequirePackage{fancyhdr,titlesec}
+\RequirePackage{caption}
+\RequirePackage[section]{placeins}
+\RequirePackage{needspace}
+\RequirePackage[unicode,pdfpagelabels,colorlinks=true,
+  linktoc=all,
+  linkcolor=manualAccent,urlcolor=manualAccent,citecolor=manualAccent,
+  bookmarksopen=true,bookmarksopenlevel=1,bookmarksnumbered=false,
+  bookmarksdepth=2,pdfdisplaydoctitle=true]{hyperref}
+\RequirePackage{bookmark}
+\RequirePackage{hyperxmp}
+\hypersetup{
+  keeppdfinfo=true,
+  pdftitle={\manualname\space User Manual | v\manualversion},
+  pdfauthor={Christian Kauten},
+  pdfsubject={Operating and understanding the \manualname\space module for VCV Rack 2},
+  pdfkeywords={\manualname, Arhythmetic Units, VCV Rack, spectrum analysis, audio, user manual},
+  pdfcreator={LaTeX with hyperref and hyperxmp},
+  pdfpublisher={Arhythmetic Units},
+  pdfcopyright={Copyright 2025 Arhythmetic Units. All rights reserved.},
+  pdflang={en-US},
+  pdflicenseurl={https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/main/LICENSING.md}
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt minus 1pt}
+\linespread{1.06}
+\setlist{leftmargin=1.5em,topsep=5pt,itemsep=4pt,parsep=0pt}
+\setlist[enumerate]{label=\textcolor{manualAccent}{\bfseries\arabic*.},leftmargin=1.8em}
+\setlist[description]{font=\bfseries\color{manualInk},itemsep=8pt}
+\raggedbottom
+\widowpenalty=10000
+\clubpenalty=10000
+\emergencystretch=1em
+
+% A restrained, explicit scale: 18 pt section / 13 pt control / 11 pt body.
+% Keep enough space above a section that follows another on the same page.
+\titleformat{\section}{\color{manualInk}\sffamily\fontsize{18}{22}\selectfont\bfseries\raggedright}{}{0pt}{}
+\titlespacing*{\section}{0pt}{20pt}{12pt}
+\renewcommand{\thesubsection}{\arabic{subsection}}
+\titleformat{\subsection}{\fontsize{13}{16}\selectfont\bfseries\color{manualInk}\raggedright}
+  {\makebox[1.6em][l]{\textcolor{manualAccent}{\thesubsection}}}{0pt}{}
+\titlespacing*{\subsection}{0pt}{16pt}{7pt}
+\titleformat{\paragraph}[runin]{\bfseries\color{manualInk}}{}{0pt}{}
+\titlespacing*{\paragraph}{0pt}{10pt}{.7em}
+% Include explanatory subheadings in the PDF outline without control numbers.
+\newcommand{\manualsubheading}[1]{\subsection*{#1}\addcontentsline{toc}{subsection}{#1}}
+\captionsetup{font=small,labelfont={bf,color=manualAccent},labelsep=period,
+  justification=raggedright,singlelinecheck=false,skip=8pt}
+\setlength{\textfloatsep}{16pt}
+\setlength{\intextsep}{14pt}
+\AtBeginDocument{\color{manualInk}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\textcolor{manualMuted}{ARHYTHMETIC UNITS}}
+\fancyhead[R]{\footnotesize\textcolor{manualMuted}{\manualname\ / v\manualversion}}
+\fancyfoot[L]{\footnotesize\textcolor{manualMuted}{\nouppercase{\leftmark}}}
+\fancyfoot[R]{\small\bfseries\textcolor{manualAccent}{\thepage}}
+\renewcommand{\headrulewidth}{.3pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{manualRule}\leaders\hrule height\headrulewidth\hfill}}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+\fancypagestyle{plain}{\pagestyle{fancy}}
+
+% Numberless, automatically generated contents with thematic group headings.
+\setcounter{tocdepth}{1}
+\renewcommand{\contentsname}{Table of Contents}
+\newcommand{\contentsgroup}[1]{\addtocontents{toc}{\protect\manualtocgroup{#1}}}
+\newcommand{\manualtocgroup}[1]{%
+  \par\addvspace{18pt}\noindent{\small\bfseries\color{manualAccent}\MakeUppercase{#1}}\par
+  \vspace{5pt}{\color{manualRule}\hrule}\vspace{6pt}}
+\renewcommand*{\l@section}[2]{%
+  \par\addvspace{7pt}\begingroup\let\numberline\@gobble
+  \hypersetup{linkcolor=manualInk}% Titles stay quiet; links remain active.
+  \noindent\normalsize #1\nobreak\hfill\makebox[2em][r]{\bfseries #2}\par\endgroup}
+\newcommand{\manualcontents}{%
+  \pagenumbering{roman}\pdfbookmark[1]{Table of Contents}{contents}
+  \tableofcontents
+  \vfill
+  {\footnotesize\color{manualMuted}Select a title or page number to navigate.
+  The PDF outline also lists individual panel controls.}\par
+  \clearpage\pagenumbering{arabic}}
+
+\newcommand{\manualcover}[1]{%
+  \hypersetup{pageanchor=false}\thispagestyle{empty}\thispdfpagelabel{Cover}
+  \pdfbookmark[1]{Cover}{cover}
+  \pagecolor{manualCover}
+  \begingroup\centering\setlength{\parskip}{0pt}
+    \vspace*{0pt}
+    \includegraphics[width=\textwidth]{img/Logo}\par
+    \vfill
+    \includegraphics[width=\textwidth,height=.48\textheight,keepaspectratio]{img/PanelLayout.png}\par
+    \vfill
+    \includegraphics[width=.62\textwidth]{img/ArhythmeticUnits}\par
+    \vspace{14pt}
+    {\small #1\quad /\quad User manual v\manualversion}\par
+  \endgroup
+  \clearpage\nopagecolor\hypersetup{pageanchor=true}}
+\newcommand{\manualcolophon}{%
+  \clearpage\thispagestyle{empty}\thispdfpagelabel{Colophon}
+  \pdfbookmark[1]{Publication details}{colophon}\pagecolor{manualCover}
+  \begingroup\centering\setlength{\parskip}{0pt}
+  \hypersetup{urlcolor=manualInk}
+  \vspace*{.36\textheight}
+  \includegraphics[width=.68\textwidth]{img/ArhythmeticUnits}\par
+  \vspace{18pt}
+  {\small Copyright \textcopyright\ 2025 Arhythmetic Units. All rights reserved.}\par
+  \vfill
+  {\small\manualname\space User Manual\quad /\quad Version \manualversion}\par
+  \vspace{6pt}{\footnotesize Written by Christian Kauten}\par
+  \vspace{18pt}
+  {\footnotesize
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier}{Project source and documentation}\quad /\quad
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases}{Releases and manuals}\par
+  \vspace{6pt}Source code and visual assets have separate
+  \href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/blob/main/LICENSING.md}{license terms}.}\par
+  \endgroup}
+
+% Keep figures with their control subsection, without redefining section internals.
+\AddToHook{cmd/subsection/before}{\FloatBarrier\Needspace{5\baselineskip}}
+\AddToHook{cmd/subsubsection/before}{\FloatBarrier\Needspace{4\baselineskip}}

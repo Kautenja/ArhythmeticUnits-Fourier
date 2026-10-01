@@ -1,0 +1,117 @@
+\section{Inverse Jobs and Complete Filtering Chains}
+\label{sec:inverse-chain}
+Forward analysis is only one use of a resumable transform. The comparison
+campaign also evaluates independently released inverse transforms and complete
+frequency-domain filtering chains. These are benchmark applications of the
+reusable FFT classes; neither visualization module produces audio or invokes
+these paths. Their schedules retain bulk buffering operations, so the bounded
+operation contract of Section~\ref{sec:one-hop} applies only to the complete
+analysis implementation. This distinction lets the measurements expose the
+remaining concentration of work in the inverse and filtering controls.
+
+\subsection{Normalized inverse jobs}
+An inverse job accepts all $N$ complex bins in natural order and produces all
+$N$ complex time samples,
+\begin{equation}
+ z[m]=\frac{1}{N}\sum_{k=0}^{N-1}Z[k]e^{j2\pi km/N}
+     =\frac{1}{N}\overline{\operatorname{FFT}(\overline Z)[m]}.
+ \label{eq:inverse-contract}
+\end{equation}
+The spectrum need not be Hermitian. No window is applied or inverted, and the
+factor $1/N$ belongs to every adapter's measured work. In
+\code{OnTheFlyIFFT<T>}, buffering copies and permutes the input and conjugates
+the retained coefficients. Each subsequent step executes one forward
+butterfly or conjugates and normalizes one output. Thus the transform has
+$B_c(N)+N$ resumable steps, with $B_c(N)=(N/2)\log_2N$.
+Buffering remains a timed $O(N)$ pass outside that step count.
+
+The streaming job fixture releases a new spectrum on sample $t_r=rH$,
+independently of any forward analyzer. After the transform, the harness copies
+all $N$ results to its canonical destination, giving
+\begin{equation}
+ W_{\mathrm{inv}}=B_c(N)+2N
+ \label{eq:inverse-work}
+\end{equation}
+scheduled units in the first-party control. The immediate variant executes
+them on release; the balanced variant uses Equation~\eqref{eq:balanced} with
+$W=W_{\mathrm{inv}}$. Both pay the same bulk input preparation at release.
+Their release-to-publication delays are respectively $d=0$ and $d=H-1$
+samples. A native-library job executes its transform, required conversion,
+normalization, and canonical stores immediately. These jobs publish $N$
+complex outputs every $H$ calls; they do not define an audio stream with
+$N=H$, perform overlap-add, or inherit the analyzer's spectrum-center age.
+
+\subsection{Overlap-save processing and delivery}
+The complete-chain fixture follows conventional FFT convolution
+principles~\cite{wefers2015}. Let $v[n]$ be the common complex input stream,
+zero before startup, and let $g[\ell]$ be a causal FIR of length $L$.
+At endpoint $t_r$, the selected frame is
+$u_r[m]=v[t_r-N+1+m]$. With $G[k]$ the $N$-point transform of the zero-padded
+filter, the chain computes
+\begin{equation}
+ c_r=\operatorname{IFFT}\!\left(\operatorname{FFT}(u_r)\,G\right),
+ \qquad b_r[j]=c_r[N-H+j],\quad 0\le j<H.
+ \label{eq:chain-contract}
+\end{equation}
+The product is binwise, and both transforms are full complex transforms.
+The last $H$ samples agree with linear convolution when $N-H\ge L-1$:
+each retained index then has every required input within the selected frame,
+so none of its filter terms wraps circularly. Discarding the first $N-H$
+outputs is overlap-save extraction. No analysis or synthesis window is used.
+
+The two fixtures are identity and
+$g=[1/2,-1/4,1/8]$. Both require $H\le N-2$ and execute the same path,
+including all $N$ spectral multiplications; the identity does not bypass the
+transforms. The three-tap filter is a correctness and application fixture,
+not a claim that FFT convolution is economical for such a short filter.
+This experiment evaluates neither a windowed STFT reconstruction nor
+partitioned long-filter convolution.
+
+The first-party chain schedules forward butterflies, $N$ multiplications,
+one inverse-buffer operation, inverse butterflies and normalization, and $H$
+output stores. Its accounting is therefore
+\begin{equation}
+ W_{\mathrm{chain}}=2B_c(N)+2N+H+1.
+ \label{eq:chain-work}
+\end{equation}
+The inverse-buffer operation charged as one unit contains $O(N)$ work.
+At frame release, an additional $O(N)$ ring-to-frame copy and forward
+buffer/permutation pass execute outside the quota. Consequently,
+$\ceil{W_{\mathrm{chain}}/H}$ bounds scheduled units per call, but does not
+bound their primitive operations by the analysis scheduler's formula.
+The native-library chains execute the same functional pipeline immediately,
+including layout conversion and normalized inverse output. All chains include
+continuous delivery and a common dependent checksum that keeps every delivered
+sample observable to the optimizer.
+
+Publication exposes a block at $p_r=t_r+d$. Playback starts in that call and
+delivers $b_r[j]$ at $p_r+j$. Since this sample corresponds to convolution
+output index $t_r-H+1+j$, the input-to-delivery delay is
+\begin{equation}
+ D_{\mathrm{chain}}=H-1+d
+ =\begin{cases}
+ H-1,&\text{immediate},\\
+ 2H-2,&\text{balanced},
+ \end{cases}
+ \label{eq:chain-delay}
+\end{equation}
+in samples, or $D_{\mathrm{chain}}/f_s$ seconds. This is the implementation's
+buffering delay relative to the causal convolution output; any filter phase
+delay is separate. Successive blocks join without gaps after startup because
+each contains $H$ outputs and publications are $H$ samples apart.
+Device buffering and callback-end visibility add delay beyond this sample
+index model.
+
+\subsection{Independent output checks}
+Alternating sparse non-Hermitian spectra have known inverse sequences of the
+form $a+b e^{j2\pi 7m/N}+c e^{-j2\pi 3m/N}$, allowing every inverse output
+to be checked without reusing a tested transform. For the chains, direct
+time-domain identity/FIR evaluation checks every delivered sample and every
+published block, including startup zeros and retained-input wraparound.
+These synthesis checks require
+$|a-r|\le\epsilon\max(1,|r|)$ for each complex output, with
+$\epsilon=2\times10^{-5}$ for float and $10^{-10}$ for double; non-finite
+values fail. This pointwise absolute-or-relative budget differs from the
+processed-spectrum norm policy used for analysis. Correct fixture output and
+exact logical delivery do not by themselves demonstrate audio-device
+deadline compliance.

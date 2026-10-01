@@ -1,0 +1,56 @@
+\section{Complete-Pipeline Prototype Evaluation}
+\label{sec:pipeline-evaluation}
+A second campaign informed the production choice. Its exact sources and raw
+summaries are archived separately in \path{docs/whitepaper/data/pipeline/}. The
+prototypes compare: (i) the original arithmetic with controlled exact cadence
+(\code{legacy}); (ii) candidate arithmetic executed in boundary bursts across four stage slots
+(\code{stage\_burst}); (iii) a serial balanced sequence within one hop
+(\code{serial}); and (iv) four overlapped stages across four hops
+(\code{pipeline}). Modes (ii)--(iv) share positive-bin specialization and
+prepared smoothing bounds. The stage-burst and overlapped modes share storage and four-hop latency and
+therefore isolate placement most closely. Serial also changes stage storage
+and latency; its comparison with stage bursts is informative but cannot
+isolate dispatch cost alone.
+
+The host and compiler are the Apple M1 Pro and Apple Clang 21.0.0 described
+above. All modes use C++11 with \code{-O3 -DNDEBUG -Wall -Wextra -pedantic},
+scalar float, deterministic noise, normalized periodic Hann, $\alpha=0.8$,
+and 48 kHz. Sizes are $N\in\{1024,4096,16384\}$, hops $H=N/4,N/2$, and
+smoothing off or one-third octave. Twelve repetitions rotate the mode order;
+each pass has 20 warmup and 64 measured hops. Separate passes measure total
+hop time, individual samples, and synchronous 16-, 64-, and 256-sample blocks.
+These are simulated blocks, not device callbacks. Empty timer median/p99 is
+41/42 ns, with no subtraction. Historical phase timings separately confirm
+that packing, reconstruction, and postprocessing remain concentrated.
+
+\input{tables/prototype-timing.tex}
+
+Table~\ref{tab:pipeline} shows an approximately 80\% reduction in the median
+observed block maximum for serial versus legacy in this workload. Serial's
+51.392 microseconds per hop exceeds the stage-burst control's 50.327. The
+fully matched overlap comparison also costs more, at 55.145 microseconds:
+scheduling is not free. Across all 12 size/hop/smoothing settings, median paired
+serial/legacy total-time ratios span 0.920--1.212; overlap/legacy spans
+0.986--1.585. Peak reduction can coexist with greater total CPU cost. Four-hop
+overlap adds $3H$ samples of age: 64 ms here and 256 ms for $N=16384,H=4096$.
+It did not earn that extra latency and storage in this campaign.
+
+The measured prototypes are not the integrated production implementation.
+Their arithmetic, cache policy, and adapters informed the successor, which
+subsequently gained maximum-size plans, live cache rebuilding, SIMD support,
+and module-owned output. Do not use these timings as a production speedup.
+The campaign retains all per-repetition summaries, including preemption-sensitive
+maxima, but no individual call traces. It remains a single-host study without
+Rack graphics, actual audio callbacks, or an optimized-library baseline.
+
+Production correctness is checked separately: 1,934,764 standalone assertions
+in seven cases cover spectra, cadence, retained-input wraparound, all 15 window
+functions, cache invalidation, reset, and allocation-free live changes. A
+separate Rack-linked suite includes scalar/SIMD agreement and coordinate
+mapping (3,807,481 assertions in four cases); module lifecycle and serialization
+suites also pass. The standalone suite passes AddressSanitizer and
+UndefinedBehaviorSanitizer. A Rack plugin build and native display inspection
+with context recreation pass, but no full interactive Rack/DAW workload or
+integrated production timing campaign was performed. These checks support the
+implementation contract, not a device deadline guarantee.
+

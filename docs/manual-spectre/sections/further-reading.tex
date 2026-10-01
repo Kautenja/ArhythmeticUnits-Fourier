@@ -1,0 +1,23 @@
+\section{Timing And Further Reading}\label{sec:further-reading}
+
+Spectre prepares each new spectrum over its 1024-sample update interval,
+about $21.3\,\mathrm{ms}$ at $48\,\mathrm{kHz}$. Each spectrum already covers
+about $42.7\,\mathrm{ms}$ of audio at that rate. Average and Rack's display
+refresh add further visible delay.
+
+Analysis settings take effect at the start of the next frame and affect new
+columns. Turning Run off pauses any unfinished frame; resuming completes it
+before starting another. Changing Rack's sample rate discards unfinished
+analysis. Allow new history to replace older columns before comparing results
+across that change.
+
+Analysis runs on Rack's audio engine thread. Work is spread across sample
+calls to reduce processing bursts, but the module still contributes to the
+patch's CPU load. This does not guarantee that a heavily loaded patch will
+meet its audio deadlines.
+
+For the mathematical background, FFT algorithms, scheduling proofs, and
+performance experiments, see the accompanying
+\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper}{\textit{Whole-Pipeline Scheduling for Real-Time Spectral Analysis}}.
+Its implementation appendix gives the supporting algorithms; this manual
+focuses on operating the module.

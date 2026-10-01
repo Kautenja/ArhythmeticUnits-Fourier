@@ -1,0 +1,52 @@
+\section{Making Useful Measurements}\label{sec:measurements}
+
+\paragraph{Establish a reference}
+For a controlled check at $48\,\mathrm{kHz}$, use a $750\,\mathrm{Hz}$ sine:
+with Length 2048 it falls exactly on bin 32. Use a known $5\,\mathrm{V}$
+peak ($10\,\mathrm{V}$ peak-to-peak) source, unity input gain, Flattop,
+zero Slope, no smoothing, and AC coupling off. After the frame fills,
+the peak should be approximately $0\,\mathrm{dB}$ or $100\,\%$.
+Use the source's frequency setting or a separate tuner to establish pitch;
+the cursor does not snap to a peak. An off-bin tone can read differently.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+\textbf{Sine peak voltage} & \textbf{Relative amplitude} & \textbf{Level} \\
+\midrule
+$5\,\mathrm{V}$ & $100\,\%$ & $0\,\mathrm{dB}$ \\
+$2.5\,\mathrm{V}$ & $50\,\%$ & $-6.02\,\mathrm{dB}$ \\
+$0.5\,\mathrm{V}$ & $10\,\%$ & $-20\,\mathrm{dB}$ \\
+$0.005\,\mathrm{V}$ & $0.1\,\%$ & $-60\,\mathrm{dB}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+These ideal isolated-tone values follow $20\log_{10}(V_{\rm peak}/5\,\mathrm{V})$.
+They are not a conversion from an arbitrary signal's largest spectral peak
+to its total voltage. This reference is not dBFS, SPL, LUFS, or a calibrated
+noise-power density measurement.
+
+\paragraph{Know what is being summed}
+Each jack sums all voices of a polyphonic cable before analysis. Two identical,
+in-phase voices add to twice the amplitude (about $+6.02\,\mathrm{dB}$);
+equal opposite-polarity voices cancel. To inspect voices independently, split
+them into separate monophonic cables and use different inputs. Equal-looking
+magnitude spectra alone cannot tell you the relative phase or predict the
+result of mixing two signals.
+
+\paragraph{Separate signal changes from viewing changes}
+Input gain and AC coupling affect newly captured samples. Window, Average,
+and Smooth affect the analysis. Frequency bounds and scales determine the
+view; Slope deliberately weights levels by frequency. Turn Run off to compare
+analysis choices on retained audio, but remember that Fourier keeps
+reanalyzing and Average can still settle. Changing Length clears that audio.
+
+\paragraph{Record the conditions}
+When comparing a patch revision, note the Rack sample rate, input source and
+gain, Length, Hop, window, smoothing, Slope, scales, and AC coupling. A noise
+trace can change height when Length or window changes because each bin covers
+a different effective bandwidth. Do not diagnose a quieter source from that
+change alone. Save settings as a preset; save an external image if you need a
+record of the trace, because patches do not retain captured spectra.

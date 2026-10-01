@@ -1,0 +1,49 @@
+\clearpage
+\section{Control Values}\label{sec:control-values}
+
+Use this page when you need an exact range or the complete menu. The
+\hyperref[sec:panel]{Panel Layout} chapter explains which settings to choose.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+\textbf{Control} & \textbf{Range / choices} & \textbf{Default} \\
+\midrule
+Input gain & Silence to +12 dB & 0 dB \\
+Run & Capture / stop & Capture \\
+Window & See menu below & Flattop \\
+Length & 128, 256, 512, 1024, 2048, 4096, 8192, 16384 samples & 2048 \\
+Hop & 5--300 ms & 30 ms \\
+Y Scale & Linear: 0--400\%; Log 60dB: $-60$ to $+12$ dB; Log 120dB: $-120$ to $+12$ dB & Log 60dB \\
+Freq Scale & Linear, Logarithmic & Logarithmic \\
+Average & 0--2500 ms & 0 ms \\
+Smooth & See menu below & None \\
+LO Freq & 0 Hz to half the sample rate & 0 Hz \\
+HI Freq & 0 Hz to half the sample rate & Half the rate \\
+Slope & $-9$ to $+9$ dB/oct & +4.5 dB/oct \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\paragraph{Window menu}
+\begin{center}
+\begin{tabularx}{\textwidth}{@{}XXX@{}}
+Boxcar & Bartlett & BartlettHann \\
+Parzen & Welch & Cosine \\
+Bohman & Lanczos & Hann \\
+Hamming & Blackman & BlackmanHarris \\
+BlackmanNuttall & KaiserBessel & Flattop \\
+\end{tabularx}
+\end{center}
+These are fixed shapes; there are no additional shape parameters.
+
+\paragraph{Smooth menu}
+None; 1/48, 1/24, 1/12, 1/9, 1/6, 1/5, 1/4, 1/3, 1/2, 2/3, 3/4, 1,
+1.5, 2, or 2.5 octaves.
+
+\paragraph{Timing at other sample rates}
+Frame duration in seconds is Length divided by sample rate. Bin spacing
+in hertz is sample rate divided by Length. The worked examples on
+page~\pageref{sec:resolution} use 48 kHz. Hop sets the interval between
+analyses independently of Length.

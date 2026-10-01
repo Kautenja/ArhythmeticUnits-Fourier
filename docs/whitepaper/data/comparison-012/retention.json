@@ -1,0 +1,164 @@
+{
+  "removed": [],
+  "retained": [
+    {
+      "metadata_sha256": "5e5e00c632cec4ce44285ad5242f0c731382f443d152e64064503274a3a0c70e",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-01-extensions",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "83a01752e134d28bcb02d0497fcbbdd7479321bb43188dc53c7e193db7c50c7c"
+    },
+    {
+      "metadata_sha256": "8aaa61f4ea2d56754cf4dc558ae8f29721a35fb210866e8c5f1e089e824d9777",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-01-primary",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "2a9070c7aeb316dacb2891f3f3f52778093435ffcf7620ab4322106d467bf834"
+    },
+    {
+      "metadata_sha256": "593491d6968da35c02242bdfb8c1cfc4f3b311c16ed848ddee393c78952e92bb",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-01-short-hop",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "698d34e3a4f17fa37f503cc5493c5712ba095419cc85f3563ca37cde8a7200a3"
+    },
+    {
+      "metadata_sha256": "e0f60db8f1fc682333a68cece65ad72fe02c4d6a65becbe9a295e3e345014137",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-01-single-sample",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "3c69c0e7f3a1fd6afeb189ece12d3e8f5ae12fd17805652524702e1a799764d1"
+    },
+    {
+      "metadata_sha256": "3a2e26f5775804589e134ea99c30a873e0ced33685f2afdee140ed5ab6cb5f62",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-02-extensions",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "45485fe4d0bcc6002b7a2658ada1ef61549d3400f4ac32049cbfddb70418442b"
+    },
+    {
+      "metadata_sha256": "e72be71dca873c97c8187f4d75d364cd88bb47e1577d6341eee85c97b9e62217",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-02-primary",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "b328d32011ccdc474dde9ccc149b6cb32a2f02a58928a4be2229044af249dd39"
+    },
+    {
+      "metadata_sha256": "a210181c1e2d7a3a253466f3e560d3ed442dc7696ac127d3e6b31efb98c9b075",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-02-short-hop",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "54eaa85c2d5fe87e9e2d68ff4934b3bc26ca41e0eaf1ecd036a58d02dc33b8a8"
+    },
+    {
+      "metadata_sha256": "aa863392ccac3ef5f8312c9584fb5e5da0c69a0aec3014feefd94d0978dbdc66",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-02-single-sample",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "2793867ced633b5e885aa03690bcfb32da71a495bc737a9bc1905aa5dbd2cdff"
+    },
+    {
+      "metadata_sha256": "48e9d4aa26682f656a3dab42869f96a325777526bb265c1c5a6ca50dd87275b7",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-03-extensions",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "754f9b9416c28d1a13a54cbc65f599e4eb546aa5016e053f02ab4419169601f3"
+    },
+    {
+      "metadata_sha256": "863a44fb62751eb577d39703055c6167483b62c991795660faa7c6d6d6460461",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-03-primary",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "2f720463b534705b78380123b5abffb445cbe984e5d54910067601cd0d8ce659"
+    },
+    {
+      "metadata_sha256": "9cf10bd1cc78aee5397ade49da35e6162b41d1bc4911f2a7ab4150b231795254",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-03-short-hop",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "8434d23a02f8feb4d9625ffe8271989d824ef22c96de1eae8ee556613b8e16c3"
+    },
+    {
+      "metadata_sha256": "ab36b5ff0d8f7e9b55ed148c46c4fa27328956eff1fc5c3345062c28b0d97aea",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-confirmation-03-single-sample",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-confirmation-report-readable/evidence.json",
+        ".build/paper-fr11-confirmation-report/evidence.json"
+      ],
+      "tree_sha256": "d0f0b7914766dda209ca8c44aecb307ff29279c95fdbf87e550d809a989b39a3"
+    },
+    {
+      "metadata_sha256": "e1bcff86855e23af60f551e27a7aa2e560900a9dc2f0e0ea85f6654e0da1a27e",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-extension-pilot",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        "specs/archive/004-external-fft-comparison.md"
+      ],
+      "tree_sha256": "ebc377bffd0837e5ec53caf02efeaf1fd570f1ec30544548254c79f1e7af21ff"
+    },
+    {
+      "metadata_sha256": "41558ccd74fa33bb5a1c9733a4122e87ab071377d19dfaa5ebe0a1bf42f364ca",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-pilot-01",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        "specs/archive/004-external-fft-comparison.md"
+      ],
+      "tree_sha256": "21fd6020f61bcd4ed4bc2b1dbec8b96c53693033bd3713273135a05348fa014d"
+    },
+    {
+      "metadata_sha256": "12981ff2ea4dd3868f29198fb0788e4127d0660e23877e74669552f12f41c3ad",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-pilot-02",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-pilot-02-report/evidence.json",
+        "specs/archive/004-external-fft-comparison.md"
+      ],
+      "tree_sha256": "b65c4e21febf0c53f5f135057ba70471e5238d7d395460204cc5f4925bd5760e"
+    },
+    {
+      "metadata_sha256": "1e5809523f3416c01025d52fd74a79139619facb33d038824ae48379713b1293",
+      "path": "/Users/christiankauten/Documents/Projects/Rack/plugins/Fourier/.build/paper-fr11-pilot-03",
+      "reason": "Retained historical spec/report uses; manuscript analysis and integration are deferred.",
+      "references": [
+        ".build/paper-fr11-pilot-03-report/evidence.json",
+        "specs/archive/004-external-fft-comparison.md"
+      ],
+      "tree_sha256": "274c1723a0606d28196f83c3ee0279d8834825a55396b2d802d2bf06d72c5759"
+    }
+  ],
+  "status": "retained-with-dependencies"
+}

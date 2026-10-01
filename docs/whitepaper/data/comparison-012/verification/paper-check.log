@@ -1,0 +1,4 @@
+python3 tools/check_paper.py
+Passed: historical source archive and campaign hashes, 2880 timing rows, 27 phase rows.
+Passed: 31 references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.
+Passed: prototype table, frame ages, and clean/dirty whole-pipeline schedule examples.

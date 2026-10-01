@@ -1,0 +1,47 @@
+\section{Separating Nearby Tones}\label{sec:resolution}
+
+Two low notes can look like one broad peak. This experiment distinguishes
+frequency resolution from simply enlarging the display.
+
+\paragraph{Starting point}
+Use two sine oscillators near $100$ and $110\,\mathrm{Hz}$, summed through
+a mixer into red. At a Rack sample rate of $48\,\mathrm{kHz}$, choose Hann,
+Length 2048, Hop $30\,\mathrm{ms}$, Linear Freq Scale, and
+$0$--$300\,\mathrm{Hz}$. Set Average and Smooth off and Slope to zero.
+
+\begin{enumerate}
+  \item Observe the mixture, then mute each oscillator in turn to locate
+  its contribution. At Length 2048 the two tones are closer than one bin.
+  They will be difficult to distinguish in the mixture.
+  \item Restore both tones and increase Length to 16384. Allow fresh audio
+  to fill the new frame. The finer bin spacing should make them easier to
+  separate with Hann; a broader window such as Flattop may still merge them.
+  \item Return to Length 2048 and narrow LO/HI Freq around the peaks.
+  The existing shape grows on screen, but the missing detail does not return.
+  Turn off Bezier Curve in the context menu to see the bin connections.
+  \item Return to Length 16384 and change one oscillator's pitch abruptly.
+  Notice the transition taking time to pass through the long frame. A smaller
+  Hop updates more frequently but does not shorten that frame.
+\end{enumerate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rrr@{}}
+\toprule
+\textbf{Length at 48 kHz} & \textbf{Audio span} & \textbf{Bin spacing} \\
+\midrule
+2048 & $42.67\,\mathrm{ms}$ & $23.44\,\mathrm{Hz}$ \\
+4096 & $85.33\,\mathrm{ms}$ & $11.72\,\mathrm{Hz}$ \\
+8192 & $170.67\,\mathrm{ms}$ & $5.86\,\mathrm{Hz}$ \\
+16384 & $341.33\,\mathrm{ms}$ & $2.93\,\mathrm{Hz}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{What sets the limit?}
+Bin spacing is $f_s/N$; it is not a promise that every pair of tones that far
+apart will resolve. Window width, relative levels, and leakage also matter.
+Frequency smoothing trades more detail for a steadier broad shape. Increasing
+Rack's sample rate at the same Length widens bin spacing; it does not improve
+bass resolution. Choose Length for the detail needed, then Hop for how often
+you need an update, while watching the patch's CPU load.

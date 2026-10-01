@@ -1,0 +1,67 @@
+{
+  "utc": "2026-09-30T05:58:24.051486+00:00",
+  "monotonic": 1861054.015166,
+  "pid": 14863,
+  "cpu": {
+    "command": [
+      "sysctl",
+      "-n",
+      "machdep.cpu.brand_string",
+      "hw.memsize",
+      "hw.physicalcpu",
+      "hw.logicalcpu"
+    ],
+    "returncode": 0,
+    "output": "Apple M1 Pro\n17179869184\n10\n10\n",
+    "stderr": ""
+  },
+  "power": {
+    "command": [
+      "pmset",
+      "-g",
+      "batt"
+    ],
+    "returncode": 0,
+    "output": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=22544483)\t100%; charged; 0:00 remaining present: true\n",
+    "stderr": ""
+  },
+  "thermal": {
+    "command": [
+      "pmset",
+      "-g",
+      "therm"
+    ],
+    "returncode": 0,
+    "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n",
+    "stderr": ""
+  },
+  "settings": {
+    "command": [
+      "pmset",
+      "-g",
+      "custom"
+    ],
+    "returncode": 0,
+    "output": "Battery Power:\n Sleep On Power Button 1\n lowpowermode         0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n lowpowermode         0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         60\n womp                 1\n networkoversleep     0\n sleep                1\n tcpkeepalive         1\n disksleep            10\n",
+    "stderr": ""
+  },
+  "load": {
+    "command": [
+      "uptime"
+    ],
+    "returncode": 0,
+    "output": " 1:58  up 31 days, 15:06, 2 users, load averages: 1.89 2.32 2.38\n",
+    "stderr": ""
+  },
+  "processes": {
+    "command": [
+      "ps",
+      "-Ao",
+      "pid,pcpu,comm",
+      "-r"
+    ],
+    "returncode": 0,
+    "output": "  PID  %CPU COMM\n30976   7.8 /Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex\n30980   5.2 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/154.0.8037.57/Helpers/Codex (Renderer).app/Contents/MacOS/Codex (Renderer)\n30894   4.7 /Applications/ChatGPT.app/Contents/MacOS/ChatGPT\n  403   3.4 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer\n  565   1.8 /System/Library/DriverExtensions/com.apple.DriverKit-AppleBCMWLAN.dext/com.apple.DriverKit-AppleBCMWLAN\n24088   1.8 /System/Library/PrivateFrameworks/AMPDevices.framework/Versions/A/XPCServices/com.apple.amp.devicesui.xpc/Contents/MacOS/com.apple.amp.devicesui\n  396   1.5 /usr/sbin/notifyd\n  624   1.4 /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder\n30932   1.2 /Applications/ChatGPT.app/Contents/Frameworks/Codex Framework.framework/Versions/154.0.8037.57/Helpers/Codex (Service).app/Contents/MacOS/Codex (Service)\n  330   1.1 /usr/libexec/logd\n  371   0.7 /usr/libexec/opendirectoryd\n    1   0.6 /sbin/launchd\n41651   0.5 /usr/libexec/trustd\n  504   0.4 /usr/sbin/mDNSResponder\n  405   0.3 /usr/sbin/cfprefsd\n50185   0.3 /Library/Application Support/Logitech.localized/LogiOptionsPlus/logioptionsplus_agent.app/Contents/MacOS/logioptionsplus_agent\n  334   0.2 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd\n  342   0.2 /usr/libexec/configd\n  373   0.1 /System/Library/CoreServices/launchservicesd",
+    "stderr": ""
+  }
+}

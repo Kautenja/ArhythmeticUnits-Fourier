@@ -1,10 +1,10 @@
 {
   "plugin": "ArhythmeticUnits-Fourier",
   "model": "Spectrogram",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "params": [
     {
-      "value": 1.9952623844146729,
+      "value": 1.0,
       "id": 0
     },
     {
@@ -16,7 +16,7 @@
       "id": 2
     },
     {
-      "value": 1.0,
+      "value": 0.0,
       "id": 3
     },
     {
@@ -29,10 +29,20 @@
     },
     {
       "value": 0.0,
+      "id": 6
+    },
+    {
+      "value": 20000.0,
+      "id": 7
+    },
+    {
+      "value": 0.0,
       "id": 8
     }
   ],
   "data": {
-    "is_ac_coupled": false
+    "is_running": true,
+    "is_ac_coupled": false,
+    "color_map": 2
   }
 }

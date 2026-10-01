@@ -1,0 +1,35 @@
+{
+  "files": {
+    "evidence.json": "2fef03b4fc760560b1a1cd273caa3d3bce8e64200b250aed93d5b7a55f5a5af1",
+    "pilot-01-Baselines-metadata.json.gz": "5a09e48d40dde0ee91b20d540da1cddd978d96e4b398e0f3757aef7b96200b6b",
+    "pilot-01-Granularity-metadata.json.gz": "108768d0c688e2bf5b995169f6f8f06bf91df210dfed8da6b9b9f23f041fefee",
+    "pilot-01-Host-metadata.json.gz": "1eccd7c5dcb9ef370e59a144ccf4d73dd42546a0f08db32d3f609dd3b09f3a87",
+    "pilot-01-Lifecycle-metadata.json.gz": "5e77f8f09e15023080d5a856d23ce7a30426acb4bff2c98031006b885a22faf0",
+    "pilot-01-Modules-metadata.json.gz": "dd1aa2eb87900238b5fa1fd0875a169994dc44a83fd2fbaa1a7412b12543cf73",
+    "pilot-01-Scaling-metadata.json.gz": "601417c5fe22000715c44a5f5ca184850cd25145cded6d5c6a033522d4b35441",
+    "pilot-01-Stress-metadata.json.gz": "4e813459f92508a8aabca090d2fa1a518e37caf7f8061b6c3352832c09759935",
+    "pilot-01-session.json.gz": "f3204f3af3fa94c6f3b55492c2565611e8f4793d2232e05b33c4e57a09972cf8",
+    "pilot-02-Baselines-metadata.json.gz": "46ea99baa5ceb5fef61f6b8f2b3931b162039290af6aaa94f2a5b29878c9569e",
+    "pilot-02-Granularity-metadata.json.gz": "38fd56ea40ba32b3d7588733ca1ee288fe547d66bd6e9c3747e0002163f3b70f",
+    "pilot-02-Host-metadata.json.gz": "9ecfbb529d47d13b1798dca9c0ecbd758029e3d3b5758259d38a6b26d9d82ea2",
+    "pilot-02-Lifecycle-metadata.json.gz": "2b21d05caf285d30033ba15692f7567fb08767752a09fece6b12019566b28ff6",
+    "pilot-02-Modules-metadata.json.gz": "a04e7fc31bfd16d3e6a9f3bc9cedaa4b91d756eae1b21d6563d9a8621701f5e4",
+    "pilot-02-Scaling-metadata.json.gz": "5fd04c8dcf41fd29a3161a5d0f574176515cb5920f856c5ba41e4579e3f20ce6",
+    "pilot-02-Stress-metadata.json.gz": "2fb8b8004aab8bbc8125989984a265f4ae6c8a8327bdf25a86cf9f8d29de73dc",
+    "pilot-02-session.json.gz": "61980d2c774749cbfdb2eed888a04e6995eba854afe286b4e7590e890fe752c5",
+    "prepared-manifest.json.gz": "8769b76f2a25dd620743f5fb55ae3c5fa2e0546fa662a3c70d904b2a756a834c",
+    "source.tar.gz": "8a763a800dab6c065ff36d3a5cac1610893aa8b65dfae240caf13884e4940669"
+  },
+  "importer_sha256": "cfb23aff329596ccd96ff00a8a70a94acb019ecdd8fbb6ed66916a09fd259983",
+  "policy": "study-014-descriptive-v1",
+  "schema": 1,
+  "source_sha256": "8a763a800dab6c065ff36d3a5cac1610893aa8b65dfae240caf13884e4940669",
+  "validation_sha256": {
+    "check.py": "411d212a4ebb79322d0a5ed4aa80cc25316890463b0be6fb2ee9ba6914fab114",
+    "contracts.py": "47adf9377a624fac68c3a0d69ab1f615c9df7a8af669b67dd3cfb92d1af89cb7",
+    "engine_host.py": "fbf1f076e8c941f3d49014c14de79329284f16b4f37a75ab638b414a73bb83c8",
+    "execution.py": "d5aadf879084fbaf411e2c6f7ed5cc2de091985ef041032e59e2ccd00384501f",
+    "observations.py": "e7b8f067e2399c995446b583348f5fcf1a3f70caeab58cb58c185904e472bcec",
+    "offline.py": "5b7af7c1afc5ca6b344f2b2011ac65d5265ef446e7601059fd964977116c25e6"
+  }
+}

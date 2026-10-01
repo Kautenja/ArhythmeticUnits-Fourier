@@ -1,0 +1,112 @@
+\section{Implementation Reference}
+\label{app:implementation}
+This appendix collects supporting transform and table-construction
+details. The signal model and one-hop contract
+remain in the main text;
+Appendices~\ref{sec:legacy-transform} and~\ref{app:one-hop} preserve the
+transform derivations and detailed scheduling argument. The user manuals
+cover controls, display interpretation, and practical setting choices.
+
+\subsection{Bit reversal and table reuse}
+For a radix-2 complex transform of length $Q=2^p$, write an index as
+$i=\sum_{b=0}^{p-1}i_b2^b$, where $i_b\in\{0,1\}$. Its bit-reversed index is
+\begin{equation}
+ R_p(i)=\sum_{b=0}^{p-1}i_b2^{p-1-b}.
+ \label{eq:reverse-index}
+\end{equation}
+For example, $R_3(3)=6$: the binary index $011$ becomes $110$. Placing the
+input at these addresses prepares the iterative decimation-in-time traversal
+of Equation~\eqref{eq:butterfly}. Listing~\ref{lst:reverse-table} constructs
+the table during initialization, not on each sample call.
+
+\begin{lstlisting}[float=tbp,language=C++,caption={Reference construction of a bit-reversal table for $Q=2^p$.},label={lst:reverse-table}]
+for (size_t i = 0; i < Q; ++i) {
+    size_t x = i, reversed = 0;
+    for (size_t bit = 0; bit < p; ++bit) {
+        reversed = (reversed << 1) | (x & 1);
+        x >>= 1;
+    }
+    reversal[i] = reversed;
+}
+\end{lstlisting}
+
+The production real analyzer prepares a table for
+$Q_{\max}=N_{\max}/2=2^{p_{\max}}$. A frame of real length $N$ needs a
+complex transform of length $M=N/2=2^p$. For $i<M$, its table entry is
+\begin{equation}
+ R_p(i)=R_{p_{\max}}(i)\mathbin{\gg}(p_{\max}-p).
+ \label{eq:reverse-reuse}
+\end{equation}
+The leading zero bits of the shorter index become trailing zeros after
+reversal; the shift removes precisely those zeros. Each packing unit writes
+its complex pair directly to that address. This fuses permutation with
+packing and window application instead of requiring a separate array pass.
+
+\subsection{Twiddle lookup and batch reference}
+Let $T[j]=\exp(-\mathrm{i}2\pi j/N_{\max})$ denote the maximum-size twiddle
+table. At a butterfly stage of span $s$ and pair index $a$, the required
+factor is obtained by
+\begin{equation}
+ W_s^a=T[aN_{\max}/s].
+ \label{eq:twiddle-reuse}
+\end{equation}
+All supported spans divide $N_{\max}$, so the index is integral. Real-spectrum
+reconstruction similarly uses $W_N^k=T[kN_{\max}/N]$. Thus changing the
+transform length does not require rebuilding trigonometric tables. Scalar
+float or double precision is used for the corresponding scalar instantiation;
+SIMD channels share the float table.
+
+Listing~\ref{lst:batch-reference} gives the complete dependency order for a
+windowed real transform. It is explanatory batch pseudocode, not a function
+invoked in one production sample call. In the production scheduler the pair,
+butterfly, and reconstruction loops are suspended between work quotas;
+window-cache preparation is included in the pair units. The output and
+smoothing stage follows as described in Section~\ref{sec:one-hop}.
+
+\begin{lstlisting}[float=tbp,caption={Batch reference for the packed real transform. R is the bit-reversal table for M; butterfly updates use Equation~\eqref{eq:butterfly}, and reconstruction uses Equation~\eqref{eq:real} and its endpoint rules.},label={lst:batch-reference}]
+M = N / 2
+for n = 0, ..., M-1:
+    z[R[n]] = u[2*n] + i*u[2*n+1]  // u is already windowed
+for span = 2, 4, ..., M:
+    for group = 0, span, ..., M-span:
+        for pair = 0, ..., span/2-1:
+            execute_butterfly(z, span, group, pair)
+for k = 0, ..., M:
+    X[k] = reconstruct_positive_bin(z, k)
+return X[0], ..., X[M]
+\end{lstlisting}
+
+The omitted negative-frequency bins follow from
+$X[N-k]=\overline{X[k]}$ for $1\le k<M$; neither module needs to materialize
+them. The generic full-spectrum real-FFT class discussed earlier does so.
+The positive-spectrum convention includes both DC and Nyquist.
+
+\subsection{Window and smoothing conventions}
+Windowing multiplies each selected input sample by its window weight before
+packing. Tapered windows trade a wider main lobe for different sidelobe
+behavior~\cite{harris1978}; denser FFT bins alone do not remove that tradeoff.
+Production weights use the existing tabulated coherent-gain correction,
+$\widetilde w[n]=w[n]/G_{\mathrm{tab}}$, with the finite-length caveat in
+Section~\ref{sec:signal-model}. A frame selects its input endpoint and
+settings once, so later parameter changes cannot mix window functions within
+that frame.
+
+For completeness, the inclusive fractional-octave interval used by the
+prefix-sum smoother can be written explicitly. Let $\Delta f=f_s/N$,
+$f_k=k\Delta f$, and $\beta>0$. Define
+\begin{align}
+ f_h&=\min(f_k2^{\beta/2},f_s/2),\\
+ f_\ell&=\begin{cases}
+ f_k2^{-\beta/2},&f_k2^{\beta/2}\le f_s/2,\\
+ f_h2^{-\beta},&f_k2^{\beta/2}>f_s/2,
+ \end{cases}\\
+ \ell_k&=\floor{f_\ell/\Delta f},\qquad
+ h_k=\min(N/2,\floor{f_h/\Delta f}).
+ \label{eq:octave-bounds}
+\end{align}
+The upper-edge adjustment preserves the nominal frequency ratio before
+rounding to bins. The mean includes both endpoints; this is why the prefix
+formula in Appendix~\ref{app:one-hop} uses $P_{h_k+1}$ and divides by
+$h_k-\ell_k+1$. With smoothing disabled, the magnitude passes through
+without this range average. DC has the one-bin interval $[0,0]$.
+

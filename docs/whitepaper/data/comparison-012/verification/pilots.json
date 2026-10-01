@@ -1,0 +1,61 @@
+{
+  "bundle_sha256": "44654dd074eecccb4fe481b2c3823edc405a3befa5998a5ebcec18adc6ec551e",
+  "campaigns": [
+    {
+      "metadata_sha256": "6c2ffbd3d2e156ed8034925a13fd53484be02d16333da38c0ed5aa6beef9042b",
+      "omitted": [
+        "dependencies.tar.gz",
+        "external-dependencies.tar.gz",
+        "paper-audit.bin",
+        "paper.bin"
+      ],
+      "path": "campaigns/000",
+      "phase": "pilot"
+    },
+    {
+      "metadata_sha256": "100f0759957af75f541a142b3644ab0eefb3f9974b4891fb6f9abe76fc899967",
+      "omitted": [
+        "dependencies.tar.gz",
+        "external-dependencies.tar.gz",
+        "paper-audit.bin",
+        "paper.bin"
+      ],
+      "path": "campaigns/001",
+      "phase": "pilot"
+    }
+  ],
+  "notes": "Bundle extraction validated every retained raw artifact and recomputed raw timing/numerical checks. Freeze diagnostics rederived exactly from those validated summaries and numerical records. Native/SDK/dependency archive bytes omitted explicitly; no timing replication.",
+  "pilot_review_rederived": {
+    "pilot-extensions": {
+      "max_relative_l2": 4.793860018254185e-07,
+      "max_relative_linf": 6.468453835776953e-07,
+      "normwise_reports": 1104,
+      "processes": 2673,
+      "raw_csv_bytes": 301778661,
+      "timer_p99_ns_range": [
+        42.0,
+        42.0
+      ],
+      "within_session_ratio_max": 5.034885002037202,
+      "within_session_ratio_median": 1.0204968837463966,
+      "within_session_ratio_p90": 1.117711266636703,
+      "workloads": 891
+    },
+    "pilot-primary-02": {
+      "max_relative_l2": 2.428253746068979e-07,
+      "max_relative_linf": 2.9786338868007423e-07,
+      "normwise_reports": 576,
+      "processes": 1272,
+      "raw_csv_bytes": 95999659,
+      "timer_p99_ns_range": [
+        42.0,
+        42.0
+      ],
+      "within_session_ratio_max": 7.754547887845999,
+      "within_session_ratio_median": 1.0113841918787179,
+      "within_session_ratio_p90": 1.0494848208543444,
+      "workloads": 424
+    }
+  },
+  "status": "passed"
+}

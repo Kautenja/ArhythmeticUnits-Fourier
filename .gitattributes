@@ -1,6 +1,15 @@
-patches/* linguist-vendored
-design/* linguist-vendored
-dep/* linguist-vendored
-doxygen/* linguist-vendored
-manual/* linguist-vendored
-notebooks/* linguist-vendored
+# Exclude third-party dependencies from GitHub language statistics.
+dep/** linguist-vendored
+
+# Exclude documentation, including manuals and the technical report.
+docs/** linguist-documentation
+
+# Exclude Rack patches and presets from language statistics.
+patches/** -linguist-detectable
+presets/** -linguist-detectable
+
+# Preserve checksummed comparison evidence and exports across Git clients.
+docs/whitepaper/data/comparison-012/** -text
+docs/whitepaper/generated/comparison-012-*/** -text
+# Generated CSV uses CRLF; retain the normal whitespace checks otherwise.
+docs/whitepaper/data/comparison-012/tables/**/*.csv whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

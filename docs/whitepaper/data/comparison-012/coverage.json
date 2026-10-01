@@ -1,0 +1,99 @@
+{
+  "groups": [
+    {
+      "accuracy_coverage_rows": 1728,
+      "boundary_operation_precision_counts": {
+        "analysis/analysis/float": 192,
+        "chain/fir/float": 60,
+        "chain/identity/float": 60,
+        "inverse-job/inverse/float": 60,
+        "transform/fft/float": 12,
+        "transform/ifft/float": 12,
+        "transform/rfft/float": 12
+      },
+      "figures": 182,
+      "group": "primary",
+      "processes": 3672,
+      "processes_per_workload": 9,
+      "report_manifest_sha256": "b1552c7d3e89d3379a0607443315afc8fb8ba3415c9b783072364df28a53da6d",
+      "sessions": 3,
+      "stationary_rows": 408,
+      "workloads": 408
+    },
+    {
+      "accuracy_coverage_rows": 2664,
+      "boundary_operation_precision_counts": {
+        "analysis/analysis/double": 60,
+        "analysis/analysis/float": 236,
+        "chain/fir/double": 24,
+        "chain/fir/float": 105,
+        "chain/identity/double": 24,
+        "chain/identity/float": 105,
+        "inverse-job/inverse/double": 24,
+        "inverse-job/inverse/float": 105,
+        "transform/fft/double": 12,
+        "transform/ifft/double": 12,
+        "transform/rfft/double": 12
+      },
+      "figures": 384,
+      "group": "extensions",
+      "processes": 6471,
+      "processes_per_workload": 9,
+      "report_manifest_sha256": "dcaaa00f961f2dc12205170f0abd0ce1e488a3e0afb5cc26c8da90f4ff2c9f17",
+      "sessions": 3,
+      "stationary_rows": 719,
+      "workloads": 719
+    },
+    {
+      "accuracy_coverage_rows": 504,
+      "boundary_operation_precision_counts": {
+        "analysis/analysis/double": 20,
+        "analysis/analysis/float": 36,
+        "chain/fir/double": 8,
+        "chain/fir/float": 10,
+        "chain/identity/double": 8,
+        "chain/identity/float": 10,
+        "inverse-job/inverse/double": 8,
+        "inverse-job/inverse/float": 10
+      },
+      "figures": 66,
+      "group": "short-hop",
+      "processes": 990,
+      "processes_per_workload": 9,
+      "report_manifest_sha256": "770ad0304e1f1cf4d0257eb14becb5151e7606667d6439d08c89a3286136e63f",
+      "sessions": 3,
+      "stationary_rows": 110,
+      "workloads": 110
+    },
+    {
+      "accuracy_coverage_rows": 144,
+      "boundary_operation_precision_counts": {
+        "analysis/analysis/float": 16,
+        "chain/fir/float": 10,
+        "chain/identity/float": 10,
+        "inverse-job/inverse/float": 10
+      },
+      "figures": 24,
+      "group": "single-sample",
+      "processes": 414,
+      "processes_per_workload": 9,
+      "report_manifest_sha256": "4036a819cae540b24e8b7525c819d354dd5fc06b05a5e11a8edbb07ab5bd8671",
+      "sessions": 3,
+      "stationary_rows": 46,
+      "workloads": 46
+    },
+    {
+      "accuracy_coverage_rows": 0,
+      "boundary_operation_precision_counts": {},
+      "figures": 16,
+      "group": "transitions",
+      "processes": 144,
+      "processes_per_workload": 9,
+      "report_manifest_sha256": "e1f6fead20c937478a11750fd29896b87605e8b73f29a9bf513b9fa084b9866b",
+      "sessions": 3,
+      "stationary_rows": 0,
+      "workloads": 16
+    }
+  ],
+  "notes": "Structural coverage inventory, not an algorithm ranking. Coverage scopes and missing values remain explicit in the full tables."
+}

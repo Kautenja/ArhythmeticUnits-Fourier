@@ -1,0 +1,44 @@
+diff --git a/src/dsp/spectrum_analysis.hpp b/src/dsp/spectrum_analysis.hpp
+index 5d00fbb..20b137c 100644
+--- a/src/dsp/spectrum_analysis.hpp
++++ b/src/dsp/spectrum_analysis.hpp
+@@ -114,6 +114,29 @@ class SpectrumAnalysis {
+         }
+     }
+
++    /// @brief Resume a bounded butterfly segment, splitting only at group ends.
++    void butterfly_segment(size_t count) {
++        while (count) {
++            const size_t half = span / 2;
++            const size_t end = pair + std::min(count, half - pair);
++            const size_t stride = maximum_length / span;
++            size_t twiddle = pair * stride;
++            count -= end - pair;
++            for (; pair < end; ++pair, twiddle += stride) {
++                const std::complex<T> w(twiddles[twiddle]);
++                const auto even = packed[group + pair];
++                const auto odd = complex_multiply(packed[group + pair + half], w);
++                packed[group + pair] = even + odd;
++                packed[group + pair + half] = even - odd;
++            }
++            if (pair == half) {
++                pair = 0;
++                group += span;
++                if (group == settings.length / 2) { group = 0; span *= 2; }
++            }
++        }
++    }
++
+     /// @brief Reconstruct one positive bin and extend the magnitude prefix sum.
+     void reconstruct(size_t k) {
+         const size_t m = settings.length / 2;
+@@ -272,7 +295,8 @@ class SpectrumAnalysis {
+                     for (; cursor < end; ++cursor) prepare_pair(cursor);
+                     break;
+                 case 1:
+-                    for (; cursor < end; ++cursor) butterfly();
++                    butterfly_segment(count);
++                    cursor = end;
+                     break;
+                 case 2:
+                     for (; cursor < end; ++cursor) reconstruct(cursor);

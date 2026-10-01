@@ -1,0 +1,23 @@
+\section{Context Menu And Saved Settings}\label{sec:settings}
+
+Right-click the module to find these options under \textbf{Render Settings}:
+\begin{itemize}
+  \item \textbf{Filled Display} shades the area beneath each trace. It is
+  off by default.
+  \item \textbf{Bezier Curve} draws curved connections between the plotted
+  points. It is on by default. Turning it off uses straight segments and can
+  make individual bins easier to inspect. It does not change FFT resolution.
+  \item \textbf{AC-coupled} removes DC offset from newly captured inputs
+  using a DC-blocking filter. It is on by default and can also affect very
+  low frequencies. Turn it off when inspecting DC or slow signals, and set
+  Slope to zero to avoid frequency weighting near DC.
+\end{itemize}
+
+These three menu changes support Rack's Undo and Redo commands. Panel
+settings, menu options, and the running state are saved with patches and
+presets. The captured audio and spectrum are not saved. Loading a patch
+that was saved with Run off therefore does not restore a frozen trace;
+press Run to capture a new one.
+
+Rack's module initialization resets the controls to their defaults, enables
+Run, AC coupling, and Bezier curves, and disables Filled Display.

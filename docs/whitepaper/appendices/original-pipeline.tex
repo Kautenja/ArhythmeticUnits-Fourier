@@ -1,0 +1,64 @@
+\section{Original Whole-Pipeline Cost and Ownership}
+\label{sec:cost}
+The real FFT's public interface exposes a useful but partial work budget.
+A schematic call-cost model is
+\begin{equation}
+ C_s=C_{\mathrm{input},s}+C_{\mathrm{dispatch},s}
+       +b_s C_{\mathrm{butterfly},s}
+       +\mathbf{1}_{s=0}C_{\mathrm{prepare}}
+       +\mathbf{1}_{s=L-1}C_{\mathrm{reconstruct}}
+       +C_{\mathrm{publish},s}.
+ \label{eq:cost}
+\end{equation}
+Here $b_s\le q$ is the number of useful butterflies, and costs need not be
+constant across stages or calls. Publication of a previous result may coincide
+with preparation of the next. The expression describes locations of work,
+not a hardware-independent cycle prediction.
+
+In the source snapshot, real-input packing creates a temporary vector;
+copying and bit reversal are bulk operations; reconstruction is bulk; optional
+fractional-octave smoothing allocates a prefix-sum array; temporal smoothing
+and display-coordinate conversion visit complete arrays. Window-length
+reconfiguration may resize storage on the engine path. The existing
+implementation therefore does not satisfy an allocation-free, uniformly
+small-call contract merely because its inner FFT is resumable.
+
+If $H=\rho N$ for fixed $\rho>0$, then $q=\Theta(\log N)$ for the real FFT.
+The butterfly work assigned to ordinary calls grows logarithmically, while
+preparation and reconstruction still contribute $\Theta(N)$ operations to
+boundary calls. Consequently, the full real-FFT path retains a linear peak
+operation count under this scaling. The change from a full
+$\Theta(N\log N)$ burst to smaller inner batches can still be useful, but the
+asymptotic distinction must be stated at the correct boundary.
+
+\subsection{Magnitude processing and SIMD}
+Fractional-octave smoothing uses a prefix sum of magnitudes, allowing a range
+mean to be evaluated with two prefix accesses after a linear setup pass. For
+fraction $\beta$ of an octave, the nominal band around $f_k$ is
+$[f_k2^{-\beta/2},f_k2^{\beta/2}]$, discretized to FFT-bin indices and adjusted
+near Nyquist. The result is a visualization-oriented magnitude average, not a
+constant-Q transform or a power-conserving spectral estimate. Phase is discarded
+when smoothed magnitudes replace complex coefficients.
+
+The Fourier module instantiates arithmetic on \code{simd::float\_4}. Each lane
+carries an independent input channel through the same traversal; the SIMD
+lanes are not four consecutive bins of one transform. This arrangement
+shares index and control work across channels, but lane parallelism does not
+by itself imply a fourfold speedup; Section~\ref{sec:comparison-results}
+measures the four-channel paths directly. Rack's plugin API supplies the host
+processing and SIMD context~\cite{rack}.
+
+\subsection{Snapshots and publication}
+The input ring can continue advancing because \code{buffer()} copies the
+selected frame into transform-owned storage. Resuming directly from a mutable
+ring without preserving the selected samples would violate
+Equation~\eqref{eq:dft}. Any attempt to distribute packing must therefore solve
+input lifetime as well as arithmetic scheduling.
+
+Similarly, a display-readiness flag is not by itself an engine-to-display
+synchronization protocol. Concurrent reads of arrays being modified require an
+ownership and publication design consistent with the C++ memory model. The
+original source's tests do not certify its shared display buffers.
+A bounded exchange of preallocated buffers needs an explicit slow-consumer
+policy and safe reuse; an atomic pointer alone is insufficient. The successor's
+ownership exchange is described in Section~\ref{sec:one-hop}.

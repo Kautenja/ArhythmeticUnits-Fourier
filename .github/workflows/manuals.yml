@@ -1,0 +1,204 @@
+name: Manuals and white paper
+
+on:
+  pull_request:
+    paths: &publication_paths
+      - 'docs/**'
+      - 'specs/**'
+      - 'README.md'
+      - 'CITATION.cff'
+      - 'plugin.json'
+      - '.github/workflows/manuals.yml'
+  push:
+    branches: [main]
+    paths: *publication_paths
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to upload PDFs for (blank builds this ref only)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pdfs-${{ github.event_name }}-${{ inputs.tag || github.event.release.tag_name || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
+
+jobs:
+  check:
+    name: Check publication evidence and links
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify paper artifacts and import regressions
+        run: |
+          make -C docs/whitepaper check
+          python3 -m unittest discover -s docs/whitepaper/tools -p test_study_import.py
+
+  build:
+    name: Build manuals and white paper
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out PDF sources
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.tag && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          persist-credentials: false
+
+      - name: Install LaTeX and PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended texlive-science latexmk lmodern poppler-utils python3-pypdf
+
+      - name: Check release and manual versions
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name || (github.ref_type == 'tag' && github.ref_name) || '' }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          # Historical layouts retain their original version/metadata conventions.
+          if not Path('docs/manual-fourier').is_dir():
+              print('Historical layout: retaining legacy publication checks.')
+          else:
+              version = json.loads(Path('plugin.json').read_text())['version']
+              tag = os.environ['RELEASE_TAG']
+              if tag and tag not in (version, 'v' + version):
+                  raise ValueError(f'Release tag {tag!r} disagrees with manifest {version!r}')
+              for module in ('fourier', 'spectre'):
+                  source = Path('docs', 'manual-' + module, 'manual.tex').read_text()
+                  versions = re.findall(r'\bversion\s*=\s*\{([^}]+)\}', source)
+                  if versions != [version]:
+                      raise ValueError(f'{module} manual versions {versions!r} disagree with {version!r}')
+          PY
+
+      - name: Build and validate publication PDFs
+        id: pdfs
+        run: |
+          output_dir="$RUNNER_TEMP/publication-pdfs"
+          mkdir -p "$output_dir"
+          if [ -d docs/manual-fourier ]; then
+            make -C docs/manual-fourier BUILD=.build
+            make -C docs/manual-spectre BUILD=.build
+            make -C docs/whitepaper
+            cp docs/manual-fourier/.build/manual.pdf "$output_dir/Fourier.pdf"
+            cp docs/manual-spectre/.build/manual.pdf "$output_dir/Spectre.pdf"
+            paper_pdf=docs/whitepaper/.build/paper.pdf
+            if [ ! -f "$paper_pdf" ]; then
+              paper_pdf=docs/whitepaper/build/paper.pdf
+            fi
+            cp "$paper_pdf" "$output_dir/Fourier-whitepaper.pdf"
+          else
+            # Older release tags retain their original directory layout.
+            manual_dir=docs/manual
+            if [ ! -d "$manual_dir" ]; then
+              manual_dir=manual
+            fi
+            make -C "$manual_dir"
+            cp "$manual_dir/build/Fourier.pdf" "$output_dir/Fourier.pdf"
+            cp "$manual_dir/build/Spectre.pdf" "$output_dir/Spectre.pdf"
+            if [ -f whitepaper/Makefile ]; then
+              make -C whitepaper
+              cp whitepaper/build/paper.pdf "$output_dir/Fourier-whitepaper.pdf"
+            else
+              echo '::notice::This historical tag predates the white paper; uploading manuals only.'
+            fi
+          fi
+          echo "directory=$output_dir" >> "$GITHUB_OUTPUT"
+          for pdf in "$output_dir"/*.pdf; do
+            test -s "$pdf"
+            pdfinfo "$pdf"
+          done
+
+      - name: Check publication contents and metadata
+        env:
+          PDF_DIRECTORY: ${{ steps.pdfs.outputs.directory }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          from pypdf import PdfReader
+
+          directory = Path(os.environ['PDF_DIRECTORY'])
+          modern = Path('docs/manual-fourier').is_dir()
+          required = ['Fourier.pdf', 'Spectre.pdf']
+          if modern:
+              required.append('Fourier-whitepaper.pdf')
+              version = json.loads(Path('plugin.json').read_text())['version']
+          for name in required:
+              if not (directory / name).is_file():
+                  raise ValueError(f'Missing required publication: {name}')
+
+          for path in sorted(directory.glob('*.pdf')):
+              pdf = PdfReader(path)
+              if not pdf.pages:
+                  raise ValueError(f'{path.name}: no pages')
+              if not modern:
+                  # Older manuals predate the current metadata and bookmark rules.
+                  continue
+              title = pdf.metadata.title if pdf.metadata else ''
+              title = title or ''
+              text = '\n'.join(page.extract_text() or '' for page in pdf.pages)
+              if not pdf.outline or '??' in text or 'Arhythmetic Units' not in text:
+                  raise ValueError(f'{path.name}: missing bookmarks/branding or unresolved references')
+              if path.name == 'Fourier-whitepaper.pdf':
+                  expected = re.search(r'pdftitle=\{([^}]+)\}', Path('docs/whitepaper/preamble.tex').read_text())
+                  if len(pdf.pages) < 2 or not expected or title != expected.group(1):
+                      raise ValueError(f'{path.name}: incomplete report or incorrect title')
+              else:
+                  module = path.stem
+                  if len(pdf.pages) < 6 or module + ' User Manual' not in title:
+                      raise ValueError(f'{path.name}: incomplete manual or incorrect title')
+                  if not re.search(r'\bv' + re.escape(version) + r'(?![\w.-])', title):
+                      raise ValueError(f'{path.name}: title does not contain version {version}')
+                  if pdf.trailer['/Root'].get('/Lang') != 'en-US' or not pdf.xmp_metadata:
+                      raise ValueError(f'{path.name}: missing language or XMP metadata')
+              print(f'Validated {path.name}: {len(pdf.pages)} pages; {title}')
+          PY
+
+      - name: Save publication PDFs
+        uses: actions/upload-artifact@v7
+        with:
+          name: publication-pdfs
+          path: ${{ steps.pdfs.outputs.directory }}/*.pdf
+          retention-days: 3
+          if-no-files-found: error
+
+  publish:
+    name: Attach PDFs to release
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated PDFs
+        uses: actions/download-artifact@v8
+        with:
+          name: publication-pdfs
+          path: pdfs
+
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name }}
+        run: |
+          gh release upload "$RELEASE_TAG" pdfs/*.pdf --clobber

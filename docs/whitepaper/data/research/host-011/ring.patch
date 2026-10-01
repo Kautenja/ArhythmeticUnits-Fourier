@@ -1,0 +1,26 @@
+--- a/src/dsp/spectrum_analysis.hpp
++++ b/src/dsp/spectrum_analysis.hpp
+@@ -100,7 +100,8 @@
+     /// @brief Read a retained frame sample, respecting logical zero padding.
+     T sample(size_t index) const {
+         if (index + frame_available < settings.length) return T(0.f);
+-        return input[(origin + index) % input.size()];
++        const size_t position = origin + index;
++        return input[position < input.size() ? position : position - input.size()];
+     }
+ 
+     /// @brief Fuse window preparation/application, real packing and permutation.
+@@ -277,11 +278,11 @@
+     bool process(const T& value, Output emit, bool capture = true) {
+         if (capture) {
+             input[head] = value;
+-            head = (head + 1) % input.size();
++            if (++head == input.size()) head = 0;
+             available = std::min(maximum_length, available + 1);
+         }
+         if (phase == 0) {
+-            origin = (head + input.size() - size()) % input.size();
++            origin = head >= size() ? head - size() : head + input.size() - size();
+             frame_available = available;
+             stage = cursor = group = pair = quota_error = 0;
+             span = 2;

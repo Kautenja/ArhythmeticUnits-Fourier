@@ -1,0 +1,19 @@
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Native pipeline & Horizon & Age (ms) & Cost & Hop peak [sessions] \\
+\midrule
+vDSP four-channel & batch & 0 & 544 & 125 [122--128] \\
+vDSP four-channel & $H$ & 4.98 & 589 & 68.6 [68.4--68.8] \\
+vDSP four-channel & $H/2$ & 2.48 & 594 & 95.4 [91.9--99] \\
+vDSP four-channel & $H/4$ & 1.23 & 568 & 121 [118--123] \\
+FFTW four-channel & batch & 0 & 642 & 147 [145--149] \\
+FFTW four-channel & $H$ & 4.98 & 658 & 119 [119--119] \\
+FFTW four-channel & $H/2$ & 2.48 & 648 & 130 [129--130] \\
+FFTW four-channel & $H/4$ & 1.23 & 658 & 144 [140--147] \\
+\bottomrule
+\end{tabular}
+\caption{Four-channel controlled analysis at $N=16384,H=240,D=64$, continuous execution. Age is logical endpoint-to-publication delay; cost is ns/engine sample for all four channels, peak is $\mu$s. Both providers use batched native four-channel plans. Each row has 3,840 blocks across four processes. The same-shape SIMD production core has the values stated in the text.}
+\label{tab:study-horizons}
+\end{table}

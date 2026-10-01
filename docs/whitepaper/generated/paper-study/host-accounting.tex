@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Graph & CPU/sample & Block p99 & Wake p99 & Compute / release \\
+\midrule
+Empty, 1 thread & 0.396 & 9.12 & 466 & 0 / 15 \\
+Empty, 4 threads & 62.7 & 106 & 414 & 5 / 9 \\
+Production, 1 thread & 2.59 & 250 & 435 & 0 / 18 \\
+Production, 4 threads & 62.6 & 109 & 406 & 0 / 0 \\
+vDSP batch, 1 thread & 2.01 & 899 & 350 & 0 / 20 \\
+vDSP batch, 4 threads & 62.7 & 123 & 408 & 0 / 0 \\
+\bottomrule
+\end{tabular}
+\caption{Paced engine controls at $D=64$, 48\,kHz. Nonempty graphs contain four aligned Fourier modules; no background or consumer. All time columns are $\mu$s. CPU/sample includes process-wide CPU during waits and worker synchronization; block p99 excludes wake lateness. Counts span 16,384 blocks per row. The empty engine is a measured control, not a subtracted overhead estimate.}
+\label{tab:study-host-accounting}
+\end{table}

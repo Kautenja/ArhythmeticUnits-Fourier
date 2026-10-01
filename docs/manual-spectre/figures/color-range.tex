@@ -1,0 +1,16 @@
+% Reuse the panel control geometry, with readable in-context annotations.
+\begin{tikzpicture}[x=1pt,y=-1pt,font=\small,line join=round]
+  \begin{scope}[shift={(0,-106)}]
+    \PanelColorControl
+  \end{scope}
+  \draw[panel leader] (65,14)--(106,14);
+  \node[anchor=west,text=panelInk] at (112,14) {Palette: choose the colors};
+  \draw[panel leader] (65,32)--(106,48);
+  \node[anchor=west,text=panelInk] at (112,48) {Scale: Decibels or Linear};
+  \draw[panel leader] (61,84)--(106,84);
+  \node[anchor=west,align=left,text=panelInk] at (112,91)
+    {Ceiling: upper-right handle\\Levels above this share the top color};
+  \draw[panel leader] (15,147)--(-4,147)--(-4,206)--(106,206);
+  \node[anchor=west,align=left,text=panelInk] at (112,199)
+    {Floor: lower-left handle\\Levels below this share the bottom color};
+\end{tikzpicture}

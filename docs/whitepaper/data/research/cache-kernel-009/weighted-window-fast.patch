@@ -1,0 +1,68 @@
+diff --git a/src/dsp/spectrum_analysis.hpp b/src/dsp/spectrum_analysis.hpp
+index 5d00fbb..bfb008f 100644
+--- a/src/dsp/spectrum_analysis.hpp
++++ b/src/dsp/spectrum_analysis.hpp
+@@ -69,6 +69,8 @@ class SpectrumAnalysis {
+     /// Hop phase, dependency stage and unit index; butterfly traversal state.
+     size_t phase = 0, stage = 0, cursor = 0, span = 2, group = 0, pair = 0;
+     size_t butterflies = 0, reversal_shift = 0;
++    /// Experimental virtual work weight for a dirty preparation pair.
++    size_t prepare_weight = 1;
+     /// Quotient/remainder accumulator realizes the balanced quota without division per sample.
+     size_t quota_base = 0, quota_remainder = 0, quota_error = 0;
+     bool window_dirty = true, bands_dirty = true, clear_average = true;
+@@ -195,7 +197,7 @@ class SpectrumAnalysis {
+     bool is_frame_start() const { return phase == 0; }
+     size_t size() const { return settings.length; }
+     size_t hop_length() const { return settings.hop; }
+-    size_t work_per_frame() const { return settings.length / 2 + butterflies + 2*(size()/2+1); }
++    size_t work_per_frame() const { return prepare_weight * settings.length / 2 + butterflies + 2*(size()/2+1); }
+
+     /// @brief Latch settings at a frame boundary; reject invalid values without mutation.
+     /// @returns false for a mid-frame call or out-of-capacity/invalid settings.
+@@ -244,17 +246,26 @@ class SpectrumAnalysis {
+             stage = cursor = group = pair = quota_error = 0;
+             span = 2;
+             prefix[0] = T(0.f);
++            const size_t next_weight = window_dirty ? 4 : 1;
++            if (prepare_weight != next_weight) {
++                prepare_weight = next_weight;
++                quota_base = work_per_frame() / settings.hop;
++                quota_remainder = work_per_frame() % settings.hop;
++            }
+         }
+         size_t quota = quota_base;
+         quota_error += quota_remainder;
+         if (quota_error >= settings.hop) { quota_error -= settings.hop; ++quota; }
+-        const size_t lengths[] = {size()/2, butterflies, size()/2+1, size()/2+1};
++        const size_t lengths[] = {prepare_weight * size()/2, butterflies, size()/2+1, size()/2+1};
+         // Retain the simple loop when calls do at most two units. Segment
+         // setup costs more than it saves for these sparse schedules.
+         if (quota_base <= 1) {
+             for (size_t i = 0; i < quota; ++i) {
+                 switch (stage) {
+-                case 0: prepare_pair(cursor); break;
++                case 0:
++                    if (prepare_weight == 1) prepare_pair(cursor);
++                    else if (cursor % 4 == 0) prepare_pair(cursor / 4);
++                    break;
+                 case 1: butterfly(); break;
+                 case 2: reconstruct(cursor); break;
+                 case 3: output_bin(cursor, emit); break;
+@@ -269,7 +280,15 @@ class SpectrumAnalysis {
+                 const size_t end = cursor + count;
+                 switch (stage) {
+                 case 0:
+-                    for (; cursor < end; ++cursor) prepare_pair(cursor);
++                    if (prepare_weight == 1) {
++                        for (; cursor < end; ++cursor) prepare_pair(cursor);
++                    } else {
++                        for (; cursor < end;) {
++                            const size_t offset = cursor % 4;
++                            if (!offset) prepare_pair(cursor / 4);
++                            cursor += std::min(end - cursor, 4 - offset);
++                        }
++                    }
+                     break;
+                 case 1:
+                     for (; cursor < end; ++cursor) butterfly();

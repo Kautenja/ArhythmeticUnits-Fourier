@@ -1,0 +1,28 @@
+\section{Troubleshooting}\label{sec:troubleshooting}
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[No image or a stale image] Check the source signal, cable, input
+  gain, and Run light. Ensure LO Freq is below HI Freq. If you loaded a
+  frozen patch, resume capture to acquire new history.
+  \item[Bands are too broad or changes blur together] Reduce Smooth and
+  Average, and compare window functions. Spectre's FFT length is fixed;
+  use Fourier if you need a longer frame to separate nearby frequencies.
+  \item[Levels differ from another analyzer] Match input gain, window,
+  FFT length, smoothing, and amplitude reference. Set Slope to zero and
+  account for summed polyphonic voices. Spectre starts at $+6\,\mathrm{dB}$
+  input gain; Fourier starts at $0\,\mathrm{dB}$. A spectral peak is not a
+  broadband RMS measurement.
+  \item[Large regions reach the same end color] In Decibels mode, raise
+  the upper handle to distinguish strong values in retained history. Adjust
+  the lower handle for quiet detail. Choose Linear for less visible weak background
+  detail, or raise Floor in Decibels mode.
+  Color saturation does not mean the stored magnitude was clipped.
+  \item[Old and new bands disagree after a sample-rate change] Allow a full
+  sweep to replace history acquired at the old sample rate before comparing
+  frequencies. Check the frequency bounds as well.
+  \item[Analysis uses too much CPU] Spectre performs analysis on Rack's
+  audio engine thread despite having no audio outputs. Turn Run off when
+  inspecting a frozen image to pause buffering and FFT processing. Its FFT
+  length and hop size are fixed; Fourier provides adjustable settings when
+  you need to trade frequency detail or update rate for analysis workload.
+\end{description}

@@ -1,0 +1,712 @@
+[
+  {
+    "backend": "fftw-fft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-fft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-float",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-fft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-float",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-inverse-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "inverse-stream-batch-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-inverse-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "inverse-stream-batch-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-inverse-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "inverse-stream-batch-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-inverse-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "inverse-stream-batch-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-ols-identity-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "ols-identity-batch-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-ols-identity-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "ols-identity-batch-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-ols-identity-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "ols-identity-batch-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-ols-identity-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "ols-identity-batch-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-ols-fir-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "ols-fir-batch-float",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-ols-fir-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "ols-fir-batch-float",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-ols-fir-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "ols-fir-batch-float",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-ols-fir-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "ols-fir-batch-float",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "core-float",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "fftw-analysis-float",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  },
+  {
+    "backend": "legacy-batch-float",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  },
+  {
+    "backend": "core-float",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  },
+  {
+    "backend": "fftw-fft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-fft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-double",
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-fft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-rfft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "rfft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-ifft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "ifft-double",
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "complete"
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-inverse-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "inverse-stream-batch-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-inverse-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "inverse-stream-batch-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-inverse-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "inverse-stream-batch-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-inverse-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "inverse-stream-batch-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-ols-identity-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "ols-identity-batch-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-ols-identity-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "ols-identity-batch-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-ols-identity-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "ols-identity-batch-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-ols-identity-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "ols-identity-batch-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-ols-fir-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "ols-fir-batch-double",
+    "n": 128,
+    "hop": 37
+  },
+  {
+    "backend": "fftw-ols-fir-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "ols-fir-batch-double",
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput"
+  },
+  {
+    "backend": "fftw-ols-fir-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "ols-fir-batch-double",
+    "n": 128,
+    "hop": 37,
+    "state": "startup"
+  },
+  {
+    "backend": "fftw-ols-fir-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "ols-fir-batch-double",
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "core-double",
+    "n": 128,
+    "hop": 37,
+    "smooth": 1
+  },
+  {
+    "backend": "fftw-analysis-double",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  },
+  {
+    "backend": "legacy-batch-double",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  },
+  {
+    "backend": "core-double",
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1
+  }
+]

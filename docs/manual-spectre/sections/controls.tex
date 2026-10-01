@@ -1,0 +1,209 @@
+\begingroup
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\colorlet{panelAccent}{spectreAccent}
+\clearpage
+\subsection{Input}
+
+Patch the signal you want to follow over time. Spectre combines all voices
+of a polyphonic cable into one signal; it does not draw each voice separately.
+Voices can reinforce or cancel one another.
+
+\textbf{Input Gain} starts at \textbf{+6 dB}, about twice the amplitude.
+It ranges from silence to +12 dB and changes newly captured audio only.
+Set it to 0 dB when matching Fourier's default gain. It does not change your
+listening path. To adjust the picture instead, use the color range below.
+
+\subsection{Vertical Color Range}
+
+\textbf{Use the color range to decide which levels stand out.} Click the
+palette name to choose the colors. Click the scale below it to choose
+\textbf{Decibels} or \textbf{Linear}. Decibels makes quiet details easier
+to see alongside loud ones; Linear gives strong amplitudes more prominence.
+
+\begin{figure}[!htp]
+\centering
+\input{figures/color-range.tex}
+\caption{The color controls enlarged from the panel reference. Floor and
+Ceiling select the levels assigned to the two ends of the palette. The
+ramp here is schematic; the chosen palette determines the actual colors.}
+\end{figure}
+
+Lower \textbf{Floor} to reveal quiet tails; raise it to hide faint background
+detail. Raise \textbf{Ceiling} to distinguish strong peaks that share the top
+color. Lower it to devote more contrast to quieter levels. Values outside
+the range share the endpoint colors; the stored magnitudes are unchanged.
+
+\paragraph{Try it}
+Freeze a sound with Run, then move Floor. The picture changes while the
+recorded sound stays the same. More visible background in Decibels mode
+usually means you can now see weak content, including noise or leakage;
+the color controls do not add noise or apply a noise gate.
+
+\clearpage
+\manualsubheading{Color Range: Everyday Adjustments}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{@{}p{.38\textwidth}X@{}}
+\toprule
+\textbf{To do this} & \textbf{Use this gesture} \\
+\midrule
+Set Floor / Ceiling & Drag the lower-left / upper-right handle. \\
+Make a fine adjustment & Hold Cmd (macOS) or Ctrl (other platforms) while dragging. \\
+Enter an exact level & Right-click the corresponding handle. \\
+Reset one endpoint & Double-click its handle. \\
+Undo a drag & Use Rack's Undo; each drag is one action. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Each scale remembers its own range. Decibels starts at \textbf{$-90$ to 0 dB};
+Linear starts at \textbf{0--100\%}. The handles cannot cross. A reset stops
+at the other endpoint if necessary. Full ranges and palettes are listed on
+page~\pageref{sec:control-values}.
+
+Changing the range, scale, or palette recolors existing history, even while
+frozen. It neither advances the scan line nor changes the Raw readout.
+The \hyperref[sec:detail]{Finding Quiet Detail} exercise walks through a
+contrast adjustment on the same captured sound.
+
+\subsection{Run}
+
+\textbf{Lit: record new spectra. Dark: freeze the history.} Press Run to
+inspect a moment before the scan line overwrites it. Press again to resume
+from the paused position. Run starts enabled; sound received during a pause
+is not recorded.
+
+While frozen, change the color controls, frequency view, or Slope to inspect
+the same history differently. Gain, AC coupling, Window, Average, and Smooth
+need new audio or analysis after you resume. They do not rebuild old columns.
+Unlike Fourier, Spectre pauses its analysis as well as its capture.
+
+\paragraph{Keep a result}
+Saving a Rack patch saves the settings and Run state, not the image history.
+Save an external image if you need a lasting record; a frozen patch reopens
+without the old sound and must capture again.
+
+\clearpage
+\subsection{Window Function}
+A pure tone does not always appear as one thin line. The analyzer works on
+short pieces of audio, and the edges of each piece can spread the tone into
+nearby frequencies. This spreading is called \textit{leakage}. A window
+softens the edges, trading a broader main peak for less energy around it.
+
+\textbf{Start with Flattop} when comparing the heights of steady tones.
+Try \textbf{Hann} when you want to distinguish nearby harmonics. Boxcar gives
+a narrow main peak, but its leakage can hide quieter tones beside a loud one.
+No window is best for every sound. The FFT measures at evenly spaced
+frequencies called \textit{bins}; the plots below show what it sees.
+
+\begin{figure}[!htp]
+\centering
+\input{window-tradeoffs.tex}
+\caption{Calculated responses to one tone halfway between FFT bins.
+The dashed line marks the tone; dots mark measured bins. All three plots use
+the same 2048-sample length and level scale. The ripples are leakage, not
+additional tones.}
+\end{figure}
+
+\paragraph{Read the shape, not just the height}
+The small ripples around a large peak can come from the analysis itself;
+they are not necessarily extra notes or noise in the source. Compare windows
+before drawing that conclusion. The module compensates for the window's
+level reduction, but peak shape and the displayed noise level still change.
+
+\paragraph{Try it}
+With Average and Smooth off, capture a steady oscillator using Hann, then
+switch to Flattop. Compare the width of the new band with the older history.
+Window changes apply to \textbf{new columns only}; they do not redraw the
+past. The complete menu is on page~\pageref{sec:control-values}.
+
+\clearpage
+\subsection{Freq Scale}
+
+Choose \textbf{Linear} to compare harmonic spacing: equal steps in hertz
+occupy equal distances from bottom to top. Choose \textbf{Logarithmic}
+(the default) to give bass frequencies more room. Frequency is vertical in
+Spectre; the colors show level.
+
+The control's Logarithmic mode uses a square-root mapping in this version,
+so octaves do not occupy equal heights. Read the labels or hover readout
+when you need an exact frequency.
+
+\subsection{Average}
+Use \textbf{Average} to calm a flickering display. Increasing it makes
+changes settle more gradually, which helps compare the overall balance of
+noise or a busy mix. Leave it at \textbf{0 ms} when following attacks and
+short events. The range extends to 2500 ms.
+
+The value controls how strongly previous results influence the next result;
+it does not select a fixed-length recording to average.
+
+In Spectre, Average can blur an attack across successive columns. It does
+not change the duration of the history, and it affects new columns only.
+
+\subsection{Smooth}
+Use \textbf{Smooth} to see broad tonal balance instead of every small
+peak. Start at \textbf{None} for individual harmonics. Try 1/12 octave for a
+gentler outline, then increase the width if you want less detail. Wider
+settings can lower narrow peaks and merge neighboring ones.
+
+An octave means a doubling of frequency. An octave-based smoothing width
+therefore covers more hertz in the treble than in the bass. Smooth does not
+create additional frequency resolution.
+
+\begin{figure}[!htp]
+\centering
+\input{smoothing.tex}
+\caption{Average softens changes across time; Smooth blends detail across
+frequency. These are qualitative sketches, not measured responses.}
+\end{figure}
+
+Like Average, Smooth affects new columns only. Allow a fresh sweep
+before comparing settings.
+
+\clearpage
+\subsection{Low Frequency}
+
+\textbf{LO Freq} sets the bottom of the frequency view. Raise it to leave
+frequencies below your area of interest out of the picture. It starts at
+\textbf{0 Hz}. It does not filter the input or erase stored frequencies.
+
+\subsection{High Frequency}
+
+\textbf{HI Freq} sets the top of the view. Lower it to give the bass or a
+group of harmonics more room. Keep it above LO Freq. Both controls can reach
+half of Rack's sample rate, called the \textit{Nyquist frequency}; that is
+24 kHz at a 48 kHz sample rate. HI Freq starts at this upper limit.
+
+\paragraph{Try it}
+Freeze a sound and view only 0--500 Hz. The bands grow taller on screen,
+but the underlying frequency detail is unchanged. Spectre has a fixed
+analysis length: if two bass notes merge, use Fourier with a longer Length
+to separate them. Check the view after a sample-rate change.
+
+\subsection{Slope}
+
+\textbf{Slope changes which frequencies stand out in color.} Positive
+values emphasize high frequencies; negative values emphasize low ones.
+It can help reveal quiet upper harmonics. Set it to \textbf{0} for a fair
+comparison of unweighted levels.
+
+The default is \textbf{+4.5 dB per octave}, and the range is $-9$ to
+$+9$ dB per octave. An octave doubles the frequency. In Decibels mode,
+1 kHz is the pivot: for example, +3 dB/oct adds 3 dB at 2 kHz and subtracts
+3 dB at 500 Hz. The DC bin receives no tilt.
+
+Slope recolors retained history, including while frozen. It changes the
+\textbf{Color} readout, but leaves stored magnitudes and \textbf{Raw} alone.
+It never changes the audio in your listening path.
+
+\paragraph{A note about Linear intensity}
+Linear intensity keeps the earlier display behavior. With Linear Freq Scale,
+Slope pivots around 1 kHz. With Logarithmic Freq Scale, it follows image-row
+position instead of exact frequency, so the tilt does not match the stated
+dB per octave at the frequency labels. Use Decibels intensity for frequency-based
+tilt, or zero Slope for an unweighted comparison.
+
+\endgroup

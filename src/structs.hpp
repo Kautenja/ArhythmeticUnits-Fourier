@@ -28,7 +28,7 @@
 enum class FrequencyScale {
     /// Linear frequency rendering along a fixed offset.
     Linear = 0,
-    /// Logarithmic frequency rendering along base 10 harmonics.
+    /// Logarithmic frequency rendering with base-10 decade ticks.
     Logarithmic
 };
 
@@ -73,7 +73,7 @@ static const std::vector<std::string>& magnitude_scale_names() {
 /// @details
 /// Options are listed in fractional octave increments following the format
 /// `_<numerator>_<denominator>`. For instance, 1/48th octave is `_1_48`,
-/// where as 1 octave would be `_1_1`. The null frequency smoothing option is
+/// whereas 1 octave would be `_1_1`. The null frequency smoothing option is
 /// represented by the `None` symbol.
 enum class FrequencySmoothing {
     /// No frequency smoothing.
@@ -82,7 +82,7 @@ enum class FrequencySmoothing {
     _1_48,
     /// 1/24th octave.
     _1_24,
-    /// 1/24th octave.
+    /// 1/12th octave.
     _1_12,
     /// 1/9th octave.
     _1_9,
@@ -133,9 +133,10 @@ static const std::vector<std::string>& frequency_smoothing_names() {
     return names;
 }
 
-/// @brief Convert the given frequency smoothing option to its float value.
-/// @param value The frequency smoothing value to lookup the value of.
-/// @returns The value of the given frequency smoothing value.
+/// @brief Convert an enabled frequency smoothing option to an octave width.
+/// @param value The frequency smoothing option to convert.
+/// @returns The smoothing bandwidth in octaves.
+/// @throws std::runtime_error for None or an unknown option.
 inline float to_float(const FrequencySmoothing& value) {
     switch (value) {
     case FrequencySmoothing::_1_48: return 1.f/48.f;

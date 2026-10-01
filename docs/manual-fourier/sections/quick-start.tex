@@ -1,0 +1,35 @@
+\section{Quick Start}\label{sec:quick-start}
+
+\begin{enumerate}
+  \item Connect an oscillator or other audio source to the red input. Keep
+  your existing connection to the mixer or audio output if you want to hear it.
+  \item Leave the input gain at $0\,\mathrm{dB}$ and ensure \textbf{Run} is lit.
+  A new module uses a Flattop window, Length 2048, and Hop
+  $30\,\mathrm{ms}$, with no time or frequency smoothing.
+  \item For an amplitude comparison, set \textbf{Slope} to
+  $0\,\mathrm{dB/oct}$. The default $+4.5\,\mathrm{dB/oct}$ visually boosts
+  frequencies above $1\,\mathrm{kHz}$ and reduces those below it.
+  \item Connect another signal to the green, blue, or yellow input to
+  compare spectra. Use equal input gains for a level comparison.
+  \item Hover over the plot to show a crosshair, frequency, musical note
+  and tuning offset, and amplitude at the cursor position. The readout
+  describes the cursor; it does not automatically find a spectral peak.
+  \item Press \textbf{Run} to stop capturing new samples. Press it again
+  to resume. The retained audio can still be reanalyzed while capture is stopped.
+\end{enumerate}
+
+\paragraph{Reading levels}
+Fourier displays spectral magnitudes, not total signal RMS, loudness, or
+sound pressure level. Its nominal amplitude reference is a
+$5\,\mathrm{V}$ peak sine wave (approximately $0\,\mathrm{dB}$ or
+$100\,\%$ with unity gain, zero slope, and no smoothing). Window choice,
+frequency alignment with FFT bins, and smoothing affect the height and width
+of a peak. The display ceiling is about $+12\,\mathrm{dB}$; a trace reaching
+that ceiling does not mean Fourier has clipped your audio path.
+
+\paragraph{Choosing settings}
+Use a longer \textbf{Length} to separate nearby frequencies, especially in
+the bass. Use a shorter \textbf{Hop} and little or no \textbf{Average} to
+follow changes more closely. Increase \textbf{Average} for a steadier trace
+and \textbf{Smooth} for a broader view of tonal balance. The factory presets
+provide examples of these choices.

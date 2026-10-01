@@ -1,0 +1,24 @@
+\section{Timing And Further Reading}\label{sec:further-reading}
+
+Fourier prepares each spectrum over one Hop interval and displays it when
+complete. Longer Length settings include more past audio, Average slows the
+response further, and Rack's display refresh adds its own delay. A shorter
+Hop therefore gives more frequent analyses without making a long frame
+instantaneous.
+
+Window, smoothing, frequency bounds, scales, and Slope are applied to the
+next analysis frame. Changing Length clears captured audio; changing Rack's sample rate
+also discards unfinished analysis. Let new audio fill the frame before making
+comparisons after either change. Fourier continues analyzing retained audio
+when Run is off, as described in the Run section.
+
+Analysis runs on Rack's audio engine thread. Work is spread across sample
+calls to reduce processing bursts, but the module still contributes to the
+patch's CPU load. This does not guarantee that a heavily loaded patch will
+meet its audio deadlines.
+
+For the mathematical background, FFT algorithms, scheduling proofs, and
+performance experiments, see the accompanying
+\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper}{\textit{Whole-Pipeline Scheduling for Real-Time Spectral Analysis}}.
+Its implementation appendix gives the supporting algorithms; this manual
+focuses on operating the module.

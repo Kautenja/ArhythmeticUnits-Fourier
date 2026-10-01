@@ -1,0 +1,16 @@
+{
+  "schema": 3,
+  "seed": 20260930,
+  "repeats": 2,
+  "hops": 16,
+  "frames": 8,
+  "warm_hops": 0,
+  "workloads": [
+    {"workload_schema": 3, "backend": "core-float", "n": 128, "hop": 37, "block": 16, "fixture": "silence", "state": "startup"},
+    {"workload_schema": 3, "backend": "pffft-analysis-float", "fixture": "off-bin", "window": "blackman-harris", "octave": 1},
+    {"workload_schema": 3, "backend": "core-independent4-simd", "fixture": "independent", "active_ports": 4, "temporal_value": 0.8},
+    {"workload_schema": 3, "backend": "fourier", "fixture": "silence", "active_ports": 2, "voices": 4, "window": "blackman-harris", "temporal_mode": "module-seconds", "temporal_value": 0.1, "octave": 0.3333333333333333},
+    {"workload_schema": 3, "backend": "spectre", "fixture": "noise", "temporal_mode": "module-seconds", "temporal_value": 0.1},
+    {"workload_schema": 3, "backend": "vdsp-analysis-float", "fixture": "noise", "temporal_value": 0.8}
+  ]
+}

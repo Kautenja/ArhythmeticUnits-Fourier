@@ -1,0 +1,25 @@
+\begin{figure}[tb]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.93\linewidth,height=6.3cm,ymode=log,xmode=log,log basis x=2,
+ ylabel={Observed run maximum ($\mu$s)},xlabel={Real transform length $N$},
+ xtick={1024,2048,4096,16384},xticklabels={1024,2048,4096,16384},xmin=800,xmax=21000,
+ ymajorgrids=true,grid style={black!10},legend pos=north west,
+ legend style={draw=none,font=\small},tick label style={font=\small}]
+\addplot+[color=ink,mark=square*,error bars/.cd,y dir=both,y explicit]
+ coordinates {(1024,7.917) += (0,14.374) -= (0,0.167)
+ (2048,17.291) += (0,6.084) -= (0,0.457)
+ (4096,39.458) += (0,6.751) -= (0,1.958)
+ (16384,179.625) += (0,13.084) -= (0,7.959)};
+\addlegendentry{Complete}
+\addplot+[color=accent,mark=*,error bars/.cd,y dir=both,y explicit]
+ coordinates {(1024,0.875) += (0,5.584) -= (0,0.083)
+ (2048,1.625) += (0,19.584) -= (0,0.083)
+ (4096,3.333) += (0,14.333) -= (0,0.249)
+ (16384,13.125) += (0,12.333) -= (0,0.542)};
+\addlegendentry{Incremental}
+\end{axis}
+\end{tikzpicture}
+\caption{Median and full min--max range of per-run maximum call duration over nine repetitions, $H=N/2$. Vertical bars are observed ranges, not confidence intervals. Both axes are logarithmic; horizontal ticks identify the actual transform lengths. Measurements include RFFT preparation and reconstruction, but exclude module smoothing and graphics preparation.}
+\label{fig:peaks}
+\end{figure}

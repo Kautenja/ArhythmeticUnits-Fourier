@@ -1,0 +1,74 @@
+\section{Reproducibility and Source Map}
+\label{app:reproducibility}
+The code and manuscript are available in the
+\href{https://github.com/Kautenja/ArhythmeticUnits-Fourier}{Fourier repository}.
+The current evidence is in \path{docs/whitepaper/data/study-014/}. Its receipt
+identifies the two original handback archives, exact measured first-party
+source, compressed session/campaign metadata, and compact process observations.
+The nominal measured revision is
+\code{b2641cc46ffe57d938c54567f367a00df1f30e3b}; the archived bytes and executable
+hashes, rather than later manuscript edits, determine the experiment.
+
+From the repository root, the following commands regenerate the selected
+publication assets, verify them, and build a portable source archive:
+\begin{lstlisting}[language=bash]
+python3 docs/whitepaper/tools/study_paper.py
+python3 docs/whitepaper/tools/study_paper.py --check
+make -C docs/whitepaper check
+make -C docs/whitepaper arxiv
+\end{lstlisting}
+The outputs are \path{paper.pdf} and \path{fourier-arxiv-source.tar.gz} in
+\path{docs/whitepaper/.build/}. The exporter expands literal manuscript inputs.
+After extraction into an empty directory, compile with
+\begin{lstlisting}[language=bash]
+latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' fourier.tex
+\end{lstlisting}
+Typesetting and statistical generation perform no timing experiments,
+dependency downloads, or network requests.
+
+\subsection*{Raw observations and analysis policy}
+The raw session directories and their handback archives remain local and
+unmodified. Their paths and SHA-256 identities are recorded in the compact
+receipt and data README. Regenerating compact observations from those originals
+requires the explicit read-only importer:
+\begin{lstlisting}[language=bash]
+python3 docs/whitepaper/tools/study_import.py \
+  /path/to/spec014 --output /tmp/study-014-rederived
+\end{lstlisting}
+The importer verifies original hashes, numerical audits, source identities,
+process order and execution policy before deriving summaries. It never starts
+a benchmark executable. The publication hop statistic uses a complete
+endpoint-to-next-endpoint interval for both immediate and delayed paths;
+partial edge hops are excluded and intersecting whole blocks are retained.
+It is distinct from the runner's older endpoint-to-publication diagnostic.
+A JSON tuple/list comparison in the offline consumer-age validator was repaired
+after collection; the values and original files were unchanged.
+
+The generator checks compact input hashes and emits every cell, process and
+session summary in CSV, plus selected tables, macros and vector figure
+coordinates. The reference scalar shape, complete-host contrasts, horizon
+sweep, module extremes and consumer rows are explicit selections in its source.
+All 776 processes remain available, including unfavorable maxima and missed
+releases. Regeneration from raw callbacks requires the original directories;
+a fresh clone can verify compact evidence and regenerate publication assets.
+No public raw-data deposition is claimed. Native executables and SDK/provider
+archives are omitted from portable handbacks, with their identities retained.
+
+\subsection*{Implementation and historical artifacts}
+\path{src/dsp/spectrum_analysis.hpp} owns production scheduling;
+\path{src/SpectrumAnalyzer.cpp} and \path{src/Spectrogram.cpp} supply module
+processing; \path{src/rack_extensions/display_mailbox.hpp} defines ownership.
+Native controls and the actual-engine harness live in \path{benchmark/paper/}.
+They are research alternatives, not changes to shipped backend selection.
+The measured source includes the scaled-magnitude underflow repair.
+
+The earlier FFT, pipeline and spec~012 campaigns remain under
+\path{docs/whitepaper/data/} with their original methods and hashes, outside
+current performance claims. Contributor instructions provide test, build and
+sanitizer commands; historical test counts are not reassigned to this revision.
+
+The source uses GPL-3.0-or-later, with separate visual-asset terms. Compact
+evidence and measured sources accompany manuscript version~4; original
+handbacks remain local. No public data or arXiv deposit is claimed. The
+repository's \path{CITATION.cff} and paper's \path{CITATION.bib} give the
+current report citation.

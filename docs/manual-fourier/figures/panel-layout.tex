@@ -1,0 +1,56 @@
+% Spatial reference drawing; coordinates follow PanelLayout and module controls.
+% The display is intentionally schematic. No spectrum or current values shown.
+\colorlet{panelAccent}{fourierAccent}
+\begin{tikzpicture}[x=1pt,y=-1pt,line cap=round,line join=round]
+  \PanelChassis{720}{50}{FOURIER}
+  % Four independent input pairs, retaining the panel's channel order.
+  \foreach \i/\c in {0/channelOne,1/channelTwo,2/channelThree,3/channelFour} {
+    \draw[draw=\c,line width=3pt] (22.5,51.5+75*\i)--(22.5,64+75*\i);
+    \PanelJack{22.5}{41.5+75*\i}
+    \PanelKnob{22.5}{75.5+75*\i}
+    \node[panel note,font=\sffamily\fontsize{8}{9}\selectfont]
+      at (22.5,23+75*\i) {\the\numexpr\i+1\relax};
+  }
+  \PanelRun{23}{346}
+  % Fine screen bezel, plot boundaries, and schematic axes.
+  \draw[panel line,rounded corners=3pt,fill=white] (45,15) rectangle (705,365);
+  \draw[panel fine] (80,35) rectangle (685,315);
+  \foreach \x in {180,280,...,680} \draw[panel fine] (\x,315)--(\x,310);
+  \foreach \y in {85,135,...,285} \draw[panel fine] (80,\y)--(85,\y);
+  \draw[draw=panelRule,line width=.45pt,-{Stealth[length=4pt]}] (112,284)--(206,284);
+  \draw[draw=panelRule,line width=.45pt,-{Stealth[length=4pt]}] (112,284)--(112,216);
+  \node[panel note,anchor=west] at (124,265) {Frequency};
+  \node[panel note,rotate=90] at (98,248) {Amplitude};
+  \node[text=panelMuted,font=\sffamily\fontsize{16}{18}\selectfont]
+    at (401,163) {Four independent spectra};
+  \node[panel note] at (401,184) {One trace for each input port};
+  \draw[panel fine] (55,323)--(695,323);
+  \foreach \x/\label/\num in {80/WINDOW/3,146/LENGTH/4,212/HOP/5,
+    278/FREQ SCALE/6,344/Y SCALE/7,410/AVERAGE/8,476/SMOOTH/9,
+    542/LO FREQ/10,608/HI FREQ/11,674/SLOPE/12} {
+    \PanelTextControl{\x}{\label}{\num}
+  }
+  \ifdefined\PanelBare\else
+    % A bracket identifies the repeated input/gain pairs without crossing them.
+    \draw[panel leader] (-8,30)--(-16,30)--(-16,311)--(-8,311);
+    \draw[panel leader] (-16,164)--(-27,164);
+    \node[panel badge] at (-38,164) {1};
+    \draw[panel leader] (-27,346)--(6,346);
+    \node[panel badge] at (-38,346) {2};
+    \node[panel note,anchor=west] at (0,-23) {PANEL REFERENCE};
+    \node[panel note,anchor=east] at (720,-23) {48 HP / FOUR INPUTS};
+    \draw[panel fine] (-48,445)--(720,445);
+    \PanelKey{-27}{473}{1}{Inputs + gain}{Four independent signal paths}
+    \PanelKey{-27}{516}{2}{Run}{Pause or resume capture}
+    \PanelKey{-27}{559}{3}{Window}{Choose the analysis window}
+    \PanelKey{-27}{602}{4}{Length}{Set the FFT frame size}
+    \PanelKey{237}{473}{5}{Hop}{Set the analysis interval}
+    \PanelKey{237}{516}{6}{Freq Scale}{Choose the frequency mapping}
+    \PanelKey{237}{559}{7}{Y Scale}{Choose the amplitude scale}
+    \PanelKey{237}{602}{8}{Average}{Smooth changes over time}
+    \PanelKey{500}{473}{9}{Smooth}{Combine neighboring frequencies}
+    \PanelKey{500}{516}{10}{LO Freq}{Set the visible lower bound}
+    \PanelKey{500}{559}{11}{HI Freq}{Set the visible upper bound}
+    \PanelKey{500}{602}{12}{Slope}{Apply display weighting}
+  \fi
+\end{tikzpicture}

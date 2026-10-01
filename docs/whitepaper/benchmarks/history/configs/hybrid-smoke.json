@@ -1,0 +1,770 @@
+[
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 1,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 16384,
+    "hop": 1024,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "callback",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 65536,
+    "pass_name": "throughput",
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "startup",
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "smooth": 1,
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "state": "live",
+    "smooth": 1,
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "count": 4,
+    "alignment": "staggered",
+    "load": 8,
+    "cache_mib": 1,
+    "backend": "core-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 128,
+    "hop": 37,
+    "count": 4,
+    "alignment": "aligned",
+    "block": 1,
+    "backend": "core-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "pffft-scheduled-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "pffft-hybrid-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "pffft-analysis-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "legacy-batch-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "legacy-incremental-float"
+  },
+  {
+    "n": 2048,
+    "hop": 257,
+    "rate": 96000,
+    "block": 256,
+    "smooth": 1,
+    "backend": "core-float"
+  }
+]

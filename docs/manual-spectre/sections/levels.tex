@@ -1,0 +1,53 @@
+\section{Reading Levels}\label{sec:levels}
+
+Color shows the analyzed level after input gain, windowing, smoothing,
+and Slope. Changing the palette or its endpoints changes the picture,
+not the stored magnitudes. The numeric readouts remain available even when
+the colors reach their limits.
+
+\paragraph{Decibels mapping}
+Linear magnitudes are interpolated before conversion to dB. For magnitude
+$m$, the unweighted level is
+\[
+  d_{\mathrm{raw}} = 20\log_{10}\!\left(\frac{|m|}{1024}\right).
+\]
+After Slope weighting, the resulting level $d$ sets the palette position:
+\[
+  p = \frac{d-\mathrm{Floor}}{\mathrm{Ceil}-\mathrm{Floor}},
+  \qquad \text{limited to }0\text{--}1.
+\]
+Only the color is limited to this range; numeric readouts are not clamped.
+
+The analyzer divides input voltage by $5\,\mathrm{V}$, applies input gain,
+and compensates for window coherent gain. An isolated, bin-centered
+$5\,\mathrm{V}$ peak sinusoid at unity gain, with AC coupling off, smoothing
+off, and zero Slope reads approximately $0\,\mathrm{dB}$. This is a spectral
+amplitude reference, not dBFS or broadband RMS. The unchanged DC and Nyquist
+conventions give about $+6.02\,\mathrm{dB}$ for a $5\,\mathrm{V}$ constant
+or alternating signal, respectively; no endpoint factors are added.
+
+Linear mode preserves the old slope-weighted magnitude divided by
+1024 and its original image-row weighting. It maps amplitude $a$ to
+$(a-\mathrm{Floor})/(\mathrm{Ceil}-\mathrm{Floor})$, limited to 0--1,
+using its own amplitude endpoints (displayed as percentages). The default
+0--100\% range reproduces the previous static linear mapping.
+
+\manualsubheading{Hover Readouts}
+
+The crosshair and readouts appear only inside the plot rectangle. Moving
+onto the surrounding labels or control strip hides them.
+
+Hover over the plot for a crosshair, frequency, musical note, tuning offset,
+and levels. In Decibels mode, \textbf{Raw} measures the stored bin below the
+cursor frequency, before Slope. \textbf{Color} measures the image row's
+interpolated magnitude with Slope at that row's physical frequency, before
+texture filtering on screen. Raw and Color can differ, particularly between
+bins or with nonzero Slope. Silence reads $-\infty\,\mathrm{dB}$ and invalid
+data reads \texttt{--}. Positive infinity uses the top color; invalid data
+uses the bottom color. The legend never clamps these readouts.
+
+Linear retains its historical unweighted-bin readout,
+$20\log_{10}(|m|)-60$. The exact Decibels reference is approximately
+$0.206\,\mathrm{dB}$ lower. Unlike Fourier's cursor-position amplitude,
+Spectre measures recorded spectral data. There is no time readout; use the
+sweep duration in the overview as a guide.

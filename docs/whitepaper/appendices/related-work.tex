@@ -1,0 +1,150 @@
+\section{Extended Related Work}
+\label{app:related-work}
+This appendix preserves the detailed comparisons supporting the positioning
+in Section~\ref{sec:related}.
+
+Cooley and Tukey's factorization is the mathematical foundation of the complex
+transform used here~\cite{cooley1965}. Real-input symmetry and real FFT
+algorithms have a substantial independent literature, including Sorensen
+et al.~\cite{sorensen1987}. Short-time Fourier analysis and synthesis provide
+the frame-based interpretation~\cite{allen1977}; window selection and its
+spectral consequences are treated systematically by Harris~\cite{harris1978}.
+The packing and windowing used in the plugin are applications of this established
+body of work.
+
+Time-distributed FFT computation also predates this implementation. Lo and Lee
+construct split-radix butterfly work as data become available during
+acquisition~\cite{lo1998,lo1999}. Their moving FFT additionally combines
+real-time scheduling with recursive reuse across shifted
+frames~\cite{lomoving1999}. These methods are closer to acquisition-aware
+computation than the present implementation, which selects a complete
+window before processing it. The successor retains that window in a larger
+ring while packing it incrementally.
+
+Convolution research directly addresses the distinction between aggregate
+cost and processing bursts. Bor\ss{} distributes long-partition work across
+processing cycles, allowing less spectral-product work in cycles containing
+transforms, and staggers four filter schedules to smooth their combined
+load~\cite{borss2009}. This provides an earlier plugin-level precedent for
+load distribution, including the importance of coincident processing bursts.
+Hurchalla distributes FFT processor and memory load across incoming input
+blocks in one thread for low-latency convolution~\cite{hurchalla2010}.
+That input--output latency objective differs from our selected window's
+newest-sample-to-publication delay.
+
+Battenberg and Avi\v{z}ienis compare cooperative and preemptive implementations
+of partitioned convolution~\cite{battenberg2011}. They use
+decimation-in-frequency decomposition to distribute forward transforms,
+spectral multiplication, and inverse transforms across callbacks. Thus,
+scheduling operations beyond the FFT itself also has direct precedent.
+Their preemptive implementation performs best in their evaluated scenarios;
+the cooperative implementation fits their host-plugin execution model but
+requires more implementation effort. This motivates a worker-based comparison
+without establishing a performance ranking for this analyzer.
+The present study specifies a windowed spectral-analysis sequence, an exact-hop
+quota, retained-input capacity, cancellation, and output ownership; it does
+not address the long-filter partitioning problem solved by these convolution
+systems.
+
+Wefers places these techniques in a broader treatment of real-time partitioned
+convolution, including manual preemption of processing chains and FFT
+subdivision~\cite{wefers2015}. This motivates evaluating the granularity of
+resumable work rather than assuming butterfly-level suspension is optimal.
+
+Liu, Yan, and Zou further study time-distributed FFT/IFFT algorithms for online control on
+general-purpose processors~\cite{liu2017}. The existence of these approaches
+rules out a broad novelty claim for distributing transform work or a processing
+chain in time.
+
+Pr\r{u}\v{s}a and Holighaus provide an application-level comparison in their
+real-time spectrogram visualizer using reassigned non-uniform filter
+banks~\cite{prusa2016}. Their Section~4.2 places incoming audio in a lock-free
+circular buffer and performs analysis on a separate thread polling at 60\,Hz.
+They distinguish overlap, computation, and repaint delay, and identify polling
+as a source of jitter. This is a concrete alternative execution model for
+spectral visualization. Its filter-bank representation differs from our
+fixed-window FFT; the relevant comparison here is the placement of analysis
+work and the path from captured samples to visible output.
+
+A separate family of methods reuses work between overlapping windows.
+The sliding DFT updates spectral bins recursively as samples enter and leave a
+window~\cite{jacobsen2003}. Lyons and Howard present efficient, guaranteed-stable
+sliding DFT networks, including a variant with a freely selectable analysis
+frequency~\cite{lyons2021}. Recursive analysis therefore includes designs that
+explicitly address stability; recursion alone is not grounds to reject it.
+Tree-based sliding-window transforms
+reuse intermediate calculations~\cite{richardson2019}. The plugin's resumable FFT
+does not reuse work across frames: each new frame begins a fresh transform.
+
+Garrido's feedforward STFT reuses radix-2 decimation-in-time butterflies across
+successive one-sample window shifts~\cite{garrido2016}. Its feedforward graph
+avoids the feedback accumulation of error in the iterative formulation it
+compares, while retaining intermediate results in buffers. This is distinct
+from claiming zero numerical error. The paper also exploits real-input symmetry.
+Its basic formulation uses a rectangular window and a one-sample hop; matching
+our window and output cadence requires additional consideration. Neither its
+hardware comparisons nor its small MATLAB timing example establish a performance
+ranking for this plugin.
+
+Park and Ko's hopping DFT updates a spectrum from the spectrum one hop earlier,
+without computing every intervening sample's spectrum~\cite{park2014}.
+This makes overlap reuse relevant to multi-sample hops as well as sample-by-sample
+analysis. It changes the arithmetic across frames, whereas our quota changes
+the placement of work within a frame. Lower aggregate work alone would not
+establish a smaller processing burst.
+
+Windowing must also be matched in a comparison. Rafii derives frequency-domain
+kernels for windowed sliding transforms~\cite{rafii2018}. The Hann and Blackman
+examples have three- and five-point kernels, respectively; sparsifying more
+general kernels can introduce approximation. Efficient windowing therefore
+need not rule out overlap reuse, but its cost and accuracy depend on the window.
+These kernels do not by themselves establish the numerical stability of the
+underlying recurrence. Selecting among these methods requires matching bin
+count, hop, window convention, normalization, and numerical behavior. Our
+experiments do not measure that tradeoff against sliding or hopping methods.
+
+Eleftheriadis, Garrido, and Karakonstantis combine partial window overlap with
+frequency-domain Hann windowing~\cite{eleftheriadis2023}. Their frequency
+decomposition updates a prior spectrum using corrections from entering and
+leaving sample blocks. This connects multi-sample hops and efficient windowing
+in one design. The reported fixed-point ASIC results motivate a software
+comparison, but do not establish CPU savings or long-run floating-point
+accuracy. Scheduling the correction work within our hop budget would be a
+further adaptation, not a result demonstrated by that paper.
+
+Within a single transform, B\'ecoulet and Verguet give a depth-first iterative
+conjugate-pair FFT~\cite{becoulet2021}. Their traversal uses integer indexing
+without recursion or precomputed index tables, with constant auxiliary space
+for traversal and input reordering; this is not a constant-space claim for all
+transform storage. The approach offers another way to organize locality and
+traversal state. It does not itself provide our resumable scheduling contract:
+bounded suspension units and their cost would need to be established separately.
+
+Optimized libraries such as FFTW use planning, generated kernels, and
+hardware-sensitive decompositions to improve actual execution
+time~\cite{frigo2005}. The present evaluation separates two questions. Matched
+first-party batch/resumable controls hold arithmetic substantially fixed to
+study work placement. Native batch and hybrid paths measure the practical
+cost of a different transform kernel, including the layout handling and output
+processing required at each declared workload boundary. FFTW uses fresh,
+single-threaded \code{FFTW\_MEASURE} plans without imported wisdom; plan
+identities are retained because planning is part of the experimental condition.
+
+PFFFT is a particularly relevant practical alternative: Rack exposes its real
+transform through \code{dsp::RealFFT}~\cite{pffft}. The wrapper offers ordered
+and unordered output, so a spectral-analysis comparison must include the work
+needed to obtain the required bins. The campaign records the linked Rack/PFFFT
+source and binary identities and vector path; different forks and builds are
+not assumed interchangeable. A further control retains an opaque PFFFT call
+inside incrementally scheduled preparation and output work, testing how much
+burst reduction requires suspending the transform itself. Apple Accelerate's
+vDSP provides a platform-specific baseline for the Apple Silicon
+host~\cite{vdsp}. Its reusable setup, packed real-transform layout, and scaling
+conventions are part of the native pipeline. FFTW, PFFFT, and vDSP are all
+measured in this study, with numerical audits and provenance retained.
+Their citations document the software interfaces, while all comparative
+timings in this report come from the accompanying experiment.
+Table~\ref{tab:position} summarizes the design distinctions without imposing
+a universal performance ranking.
+
+\input{tables/related-approaches.tex}

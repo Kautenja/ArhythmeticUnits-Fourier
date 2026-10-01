@@ -1,0 +1,22 @@
+\section{Why Schedule the Complete Pipeline?}
+\label{sec:legacy-motivation}
+The plugin's original real FFT suspends a conventional ordered butterfly
+traversal. With $B$ butterflies and a requested horizon $H$, it executes
+$q=\ceil{B/H}$ butterflies per sample call and completes after
+$L=\ceil{B/q}\le H$ calls. Because the original modules restart a transform as
+soon as the previous one completes, their steady-state frame interval is $L$,
+which need not equal $H$. For $N=4096$ and $H=2048$, $L=1878$: frames arrive
+about 9.1\% faster than requested, and temporal smoothing calibrated to the
+nominal hop has a time constant about 8\% shorter than intended.
+Appendix~\ref{sec:scheduling} gives the completion proof, a cadence table, a
+timestamp diagram, and the smoothing derivation.
+
+Budgeting only butterflies also leaves substantial work at the frame
+boundaries. The original path packs and permutes a frame in bulk, reconstructs
+every real-spectrum bin on the completing call, and processes magnitude and
+display arrays in separate passes, some of which allocate. For $H=\rho N$ with
+fixed $\rho>0$, the butterfly quota grows only as $O(\log N)$, but preparation
+and reconstruction still impose $O(N)$ boundary passes.
+Appendix~\ref{sec:cost} gives the cost model and ownership analysis. These two
+limitations motivate an exact frame clock and a work sequence that covers the
+complete analysis rather than only its FFT.

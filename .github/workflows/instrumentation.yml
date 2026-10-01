@@ -1,0 +1,97 @@
+name: Coverage and sanitizers
+
+# Expensive diagnostic builds are opt-in, one mode and suite per invocation.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Instrumentation (TSan requires the mailbox suite)
+        type: choice
+        options: [asan-ubsan, coverage, tsan]
+        default: asan-ubsan
+      suite:
+        description: Suite (mailbox requires TSan)
+        type: choice
+        options: [dsp, rack, mailbox]
+        default: dsp
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.suite }}
+  cancel-in-progress: true
+
+jobs:
+  instrumented:
+    name: ${{ inputs.mode }} (${{ inputs.suite }})
+    runs-on: ${{ inputs.mode == 'tsan' && 'macos-14' || 'ubuntu-24.04' }}
+    timeout-minutes: 15
+    env:
+      CXX: ${{ inputs.mode == 'tsan' && 'clang++' || 'clang++-18' }}
+      LLVM_COV: llvm-cov-18
+      LLVM_PROFDATA: llvm-profdata-18
+      ASAN_SYMBOLIZER_PATH: /usr/bin/llvm-symbolizer-18
+      RACK_SDK_VERSION: '2.6.3'
+      RACK_SDK_SHA256: 9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d
+    steps:
+      - name: Validate selection
+        env:
+          MODE: ${{ inputs.mode }}
+          SUITE: ${{ inputs.suite }}
+        run: |
+          case "$MODE:$SUITE" in
+            coverage:dsp|coverage:rack|asan-ubsan:dsp|asan-ubsan:rack|tsan:mailbox) ;;
+            *) echo 'Select coverage/ASan with DSP/Rack, or TSan with mailbox.'; exit 2 ;;
+          esac
+
+      - name: Check out source
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install instrumentation tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends clang-18 llvm-18 make
+
+      - name: Install Rack dependencies
+        if: inputs.suite == 'rack'
+        run: |
+          sudo apt-get install --yes --no-install-recommends \
+            make jq curl unzip libglu1-mesa-dev libx11-dev \
+            libasound2t64 libjack-jackd2-0 libpulse0
+
+      - name: Download and verify Rack SDK
+        if: inputs.suite == 'rack'
+        run: |
+          sdk_archive="$RUNNER_TEMP/Rack-SDK.zip"
+          curl --fail --location --retry 3 \
+            "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-lin-x64.zip" \
+            --output "$sdk_archive"
+          printf '%s  %s\n' "$RACK_SDK_SHA256" "$sdk_archive" | sha256sum --check
+          unzip -q "$sdk_archive" -d "$RUNNER_TEMP"
+          echo "RACK_DIR=$RUNNER_TEMP/Rack-SDK" >> "$GITHUB_ENV"
+
+      - name: Run instrumented suites
+        run: python3 scripts/check-instrumented.py '${{ inputs.mode }}' '${{ inputs.suite }}'
+
+      - name: Add coverage summary
+        if: always() && inputs.mode == 'coverage'
+        run: |
+          test -f '.build/reports/coverage/${{ inputs.suite }}/summary.txt' || exit 0
+          echo '### ${{ inputs.suite }} coverage' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat '.build/reports/coverage/${{ inputs.suite }}/summary.txt' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save reports and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.mode }}-${{ inputs.suite }}
+          path: .build/reports/${{ inputs.mode }}/${{ inputs.suite }}/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 3

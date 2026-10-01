@@ -1,0 +1,39 @@
+\section{Hearing Harmonics}\label{sec:harmonics}
+
+A spectrum connects a sound's timbre to its partials. Try this with an
+oscillator that offers sine, triangle, saw, and square outputs at one pitch.
+
+\paragraph{Starting point}
+Load \textbf{Harmonics}. Set all input gains to $0\,\mathrm{dB}$, Length
+4096, Hop $30\,\mathrm{ms}$, and Y Scale to Log 60dB. Keep Average and
+Smooth off, Slope at zero, and the view at $0$--$5\,\mathrm{kHz}$.
+Tune the oscillator near $220\,\mathrm{Hz}$; exact tuning is not required.
+
+\begin{enumerate}
+  \item Patch sine to red and saw to green. Look for a shared lowest peak,
+  the fundamental. The saw should have peaks near integer multiples of it:
+  $440$, $660$, $880\,\mathrm{Hz}$, and so on.
+  \item Patch triangle to blue and a square with 50\% pulse width to yellow.
+  Compare peaks near $3f_0$ and $5f_0$. An ideal triangle's upper harmonics
+  fall faster than a square's; both lack even harmonics.
+  \item Change the pulse width. Even harmonics can now appear, and some
+  harmonics weaken or disappear. Listen while watching the pattern change.
+  \item Increase Smooth, then return it to None. The broad tonal shape is
+  easier to compare when smoothed, but individual partials merge.
+\end{enumerate}
+
+\begin{figure}[!htp]
+\centering
+\input{figures/harmonics.tex}
+\caption{Ideal harmonic amplitudes relative to each waveform's fundamental.
+Stems indicate discrete partials, not the broadened peaks of a finite FFT.
+Real oscillators may intentionally depart from these shapes.}
+\end{figure}
+
+\paragraph{What to learn}
+Peak spacing reveals harmonic structure; relative heights help explain
+brightness. Equal peak voltage at the oscillator outputs does not guarantee
+equal fundamental height or perceived loudness. To compare only spectral
+shape, temporarily adjust analyzer input gains to align the fundamentals.
+Return to equal gains before making a level comparison. A missing peak may
+also lie below the selected Y Scale or be hidden beneath another trace.

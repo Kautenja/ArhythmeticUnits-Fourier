@@ -1,0 +1,274 @@
+{
+  "schema": 1,
+  "kind": "retained-measurements-regression-only",
+  "records": [
+    {
+      "label": "slow-hybrid",
+      "config": {
+        "alignment": "aligned",
+        "backend": "pffft-hybrid-float",
+        "block": 64,
+        "cache_mib": 0,
+        "callback_offset": 0,
+        "callbacks": 32768,
+        "count": 1,
+        "hop": 1024,
+        "load": 0,
+        "n": 16384,
+        "pass_name": "throughput",
+        "rate": 48000,
+        "smooth": 0,
+        "state": "steady",
+        "voices": 1,
+        "warm_hops": 64
+      },
+      "metadata": "docs/whitepaper/data/comparison-012/campaigns/confirm-01-primary.metadata.json.gz",
+      "metadata_sha256": "bb051ffe738b0d516d8fff5a9e5a881af1e61daa689c5bef4d5010f70eef6d9b",
+      "original_raw": "workload-0303-repeat-00.csv",
+      "raw_sha256": "b6d3941e69acdfd56e4195aef7edf54d9d82830798e2aa6bda4849c12bc906c0",
+      "summary": {
+        "groups": {
+          "throughput": {
+            "mean_ns": 818567083.0,
+            "ns_per_engine_sample": 390.32320165634155,
+            "observations": 1,
+            "observed_max_ns": 818567083.0,
+            "p50_ns": 818567083.0,
+            "p95_ns": 818567083.0,
+            "p99_ns": 818567083.0,
+            "simulated_compute_utilization": 0.018735513679504396,
+            "total_ns": 818567083.0
+          },
+          "timer": {
+            "mean_ns": 15.4228515625,
+            "observations": 1024,
+            "observed_max_ns": 42.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "total_ns": 15793.0
+          }
+        },
+        "publication_audit_rows": 2048
+      },
+      "bundle_member": "campaigns/000/workload-0303-repeat-00.csv",
+      "bundle": "bundles/primary.tar.gz"
+    },
+    {
+      "label": "core",
+      "config": {
+        "alignment": "aligned",
+        "backend": "core-float",
+        "block": 64,
+        "cache_mib": 0,
+        "callback_offset": 0,
+        "callbacks": 32768,
+        "count": 1,
+        "hop": 1024,
+        "load": 0,
+        "n": 4096,
+        "pass_name": "callback",
+        "rate": 48000,
+        "smooth": 0,
+        "state": "steady",
+        "voices": 1,
+        "warm_hops": 64
+      },
+      "metadata": "docs/whitepaper/data/comparison-012/campaigns/confirm-02-primary.metadata.json.gz",
+      "metadata_sha256": "ac1f7073e4dbfe6d47889f3dac9c7133132b87ba75bd2139810b3fcf9d25b9c5",
+      "original_raw": "workload-0144-repeat-00.csv",
+      "raw_sha256": "49b04e51db7d7f0d92ba6be9510458595475d422d62b055fedfe2bb765ee204a",
+      "summary": {
+        "groups": {
+          "callback": {
+            "budget_ns": 1333333.3333333333,
+            "mean_ns": 2249.954559326172,
+            "ns_per_engine_sample": 35.155539989471436,
+            "observations": 32768,
+            "observed_compute_budget_exceedances": 0,
+            "observed_max_ns": 9000.0,
+            "p50_ns": 2125.0,
+            "p95_ns": 3375.0,
+            "p99_ns": 3417.0,
+            "simulated_compute_utilization": 0.001687465919494629,
+            "total_ns": 73726511.0
+          },
+          "timer": {
+            "mean_ns": 15.7841796875,
+            "observations": 1024,
+            "observed_max_ns": 83.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "total_ns": 16163.0
+          }
+        },
+        "publication_audit_rows": 2048
+      },
+      "bundle_member": "campaigns/001/workload-0144-repeat-00.csv",
+      "bundle": "bundles/primary.tar.gz"
+    },
+    {
+      "label": "vdsp",
+      "config": {
+        "alignment": "aligned",
+        "backend": "vdsp-analysis-float",
+        "block": 64,
+        "cache_mib": 0,
+        "callback_offset": 0,
+        "callbacks": 32768,
+        "count": 1,
+        "hop": 1024,
+        "load": 0,
+        "n": 4096,
+        "pass_name": "callback",
+        "rate": 48000,
+        "smooth": 0,
+        "state": "steady",
+        "voices": 1,
+        "warm_hops": 64
+      },
+      "metadata": "docs/whitepaper/data/comparison-012/campaigns/confirm-02-primary.metadata.json.gz",
+      "metadata_sha256": "ac1f7073e4dbfe6d47889f3dac9c7133132b87ba75bd2139810b3fcf9d25b9c5",
+      "original_raw": "workload-0149-repeat-00.csv",
+      "raw_sha256": "e49b6ccb2dc34a146f647c39fbb8fea2b789ac213b1c9b227f2706b0ebc76690",
+      "summary": {
+        "groups": {
+          "callback": {
+            "budget_ns": 1333333.3333333333,
+            "mean_ns": 911.6304931640625,
+            "ns_per_engine_sample": 14.244226455688477,
+            "observations": 32768,
+            "observed_compute_budget_exceedances": 0,
+            "observed_max_ns": 11458.0,
+            "p50_ns": 334.0,
+            "p95_ns": 9375.0,
+            "p99_ns": 9500.0,
+            "simulated_compute_utilization": 0.000683722869873047,
+            "total_ns": 29872308.0
+          },
+          "timer": {
+            "mean_ns": 15.62890625,
+            "observations": 1024,
+            "observed_max_ns": 167.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "total_ns": 16004.0
+          }
+        },
+        "publication_audit_rows": 2048
+      },
+      "bundle_member": "campaigns/001/workload-0149-repeat-00.csv",
+      "bundle": "bundles/primary.tar.gz"
+    },
+    {
+      "label": "inverse",
+      "config": {
+        "alignment": "aligned",
+        "backend": "inverse-stream-incremental-float",
+        "block": 64,
+        "cache_mib": 0,
+        "callback_offset": 0,
+        "callbacks": 32768,
+        "count": 1,
+        "hop": 1024,
+        "load": 0,
+        "n": 4096,
+        "pass_name": "callback",
+        "rate": 48000,
+        "smooth": 0,
+        "state": "steady",
+        "voices": 1,
+        "warm_hops": 64
+      },
+      "metadata": "docs/whitepaper/data/comparison-012/campaigns/confirm-02-primary.metadata.json.gz",
+      "metadata_sha256": "ac1f7073e4dbfe6d47889f3dac9c7133132b87ba75bd2139810b3fcf9d25b9c5",
+      "original_raw": "workload-0216-repeat-00.csv",
+      "raw_sha256": "567c623ffc7893908a7527a497b5d5513cf36c27955bab4d810512f0241e937e",
+      "summary": {
+        "groups": {
+          "callback": {
+            "budget_ns": 1333333.3333333333,
+            "mean_ns": 4646.314178466797,
+            "ns_per_engine_sample": 72.5986590385437,
+            "observations": 32768,
+            "observed_compute_budget_exceedances": 0,
+            "observed_max_ns": 26292.0,
+            "p50_ns": 4792.0,
+            "p95_ns": 9958.0,
+            "p99_ns": 10208.0,
+            "simulated_compute_utilization": 0.003484735633850098,
+            "total_ns": 152250423.0
+          },
+          "timer": {
+            "mean_ns": 15.8701171875,
+            "observations": 1024,
+            "observed_max_ns": 42.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "total_ns": 16251.0
+          }
+        },
+        "publication_audit_rows": 2048
+      },
+      "bundle_member": "campaigns/001/workload-0216-repeat-00.csv",
+      "bundle": "bundles/primary.tar.gz"
+    },
+    {
+      "label": "inverse-misses",
+      "config": {
+        "alignment": "aligned",
+        "backend": "inverse-stream-batch-float",
+        "block": 1,
+        "cache_mib": 0,
+        "callback_offset": 0,
+        "callbacks": 65536,
+        "count": 1,
+        "hop": 1024,
+        "load": 0,
+        "n": 2048,
+        "pass_name": "callback",
+        "rate": 48000,
+        "smooth": 0,
+        "state": "steady",
+        "voices": 1,
+        "warm_hops": 64
+      },
+      "metadata": "docs/whitepaper/data/comparison-012/campaigns/confirm-02-single-sample.metadata.json.gz",
+      "metadata_sha256": "920741521caef4dd46f68b9d0ee9792ab6660987ca33d6d9a2b8906a2eb04cb2",
+      "original_raw": "workload-0008-repeat-00.csv",
+      "raw_sha256": "6984ed5d7cffbce5c56c75f25901ee559b5445adec104779457508554231c8df",
+      "summary": {
+        "groups": {
+          "callback": {
+            "budget_ns": 20833.333333333332,
+            "mean_ns": 54.880889892578125,
+            "ns_per_engine_sample": 54.880889892578125,
+            "observations": 65536,
+            "observed_compute_budget_exceedances": 64,
+            "observed_max_ns": 42542.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "simulated_compute_utilization": 0.00263428271484375,
+            "total_ns": 3596674.0
+          },
+          "timer": {
+            "mean_ns": 15.9931640625,
+            "observations": 1024,
+            "observed_max_ns": 42.0,
+            "p50_ns": 0.0,
+            "p95_ns": 42.0,
+            "p99_ns": 42.0,
+            "total_ns": 16377.0
+          }
+        },
+        "publication_audit_rows": 64
+      },
+      "bundle": "bundles/single-sample.tar.gz",
+      "bundle_member": "campaigns/001/workload-0008-repeat-00.csv"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+\section{Factory Presets}\label{sec:presets}
+
+Load these examples from Rack's module preset menu. All start running,
+with $0\,\mathrm{dB}$ input gain and Filled Display off. Frequency bounds
+are limited by the current sample rate.
+
+\begin{description}[style=nextline, leftmargin=0pt, labelwidth=0pt, labelsep=0pt]
+  \item[Mastering] Broad tonal balance: Flattop, Length 4096, Hop
+  $30\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale, $0$--$20\,\mathrm{kHz}$,
+  Average $300\,\mathrm{ms}$, Smooth $1/12$ octave, Slope
+  $+4.5\,\mathrm{dB/oct}$. AC coupling and Bezier curves are on.
+  \item[Harmonics] Individual harmonics: Hann, Length 4096, Hop
+  $20\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$5\,\mathrm{kHz}$.
+  Average and Smooth are off; Slope is zero. AC coupling is on and Bezier
+  curves are off.
+  \item[BassDetail] Low-frequency detail: Hann, Length 16384, Hop
+  $30\,\mathrm{ms}$, Linear Freq Scale, Log 60dB Y Scale, $0$--$500\,\mathrm{Hz}$,
+  Average $100\,\mathrm{ms}$. Smooth is off and Slope is zero. AC coupling
+  is on and Bezier curves are off.
+  \item[Transients] Shorter frames and frequent updates: Hann, Length 1024,
+  Hop $5\,\mathrm{ms}$, Logarithmic Freq Scale, Log 60dB Y Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling is on and Bezier curves are off.
+  \item[PluginDevelopment] Wider amplitude range: Flattop, Length 8192,
+  Hop $30\,\mathrm{ms}$, Linear Freq Scale, Log 120dB Y Scale,
+  $0$--$20\,\mathrm{kHz}$. Average and Smooth are off; Slope is zero.
+  AC coupling and Bezier curves are off.
+\end{description}

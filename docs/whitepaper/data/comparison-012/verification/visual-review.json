@@ -1,0 +1,63 @@
+{
+  "findings": [
+    "Forward, inverse-job and chain plots retain distinct time-origin labels and workload metadata.",
+    "CDFs show each process; session-range plots and units remain explicit.",
+    "Some long storage/accuracy labels crowd the heading, and some tight numerical axes use additive offsets; revise these layouts and show suitable absolute scales before publication.",
+    "Some cost-length panels contain only one N; they do not establish length scaling.",
+    "Single-sample p99 can hide sparse transform bursts; some annotations crowd low-valued points. Inspect maxima/counts and redesign the final selected figure.",
+    "No manuscript/PDF review or claim of final publication layout."
+  ],
+  "images": [
+    {
+      "file": "response-015848996f04bad3.png",
+      "group": "transitions",
+      "sha256": "94f0dc299f647d557cc0301f762c735153419d7b9f1f24e87e8ec49776a0b88f"
+    },
+    {
+      "file": "tail-age-19a83a84805f888b.png",
+      "group": "short-hop",
+      "sha256": "4acdaeffa3cbdc96f5b5d41cca20fe6dc794bf5e816cf3d781657f6f1fddd482"
+    },
+    {
+      "file": "storage-accuracy-0832e568a29a548d.png",
+      "group": "short-hop",
+      "sha256": "a9e4ef541c92f662d99fdd42321e54a900ce54ceb4a3783af288730912511a39"
+    },
+    {
+      "file": "tail-age-066a12539254dde4.png",
+      "group": "primary",
+      "sha256": "79fb3f376d6ab6b6635bf459208b28434619841e9e3391338c7f7f8b30d8dafa"
+    },
+    {
+      "file": "tail-age-06e19aac59467f03.png",
+      "group": "primary",
+      "sha256": "cc3d65ac99035319ea51e86838cd91f5d463570f66c55e6102035bacf5269ea0"
+    },
+    {
+      "file": "tail-age-0e20633e3a28cb55.png",
+      "group": "primary",
+      "sha256": "31bd7ac13acc822ba15ed025053e880fc074f7604609ae139aafb9663415a27a"
+    },
+    {
+      "file": "cost-tail-066a12539254dde4.png",
+      "group": "primary",
+      "sha256": "8ea4f0bd17fa0b71dd38bff081bd4b8c2d8d12a72d229acd4d767e3a44831c2a"
+    },
+    {
+      "file": "cost-length-00bf1bf84d4bac9b.png",
+      "group": "extensions",
+      "sha256": "8aad0c08be420a7da07befede9790066fa7cb38ecc01e741dc516775e858d6af"
+    },
+    {
+      "file": "storage-accuracy-05d8459297ba0619.png",
+      "group": "extensions",
+      "sha256": "639c7114f25d935b4464ce9581337b04a1b96442bf0d3ffdbb8754d28b5ddad1"
+    },
+    {
+      "file": "cost-tail-cad611b151c55acf.png",
+      "group": "single-sample",
+      "sha256": "e6cc252424175245243af75b6b9c8ee1fb6f2d7a9ccd06820b92abc42c91c005"
+    }
+  ],
+  "status": "diagnostic plots inspected; manuscript layout deferred"
+}

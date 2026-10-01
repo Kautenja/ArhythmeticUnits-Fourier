@@ -1,0 +1,25 @@
+\section{Reading The Display}\label{sec:display}
+
+Spectre writes new spectra from left to right. The scan line shows where
+history is being replaced. The picture stays in place; it does not scroll.
+The illustration below shows a later sweep, after every column has been
+filled at least once.
+
+\begin{figure}[!htp]
+\centering
+\resizebox{.88\textwidth}{!}{\input{figures/history.tex}}
+\caption{A circular history on a fixed panel. The two shaded regions show
+\emph{when} columns were written, not their signal level. Only a few columns
+are drawn; Spectre retains 512 spectra.}
+\label{fig:history}
+\end{figure}
+
+\paragraph{Follow time around the wrap}
+Read from the oldest column to the right edge, continue from the left edge,
+and stop at the newest column. Columns on opposite sides of the scan line
+are almost one full history apart in time.
+
+\paragraph{First capture and pauses}
+Before the first full sweep, the area ahead is empty. Paused time is excluded.
+At 48 kHz a sweep takes about 10.92 seconds; see
+\hyperref[sec:time]{Time And Measurement Limits} for other sample rates.

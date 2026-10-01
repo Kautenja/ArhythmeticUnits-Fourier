@@ -1,0 +1,18 @@
+% Derived geometry at 48 kHz; common spans, default and maximum length.
+\begin{tikzpicture}[x=1cm,y=1cm,font=\small]
+  \node[anchor=west,font=\small\bfseries] at (0,3.4) {Length};
+  \node[anchor=west,font=\small\bfseries] at (2.6,3.4) {Audio in one frame};
+  \node[anchor=west,font=\small\bfseries] at (8.7,3.4) {Bins in a 47 Hz span};
+  \foreach \n/\count/\y/\duration/\spacing in {2048/2/2.4/42.7/23.4,16384/16/.5/341.3/2.93} {
+    \node[anchor=west,font=\small\bfseries,text=fourierAccent] at (0,\y) {\n};
+    \draw[panelRule!50] (2.6,\y)--(8,\y);
+    \fill[fourierAccent!20] (2.6,\y-.2) rectangle +(5.4*\count/16,.4);
+    \draw[fourierAccent] (2.6,\y-.2) rectangle +(5.4*\count/16,.4);
+    \node[anchor=west,font=\footnotesize] at (2.6,\y-.55) {\duration\ ms};
+    \draw[panelRule] (8.7,\y)--(13.6,\y);
+    \foreach \k in {0,...,\count} {
+      \draw[fourierAccent] (8.7+4.9*\k/\count,\y-.2)--(8.7+4.9*\k/\count,\y+.2);
+    }
+    \node[anchor=west,font=\footnotesize] at (8.7,\y-.55) {\spacing\ Hz apart};
+  }
+\end{tikzpicture}

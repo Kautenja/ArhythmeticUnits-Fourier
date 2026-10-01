@@ -1,0 +1,43 @@
+% A teaching overlay on the same panel source used by the control reference.
+% Age shading only: no captured data, live values, or reproduced palette.
+\begingroup
+\def\PanelBare{1}
+\def\PanelHistory{1}
+\newcommand{\PanelHistoryScreen}{%
+  \fill[spectreAccent!9] (115,35) rectangle (325,315);
+  \fill[panelMuted!8] (325,35) rectangle (495,315);
+  \draw[panel fine] (115,35) rectangle (495,315);
+  \draw[draw=panelMuted,line width=.7pt,-{Stealth[length=4pt]}]
+    (99,304)--(99,171);
+  \node[rotate=90,text=panelMuted,font=\sffamily\fontsize{11}{13}\selectfont]
+    at (87,238) {Frequency};
+  \foreach \x in {115,136,...,325} \draw[draw=spectreAccent!22,line width=.35pt] (\x,150)--(\x,305);
+  \foreach \x in {325,346,...,493} \draw[draw=panelMuted!25,line width=.35pt] (\x,150)--(\x,305);
+  \node[text=spectreAccent,font=\sffamily\bfseries\fontsize{16}{19}\selectfont,align=center]
+    at (218,88) {WRITTEN\\THIS SWEEP};
+  \node[text=panelMuted,font=\sffamily\bfseries\fontsize{16}{19}\selectfont,align=center]
+    at (412,88) {PREVIOUS\\SWEEP};
+  \draw[draw=spectreAccent,line width=1.2pt,fill=spectreAccent!24] (304,150) rectangle (325,305);
+  \draw[draw=panelMuted,dashed,line width=1.2pt] (325,150) rectangle (346,305);
+  \draw[draw=spectreAccent,line width=2pt] (325,35)--(325,315);
+  \draw[draw=spectreAccent,line width=1pt,-{Stealth[length=5pt]}] (325,28)--(365,28);
+  \node[panel badge] at (314,220) {1};
+  \node[panel badge,fill=panelMuted] at (336,262) {2};
+  \draw[panel leader] (325,15)--(325,-23);
+  \node[anchor=south,text=spectreAccent,font=\sffamily\bfseries\fontsize{14}{16}\selectfont]
+    at (325,-28) {SCAN LINE};
+  \draw[draw=panelMuted,line width=.8pt,-{Stealth[length=5pt]}]
+    (532,180)--(559,180)--(559,427)--(-25,427)--(-25,180)--(-7,180);
+  \node[fill=white,inner sep=6pt,text=panelMuted,font=\sffamily\fontsize{13}{15}\selectfont]
+    at (268,427) {At the right edge, scanning returns to the left};
+  \node[panel badge] at (17,469) {1};
+  \node[anchor=west,text=panelInk,font=\sffamily\bfseries\fontsize{14}{16}\selectfont]
+    at (34,465) {Newest completed column};
+  \node[anchor=west,panel note] at (34,482) {Immediately behind the scan line};
+  \node[panel badge,fill=panelMuted] at (295,469) {2};
+  \node[anchor=west,text=panelInk,font=\sffamily\bfseries\fontsize{14}{16}\selectfont]
+    at (312,465) {Oldest column};
+  \node[anchor=west,panel note] at (312,482) {Immediately ahead; replaced next};
+}
+\input{figures/panel-layout.tex}
+\endgroup

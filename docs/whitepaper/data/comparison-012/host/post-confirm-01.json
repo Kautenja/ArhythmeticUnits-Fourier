@@ -1,0 +1,67 @@
+{
+  "utc": "2026-09-30T04:56:49.464247+00:00",
+  "monotonic": 1857359.494426125,
+  "pid": 89483,
+  "cpu": {
+    "command": [
+      "sysctl",
+      "-n",
+      "machdep.cpu.brand_string",
+      "hw.memsize",
+      "hw.physicalcpu",
+      "hw.logicalcpu"
+    ],
+    "returncode": 0,
+    "output": "Apple M1 Pro\n17179869184\n10\n10\n",
+    "stderr": ""
+  },
+  "power": {
+    "command": [
+      "pmset",
+      "-g",
+      "batt"
+    ],
+    "returncode": 0,
+    "output": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=22544483)\t100%; charged; 0:00 remaining present: true\n",
+    "stderr": ""
+  },
+  "thermal": {
+    "command": [
+      "pmset",
+      "-g",
+      "therm"
+    ],
+    "returncode": 0,
+    "output": "Note: No thermal warning level has been recorded\nNote: No performance warning level has been recorded\nNote: No CPU power status has been recorded\n",
+    "stderr": ""
+  },
+  "settings": {
+    "command": [
+      "pmset",
+      "-g",
+      "custom"
+    ],
+    "returncode": 0,
+    "output": "Battery Power:\n Sleep On Power Button 1\n lowpowermode         0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         10\n womp                 0\n networkoversleep     0\n sleep                1\n lessbright           1\n tcpkeepalive         1\n disksleep            10\nAC Power:\n Sleep On Power Button 1\n lowpowermode         0\n standby              1\n ttyskeepawake        1\n hibernatemode        3\n powernap             1\n hibernatefile        /var/vm/sleepimage\n displaysleep         60\n womp                 1\n networkoversleep     0\n sleep                1\n tcpkeepalive         1\n disksleep            10\n",
+    "stderr": ""
+  },
+  "load": {
+    "command": [
+      "uptime"
+    ],
+    "returncode": 0,
+    "output": " 0:56  up 31 days, 14:04, 3 users, load averages: 1.74 1.61 1.66\n",
+    "stderr": ""
+  },
+  "processes": {
+    "command": [
+      "ps",
+      "-Ao",
+      "pid,pcpu,comm",
+      "-r"
+    ],
+    "returncode": 0,
+    "output": "  PID  %CPU COMM\n98117   1.2 /System/Library/PrivateFrameworks/MediaAnalysis.framework/Versions/A/mediaanalysisd\n24088   1.2 /System/Library/PrivateFrameworks/AMPDevices.framework/Versions/A/XPCServices/com.apple.amp.devicesui.xpc/Contents/MacOS/com.apple.amp.devicesui\n  403   0.5 /System/Library/PrivateFrameworks/SkyLight.framework/Resources/WindowServer\n  624   0.2 /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder\n  334   0.1 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd\n  396   0.1 /usr/sbin/notifyd\n50185   0.1 /Library/Application Support/Logitech.localized/LogiOptionsPlus/logioptionsplus_agent.app/Contents/MacOS/logioptionsplus_agent\n30894   0.1 /Applications/ChatGPT.app/Contents/MacOS/ChatGPT\n  330   0.1 /usr/libexec/logd\n95773   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95769   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95770   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95768   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95767   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95766   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95765   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95764   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95763   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd\n95762   0.0 /System/Library/Frameworks/Contacts.framework/Support/contactsd",
+    "stderr": ""
+  }
+}

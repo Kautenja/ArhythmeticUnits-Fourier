@@ -1,0 +1,60 @@
+// A trigger that detects a threshold value.
+//
+// Copyright 2025 Arhythmetic Units
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
+
+#ifndef ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_
+#define ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_
+
+/// @brief A collection of structures for detecting trigger events.
+namespace Fourier {
+
+/// @brief A trigger that detects a threshold value.
+/// @tparam T the data type for processing input signals
+template<typename T>
+struct ThresholdTrigger {
+ private:
+    /// the current value of the trigger's signal
+    bool state = false;
+
+ public:
+    /// @brief Return the state of the boolean trigger. The state will go true
+    /// after processing an input signal at or above \f$1.0\f$, and stays high
+    /// until the signal falls to or below \f$0.0\f$.
+    ///
+    inline const bool& isHigh() const { return state; }
+
+    /// @brief Reset the trigger to its default state
+    inline void reset() { state = false; }
+
+    /// @brief Process a step of the signal.
+    ///
+    /// @param signal a sample of an arbitrary signal
+    /// @returns true only on a low-to-high transition at or above \f$1.0\f$.
+    /// The signal must fall to or below \f$0.0\f$ before firing again.
+    /// Use isHigh() to read the sustained gate state.
+    ///
+    inline bool process(const T& signal) {
+        if (state)  // HIGH to LOW
+            state = signal > 0;
+        else if (signal >= 1)  // LOW to HIGH (trigger event, return true)
+            return state = true;
+        // no trigger event, return false
+        return false;
+    }
+};
+
+}  // namespace Fourier
+
+#endif  // ARHYTHMETIC_UNITS_FOURIER_DSP_THRESHOLD_TRIGGER_HPP_

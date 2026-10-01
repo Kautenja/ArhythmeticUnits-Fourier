@@ -1,0 +1,100 @@
+{
+  "groups": [
+    {
+      "group": "primary",
+      "workloads": 408,
+      "processes_per_session": 1224,
+      "hops": 2048,
+      "frames": 1024,
+      "callback_observations_range": [
+        8192,
+        131072
+      ],
+      "freeze_id": "6ec705e650201176df90d6f1a00b305c874d5cb7e635047d53f7d0f9f1decd2f",
+      "freeze_sha256": "95adb1413ed266c8b2c6b2cbe9c16147f48b7db86647e2f1b32848fcc76c69e1",
+      "pilot": "pilot-primary-02"
+    },
+    {
+      "group": "extensions",
+      "workloads": 719,
+      "processes_per_session": 2157,
+      "hops": 512,
+      "frames": 1024,
+      "callback_observations_range": [
+        2056,
+        8192
+      ],
+      "freeze_id": "23a72c8f7eec5cacf0800f05dc6b8c4a5ccbb84a66e11b69ecd71ed70701b6af",
+      "freeze_sha256": "6d2d5d0319120648371159670c0d2e5198ca2a5e8ea5febf75c4e7a3c8f391d3",
+      "pilot": "pilot-extensions"
+    },
+    {
+      "group": "short-hop",
+      "workloads": 110,
+      "processes_per_session": 330,
+      "hops": 4096,
+      "frames": 1024,
+      "callback_observations_range": [
+        2368,
+        2368
+      ],
+      "freeze_id": "c59ae5233285c19b34f09862e0cc6af7bda4f167cfe25ba53f9b04469ffd99bc",
+      "freeze_sha256": "17096f6d339688171740901d34c7a7a9d2e95001a14ccdfbc78880e93e0fc97a",
+      "pilot": "pilot-extensions"
+    },
+    {
+      "group": "single-sample",
+      "workloads": 46,
+      "processes_per_session": 138,
+      "hops": 64,
+      "frames": 1024,
+      "callback_observations_range": [
+        65536,
+        65536
+      ],
+      "freeze_id": "437897ff2ebcec760cc9cdd95679012da117b3af7b7d7bcaf2c668bf567fd7d6",
+      "freeze_sha256": "df2db114513623eaea2a01d5953e21931ed06f0ed5beaa7c9b00c35dbd9d1824",
+      "pilot": "pilot-extensions"
+    },
+    {
+      "group": "transitions",
+      "workloads": 16,
+      "processes_per_session": 48,
+      "hops": 64,
+      "frames": 1024,
+      "callback_observations_range": [
+        37,
+        1024
+      ],
+      "freeze_id": "207ce14dc078aec2aeacd5e34c8f736ef7b2788b26dfbeef3c83371fbab52dc4",
+      "freeze_sha256": "af32306c5dcede0704c9163c645d2fe4174178e127b7b2528f61b6fc419e3aa6",
+      "pilot": "pilot-primary-02"
+    }
+  ],
+  "unique_workloads": 1299,
+  "total_confirmation_processes": 11691,
+  "session_orders": [
+    [
+      "primary",
+      "extensions",
+      "short-hop",
+      "single-sample",
+      "transitions"
+    ],
+    [
+      "short-hop",
+      "transitions",
+      "primary",
+      "extensions",
+      "single-sample"
+    ],
+    [
+      "extensions",
+      "single-sample",
+      "transitions",
+      "short-hop",
+      "primary"
+    ]
+  ],
+  "preparation": "At least 180 seconds without builds, tests, reports or benchmarks before each measurement block; fresh power/thermal/load snapshots; same laptop/day is not independent hardware replication."
+}

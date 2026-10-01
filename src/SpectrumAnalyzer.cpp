@@ -14,11 +14,25 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include <algorithm>  // std::fill
+#include <algorithm>  // std::max
+#include <array>
+#include <vector>
 #include <string>     // std::string
 #include <limits>     // std::numeric_limits
 #include <iomanip>    // std::fixed, std::setprecision
 #include "./plugin.hpp"
+#include "rack_extensions/panel.hpp"
+#include "dsp/constants.hpp"
+#include "dsp/dc_blocker.hpp"
+#include "dsp/eurorack.hpp"
+#include "dsp/spectrum_analysis.hpp"
+#include "rack_extensions/display_mailbox.hpp"
+#include "rack_extensions/spectrum_coordinates.hpp"
+#include "dsp/math.hpp"
+#include "dsp/threshold_trigger.hpp"
+#include "dsp/trigger_divider.hpp"
+#include "dsp/western_scale.hpp"
+#include "dsp/window.hpp"
 
 /// @brief A spectrum analyzer module.
 struct SpectrumAnalyzer : Module {
@@ -26,7 +40,8 @@ struct SpectrumAnalyzer : Module {
     /// Architectural constants of the module.
     enum Architecture {
         /// The number of processing lanes on the module
-        NUM_CHANNELS = 4
+        NUM_CHANNELS = 4,
+        MAX_FFT = 16384
     };
 
     /// Controllable parameters on the module.
@@ -63,40 +78,62 @@ struct SpectrumAnalyzer : Module {
         NUM_LIGHTS
     };
 
+    /// Complete curve snapshot. All storage is sized once; count selects live bins.
+    struct DisplaySpectrum {
+        std::array<std::vector<Vec>, NUM_CHANNELS> points;
+        size_t count = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        // Benchmark-only metadata travels with the same owned snapshot.
+        uint64_t sequence = 0;
+        int64_t endpoint = -1, published_at = -1;
+#endif
+        DisplaySpectrum() {
+            for (auto& lane : points) lane.resize(MAX_FFT / 2 + 1);
+        }
+    };
+
+
  private:
     /// The sample rate of the module.
     float sample_rate = 0.f;
 
-    /// DC-blocking filter for AC-coupled mode.
-    Filter::DCBlocker<simd::float_4> dc_blocker;
+    /// Double feedback state avoids accumulated DC bias from float rounding
+    /// in short periodic inputs. Analysis and display storage remain float.
+    std::array<Fourier::DCBlocker<double>, NUM_CHANNELS> dc_blockers;
 
-    /// Delay line for tracking the input signal x[t].
-    Math::ContiguousCircularBuffer<simd::float_4> delay;
+    /// Engine-owned analysis and a frame's latched coordinate settings.
+    // Each bin maps four display coordinates on the engine thread. Give this
+    // output stage extra credit so cache rebuilds do not compress its bursts.
+    Fourier::SpectrumAnalysis<simd::float_4, 2> analysis{MAX_FFT, MAX_FFT};
+    Fourier::SpectrumCoordinates coordinates;
+    Fourier::CachedSpectrumCoordinates<MAX_FFT / 2 + 1> coordinate_cache;
 
-    /// Sampled function for windowing the FFT.
-    Math::Window::CachedWindow<float> window_function;
-
-    /// An on-the-fly FFT calculator for each input channel.
-    Math::OnTheFlyRFFT<simd::float_4> fft;
-
-    /// A copy of low-pass filtered DFT coefficients.
-    std::vector<std::complex<simd::float_4>> filtered_coeffs;
+    /// Producer writes scheduled bins; only the UI consumes complete frames.
+    Fourier::DisplayMailbox<DisplaySpectrum> display_spectrum;
 
     /// A clock divider for updating the lights at a lower sampling rate.
-    Trigger::Divider light_divider;
+    Fourier::TriggerDivider light_divider;
 
     /// A trigger for handling presses on the "run" button.
-    Trigger::Threshold<float> run_trigger;
+    Fourier::ThresholdTrigger<float> run_trigger;
 
     /// A flag determining whether the analyzer is running or not.
     bool is_running = true;
-
-    /// A flag determining whether the coefficients can be rendered.
-    bool is_ready_to_render = false;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    uint64_t benchmark_sequence = 0;
+    int64_t benchmark_now = 0, benchmark_endpoint = -1, benchmark_last_capture = -1;
+#endif
 
  public:
-    /// A buffer of rasterized coefficients with \f$(x, y) \in [0, 1)\f$.
-    std::vector<Vec> raster_coeffs[NUM_CHANNELS];
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+    /// @brief Benchmark replay only, after the engine barrier; never a UI read.
+    uint64_t benchmark_publications() const { return benchmark_sequence; }
+#endif
+    /// @brief UI-only: acquire the latest complete spectrum or retain the last one.
+    const DisplaySpectrum& consume_display_spectrum() {
+        display_spectrum.consume();
+        return display_spectrum.current();
+    }
 
     /// Whether to fill the plots.
     bool is_fill_enabled = false;
@@ -122,7 +159,7 @@ struct SpectrumAnalyzer : Module {
             "Enables or disables the analyzer. When disabled,\n"
             "the analyzer stops buffering and processing new audio.";
         // Setup the window function as a custom discrete enumeration.
-        configSwitch(PARAM_WINDOW_FUNCTION, 0, Math::Window::names().size() - 1, static_cast<size_t>(Math::Window::Function::Flattop), "Window", Math::Window::names());
+        configSwitch(PARAM_WINDOW_FUNCTION, 0, Fourier::Window::names().size() - 1, static_cast<size_t>(Fourier::Window::Function::Flattop), "Window", Fourier::Window::names());
         getParamQuantity(PARAM_WINDOW_FUNCTION)->description =
             "The window function to apply before the FFT. Windowing\n"
             "helps reduce spectral leakage in the frequency domain.";
@@ -139,7 +176,7 @@ struct SpectrumAnalyzer : Module {
             "The hop size for the time-domain segmentation (STFT.)\n"
             "The analyzer computes a new FFT along this period.";
         // Setup the discrete frequency scale selector.
-        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "X Scale", frequency_scale_names());
+        configSwitch(PARAM_FREQUENCY_SCALE, 0, frequency_scale_names().size() - 1, static_cast<size_t>(FrequencyScale::Logarithmic), "Freq Scale", frequency_scale_names());
         getParamQuantity(PARAM_FREQUENCY_SCALE)->description =
             "The frequency-axis scale on the display. The DFT spaces\n"
             "frequencies linearly but humans hear frequencies along\n"
@@ -192,9 +229,15 @@ struct SpectrumAnalyzer : Module {
     /// @brief Respond to the module being reset by the host environment.
     inline void onReset() final {
         Module::onReset();
-        // Reset momentary button trigger states.
+        // Resume analysis and publish an empty display snapshot.
         is_running = true;
-        is_ready_to_render = false;
+        display_spectrum.writable().count = 0;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        display_spectrum.writable().sequence = ++benchmark_sequence;
+        display_spectrum.writable().endpoint = -1;
+        display_spectrum.writable().published_at = benchmark_now;
+#endif
+        display_spectrum.publish();
         // Reset hidden menu options.
         is_fill_enabled = false;
         is_bezier_enabled = true;
@@ -205,9 +248,14 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Respond to a change in sample rate from the engine.
     inline void onSampleRateChange() final {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_last_capture = benchmark_endpoint = -1;
+#endif
         Module::onSampleRateChange();
         sample_rate = APP->engine->getSampleRate();
-        // Set the light divider relative to the sample rate and reset it.
+        analysis.reserve_hop(static_cast<size_t>(std::ceil(sample_rate * 0.3f)));
+        analysis.reset();
+        // Update lights every 512 engine samples and reset the divider.
         light_divider.setDivision(512);
         light_divider.reset();
         // Update the low frequency bound and preserve settings.
@@ -220,8 +268,10 @@ struct SpectrumAnalyzer : Module {
         param_high_frequency->maxValue = param_high_frequency->defaultValue = sample_rate / 2.f;
         set_high_frequency(high_frequency);
         // Set the transition width of DC-blocking filters for AC-coupled mode.
-        dc_blocker.setTransitionWidth(10.f, sample_rate);
-        dc_blocker.reset();
+        for (auto& filter : dc_blockers) {
+            filter.setTransitionWidth(10.0, sample_rate);
+            filter.reset();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -233,9 +283,9 @@ struct SpectrumAnalyzer : Module {
     inline json_t* dataToJson() final {
         json_t* rootJ = json_object();
         json_object_set_new(rootJ, "is_running", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_running));
-        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_running));
+        json_object_set_new(rootJ, "is_fill_enabled", json_boolean(is_fill_enabled));
+        json_object_set_new(rootJ, "is_bezier_enabled", json_boolean(is_bezier_enabled));
+        json_object_set_new(rootJ, "is_ac_coupled", json_boolean(is_ac_coupled));
         return rootJ;
     }
 
@@ -261,21 +311,18 @@ struct SpectrumAnalyzer : Module {
     /// @returns The sample rate of the module.
     inline float get_sample_rate() const { return sample_rate; }
 
-    /// @brief Return a flag determining whether module outputs can be rendered.
-    inline bool get_is_ready_to_render() const { return is_ready_to_render; }
-
     // Window Function
 
     /// @brief Return the window function.
     /// @returns The window function for computing DFT coefficients.
-    inline Math::Window::Function get_window_function() {
+    inline Fourier::Window::Function get_window_function() {
         const auto value = params[PARAM_WINDOW_FUNCTION].getValue();
-        return static_cast<Math::Window::Function>(value);
+        return static_cast<Fourier::Window::Function>(value);
     }
 
     /// @brief Set the window function.
     /// @param value The window function for computing DFT coefficients.
-    inline void set_window_function(const Math::Window::Function& value) {
+    inline void set_window_function(const Fourier::Window::Function& value) {
         params[PARAM_WINDOW_FUNCTION].setValue(static_cast<float>(value));
     }
 
@@ -284,7 +331,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the length of the window.
     /// @returns The length of the window measured in samples.
     inline size_t get_window_length() {
-        return 1 << static_cast<size_t>(params[PARAM_WINDOW_LENGTH].getValue());
+        const float value = params[PARAM_WINDOW_LENGTH].getValue();
+        const int exponent = std::isfinite(value) ? static_cast<int>(clamp(value, 7.f, 14.f)) : 11;
+        return size_t(1) << exponent;
     }
 
     /// @brief Set the length of the window.
@@ -299,7 +348,9 @@ struct SpectrumAnalyzer : Module {
     /// @brief Return the hop length of the windowed DFT in samples.
     /// @returns The number of samples to hop between computations of the DFT.
     inline size_t get_hop_length() {
-        return params[PARAM_HOP_LENGTH].getValue() * sample_rate;
+        const float value = params[PARAM_HOP_LENGTH].getValue();
+        const float seconds = std::isfinite(value) ? clamp(value, 0.005f, 0.3f) : 0.03f;
+        return std::max(size_t(1), static_cast<size_t>(seconds * sample_rate));
     }
 
     /// @brief Set the hop length of the windowed DFT in samples.
@@ -383,15 +434,14 @@ struct SpectrumAnalyzer : Module {
     // Low Frequency Bound
 
     /// @brief Return the lowest frequency to render on the display.
-    /// @returns The lowest frequency to render in Hz. If the frequency falls
-    /// below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The lower display bound in Hz, capped at the Nyquist frequency.
     inline float get_low_frequency() {
         return fmin(params[PARAM_LOW_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the lowest frequency to render on the display.
     /// @param value The lowest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_low_frequency(const float& value) {
         params[PARAM_LOW_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -399,15 +449,14 @@ struct SpectrumAnalyzer : Module {
     // High Frequency Bound
 
     /// @brief Return the highest frequency to render on the display.
-    /// @returns The highest frequency to render in Hz. If the frequency
-    /// falls below the Nyquist rate, then the Nyquist rate is returned.
+    /// @returns The upper display bound in Hz, capped at the Nyquist frequency.
     inline float get_high_frequency() {
         return fmin(params[PARAM_HIGH_FREQUENCY].getValue(), sample_rate / 2.f);
     }
 
     /// @brief Set the highest frequency to render on the display.
     /// @param value The highest frequency to render in Hz. If the value is
-    /// above the Nyquist rate, then the value is clipped.
+    /// above the Nyquist frequency, then the value is clipped.
     inline void set_high_frequency(const float& value) {
         params[PARAM_HIGH_FREQUENCY].setValue(fmin(value, sample_rate / 2.f));
     }
@@ -430,32 +479,6 @@ struct SpectrumAnalyzer : Module {
     // MARK: Processing
     // -----------------------------------------------------------------------
 
-    /// @brief Process the window length and hop length parameters.
-    /// @details
-    /// Resizes the delay lines and DFT buffers to the length of the window.
-    /// Also sets the DFT divider to the length of the hop.
-    inline void process_window() {
-        // Determine the length of the delay lines and associated FFTs.
-        const size_t N = get_window_length();
-        if (delay.size() != N) {
-            delay.resize(N);
-            delay.clear();
-        }
-        window_function.set_window(get_window_function(), N, false, true);
-        if (fft.size() != N)
-            fft.resize(N);
-        if (filtered_coeffs.size() != N) {
-            filtered_coeffs.resize(N);
-            std::fill(filtered_coeffs.begin(), filtered_coeffs.end(), 0);
-        }
-        // Update the rasterized coefficients from the FFT length.
-        for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            if (raster_coeffs[i].size() == N / 2.f + 1) continue;
-            raster_coeffs[i].resize(N / 2.f + 1);
-            std::fill(raster_coeffs[i].begin(), raster_coeffs[i].end(), Vec(0.f, 0.f));
-        }
-    }
-
     /// @brief Process presses to the "run" button.
     /// @details
     /// Processes the run parameter with a trigger and flips the `is_running`
@@ -467,132 +490,67 @@ struct SpectrumAnalyzer : Module {
 
     /// @brief Process input signals.
     /// @details
-    /// Applies gain to each input signal and buffers it for DFT computation.
-    inline void process_input_signal() {
-        if (!is_running) return;  // Don't buffer input signals if not running.
+    /// Normalizes each input, applies optional AC coupling and gain, and
+    /// returns one sample per lane for DFT computation.
+    inline simd::float_4 process_input_signal() {
+        if (!is_running) return simd::float_4(0.f);
         // Buffer signals and gains.
         float signals[NUM_CHANNELS] = {0.f, 0.f, 0.f, 0.f};
         float gains[NUM_CHANNELS] = {1.f, 1.f, 1.f, 1.f};
         for (size_t i = 0; i < NUM_CHANNELS; i++) {
-            signals[i] = Math::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
+            signals[i] = Fourier::Eurorack::fromAC(inputs[INPUT_SIGNAL + i].getVoltageSum());
             gains[i] = params[PARAM_INPUT_GAIN + i].getValue();
+            // Keep filter history warm in bypass, as in AC-coupled mode.
+            const double filtered = dc_blockers[i].process(signals[i]);
+            if (is_ac_coupled) signals[i] = static_cast<float>(filtered);
         }
         simd::float_4 signals_simd(signals[0], signals[1], signals[2], signals[3]);
         simd::float_4 gains_simd(gains[0], gains[1], gains[2], gains[3]);
-        // Process the input signals with the DC blocking filters.
-        dc_blocker.process(signals_simd);
-        // Insert the normalized and processed input signal into the delay.
-        delay.insert(gains_simd * (is_ac_coupled ? dc_blocker.getValue() : signals_simd));
+        // Return the gain-adjusted sample for the analyzer to buffer.
+        return gains_simd * signals_simd;
     }
 
-    /// @brief Create a point from a spectral coefficient.
-    /// @param index The index of the frequency bin.
-    /// @param coefficient The value of the frequency bin.
-    /// @param length Half the length of the FFT, i.e., \f$\frac{N}{2}\f$.
-    /// @param slope The slope (dB/oct). It allows you to adjust spectrum
-    /// analyzer display's slope around the reference frequency. Skewing the
-    /// spectrum can be useful because higher frequencies usually have weaker
-    /// power in comparison to the lower frequencies. By choosing an
-    /// appropriate spectrum slope, you can compensate for this fact and make
-    /// the spectrum plot look more convenient and meaningful.
-    /// @param reference_frequency The frequency frequency for spectrum
-    /// scaling. This is the frequency that the gain curve is centered around
-    /// measured in Hertz.
-    /// @param maximum_energy The maximum energy level (measured in decibels.)
-    /// @param minimum_energy The minimum energy level (measured in decibels.)
-    /// The minimum energy only takes effect in logarithmic mode.
-    /// @returns A new point containing the encoded spectral coefficient.
-    /// @details
-    /// The `x` component of the point is either the linear or exponential
-    /// frequency value depending on `get_frequency_scale()`. The `y`
-    /// component is either linear, exponential with a \f$60dB\f$ bias, or
-    /// exponential with a \f$120dB\f$ bias. `x` and `y` are normalized in
-    /// \f$[0, 1]\f$. Points outside this range should likely be removed
-    /// before plotting. This can occur when the minimum and/or maximum
-    /// frequency to render change from their default values.
-    void make_points(const size_t& lane_index) {
-        // The reference frequency for the slope compensation.
-        static constexpr float reference_frequency = 1000.f;
-        // The maximum amplitude for logarithmic mode.
-        static constexpr float max_magnitude = 12.f;
-        // Determine the Nyquist rate from the sample rate.
-        const float nyquist_rate = sample_rate / 2.f;
-        // Get parameters from the panel once before iterating over points.
-        const auto slope = get_slope();
-        const auto low_frequency = get_low_frequency();
-        const auto high_frequency = get_high_frequency();
-        const auto frequency_scale = get_frequency_scale();
-        const auto magnitude_scale = get_magnitude_scale();
-        // Determine the non-repeated coefficients.
-        const float N = filtered_coeffs.size() / 2.f + 1.f;
-        for (size_t n = 0; n < static_cast<size_t>(N); n++) {
-            // Set the point to a reference from the rasterized point buffer.
-            Vec& point = raster_coeffs[lane_index][n];
-            // Set the X point to the normalized linear coefficient offset.
-            point.x = n / N;
-            // Determine the y-scale from the frequency. The slope is provided
-            // in decibels/octave, so first determine the octave offset from
-            // the current frequency using, e.g., 1000Hz as the reference
-            // frequency for the curve. I.e., because octaves are logarithmic,
-            // we can simply compute \f$\log2(f_i / f_{reference})\f$ and
-            // multiply by the slope. Because we're dealing with y first in
-            // terms of amplitude, also convert the decibel scaling to an
-            // amplitude gain.
-            auto gain = log2f(point.x * nyquist_rate / reference_frequency + std::numeric_limits<float>::epsilon());
-            gain = Math::decibels2amplitude(slope * gain);
-            // Normalize X point based on the minimum and maximum frequencies.
-            point.x -= low_frequency / nyquist_rate;
-            point.x /= (high_frequency - low_frequency) / nyquist_rate;
-            // Map the point from linear to logarithmic (Hertz) frequency
-            // range. Handle negative points by taking the absolute value
-            // before the square root (to avoid NaN) and negating the positive
-            // result.
-            if (frequency_scale == FrequencyScale::Logarithmic)
-                point.x = point.x < 0 ? -sqrtf(fabs(point.x)) : sqrtf(point.x);
-            // Set the Y point to the linear coefficient percentage. Apply the
-            // gain that was previously calculated from the scaling function.
-            const float max_amplitude = Math::decibels2amplitude(max_magnitude);
-            point.y = gain * abs(filtered_coeffs[n]).s[lane_index] / (max_amplitude * N);
-            // Apply magnitude scaling to the Y point.
-            switch (magnitude_scale) {
-            case MagnitudeScale::Linear:
-                break;
-            case MagnitudeScale::Logarithmic60dB:  // Exponential with -60dB bias
-                point.y = Math::amplitude2decibels(point.y) / (60.f + max_magnitude) + 1.f;
-                break;
-            case MagnitudeScale::Logarithmic120dB:  // Exponential with -120dB bias
-                point.y = Math::amplitude2decibels(point.y) / (120.f + max_magnitude) + 1.f;
-                break;
-            default: break;
-            }
+    /// @brief Latch controls and distribute all analysis/curve work over one hop.
+    inline void process_coefficients(const simd::float_4& input) {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        if (is_running) benchmark_last_capture = benchmark_now;
+#endif
+        if (analysis.is_frame_start()) {
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+            benchmark_endpoint = benchmark_last_capture;
+#endif
+            Fourier::SpectrumSettings settings;
+            settings.length = get_window_length();
+            settings.hop = get_hop_length();
+            settings.window = get_window_function();
+            settings.sample_rate = sample_rate;
+            const auto smoothing = get_frequency_smoothing();
+            settings.octave = smoothing == FrequencySmoothing::None ? 0.f : to_float(smoothing);
+            settings.alpha = get_time_smoothing_alpha();
+            analysis.configure(settings);
+            coordinates.bins = analysis.size() / 2 + 1;
+            coordinates.sample_rate = sample_rate;
+            coordinates.low_frequency = get_low_frequency();
+            coordinates.high_frequency = get_high_frequency();
+            coordinates.slope = get_slope();
+            coordinates.frequency_scale = get_frequency_scale();
+            coordinates.magnitude_scale = get_magnitude_scale();
+            coordinate_cache.configure(coordinates);
         }
-    }
-
-    /// @brief Process samples with the DFT.
-    inline void process_coefficients() {
-        // Determine the alpha parameter of the low-pass smoothing filter.
-        const float alpha = get_time_smoothing_alpha();
-        // Determine the setting of the frequency smoothing mode.
-        const auto frequency_smoothing = get_frequency_smoothing();
-        if (fft.is_done_computing()) {
-            // Perform octave smoothing. For an N-length FFT, smooth over the
-            // first N/2 + 1 coefficients to omit reflected frequencies.
-            if (frequency_smoothing != FrequencySmoothing::None)
-                fft.smooth(sample_rate, to_float(frequency_smoothing));
-            // Pass the coefficients through a smoothing filter.
-            for (size_t n = 0; n < fft.coefficients.size(); n++)
-                filtered_coeffs[n] = alpha * abs(filtered_coeffs[n]) + (1.0 - alpha) * abs(fft.coefficients[n]);
-            make_points(0);
-            make_points(1);
-            make_points(2);
-            make_points(3);
-            // Add the delay line to the FFT pipeline.
-            fft.buffer(delay.contiguous(), window_function.get_samples());
-            // Mark the module as render-able
-            is_ready_to_render = true;
+        const bool complete = analysis.process(input, [this](size_t bin, simd::float_4 value) {
+            const auto points = coordinate_cache.map(bin, value);
+            for (size_t lane = 0; lane < NUM_CHANNELS; ++lane)
+                display_spectrum.writable().points[lane][bin] = points[lane];
+        }, is_running);
+        if (complete) {
+            display_spectrum.writable().count = coordinates.bins;
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+            display_spectrum.writable().sequence = ++benchmark_sequence;
+            display_spectrum.writable().endpoint = benchmark_endpoint;
+            display_spectrum.writable().published_at = benchmark_now;
+#endif
+            display_spectrum.publish();
         }
-        // Perform the number of FFT steps required at this hop-rate.
-        fft.step(get_hop_length());
     }
 
     /// @brief Set the lights on the panel.
@@ -606,10 +564,11 @@ struct SpectrumAnalyzer : Module {
     /// @brief Process a sample.
     /// @param args the sample arguments (sample rate, sample time, etc.)
     void process(const ProcessArgs& args) final {
-        process_window();
+#ifdef FOURIER_BENCHMARK_OBSERVABILITY
+        benchmark_now = args.frame;
+#endif
         process_run_button();
-        process_input_signal();
-        process_coefficients();
+        process_coefficients(process_input_signal());
         process_lights(args);
     }
 };
@@ -643,9 +602,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// The module to render on the display.
     SpectrumAnalyzer* module = nullptr;
 
+    Fourier::CachedDisplay* axes_cache;
+
     /// the state of the mouse.
     struct {
-        /// A state variable determining whether the mouse is above the widget.
+        /// Whether the mouse is inside the plot rectangle of a live module.
         bool is_hovering = false;
         /// whether a drag is currently active
         bool is_pressed = false;
@@ -661,10 +622,10 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         // calculate the normalized x,y positions in [0, 1]. Account for
         // padding to ensure relative position corresponds to the plot.
         position.x = (position.x - pad_left) / (box.size.x - pad_left - pad_right);
-        position.x = Math::clip(position.x, 0.f, 1.f);
+        position.x = Fourier::clip(position.x, 0.f, 1.f);
         // y axis increases downward in pixel space, so invert about 1.
         position.y = 1.f - (position.y - pad_top) / (box.size.y - pad_top - pad_bottom);
-        position.y = Math::clip(position.y, 0.f, 1.f);
+        position.y = Fourier::clip(position.y, 0.f, 1.f);
         return position;
     }
 
@@ -685,19 +646,14 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param module_ the module to render on the display.
     explicit SpectrumAnalyzerDisplay(SpectrumAnalyzer* module_) :
         TransparentWidget(),
-        module(module_) { }
+        module(module_) {
+        axes_cache = new Fourier::CachedDisplay([this](const DrawArgs& args) { draw_axes(args); });
+        addChild(axes_cache);
+    }
 
     // -----------------------------------------------------------------------
     // MARK: Interactivity
     // -----------------------------------------------------------------------
-
-    /// @brief Respond to the mouse entering the widget.
-    void onEnter(const EnterEvent& e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the hovering state to true.
-        mouse_state.is_hovering = true;
-    }
 
     /// @brief Respond to the mouse exiting the widget.
     void onLeave(const LeaveEvent& e) override {
@@ -707,64 +663,15 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         mouse_state.is_hovering = false;
     }
 
-    /// @brief Respond to mouse hover events above the widget.
+    /// @brief Activate cursor readouts only inside the rendered plot rectangle.
     void onHover(const HoverEvent& e) override {
-        // Consume the event to prevent it from propagating.
-        e.consume(this);
-        // Set the mouse state to the hover position.
         mouse_state.position = e.pos;
+        const Rect plot(Vec(pad_left, pad_top),
+            Vec(box.size.x - pad_left - pad_right, box.size.y - pad_top - pad_bottom));
+        mouse_state.is_hovering = module && plot.contains(e.pos);
+        // Gutters and the control strip must not capture display hover events.
+        if (mouse_state.is_hovering) e.consume(this);
     }
-
-    // /// @brief Respond to mouse scroll events while hovering above the widget.
-    // void onHoverScroll(const HoverScrollEvent& e) override {
-    //     // Consume the event to prevent it from propagating.
-    //     e.consume(this);
-    // }
-
-    // /// Respond to a button event on this widget.
-    // void onButton(const event::Button &e) override {
-    //     // Consume the event to prevent it from propagating.
-    //     e.consume(this);
-    //     // Set the mouse state to the hover position.
-    //     mouse_state.position = e.pos;
-    //     // setup the drag state.
-    //     mouse_state.is_modified = e.mods & GLFW_MOD_CONTROL;
-    //     // if the action is a press copy the waveform before updating
-    //     mouse_state.is_pressed = e.action == GLFW_PRESS&& e.button == GLFW_MOUSE_BUTTON_LEFT;
-    //     // Handle right clicks.
-    //     if (e.action == GLFW_PRESS && e.button == GLFW_MOUSE_BUTTON_RIGHT)
-    //         dynamic_cast<ModuleWidget*>(parent)->createContextMenu();
-    // }
-
-    // /// @brief Respond to drag start event on this widget.
-    // void onDragStart(const event::DragStart &e) override {
-    //     // // lock the cursor so it does not move in the engine during the edit
-    //     // APP->window->cursorLock();
-    //     // consume the event to prevent it from propagating
-    //     e.consume(this);
-    // }
-
-    // /// @brief Respond to drag move event on this widget.
-    // void onDragMove(const event::DragMove &e) override {
-    //     // consume the event to prevent it from propagating
-    //     e.consume(this);
-    //     // if the drag operation is not active, return early
-    //     if (!mouse_state.is_pressed) return;
-    //     // update the drag state based on the change in position from the mouse
-    //     mouse_state.position.x += e.mouseDelta.x / APP->scene->rackScroll->zoomWidget->zoom;
-    //     mouse_state.position.y += e.mouseDelta.y / APP->scene->rackScroll->zoomWidget->zoom;
-    // }
-
-    // /// @brief Respond to drag end event on this widget.
-    // void onDragEnd(const event::DragEnd &e) override {
-    //     // // unlock the cursor to return it to its normal state
-    //     // APP->window->cursorUnlock();
-    //     // consume the event to prevent it from propagating
-    //     e.consume(this);
-    //     if (!mouse_state.is_pressed) return;
-    //     // disable the press state.
-    //     mouse_state.is_pressed = false;
-    // }
 
     // -----------------------------------------------------------------------
     // MARK: Rendering
@@ -791,11 +698,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgClosePath(args.vg);
             // Render tick label
             float freq = get_low_frequency() + (get_high_frequency() - get_low_frequency()) * position;
-            const auto freq_string = Math::freq_to_string(freq);
+            const auto freq_string = Fourier::freq_to_string(freq);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, point_x, box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(point_x, box.size.y - pad_bottom + 10), freq_string, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
         }
     }
 
@@ -827,11 +734,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 nvgClosePath(args.vg);
             }
             // Render a label with the base frequency in kHz.
-            const auto freq_string = Math::freq_to_string(base_frequency);
+            const auto freq_string = Fourier::freq_to_string(base_frequency);
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
-            nvgText(args.vg, rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10, freq_string.c_str(), NULL);
+            axes_cache->add_label(Vec(rescale(sqrt((base_frequency - get_low_frequency()) / frequency_range), 0.f, 1.f, pad_left, box.size.x - pad_right), box.size.y - pad_bottom + 10), freq_string, NVG_ALIGN_BOTTOM | NVG_ALIGN_CENTER);
         }
     }
 
@@ -853,7 +760,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3, y_position), label, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -886,7 +793,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             nvgFontSize(args.vg, axis_font_size);
             nvgFillColor(args.vg, axis_font_color);
             nvgTextAlign(args.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            nvgText(args.vg, pad_left - 3, y_position, label.c_str(), NULL);
+            axes_cache->add_label(Vec(pad_left - 3, y_position), label, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         }
     }
 
@@ -898,7 +805,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
     /// @param fill_color The color of the fill.
     void draw_coefficients(
         const DrawArgs& args,
-        std::vector<Vec> coefficients,
+        const Vec* coefficients,
+        size_t count,
         const float& stroke_width,
         const NVGcolor& stroke_color={{{0.9f, 0.85f, 0.15f, 0.75f}}},
         const NVGcolor& fill_color={{{0.9f, 0.85f, 0.15f, 0.5f}}}
@@ -914,7 +822,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgMoveTo(args.vg, mask.pos.x - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
         // Find and render the first visible frequency bin.
         size_t n = 0;
-        for (; n < coefficients.size(); n++) {
+        for (; n < count; n++) {
             Vec point = coefficients[n];
             // Check if we've reached the visible frequency range.
             if (point.x < 0.f) continue;
@@ -922,8 +830,8 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             point.x = rescale(point.x, 0.f, 1.f, mask.pos.x, mask.pos.x + mask.size.x);
             point.y = rescale(point.y, 0.f, 1.f, mask.pos.y + mask.size.y, mask.pos.y);
             // Clip the point to the visible window.
-            point.x = Math::clip(point.x, mask.pos.x - 2 * stroke_width, mask.pos.x + mask.size.x + 2 * stroke_width);
-            point.y = Math::clip(point.y, mask.pos.y - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
+            point.x = Fourier::clip(point.x, mask.pos.x - 2 * stroke_width, mask.pos.x + mask.size.x + 2 * stroke_width);
+            point.y = Fourier::clip(point.y, mask.pos.y - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
             // Draw an invisible line from the bottom point to the starting point.
             nvgLineTo(args.vg, mask.pos.x - 2 * stroke_width, point.y);
             // Exit the loop as we have found the first point.
@@ -931,18 +839,18 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         }
         // Render the visible frequency bins.
         if (module->is_bezier_enabled) {
-            for (; n < coefficients.size() - 2; n++) {
+            for (; n < count - 2; n++) {
                 // Determine whether this is the last point to render.
-                bool last_point = (coefficients[n+1].x >= 1.f) || (n == coefficients.size() - 3);
+                bool last_point = (coefficients[n+1].x >= 1.f) || (n == count - 3);
                 // Create a neighborhood of points to render.
-                Vec points[4] = {coefficients[n-1], coefficients[n-0], coefficients[n+1], coefficients[n+2]};
+                Vec points[4] = {coefficients[n == 0 ? 0 : n-1], coefficients[n-0], coefficients[n+1], coefficients[n+2]};
                 for (Vec& point : points) {
                     // Remap the coefficient point to the window of the mask.
                     point.x = rescale(point.x, 0.f, 1.f, mask.pos.x, mask.pos.x + mask.size.x);
                     point.y = rescale(point.y, 0.f, 1.f, mask.pos.y + mask.size.y, mask.pos.y);
                     // Clip the point to the visible window.
-                    point.x = Math::clip(point.x, mask.pos.x - 2 * stroke_width, mask.pos.x + mask.size.x + 2 * stroke_width);
-                    point.y = Math::clip(point.y, mask.pos.y - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
+                    point.x = Fourier::clip(point.x, mask.pos.x - 2 * stroke_width, mask.pos.x + mask.size.x + 2 * stroke_width);
+                    point.y = Fourier::clip(point.y, mask.pos.y - 2 * stroke_width, mask.pos.y + mask.size.y + 2 * stroke_width);
                 }
                 Vec control[2];
                 catmull_rom_to_bezier(points, control);
@@ -954,16 +862,16 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
                 }
             }
         } else {
-            for (; n < coefficients.size(); n++) {
+            for (; n < count; n++) {
                 Vec point = coefficients[n];
                 // Determine whether this is the last point to render.
-                bool last_point = (point.x >= 1.f) || (n == coefficients.size() - 1);
+                bool last_point = (point.x >= 1.f) || (n == count - 1);
                 // Remap the coefficient point to the window of the mask.
                 point.x = rescale(point.x, 0.f, 1.f, mask.pos.x, mask.pos.x + mask.size.x);
                 point.y = rescale(point.y, 0.f, 1.f, mask.pos.y + mask.size.y, mask.pos.y);
                 // Clip the point to the visible window.
-                point.x = Math::clip(point.x, mask.pos.x - stroke_width, mask.pos.x + mask.size.x + stroke_width);
-                point.y = Math::clip(point.y, mask.pos.y - stroke_width, mask.pos.y + mask.size.y + stroke_width);
+                point.x = Fourier::clip(point.x, mask.pos.x - stroke_width, mask.pos.x + mask.size.x + stroke_width);
+                point.y = Fourier::clip(point.y, mask.pos.y - stroke_width, mask.pos.y + mask.size.y + stroke_width);
                 // Connection to the next point in the plot.
                 nvgLineTo(args.vg, point.x, point.y);
                 // Connection to stop point for fill.
@@ -1028,7 +936,7 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         case FrequencyScale::Linear:
             return low_frequency + (high_frequency - low_frequency) * mouse_position.x;
         case FrequencyScale::Logarithmic:
-            return (high_frequency - low_frequency) * Math::squared(mouse_position.x) + low_frequency;
+            return (high_frequency - low_frequency) * Fourier::squared(mouse_position.x) + low_frequency;
         default:
             throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(scale)));
         }
@@ -1076,11 +984,11 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
             get_low_frequency(),
             get_high_frequency()
         );
-        const auto hover_freq_string = Math::freq_to_string(hover_freq);
+        const auto hover_freq_string = Fourier::freq_to_string(hover_freq);
         nvgText(args.vg, pad_left + 3, pad_top / 2, hover_freq_string.c_str(), NULL);
         // Convert the frequency to a note.
         if (hover_freq > 0) {  // Render note, octave, and tuning (in cents.)
-            MusicTheory::TunedNote note(hover_freq);
+            Fourier::TunedNote note(hover_freq);
             nvgText(args.vg, pad_left + 55, pad_top / 2, note.note_string().c_str(), NULL);
             nvgTextAlign(args.vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             nvgText(args.vg, pad_left + 140, pad_top / 2, note.tuning_string().c_str(), NULL);
@@ -1092,65 +1000,82 @@ struct SpectrumAnalyzerDisplay : TransparentWidget {
         nvgText(args.vg, box.size.x - pad_right - 3, pad_top / 2, mouse_position_string.c_str(), NULL);
     }
 
+    /// @brief Invalidate static artwork when its rendering inputs change.
+    void prepare_axes_cache() {
+        axes_cache->prepare(box.size, {{get_low_frequency(), get_high_frequency(),
+            module ? module->get_sample_rate() : APP->engine->getSampleRate(),
+            static_cast<float>(module ? module->get_frequency_scale() : FrequencyScale::Logarithmic),
+            static_cast<float>(module ? module->get_magnitude_scale() : MagnitudeScale::Logarithmic60dB)}});
+    }
+
+    /// @brief Rasterize the static background/grid and cache label layout.
+    void draw_axes(const DrawArgs& args) {
+        // Draw the background.
+        nvgBeginPath(args.vg);
+        nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
+        nvgFillColor(args.vg, background_color);
+        nvgFill(args.vg);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // Draw the frequency (X) axis.
+        // - Left border
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, pad_left, pad_top);
+        nvgLineTo(args.vg, pad_left, box.size.y - pad_bottom);
+        nvgStrokeWidth(args.vg, axis_stroke_width);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // - Right border
+        nvgBeginPath(args.vg);
+        nvgMoveTo(args.vg, box.size.x - pad_right, pad_top);
+        nvgLineTo(args.vg, box.size.x - pad_right, box.size.y - pad_bottom);
+        nvgStrokeWidth(args.vg, axis_stroke_width);
+        nvgStrokeColor(args.vg, axis_stroke_color);
+        nvgStroke(args.vg);
+        nvgClosePath(args.vg);
+        // - Ticks
+        switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
+        case FrequencyScale::Linear:
+            draw_x_ticks_linear(args);
+            break;
+        case FrequencyScale::Logarithmic:
+            draw_x_ticks_logarithmic(args);
+            break;
+        default:
+            throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
+        }
+        // Draw the magnitude (Y) axis.
+        switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
+        case MagnitudeScale::Linear:
+            draw_y_ticks_linear(args);
+            break;
+        case MagnitudeScale::Logarithmic60dB:
+            draw_y_ticks_logarithmic(args, -60.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60});
+            break;
+        case MagnitudeScale::Logarithmic120dB:
+            draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
+            break;
+        default:
+            throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
+        }
+    }
+
     /// @brief Draw the screen.
     /// @param args the arguments for the current draw call
     void drawLayer(const DrawArgs& args, int layer) override {
         if (layer == 1) {  // Render as a light/display w/o dimming features
-            // Draw the background.
-            nvgBeginPath(args.vg);
-            nvgRoundedRect(args.vg, 0, 0, box.size.x, box.size.y, corner_radius);
-            nvgFillColor(args.vg, background_color);
-            nvgFill(args.vg);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // Draw the frequency (X) axis.
-            // - Left border
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, pad_left, pad_top);
-            nvgLineTo(args.vg, pad_left, box.size.y - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // - Right border
-            nvgBeginPath(args.vg);
-            nvgMoveTo(args.vg, box.size.x - pad_right, pad_top);
-            nvgLineTo(args.vg, box.size.x - pad_right, box.size.y - pad_bottom);
-            nvgStrokeWidth(args.vg, axis_stroke_width);
-            nvgStrokeColor(args.vg, axis_stroke_color);
-            nvgStroke(args.vg);
-            nvgClosePath(args.vg);
-            // - Ticks
-            switch (module == nullptr ? FrequencyScale::Logarithmic : module->get_frequency_scale()) {
-            case FrequencyScale::Linear:
-                draw_x_ticks_linear(args);
-                break;
-            case FrequencyScale::Logarithmic:
-                draw_x_ticks_logarithmic(args);
-                break;
-            default:
-                throw std::runtime_error("Invalid frequency scale " + std::to_string(static_cast<int>(module->get_frequency_scale())));
-            }
-            // Draw the magnitude (Y) axis.
-            switch (module == nullptr ? MagnitudeScale::Logarithmic60dB : module->get_magnitude_scale()) {
-            case MagnitudeScale::Linear:
-                draw_y_ticks_linear(args);
-                break;
-            case MagnitudeScale::Logarithmic60dB:
-                draw_y_ticks_logarithmic(args, -60.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60});
-                break;
-            case MagnitudeScale::Logarithmic120dB:
-                draw_y_ticks_logarithmic(args, -120.f, 12.f, std::vector<int>{12, 0, -12, -24, -48, -60, -96, -120});
-                break;
-            default:
-                throw std::runtime_error("Invalid magnitude scale " + std::to_string(static_cast<int>(module->get_magnitude_scale())));
-            }
-            if (module != nullptr && module->get_is_ready_to_render()) {
-                draw_coefficients(args, module->raster_coeffs[0], 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[1], 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[2], 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
-                draw_coefficients(args, module->raster_coeffs[3], 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
+            prepare_axes_cache();
+            axes_cache->draw_cached(args);
+            const auto font = APP->window->loadFont(asset::plugin(plugin_instance, "res/Font/Arial/Bold.ttf"));
+            if (font) axes_cache->draw_labels(args, font->handle, axis_font_size, axis_font_color);
+            const auto* spectrum = module ? &module->consume_display_spectrum() : nullptr;
+            if (spectrum && spectrum->count > 0) {
+                draw_coefficients(args, spectrum->points[0].data(), spectrum->count, 1.5, {{{1.f, 0.f, 0.f, 1.f}}}, {{{1.f, 0.f, 0.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[1].data(), spectrum->count, 1.5, {{{0.f, 1.f, 0.f, 1.f}}}, {{{0.f, 1.f, 0.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[2].data(), spectrum->count, 1.5, {{{0.f, 0.f, 1.f, 1.f}}}, {{{0.f, 0.f, 1.f, 0.35f}}});
+                draw_coefficients(args, spectrum->points[3].data(), spectrum->count, 1.5, {{{1.f, 1.f, 0.f, 1.f}}}, {{{1.f, 1.f, 0.f, 0.35f}}});
                 // Interactive mouse hovering functionality.
                 if (mouse_state.is_hovering) {
                     draw_cross_hair(args);
@@ -1175,22 +1100,19 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @param module The back-end module to interact with. Can be a nullptr.
     explicit SpectrumAnalyzerWidget(SpectrumAnalyzer* module = nullptr) : ModuleWidget() {
         setModule(module);
-        setPanel(createPanel(
-            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Light.svg"),
-            asset::plugin(plugin_instance, "res/SpectrumAnalyzer-Dark.svg")
-        ));
-        // Input signals, gains, output signals, and meters.
+        setPanel(new Fourier::Panel(Fourier::PanelKind::FOURIER));
+        // Input signal ports and gain controls.
         for (std::size_t i = 0; i < SpectrumAnalyzer::NUM_CHANNELS; i++) {
-            addInput(createInput<PJ301MPort>(Vec(11, 30 + 75 * i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
-            addParam(createParam<Trimpot>(Vec(13, 66 + 75 * i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));
+            addInput(createInput<ThemedPJ301MPort>(Fourier::PanelLayout::input(i), module, SpectrumAnalyzer::INPUT_SIGNAL + i));
+            addParam(createParam<Trimpot>(Fourier::PanelLayout::gain(i), module, SpectrumAnalyzer::PARAM_INPUT_GAIN + i));
         }
         // Buttons.
-        addParam(createParamCentered<PB61303>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzer::PARAM_RUN));
-        addChild(createLightCentered<PB61303Light<WhiteLight>>(Vec(8 + 15, 331 + 15), module, SpectrumAnalyzer::LIGHT_RUN));
+        addParam(createParamCentered<PB61303>(Fourier::PanelLayout::run(), module, SpectrumAnalyzer::PARAM_RUN));
+        addChild(createLightCentered<PB61303Light<WhiteLight>>(Fourier::PanelLayout::run(), module, SpectrumAnalyzer::LIGHT_RUN));
         // Screen.
         SpectrumAnalyzerDisplay* display = new SpectrumAnalyzerDisplay(module);
-        display->setPosition(Vec(45, 15));
-        display->setSize(Vec(660, 350));
+        display->setPosition(Fourier::PanelLayout::display_position());
+        display->setSize(Fourier::PanelLayout::display_size(Fourier::PanelKind::FOURIER));
         addChild(display);
         // Screen controls.
         // Window function control with custom angles to match discrete range.
@@ -1210,7 +1132,8 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
         // Frequency scale control with custom angles to match discrete range.
         auto frequency_scale_param = createParam<TextKnob>(Vec(50 + 3 * 66, 330), module, SpectrumAnalyzer::PARAM_FREQUENCY_SCALE);
         frequency_scale_param->maxAngle = 0.3 * M_PI;
-        frequency_scale_param->label.text = "X SCALE";
+        frequency_scale_param->label.text = "FREQ SCALE";
+        frequency_scale_param->label.font_size = 8.5f;
         addParam(frequency_scale_param);
         // Magnitude scale control with custom angles to match discrete range.
         auto magnitude_scale_param = createParam<TextKnob>(Vec(50 + 4 * 66, 330), module, SpectrumAnalyzer::PARAM_MAGNITUDE_SCALE);
@@ -1247,11 +1170,27 @@ struct SpectrumAnalyzerWidget : ModuleWidget {
     /// @brief Append the context menu to the module when right clicked.
     /// @param menu the menu object to add context items for the module to
     void appendContextMenu(Menu* menu) override {
+        auto module = getModule<SpectrumAnalyzer>();
         menu->addChild(new MenuSeparator);
         menu->addChild(createMenuLabel("Render Settings"));
-        menu->addChild(createBoolPtrMenuItem("Filled Display", "", &getModule<SpectrumAnalyzer>()->is_fill_enabled));
-        menu->addChild(createBoolPtrMenuItem("Bezier Curve", "", &getModule<SpectrumAnalyzer>()->is_bezier_enabled));
-        menu->addChild(createBoolPtrMenuItem("AC-coupled", "", &getModule<SpectrumAnalyzer>()->is_ac_coupled));
+        menu->addChild(createBoolMenuItem("Filled Display", "",
+            [=]() { return module->is_fill_enabled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change filled display",
+                    "is_fill_enabled", json_boolean(value));
+            }));
+        menu->addChild(createBoolMenuItem("Bezier Curve", "",
+            [=]() { return module->is_bezier_enabled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change bezier curve",
+                    "is_bezier_enabled", json_boolean(value));
+            }));
+        menu->addChild(createBoolMenuItem("AC-coupled", "",
+            [=]() { return module->is_ac_coupled; },
+            [=](bool value) {
+                Fourier::set_module_setting(module, "change ac-coupled",
+                    "is_ac_coupled", json_boolean(value));
+            }));
         ModuleWidget::appendContextMenu(menu);
     }
 };

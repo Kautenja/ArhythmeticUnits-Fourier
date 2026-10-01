@@ -1,0 +1,741 @@
+{
+  "schema": 1,
+  "kind": "fourier-study-preparation-v1",
+  "phase": "pilot",
+  "required_features": [
+    "vdsp",
+    "fftw"
+  ],
+  "sessions": {
+    "pilot-01": 2026093001,
+    "pilot-02": 2026093002
+  },
+  "grouping": "serial groups; per-group fresh-process order shuffled by the recorded session seed",
+  "primary_outcomes": [
+    "mean ns per engine sample",
+    "whole-block and complete-frame-intersection p99/max",
+    "recorded-budget exceedances",
+    "publication and consumed-spectrum age",
+    "aggregate process CPU cost for engine graphs"
+  ],
+  "practical_thresholds": {
+    "block_p99_improvement_us": 10,
+    "mean_cost_regression_fraction": 0.05,
+    "synthetic_deadline_miss_rate": 0.001,
+    "publication_age_budget_ms": 35,
+    "consumed_age_budget_ms": 100,
+    "fixed_load_filters": [
+      0,
+      16,
+      64
+    ],
+    "meaning": "candidate design inputs; not significance thresholds or observed results"
+  },
+  "flags": [
+    "clock resolution near observed intervals",
+    "fewer than 10000 within-process observations; tail precision limited and temporal dependence unresolved",
+    "power/readiness failure",
+    "frequency/thermal state unavailable",
+    "session/process drift or multimodality for later analysis",
+    "lifecycle intervals reported separately"
+  ],
+  "aggregation": "Keep all raw rows and process/session identities; report per-process distributions and between-process/session ranges. Never treat hops, channels or callbacks as independent session replicates.",
+  "stopping": "Fixed membership and lengths; no winner-based stop or automatic retry. Processing/integrity failure preserves partial data and marks the session failed. Disturbed valid observations remain retained and flagged.",
+  "confirmation": {
+    "minimum_sessions": 3,
+    "minimum_processes_per_cell": 5,
+    "days": "separate calendar days",
+    "freeze": "Requires returned real pilots and a separate reviewed analysis task; no automatic promotion"
+  },
+  "deferred_candidates": [
+    "native-subfft-leaves",
+    "stage-weight-sweep",
+    "ring-index-variant",
+    "butterfly-segmentation",
+    "magnitude-reconstruction-variant",
+    "coordinate-mapping-variant"
+  ],
+  "groups": [
+    {
+      "name": "Baselines",
+      "family": "stream",
+      "hypothesis": "Efficient native implementations may change the cost ranking; matched pairs isolate scheduling.",
+      "regime": "continuous",
+      "hops": 256,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "backends": [
+            "core-matched-batch-float",
+            "core-matched-distributed-float",
+            "pffft-native-batch-float",
+            "pffft-native-hybrid-float",
+            "vdsp-native-batch-float",
+            "vdsp-native-hybrid-float",
+            "fftw-native-batch-float",
+            "fftw-native-hybrid-float"
+          ],
+          "settings": [
+            {
+              "n": 2048
+            },
+            {
+              "n": 4096
+            },
+            {
+              "n": 16384
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Granularity",
+      "family": "stream",
+      "hypothesis": "Shorter completion horizons trade higher local cost for earlier publication.",
+      "regime": "continuous",
+      "hops": 256,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "backends": [
+            "pffft-native-hybrid-float",
+            "vdsp-native-hybrid-float",
+            "fftw-native-hybrid-float"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "existing"
+            },
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "native-horizon-half-v1"
+            },
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "native-horizon-quarter-v1"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "existing"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "native-horizon-half-v1"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "native-horizon-quarter-v1"
+            }
+          ]
+        },
+        {
+          "backends": [
+            "vdsp-native4-hybrid-float",
+            "fftw-native4-hybrid-float"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "existing",
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "native-horizon-half-v1",
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 2048,
+              "hop": 1024,
+              "experimental_policy": "native-horizon-quarter-v1",
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "existing",
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "native-horizon-half-v1",
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "experimental_policy": "native-horizon-quarter-v1",
+              "active_ports": 4,
+              "fixture": "independent"
+            }
+          ]
+        },
+        {
+          "backends": [
+            "core-independent4-simd"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 1024,
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "active_ports": 4,
+              "fixture": "independent"
+            }
+          ]
+        },
+        {
+          "backends": [
+            "pffft-native-batch-float",
+            "vdsp-native-batch-float",
+            "fftw-native-batch-float"
+          ],
+          "settings": [
+            {
+              "n": 16384,
+              "hop": 240
+            }
+          ]
+        },
+        {
+          "backends": [
+            "vdsp-native4-batch-float",
+            "fftw-native4-batch-float"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 1024,
+              "active_ports": 4,
+              "fixture": "independent"
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "active_ports": 4,
+              "fixture": "independent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Scaling",
+      "family": "stream",
+      "hypothesis": "Block aggregation and fixed versus proportional hop relationships can change burst comparisons.",
+      "regime": "continuous",
+      "hops": 256,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "backends": [
+            "core-matched-distributed-float",
+            "core-matched-distributed-double",
+            "vdsp-native-hybrid-float",
+            "vdsp-native-hybrid-double"
+          ],
+          "settings": [
+            {
+              "block": 16
+            },
+            {
+              "block": 256
+            },
+            {
+              "n": 1024,
+              "hop": 512
+            },
+            {
+              "n": 4096,
+              "hop": 2048
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Modules",
+      "family": "stream",
+      "hypothesis": "Core results may not predict complete conditioning, display and publication costs.",
+      "regime": "paced",
+      "hops": 256,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "backends": [
+            "fourier-default"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 1440,
+              "window": "flattop",
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent"
+            }
+          ]
+        },
+        {
+          "backends": [
+            "spectre-default"
+          ],
+          "settings": [
+            {
+              "window": "flattop",
+              "temporal_mode": "module-seconds"
+            }
+          ]
+        },
+        {
+          "backends": [
+            "fourier"
+          ],
+          "settings": [
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent",
+              "voices": 1,
+              "octave": 0,
+              "temporal_value": 0
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 1,
+              "fixture": "independent",
+              "voices": 1,
+              "octave": 0,
+              "temporal_value": 0
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent",
+              "voices": 4,
+              "octave": 0,
+              "temporal_value": 0
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent",
+              "voices": 1,
+              "octave": 0.3333333333333333,
+              "temporal_value": 0
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent",
+              "voices": 1,
+              "octave": 0,
+              "temporal_value": 0.1
+            },
+            {
+              "n": 16384,
+              "hop": 240,
+              "temporal_mode": "module-seconds",
+              "active_ports": 4,
+              "fixture": "independent",
+              "voices": 1,
+              "octave": 0.3333333333333333,
+              "temporal_value": 0.1
+            }
+          ]
+        },
+        {
+          "backends": [
+            "spectre"
+          ],
+          "settings": [
+            {
+              "temporal_mode": "module-seconds",
+              "temporal_value": 0.1,
+              "octave": 0.3333333333333333
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stress",
+      "family": "stream",
+      "hypothesis": "Non-divisible hops, dirty caches and decay expose numerical and scheduling limits.",
+      "regime": "continuous",
+      "hops": 256,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "backends": [
+            "core-matched-distributed-float",
+            "pffft-native-hybrid-float",
+            "vdsp-native-hybrid-float"
+          ],
+          "settings": [
+            {
+              "n": 2048,
+              "hop": 509,
+              "state": "startup",
+              "octave": 0.3333333333333333,
+              "temporal_value": 0.8,
+              "window": "blackman-harris"
+            },
+            {
+              "n": 16384,
+              "hop": 257,
+              "window": "flattop",
+              "octave": 1
+            },
+            {
+              "n": 2048,
+              "hop": 4096,
+              "fixture": "decay",
+              "decay_samples": 4096
+            },
+            {
+              "n": 2048,
+              "hop": 1024,
+              "fixture": "silence"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Host",
+      "family": "engine",
+      "hypothesis": "Lower analyzer bursts may improve fixed-load headroom and consumed-spectrum age in actual Rack scheduling.",
+      "regime": "paced",
+      "samples": 262144,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "module": "fourier-default",
+          "native": [
+            "",
+            "vdsp-native4-batch-float",
+            "vdsp-native4-hybrid-float",
+            "fftw-native4-batch-float",
+            "fftw-native4-hybrid-float"
+          ],
+          "shapes": [
+            {
+              "threads": 1,
+              "analyzers": 1
+            },
+            {
+              "threads": 4,
+              "analyzers": 1
+            },
+            {
+              "threads": 1,
+              "analyzers": 4
+            },
+            {
+              "threads": 4,
+              "analyzers": 4
+            },
+            {
+              "threads": 4,
+              "analyzers": 16
+            },
+            {
+              "threads": 4,
+              "analyzers": 16,
+              "alignment": "staggered"
+            },
+            {
+              "threads": 4,
+              "analyzers": 16,
+              "block": 256,
+              "alignment": "staggered"
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered"
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "background": 16
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "background": 64
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "consumer_hz": 30
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "consumer_hz": 60
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "consumer_hz": 60,
+              "stall_every": 10
+            }
+          ]
+        },
+        {
+          "module": "spectre-default",
+          "native": [
+            "",
+            "pffft-native-batch-float",
+            "pffft-native-hybrid-float"
+          ],
+          "shapes": [
+            {
+              "threads": 1,
+              "analyzers": 1
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered"
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "consumer_hz": 60
+            },
+            {
+              "threads": 4,
+              "analyzers": 4,
+              "alignment": "staggered",
+              "consumer_hz": 60,
+              "stall_every": 10
+            }
+          ]
+        },
+        {
+          "module": "fourier-default",
+          "native": [
+            ""
+          ],
+          "shapes": [
+            {
+              "threads": 1,
+              "analyzers": 0,
+              "background": 0
+            },
+            {
+              "threads": 1,
+              "analyzers": 0,
+              "background": 16
+            },
+            {
+              "threads": 1,
+              "analyzers": 0,
+              "background": 64
+            },
+            {
+              "threads": 4,
+              "analyzers": 0,
+              "background": 0
+            },
+            {
+              "threads": 4,
+              "analyzers": 0,
+              "background": 16
+            },
+            {
+              "threads": 4,
+              "analyzers": 0,
+              "background": 64
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lifecycle",
+      "family": "engine",
+      "hypothesis": "Serialized controls and long complete-module decay may expose distinct allocation, cancellation, publication and numerical limits.",
+      "regime": "continuous",
+      "samples": 65536,
+      "repeats": 2,
+      "warm_hops": 16,
+      "cases": [
+        {
+          "module": "fourier",
+          "native": [
+            "",
+            "vdsp-native4-batch-float",
+            "vdsp-native4-hybrid-float"
+          ],
+          "shapes": [
+            {
+              "threads": 4,
+              "analyzers": 1,
+              "events": [
+                {
+                  "block": 64,
+                  "kind": "freeze"
+                },
+                {
+                  "block": 96,
+                  "kind": "resume"
+                },
+                {
+                  "block": 128,
+                  "kind": "window"
+                },
+                {
+                  "block": 192,
+                  "kind": "band"
+                },
+                {
+                  "block": 256,
+                  "kind": "geometry"
+                },
+                {
+                  "block": 320,
+                  "kind": "reset"
+                },
+                {
+                  "block": 384,
+                  "kind": "sample-rate"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "module": "spectre",
+          "native": [
+            "",
+            "pffft-native-batch-float",
+            "pffft-native-hybrid-float"
+          ],
+          "shapes": [
+            {
+              "threads": 4,
+              "analyzers": 1,
+              "events": [
+                {
+                  "block": 64,
+                  "kind": "freeze"
+                },
+                {
+                  "block": 96,
+                  "kind": "resume"
+                },
+                {
+                  "block": 128,
+                  "kind": "window"
+                },
+                {
+                  "block": 192,
+                  "kind": "band"
+                },
+                {
+                  "block": 256,
+                  "kind": "geometry"
+                },
+                {
+                  "block": 320,
+                  "kind": "reset"
+                },
+                {
+                  "block": 384,
+                  "kind": "sample-rate"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "module": "fourier-default",
+          "native": [
+            "",
+            "vdsp-native4-hybrid-float",
+            "fftw-native4-hybrid-float"
+          ],
+          "workload": {
+            "fixture": "decay",
+            "decay_samples": 4096
+          },
+          "samples": 1048576,
+          "shapes": [
+            {
+              "threads": 1,
+              "analyzers": 1
+            }
+          ]
+        },
+        {
+          "module": "spectre-default",
+          "native": [
+            "",
+            "pffft-native-hybrid-float"
+          ],
+          "workload": {
+            "fixture": "decay",
+            "decay_samples": 4096
+          },
+          "samples": 1048576,
+          "shapes": [
+            {
+              "threads": 1,
+              "analyzers": 1
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "readiness": "implementation-ready",
+  "group_overlap": "Repeated baseline cells in Granularity are predeclared bridge observations; retain their group/process identities rather than treating them as distinct workloads.",
+  "numerical_stress_policy": "module-decay-ftz-v1 retains every tail vector with an explicit absolute floor and separate relative diagnostics; ordinary spectra retain spectrum-norms-v1"
+}

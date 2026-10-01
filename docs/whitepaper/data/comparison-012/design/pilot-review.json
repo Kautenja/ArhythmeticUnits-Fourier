@@ -1,0 +1,32 @@
+{
+  "pilot-primary-02": {
+    "workloads": 424,
+    "processes": 1272,
+    "within_session_ratio_median": 1.0113841918787179,
+    "within_session_ratio_p90": 1.0494848208543444,
+    "within_session_ratio_max": 7.754547887845999,
+    "timer_p99_ns_range": [
+      42.0,
+      42.0
+    ],
+    "normwise_reports": 576,
+    "max_relative_l2": 2.428253746068979e-07,
+    "max_relative_linf": 2.9786338868007423e-07,
+    "raw_csv_bytes": 95999659
+  },
+  "pilot-extensions": {
+    "workloads": 891,
+    "processes": 2673,
+    "within_session_ratio_median": 1.0204968837463966,
+    "within_session_ratio_p90": 1.117711266636703,
+    "within_session_ratio_max": 5.034885002037202,
+    "timer_p99_ns_range": [
+      42.0,
+      42.0
+    ],
+    "normwise_reports": 1104,
+    "max_relative_l2": 4.793860018254185e-07,
+    "max_relative_linf": 6.468453835776953e-07,
+    "raw_csv_bytes": 301778661
+  }
+}

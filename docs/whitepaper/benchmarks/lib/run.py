@@ -1,0 +1,541 @@
+#!/usr/bin/env python3
+"""Build and retain reproducible, serial paper experiments (Python stdlib only)."""
+# Copyright 2026 Arhythmetic Units
+# SPDX-License-Identifier: GPL-3.0-or-later
+import argparse
+import datetime as dt
+import hashlib
+import json
+import math
+import os
+from pathlib import Path
+import platform
+import random
+import shlex
+import shutil
+import subprocess
+import tarfile
+
+from workloads import FIELDS, expand
+from contracts import SYNTHESIS_BACKENDS, load_registry, resolve_contract, validate_config
+from dependencies import fftw_inputs
+from campaigns import resolve as resolve_campaign, inventory as campaign_inventory
+from runtime import RuntimeProfile, format_runtime, validate_profile
+from observations import quantile, summarize
+from execution import (SleepProtection, Gate, host_snapshot, add_arguments,
+                       policy_from_args, validate_policy, child_environment, validate_process,
+                       ENVIRONMENT, ReadinessError)
+
+from paths import ROOT, BENCHMARKS, HISTORY
+BINARY = ROOT / (".build/benchmark/rack/paper.exe" if os.name == "nt" else
+                 ".build/benchmark/rack/paper")
+BASE = dict(backend="core-float", pass_name="callback", n=2048, hop=1024,
+            block=64, count=1, alignment="aligned", load=0, smooth=0, voices=1,
+            rate=48000, state="steady", cache_mib=0, callback_offset=0)
+
+
+def source_inputs(root=ROOT):
+    """Include working research sources, excluding interpreter/Finder metadata."""
+    return sorted({p for base in (root/"src", root/"benchmark", root/"test/paper",
+                                  root/"docs/whitepaper/benchmarks") for p in base.rglob("*")
+                   if p.is_file() and "__pycache__" not in p.parts and p.name != ".DS_Store"} |
+                  {root/"Makefile", root/"plugin.json", *root.glob("mk/*.mk")})
+
+
+def workload(**changes):
+    return expand(dict(BASE, **changes))
+
+
+def matrix(profile):
+    """Factor sweeps, not an unbounded Cartesian product; custom JSON is supported."""
+    rows = synthesis_matrix(profile == "smoke")
+    if profile == "synthesis":
+        return rows
+    cores = ("core-float", "core-double", "core-simd4", "legacy-batch-float",
+             "legacy-incremental-float", "legacy-batch-double", "legacy-incremental-double")
+    modules = ("fourier", "spectre")
+    if profile == "smoke":
+        for backend in cores + modules:
+            rows += [workload(backend=backend, block=64),
+                     workload(backend=backend, pass_name="throughput", smooth=1),
+                     workload(backend=backend, count=4, alignment="staggered", load=8),
+                     workload(backend=backend, state="startup"),
+                     workload(backend=backend, state="live", cache_mib=1)]
+    else:
+        for backend in cores:
+            for n in (128, 2048, 16384):
+                for hop in (257, 1024):
+                    for smooth in (0, 1):
+                        for block in (1, 16, 64, 256):
+                            rows.append(workload(backend=backend, n=n, hop=hop, smooth=smooth, block=block))
+                        rows.append(workload(backend=backend, n=n, hop=hop, smooth=smooth, pass_name="throughput"))
+        # Multiple active analyzers, identical workload under both alignments.
+        for backend in cores + modules:
+            for count in (1, 4, 16):
+                for alignment in ("aligned", "staggered"):
+                    for load in (0, 64):
+                        for pass_name in ("callback", "throughput"):
+                            rows.append(workload(backend=backend, count=count, alignment=alignment,
+                                                 load=load, pass_name=pass_name))
+            for state in ("startup", "live"):
+                rows.append(workload(backend=backend, state=state))
+            rows.append(workload(backend=backend, cache_mib=32))
+        for backend in modules:
+            for n in ((128, 2048, 16384) if backend == "fourier" else (2048,)):
+                for rate in (48000, 96000, 192000):
+                    for voices in (1, 16):
+                        for smooth in (0, 1):
+                            for block in (16, 64, 256):
+                                rows.append(workload(backend=backend, n=n, rate=rate, voices=voices,
+                                                     smooth=smooth, block=block))
+    for block in ((64,) if profile == "smoke" else (1, 16, 64, 256)):
+        for count in (1, 4, 16):
+            for load in (0, 64):
+                for pass_name in ("callback", "throughput"):
+                    rows.append(workload(backend="driver", block=block, count=count, load=load, pass_name=pass_name))
+    for name in ("fft", "rfft", "ifft"):
+        for precision in ("float", "double"):
+            for n in ((128,) if profile == "smoke" else (128, 2048, 16384)):
+                for mode in ("complete", "incremental", "phases", "steps"):
+                    rows.append(workload(backend=f"{name}-{precision}", n=n, pass_name=mode, hop=257))
+    # Duplicate base rows from independent factor sweeps need only one identity.
+    return list({json.dumps(row, sort_keys=True): row for row in rows}.values())
+
+
+def synthesis_matrix(smoke):
+    """Matched inverse and full filtering controls; independent of Rack modules."""
+    rows = []
+    for backend in sorted(SYNTHESIS_BACKENDS):
+        base = workload(backend=backend, n=128 if smoke else 2048, hop=32 if smoke else 1024)
+        for n in ((128,) if smoke else (128, 2048, 16384)):
+            for mode in ("callback", "throughput"):
+                for block in ((64,) if smoke or mode == "throughput" else (16, 64, 256)):
+                    rows.append(dict(base, n=n, hop=32 if n == 128 else 1024, pass_name=mode, block=block))
+        rows += [dict(base, state="startup"),
+                 dict(base, count=4, alignment="staggered", load=8, cache_mib=1)]
+        if not smoke:
+            rows += [dict(base, hop=257), dict(base, rate=96000),
+                     dict(base, count=16, load=64),
+                     dict(base, count=16, alignment="staggered", load=64)]
+    return list({json.dumps(row, sort_keys=True): row for row in rows}.values())
+
+
+def command(config, executable=BINARY):
+    keys = ("backend", "pass_name", "n", "hop", "block", "count", "alignment", "load",
+            "smooth", "voices", "callbacks", "warm_hops", "rate", "state", "cache_mib")
+    prefix = (["--transition", config["transition_suite"],
+               "control" if config.get("transition_control", False) else "change"]
+              if config.get("transition_suite") else [])
+    return ([str(executable)] + prefix + [str(config[key]) for key in keys] + [str(config.get("callback_offset", 0))]
+            + (["v3", json.dumps({k: config[k] for k in sorted(FIELDS)})] if config.get("workload_schema") == 3 else ["v2"]))
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def capture(args, cwd=ROOT):
+    return subprocess.check_output(args, cwd=cwd, text=True, stderr=subprocess.STDOUT).strip()
+
+
+
+def save(path, value):
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("output", type=Path, nargs="?", help="New campaign directory; never overwritten")
+    parser.add_argument("--profile", choices=("smoke", "paper", "synthesis"), default="smoke")
+    parser.add_argument("--config", type=Path, help="JSON array of complete or partial workload objects")
+    parser.add_argument("--freeze", type=Path, help="Verified confirmation freeze; checked before any measurement")
+    parser.add_argument("--repeats", type=int, default=7)
+    parser.add_argument("--hops", type=int, default=64, help="Minimum measured hops per streaming pass")
+    parser.add_argument("--frames", type=int, default=64, help="Transform frames per pass")
+    parser.add_argument("--step-frames", type=int, default=2, help="Frames retaining every transform step")
+    parser.add_argument("--warm-hops", type=int, default=64)
+    parser.add_argument("--seed", type=int, default=20260929)
+    parser.add_argument("--rack-dir", type=Path, default=ROOT / "../..")
+    parser.add_argument("--cxx", default="c++")
+    parser.add_argument("--notes", default="", help="Power mode, affinity, host activity, session context")
+    parser.add_argument("--list", action="store_true", help="Print resolved workloads without building/running")
+    parser.add_argument("--inventory", action="store_true", help="List capabilities, including unavailable adapters")
+    parser.add_argument("--fftw-prefix", type=Path, help="Enable optional serial float/double FFTW static libraries")
+    parser.add_argument("--enable-vdsp", action="store_true", help="Enable macOS Accelerate/vDSP research adapters")
+    parser.add_argument("--variant", help="Explicit host variant for a campaign manifest: rack, portable, macos")
+    parser.add_argument("--describe-matrix", action="store_true", help="Resolved counts, channel contracts and configurations")
+    parser.add_argument("--phase", choices=("smoke", "pilot", "confirmation"), help="Evidence classification; defaults to smoke")
+    parser.add_argument("--session-id", default="", help="Independent measurement session label; required outside smoke")
+    parser.add_argument("--host-id", default="", help="Physical measurement host label; required outside smoke")
+    add_arguments(parser)
+    args = parser.parse_args()
+    features, external_inputs = [], {}
+    if args.fftw_prefix:
+        args.fftw_prefix = args.fftw_prefix.resolve()
+        try:
+            external_inputs.update(fftw_inputs(args.fftw_prefix))
+        except ValueError as error:
+            parser.error(str(error))
+        features.append("fftw")
+    if args.enable_vdsp:
+        if platform.system() != "Darwin":
+            parser.error("vDSP is unavailable: --enable-vdsp requires macOS")
+        features.append("vdsp")
+    registry = load_registry(features=features)
+    if args.inventory:
+        print(json.dumps(registry, indent=2, sort_keys=True))
+        return
+    if args.output is None and not (args.list or args.describe_matrix):
+        parser.error("An output directory is required")
+    if min(args.repeats, args.hops, args.frames, args.step_frames) < 1 or args.warm_hops < 0:
+        parser.error("Counts must be positive and warmup nonnegative")
+    if args.hops < 2:
+        parser.error("At least two measured hops are required")
+    frozen = None
+    if args.freeze:
+        from study import read_freeze, seed_for_session
+        frozen = read_freeze(args.freeze)
+        if frozen.get('fixture'): parser.error('Cannot launch a synthetic freeze')
+        if args.phase != "confirmation":
+            parser.error("Frozen runs require --phase confirmation")
+    configs = matrix(args.profile)
+    manifest = None
+    if args.config:
+        document = json.loads(args.config.read_text())
+        if isinstance(document, dict):
+            try:
+                configs, manifest = resolve_campaign(document, args.variant, registry, platform.system(), BASE)
+            except (ValueError, KeyError) as error:
+                parser.error(str(error))
+        else:
+            if args.variant:
+                parser.error("--variant requires a campaign manifest")
+            configs = [workload(**item) for item in document]
+    phase = args.phase or ("pilot" if manifest and manifest["phase"] != "smoke" else "smoke")
+    if manifest and manifest["phase"] == "smoke" and phase != "smoke":
+        parser.error("Smoke configurations cannot become publication evidence")
+    if not (args.list or args.describe_matrix) and phase != "smoke" and not (args.session_id and args.host_id):
+        parser.error("Pilot/confirmation requires explicit --host-id and --session-id")
+    for config in configs:
+        if config.keys() - (set(BASE) | FIELDS | {"transition_suite", "transition_control"}):
+            parser.error("Unknown workload keys: " + str(config.keys() - (set(BASE) | FIELDS | {"transition_suite", "transition_control"})))
+        try:
+            validate_config(config, registry)
+        except ValueError as error:
+            parser.error(str(error))
+        config["warm_hops"] = 0 if config.get("transition_suite") else args.warm_hops
+        config["callbacks"] = (math.ceil(max(args.hops, 26 if config.get("transition_suite") else 0)*config["hop"]/config["block"])
+                               if config["pass_name"] in ("callback", "throughput") else
+                               args.step_frames if config["pass_name"] == "steps" else args.frames)
+        try:
+            validate_config(config, registry, measurement=True)
+        except ValueError as error:
+            parser.error(str(error))
+    if len({json.dumps(c, sort_keys=True) for c in configs}) != len(configs):
+        parser.error("Duplicate workload configuration")
+    if not configs:
+        parser.error("Empty workload matrix")
+    args.execution_policy = validate_policy(policy_from_args(args), configs)
+    if args.list or args.describe_matrix:
+        result = dict(campaign=manifest, phase=phase, inventory=campaign_inventory(configs, registry), configs=configs) if args.describe_matrix else configs
+        print(json.dumps(result, indent=2))
+        return
+    if frozen:
+        if configs != frozen["configs"] or args.repeats != frozen["options"]["repeats"] or args.seed != seed_for_session(frozen, args.session_id):
+            parser.error("Command differs from frozen configuration")
+    output = args.output.resolve()
+    if any(base == output or base in output.parents for base in (ROOT/"src", ROOT/"benchmark", ROOT/".git")):
+        parser.error("Write campaigns outside source and Git metadata directories")
+    output.mkdir(parents=True, exist_ok=False)
+    runtime, metadata = RuntimeProfile(), {}
+    guard = SleepProtection()
+    metadata["sleep_protection"] = guard.record
+    try:
+        with guard:
+            args.sleep_guard = guard
+            run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
+                         runtime, metadata)
+        save(output/"metadata.json", metadata)
+        runtime.switch("validation")
+        from check import check
+        check(output)
+    except BaseException:
+        # Keep failed phase accounting without presenting partial evidence as complete.
+        metadata["runtime"] = runtime.finish("failed")
+        metadata["status"] = "invalid"
+        metadata["failure"] = dict(type=__import__("sys").exc_info()[0].__name__, message=str(__import__("sys").exc_info()[1]))
+        if isinstance(__import__("sys").exc_info()[1], ReadinessError):
+            metadata["readiness_failure"] = __import__("sys").exc_info()[1].snapshot
+        save(output/"metadata.json", metadata)
+        raise
+    metadata["runtime"] = runtime.finish("complete")
+    validate_profile(metadata["runtime"])
+    metadata["finished_utc"] = metadata["runtime"]["finished_utc"]
+    save(output/"metadata.json", metadata)
+    print(format_runtime(output, metadata), flush=True)
+
+
+def run_campaign(args, output, configs, features, external_inputs, registry, phase, manifest,
+                 runtime, metadata):
+    """Prepare completely, then launch protected, versioned serial measurements."""
+    rack = args.rack_dir.resolve()
+    build = ["make", "-B", "benchmark-paper-build", f"RACK_DIR={rack}", f"CXX={args.cxx}"]
+    # The recorded feature set must override ambient Make environment settings.
+    build.append("PAPER_FFTW_PREFIX="+(str(args.fftw_prefix) if args.fftw_prefix else ""))
+    build.append("PAPER_VDSP="+str(int(args.enable_vdsp)))
+    metadata.update(schema=2, status="incomplete", started_utc=dt.datetime.now(dt.timezone.utc).isoformat(),
+                    revision=capture(["git", "rev-parse", "HEAD"]),
+                    git_status=capture(["git", "status", "--porcelain"]),
+                    platform=platform.platform(), machine=platform.machine(), processor=platform.processor(),
+                    python=platform.python_version(), cpu_count=os.cpu_count(),
+                    compiler=capture(shlex.split(args.cxx)+["--version"]), build_command=build,
+                    rack_dir=str(rack), seed=args.seed, repeats=args.repeats, notes=args.notes,
+                    protocol="v2", configs=configs, runs=[], build_features=features,
+                    external_dependency_sha256={name: digest(path) for name, path in external_inputs.items()})
+    if args.freeze:
+        from study import read_freeze
+        metadata["study_freeze"] = read_freeze(args.freeze)
+    metadata["analysis_accuracy_policy"] = "spectrum-norms-v1"
+    metadata["module_accuracy_policy"] = "all-module-outputs-v1"
+    metadata["scalar_analysis_audit_policy"] = "all-publications-v1"
+    if any(c.get("transition_suite") for c in configs):
+        metadata["transition_policy"] = "fourier-transitions-v1"
+    metadata["runtime_profile"] = "coarse-wall-v1"
+    metadata["execution_policy"] = args.execution_policy
+    metadata["phase"] = phase
+    metadata["session_id"] = args.session_id or "smoke"
+    metadata["host_id"] = args.host_id or "unlabeled-smoke-host"
+    metadata["campaign_manifest"] = manifest
+    metadata["matrix_inventory"] = campaign_inventory(configs, registry)
+    metadata["config_file_sha256"] = digest(args.config) if args.config else None
+    metadata["contracts"] = {str(i): resolve_contract(c, registry) for i, c in enumerate(configs)}
+    metadata["resources"] = {}
+    if args.enable_vdsp:
+        metadata["platform_framework"] = dict(name="Apple Accelerate/vDSP", binary_hash=None,
+            limitation="System framework/dyld cache; exact per-instance OS and compile SDK identity in provider_info",
+            SDKROOT=os.environ.get("SDKROOT"), default_xcrun_sdk={})
+        for key, option in (("version", "--show-sdk-version"), ("build", "--show-sdk-build-version")):
+            try:
+                metadata["platform_framework"]["default_xcrun_sdk"][key] = capture(["xcrun", "--sdk", "macosx", option])
+            except (OSError, subprocess.CalledProcessError):
+                metadata["platform_framework"]["default_xcrun_sdk"][key] = "unavailable"
+    if platform.system() == "Darwin":
+        try:
+            metadata["cpu_model"] = capture(["sysctl", "-n", "machdep.cpu.brand_string"])
+        except subprocess.CalledProcessError as error:
+            metadata["cpu_model"] = "unavailable: " + error.output.strip()
+    elif Path("/proc/cpuinfo").exists():
+        metadata["cpuinfo"] = Path("/proc/cpuinfo").read_text()
+    save(output/"metadata.json", metadata)
+    runtime.switch("input_hashes")
+    # Archive working sources, including uncommitted benchmark development.
+    sources = source_inputs()
+    # SDK headers/build rules and linked library affect generated code/behavior.
+    sdk = sorted({p for base in (rack/"include", rack/"dep/include") for p in base.rglob("*")
+                  if p.is_file() and p.name != ".DS_Store"} |
+                 {p for p in rack.glob("*.mk")} | {p for p in rack.glob("libRack.*") if p.is_file()} |
+                 {p for p in (rack/"dep/pffft").glob("pffft.[ch]") if p.is_file()})
+    if getattr(args, 'engine_study', False):
+        from prepared import sdk_inputs
+        sdk = sdk_inputs(rack)
+    build_inputs = {p: digest(p) for p in sources+sdk+list(external_inputs.values())}
+    runtime.switch("build")
+    with (output/"build.log").open("w") as log:
+        subprocess.run(build, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=True)
+    metadata["compile_commands"] = [line for line in (output/"build.log").read_text().splitlines()
+        if " -c " in line and "benchmark/paper/benchmark.cpp" in line]
+    if len(metadata["compile_commands"]) != 2:
+        raise ValueError("Cannot identify both effective benchmark compiler commands")
+    runtime.switch("archive")
+    if any(digest(p) != expected for p, expected in build_inputs.items()):
+        raise ValueError("Source or dependency changed during build")
+    audit_binary = BINARY.with_name("paper-audit" + BINARY.suffix)
+    shutil.copy2(BINARY, output/"paper.bin")
+    shutil.copy2(audit_binary, output/"paper-audit.bin")
+    measured_binary = output/"paper.bin"
+    measured_binary.chmod(0o500)
+    metadata["binary_sha256"] = digest(BINARY)
+    metadata["audit_binary_sha256"] = digest(audit_binary)
+    metadata["source_sha256"] = {str(p.relative_to(ROOT)): digest(p) for p in sources}
+    with tarfile.open(output/"source.tar.gz", "w:gz") as archive:
+        for path in sources:
+            archive.add(path, arcname=str(path.relative_to(ROOT)))
+    metadata["sdk_sha256"] = {str(p.relative_to(rack)): digest(p) for p in sdk}
+    with tarfile.open(output/"dependencies.tar.gz", "w:gz", dereference=True) as archive:
+        for path in sdk:
+            archive.add(path, arcname=str(path.relative_to(rack)), recursive=False)
+    if external_inputs:
+        with tarfile.open(output/"external-dependencies.tar.gz", "w:gz", dereference=True) as archive:
+            for name, path in external_inputs.items():
+                archive.add(path, arcname=name, recursive=False)
+    metadata["optional_build_provenance"] = "retained" if "fftw/provenance.json" in external_inputs else "not supplied"
+    metadata["dependency_scope"] = "Rack headers, build rules and libRack bytes; system libraries identified by loader output and OS version"
+    loader = (["otool", "-L", str(BINARY)] if platform.system() == "Darwin" else
+              ["objdump", "-p", str(BINARY)] if os.name == "nt" else ["ldd", str(BINARY)])
+    try:
+        (output/"linked-libraries.txt").write_text(capture(loader)+"\n")
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError("Cannot identify linked implementations") from error
+    try:
+        metadata["rack_revision"] = capture(["git", "rev-parse", "HEAD"], rack)
+        metadata["pffft_revision"] = capture(["git", "rev-parse", "HEAD"], rack/"dep/pffft") if (rack/"dep/pffft/.git").exists() else "source revision unavailable in SDK"
+        metadata["rack_status"] = capture(["git", "status", "--porcelain", "--untracked-files=no"], rack)
+    except subprocess.CalledProcessError:
+        metadata["rack_revision"] = "SDK without Git metadata"
+    if "study_freeze" in metadata:
+        from study import enforce
+        enforce(metadata["study_freeze"], metadata)
+    env = dict(os.environ, DYLD_LIBRARY_PATH=str(rack), LD_LIBRARY_PATH=str(rack))
+    # Resource probes/preflight must not write into an inherited telemetry path.
+    env.pop("PAPER_RUNTIME_PATH", None)
+    env.pop("PAPER_TRANSITION_PATH", None)
+    for key in ENVIRONMENT:
+        env.pop(key, None)
+    env["PAPER_SLEEP_OWNER"] = str(args.sleep_guard.pid)
+    runtime.switch("preflight")
+    with (output/"verification.txt").open("w") as verification:
+        subprocess.run([str(measured_binary), "--verify"], cwd=ROOT, env=env,
+                       stdout=verification, stderr=subprocess.STDOUT, check=True)
+    compiled_registry = json.loads(subprocess.check_output([str(measured_binary), "--inventory"], env=env, text=True))
+    if compiled_registry != registry:
+        raise ValueError("Compiled backend registry differs from runner")
+    save(output/"inventory.json", compiled_registry)
+    runtime.switch("resource_probes")
+    for index, config in enumerate(configs):
+        arguments = command(config)[1:]
+        contract = json.loads(subprocess.check_output([str(measured_binary), "--describe"]+arguments, env=env, text=True))
+        if contract != metadata["contracts"][str(index)]:
+            raise ValueError("C++ and Python evidence contracts differ")
+        resource = {}
+        for label, executable in (("timing", measured_binary), ("allocation", output/"paper-audit.bin")):
+            resource[label] = json.loads(subprocess.check_output(
+                [str(executable), "--resources-untimed" if getattr(args, "prepare_only", False) else "--resources"]+arguments, env=env, text=True))
+        filename = f"resources-{index:04d}.json"
+        save(output/filename, resource)
+        metadata["resources"][str(index)] = filename
+    if getattr(args, 'prepare_only', False):
+        metadata['status'] = 'prepared'
+        metadata['artifact_sha256'] = {p.name: digest(p) for p in output.iterdir() if p.is_file() and p.name != 'metadata.json'}
+        save(output/'metadata.json', metadata)
+        return
+    execute_campaign(args, output, configs, registry, runtime, metadata, env)
+
+
+def validate_engine_execution(data, policy, document, owner):
+    """Cross-check engine JSON against the same protected process timing sidecar."""
+    p = document['profile']; c = dict(p['workload'], callbacks=p['blocks'])
+    rows = document['result']['observations']
+    validate_process(data, policy, c, {'groups': {'callback': {'total_ns': sum(r['duration_ns'] for r in rows)}}},
+                     sleep_owner=owner)
+    for index, (sidecar, row) in enumerate(zip(data['observations'], rows)):
+        if (sidecar['sample'] != index*c['block'] or any(sidecar[k] != row[k]
+                for k in ('samples','release_ns','deadline_ns','wake_ns','start_ns','finish_ns'))):
+            raise ValueError('Engine and execution sidecar timestamps differ')
+
+
+def execute_campaign(args, output, configs, registry, runtime, metadata, env, gate=None, defer_integrity=False):
+    """One shared serial dispatch loop for built or immutable prepared campaigns."""
+    measured_binary = output/'paper.bin'
+    rack = args.rack_dir.resolve()
+    sources = source_inputs()
+    sdk = [rack/name for name in metadata['sdk_sha256']]
+    external_inputs = getattr(args, 'external_inputs', None)
+    if external_inputs is None:
+        external_inputs = fftw_inputs(args.fftw_prefix) if args.fftw_prefix else {}
+    jobs = [(repeat, index) for repeat in range(args.repeats) for index in range(len(configs))]
+    random.Random(args.seed).shuffle(jobs)
+    runtime.switch("metadata_checkpoint")
+    save(output/"metadata.json", metadata)
+    runtime.switch("host_readiness")
+    if not defer_integrity: metadata["host_before"] = host_snapshot(args.sleep_guard.pid)
+    gate = gate or Gate(args.execution_policy, args.sleep_guard)
+    metadata["execution_events"] = gate.events
+    for ordinal, (repeat, index) in enumerate(jobs):
+        runtime.switch("job_dispatch", workload=index, repeat=repeat)
+        config = configs[index]
+        stem = f"workload-{index:04d}-repeat-{repeat:02d}"
+        raw, errors = output/(stem+".csv"), output/(stem+".stderr")
+        process_runtime = output/(stem+".runtime.json")
+        process_execution = output/(stem+".execution.json")
+        engine = metadata.get('family') == 'engine'
+        invocation = ([str(measured_binary), '--engine', str(output/f'profile-{index:04d}.json')]
+                      if engine else command(config, measured_binary))
+        if engine: raw = output/(stem+'.json')
+        print(f"[{ordinal+1}/{len(jobs)}] {stem} {config['workload']['backend'] if engine else config['backend']} {'engine' if engine else config['pass_name']}", flush=True)
+        started = dt.datetime.now(dt.timezone.utc).isoformat()
+        metadata["active_job"] = dict(workload=index, repeat=repeat, raw=raw.name, stderr=errors.name)
+        save(output/"metadata.json", metadata)
+        process_env = child_environment(args.execution_policy, process_execution,
+                                        dict(env, PAPER_RUNTIME_PATH=str(process_runtime)))
+        transition = output/(stem+".transition.json") if config.get("transition_suite") else None
+        if transition:
+            process_env["PAPER_TRANSITION_PATH"] = str(transition)
+        if engine:
+            process_env['PAPER_HOST_EXECUTION_PATH'] = str(process_execution)
+            process_env.pop('PAPER_RUNTIME_PATH', None)
+        with raw.open("x") as stdout, errors.open("x") as stderr:
+            if ordinal == 0 and gate.state != "launched":
+                gate.prepared(measured_binary, metadata["binary_sha256"])
+                runtime.switch("stabilization")
+                gate.settle()
+                gate.launch()
+            args.sleep_guard.check()
+            runtime.switch("benchmark_process", workload=index, repeat=repeat)
+            subprocess.run(invocation, cwd=ROOT, env=process_env,
+                           stdout=stdout, stderr=stderr, check=True)
+            args.sleep_guard.check()
+        runtime.switch("summarize", workload=index, repeat=repeat)
+        run = dict(workload=index, repeat=repeat, command=invocation, started_utc=started,
+                   raw=raw.name, stderr=errors.name, execution=process_execution.name)
+        if engine:
+            from engine_host import validate as validate_engine
+            document = json.loads(raw.read_text())
+            run['summary'] = validate_engine(document, registry)
+            run['profile'] = f'profile-{index:04d}.json'
+            validate_engine_execution(json.loads(process_execution.read_text()), args.execution_policy,
+                                      document, args.sleep_guard.pid)
+        else:
+            validate_profile(json.loads(process_runtime.read_text()))
+            run.update(runtime=process_runtime.name, summary=summarize(raw, config))
+            validate_process(json.loads(process_execution.read_text()), args.execution_policy,
+                             config, run['summary'], raw, args.sleep_guard.pid)
+        from study_plan import observation_design
+        design_config = (dict(config['workload'], callbacks=config['blocks']) if engine else config)
+        if engine:
+            channels = 4 if config['workload']['backend'].startswith('fourier') else 1
+            publications = sum(sum(p['published_at'] >= document['result']['origin'] for p in node['publications'])
+                               for node in document['result']['replay']['nodes'])*channels
+        else:
+            publications = run['summary'].get('publication_audit_rows', 0)*resolve_contract(config, registry)['channels']
+        if design_config['pass_name'] in ('callback', 'throughput'):
+            run['observation_design'] = observation_design(design_config, publications)
+        metadata['runs'].append(run)
+        if transition:
+            metadata["runs"][-1]["transition"] = transition.name
+        metadata.pop("active_job", None)
+        runtime.switch("metadata_checkpoint", workload=index, repeat=repeat)
+        save(output/"metadata.json", metadata)
+    if defer_integrity:
+        metadata['status'] = 'recorded'
+        save(output/'metadata.json', metadata)
+        return
+    runtime.switch("final_integrity")
+    metadata["host_after"] = host_snapshot(args.sleep_guard.pid)
+    if metadata["host_before"]["power"] != metadata["host_after"]["power"]:
+        raise ValueError("Power source/settings changed during campaign")
+    if (digest(measured_binary) != metadata["binary_sha256"]
+            or digest(output/"paper-audit.bin") != metadata["audit_binary_sha256"]
+            or any(digest(p) != metadata["source_sha256"][str(p.relative_to(ROOT))] for p in sources)
+            or any(digest(p) != metadata["sdk_sha256"][str(p.relative_to(rack))] for p in sdk)
+            or any(digest(path) != metadata["external_dependency_sha256"][name] for name, path in external_inputs.items())):
+        raise ValueError("Source, executable or dependencies changed during campaign")
+    metadata["status"] = "complete"
+    metadata["finished_utc"] = dt.datetime.now(dt.timezone.utc).isoformat()
+    runtime.switch("artifact_hashes")
+    metadata["artifact_sha256"] = {p.name: digest(p) for p in output.iterdir()
+                                  if p.is_file() and p.name != "metadata.json"}
+    save(output/"metadata.json", metadata)
+
+
+if __name__ == "__main__":
+    main()

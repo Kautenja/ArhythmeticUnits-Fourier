@@ -1,0 +1,15 @@
+\begin{table}[tb]
+\centering\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Mode & Hop ($\mu$s) & Block max ($\mu$s) & Max range ($\mu$s) & Age (samples) \\
+\midrule
+Legacy & 56.009 & 24.625 & 24.291--36.292 & 1023 \\
+Stage bursts & 50.327 & 45.751 & 43.125--57.625 & 4095 \\
+Serial one hop & 51.392 & 4.875 & 4.792--9.167 & 1023 \\
+Four-hop overlap & 55.145 & 5.229 & 4.000--18.917 & 4095 \\
+\bottomrule
+\end{tabular}
+\caption{Selected prototype workload: $N=4096$, $H=1024$, one-third-octave smoothing, 64-sample blocks. Hop time and block maximum are medians of 12 run summaries from separate passes; range is the full range of those maxima. Age is measured from the frame's newest input.}
+\label{tab:pipeline}
+\end{table}

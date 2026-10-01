@@ -1,0 +1,54 @@
+% Spatial reference drawing; coordinates follow PanelLayout and module controls.
+% Palette swatches and axes are conceptual, not captured spectral data.
+\colorlet{panelAccent}{spectreAccent}
+\begin{tikzpicture}[x=1pt,y=-1pt,line cap=round,line join=round]
+  \PanelChassis{525}{75}{SPECTRE}
+  \draw[draw=panelMuted,line width=3pt] (37.5,50)--(37.5,68);
+  \PanelJack{37.5}{38.5}
+  \PanelKnob{37.5}{80}
+  \PanelRun{37.5}{346}
+  \PanelColorControl
+  % Display with axes only: no trace, live palette, or numeric readout to drift.
+  \draw[panel line,rounded corners=3pt,fill=white] (75,15) rectangle (510,365);
+  \draw[panel fine] (115,35) rectangle (495,315);
+  \ifdefined\PanelHistory
+    \PanelHistoryScreen
+  \else
+  \foreach \y in {85,135,...,285} \draw[panel fine] (115,\y)--(120,\y);
+  \foreach \x in {165,215,...,465} \draw[panel fine] (\x,315)--(\x,310);
+  \draw[draw=panelRule,line width=.45pt,-{Stealth[length=4pt]}] (139,284)--(220,284);
+  \draw[draw=panelRule,line width=.45pt,-{Stealth[length=4pt]}] (139,284)--(139,216);
+  \node[panel note,anchor=west] at (152,265) {Scan direction};
+  \node[panel note,rotate=90] at (126,248) {Frequency};
+  \node[text=panelMuted,font=\sffamily\fontsize{16}{18}\selectfont]
+    at (314,157) {Spectral history};
+  \node[panel note] at (314,179) {Frequency / time / magnitude};
+  \fi
+  \draw[panel fine] (85,323)--(500,323);
+  \foreach \x/\label/\num in {110/WINDOW/4,171/FREQ SCALE/5,
+    232/AVERAGE/6,293/SMOOTH/7,354/LO FREQ/8,415/HI FREQ/9,476/SLOPE/10} {
+    \PanelTextControl{\x}{\label}{\num}
+  }
+  \ifdefined\PanelBare\else
+    \draw[panel leader] (3,27)--(-8,27)--(-8,93)--(3,93);
+    \draw[panel leader] (-8,60)--(-27,60);
+    \node[panel badge] at (-38,60) {1};
+    \draw[panel leader] (-27,204)--(8,204);
+    \node[panel badge] at (-38,204) {2};
+    \draw[panel leader] (-27,346)--(20,346);
+    \node[panel badge] at (-38,346) {3};
+    \node[panel note,anchor=west] at (0,-23) {PANEL REFERENCE};
+    \node[panel note,anchor=east] at (525,-23) {35 HP / ONE INPUT};
+    \draw[panel fine] (-48,445)--(525,445);
+    \PanelKey{-27}{473}{1}{Input + gain}{Sum voices into one signal}
+    \PanelKey{-27}{516}{2}{Color range}{Palette, scale, Floor + Ceiling}
+    \PanelKey{-27}{559}{3}{Run}{Freeze or resume acquisition}
+    \PanelKey{-27}{602}{4}{Window}{Choose the analysis window}
+    \PanelKey{-27}{645}{5}{Freq Scale}{Choose the frequency mapping}
+    \PanelKey{274}{473}{6}{Average}{Smooth changes over time}
+    \PanelKey{274}{516}{7}{Smooth}{Combine neighboring frequencies}
+    \PanelKey{274}{559}{8}{LO Freq}{Set the visible lower bound}
+    \PanelKey{274}{602}{9}{HI Freq}{Set the visible upper bound}
+    \PanelKey{274}{645}{10}{Slope}{Apply display weighting}
+  \fi
+\end{tikzpicture}

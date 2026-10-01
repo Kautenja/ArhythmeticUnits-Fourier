@@ -27,16 +27,15 @@ extern Plugin* plugin_instance;
 // Extensions to the VCV rack framework.
 #include "./rack_extensions/graphics.hpp"
 #include "./rack_extensions/text_knob.hpp"
+#include "./rack_extensions/settings_history.hpp"
+#include "./rack_extensions/cached_display.hpp"
 
-// DSP library and mathematical utilities
-#include "./dsp/filter.hpp"
-#include "./dsp/math.hpp"
-#include "./dsp/music_theory.hpp"
-#include "./dsp/trigger.hpp"
+// Shared module display and analysis settings.
 #include "./structs.hpp"
 
-/// The "Fourier" Spectrogram analyzer module.
+/// The "Spectre" spectrogram module.
 extern Model *modelSpectrogram;
+/// The "Fourier" spectrum analyzer module.
 extern Model *modelSpectrumAnalyzer;
 
 #endif  // ARHYTHMETIC_UNITS_FOURIER_PLUGIN_HPP_

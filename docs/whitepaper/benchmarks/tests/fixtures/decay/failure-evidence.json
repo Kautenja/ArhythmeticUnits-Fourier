@@ -1,0 +1,37 @@
+{
+  "kind": "untimed-decay-regression-evidence-v1",
+  "source_revision": "0102346",
+  "rack_revision": "8c33d966d329e4a6e354593b2b5f9ac2df5a03bd",
+  "binary_sha256": "b68c2139c729cf73fe3e5542606c89d20d7b607b557ea2f576e0fe607ffadbac",
+  "fixture_only": true,
+  "performance_measurements": false,
+  "magnitude_reproducer": {
+    "kind": "untimed-magnitude-reproducer",
+    "input": 1.0000000195414814e-25,
+    "fpu_control": 16777216,
+    "actual": 0,
+    "reference": 1.414213590008923e-25
+  },
+  "failures": {
+    "fourier-default": {
+      "exit_code": 1,
+      "stderr": "fourier-default/ node=0 frame=106560: Independent analysis spectrum norms differ: L2=0.010668632079184052, Linf=0.016524455558102665, endpoint=105120, channel=3 {\"policy\":\"spectrum-norms-v1\",\"tolerance\":0.00029999999999999997,\"vectors\":295,\"values\":302375,\"zero_vectors\":0,\"max_relative_l2\":5.2310056970495161e-05,\"max_relative_linf\":5.0586539962738049e-05,\"legacy_pointwise_failures\":0,\"max_legacy_scaled_error\":0.00012120963079385766,\"worst_pointwise\":{\"endpoint\":4320,\"bin\":1017,\"channel\":0,\"actual\":1.0384467840194702,\"reference\":1.0385726690292358}}"
+    },
+    "vdsp-native4-hybrid-float": {
+      "exit_code": 1,
+      "stderr": "fourier-default/vdsp-native4-hybrid-float node=0 frame=109440: Independent analysis spectrum norms differ: L2=0.010668633805142633, Linf=0.016524457891231976, endpoint=108000, channel=1 {\"policy\":\"spectrum-norms-v1\",\"tolerance\":0.00029999999999999997,\"vectors\":301,\"values\":308525,\"zero_vectors\":0,\"max_relative_l2\":5.2396582536877349e-05,\"max_relative_linf\":5.0586539962738049e-05,\"legacy_pointwise_failures\":0,\"max_legacy_scaled_error\":4.7206878662109375e-05,\"worst_pointwise\":{\"endpoint\":1440,\"bin\":1017,\"channel\":0,\"actual\":0.90087014436721802,\"reference\":0.90082293748855591}}"
+    },
+    "fftw-native4-hybrid-float": {
+      "exit_code": 1,
+      "stderr": "fourier-default/fftw-native4-hybrid-float node=0 frame=106560: Independent analysis spectrum norms differ: L2=0.010668632064959783, Linf=0.016524455558102665, endpoint=105120, channel=3 {\"policy\":\"spectrum-norms-v1\",\"tolerance\":0.00029999999999999997,\"vectors\":295,\"values\":302375,\"zero_vectors\":0,\"max_relative_l2\":5.2310056970495161e-05,\"max_relative_linf\":5.0586539962738049e-05,\"legacy_pointwise_failures\":0,\"max_legacy_scaled_error\":2.4557113647460938e-05,\"worst_pointwise\":{\"endpoint\":4320,\"bin\":1017,\"channel\":3,\"actual\":0.57124006748199463,\"reference\":0.57121551036834717}}"
+    },
+    "spectre-default": {
+      "exit_code": 1,
+      "stderr": "spectre-default/ node=0 frame=194560: Independent analysis spectrum norms differ: L2=0.00032711113940373649, Linf=0.00017641585957128771, endpoint=193536, channel=0 {\"policy\":\"spectrum-norms-v1\",\"tolerance\":0.00029999999999999997,\"vectors\":189,\"values\":193725,\"zero_vectors\":0,\"max_relative_l2\":0.00027999148340379751,\"max_relative_linf\":0.00018047868986130244,\"legacy_pointwise_failures\":0,\"max_legacy_scaled_error\":0.00012601540554163827,\"worst_pointwise\":{\"endpoint\":3072,\"bin\":1018,\"channel\":0,\"actual\":1.1296541690826416,\"reference\":1.129511833190918}}"
+    },
+    "pffft-native-hybrid-float": {
+      "exit_code": 1,
+      "stderr": "spectre-default/pffft-native-hybrid-float node=0 frame=109568: Independent analysis spectrum norms differ: L2=0.010668632128644055, Linf=0.016524456388538247, endpoint=108544, channel=0 {\"policy\":\"spectrum-norms-v1\",\"tolerance\":0.00029999999999999997,\"vectors\":106,\"values\":108650,\"zero_vectors\":0,\"max_relative_l2\":5.209713325291574e-05,\"max_relative_linf\":5.0586203010210252e-05,\"legacy_pointwise_failures\":0,\"max_legacy_scaled_error\":2.002716064453125e-05,\"worst_pointwise\":{\"endpoint\":5120,\"bin\":1020,\"channel\":0,\"actual\":0.53498381376266479,\"reference\":0.53500384092330933}}"
+    }
+  }
+}

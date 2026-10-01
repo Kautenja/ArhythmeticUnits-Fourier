@@ -1,0 +1,35 @@
+\section{Recognizing Sound Shapes}\label{sec:shapes}
+
+A spectrogram turns musical events into shapes. Read position as frequency,
+horizontal extent as captured time, and color as magnitude. Start with
+Average and Smooth off so their blending does not disguise the pattern.
+
+\begin{figure}[!htp]
+\centering
+\input{figures/sound-shapes.tex}
+\caption{Schematic sound signatures, shown in chronological order within
+one sweep. Marks indicate energy; their shade is illustrative rather than a
+calibrated palette. Spectre's scan line wraps when it reaches the right edge.}
+\end{figure}
+
+\begin{description}[style=nextline,leftmargin=0pt,labelwidth=0pt,labelsep=0pt]
+  \item[Steady tone] A sine produces one horizontal band. A harmonic sound
+  adds bands near integer multiples of its fundamental. With Linear Freq
+  Scale, equally spaced harmonics are equally spaced on the frequency axis.
+  \item[Pitch movement] A glide bends the bands upward or downward.
+  Vibrato makes them undulate. Harmonics move together as the fundamental
+  changes; frequency smoothing can blend neighboring bands.
+  \item[Attack and decay] A short broadband attack produces a vertical
+  mark. Resonances can continue as horizontal tails. A pitched percussion
+  sound may combine a vertical attack with a falling pitch curve.
+  \item[Sustained noise] Energy spreads over a frequency region instead
+  of forming stable harmonic lines. A moving filter changes that region's
+  boundary and may leave a bright resonant band near its cutoff.
+\end{description}
+
+\paragraph{Use shape as evidence}
+A thick band can be a window's broad peak, modulation, several nearby tones,
+or smoothing. It does not establish that the source is noisy. An evenly
+colored region can simply be above Ceil or below Floor. Change one viewing
+control at a time, then compare the sound again with minimal smoothing.
+The next walkthroughs isolate these causes.

@@ -1,0 +1,2 @@
+# Local raw audit packages are intentionally not Git blobs.
+*.tar.gz

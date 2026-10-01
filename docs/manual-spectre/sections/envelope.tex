@@ -1,0 +1,40 @@
+\section{Following An Envelope}\label{sec:envelope}
+
+Follow how a sound develops rather than only how bright its final spectrum
+looks. Use an oscillator or noise source, a VCA, and a repeating envelope.
+
+\paragraph{Starting point}
+Load \textbf{DecibelInspection}. It sets unity input gain, Flattop, no
+smoothing, zero Slope, and a $-90$ to $+12\,\mathrm{dB}$ color range.
+Change Window to Hann. Use Linear Freq Scale and $0$--$5\,\mathrm{kHz}$
+for a pitched source, or a wider range for noise. Keep Rack at
+$48\,\mathrm{kHz}$ for the timing examples here.
+
+\begin{enumerate}
+  \item Patch the sound through the VCA. Send the envelope to the VCA's
+  level input, and branch the VCA output to Spectre and your listening path.
+  Trigger a short attack and a decay of roughly half a second once a second.
+  \item Watch several repetitions. A sine leaves one band whose color
+  brightens at each attack and fades during decay. Noise leaves a broad
+  vertical event. Your envelope shape controls how those colors fade.
+  \item Set Average to $300\,\mathrm{ms}$ and observe new events. Their
+  level changes should look more gradual. Previously recorded columns are
+  unchanged; Average affects newly analyzed spectra. Restore Average to zero.
+  \item Send an envelope to oscillator pitch or to a filter's cutoff.
+  Compare movement in frequency with fading amplitude. Freeze after a few
+  events and inspect their shapes; resume to try a different envelope.
+\end{enumerate}
+
+\paragraph{What time detail survives?}
+At $48\,\mathrm{kHz}$ each column summarizes about $42.7\,\mathrm{ms}$
+of audio, and successive windows overlap by half. A very short click can
+therefore affect several columns. Its drawn width is not its exact duration.
+Averaging adds further persistence. Use an oscilloscope for individual sample
+edges or precise attack timing, and Spectre for the changing frequency content.
+
+\paragraph{Try a fair comparison}
+Keep gain, Floor, Ceil, window, and sample rate fixed while changing the
+source. A darker decay after raising Floor does not show that the VCA became
+quieter: it shows that you hid more low-level detail. Likewise, changing
+Slope can make upper partials appear to sustain longer by making them more
+visible. Use zero Slope while comparing decay across frequencies.
