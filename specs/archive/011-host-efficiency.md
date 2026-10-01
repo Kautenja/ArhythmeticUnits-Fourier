@@ -306,7 +306,7 @@ local FFTW prefix, and Apple's Accelerate framework available. Source snapshots,
 raw timings, binaries, and full logs remain in `.build/host-011/`. Reproduction
 patches, probes, stock test copies, control CSVs, and compressed descriptive
 results/source identities are preserved in
-[`docs/whitepaper/benchmarks/experiments/host-011`](../../docs/whitepaper/data/research/host-011).
+[`docs/whitepaper/benchmarks/experiments/host-011`](../../docs/latex/deprecated/whitepaper/data/research/host-011).
 The compact `measurements.json.gz` intentionally excludes per-run raw data and
 Git status; use the ignored full archives for raw-block reanalysis. It retains
 configuration, compiler/environment, preflight, executable/source identities,

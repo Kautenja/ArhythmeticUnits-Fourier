@@ -1,83 +1,83 @@
-# Whole-Pipeline Scheduling for Real-Time Spectral Analysis
+# Scheduling FFT-Based Spectral Analysis In The Audio Processing Loop
 
-A technical report by Christian Kauten (Arhythmetic Units) about complete
-analysis scheduling, exact-hop publication and the tradeoffs between work
-placement, native kernels and host execution. Manuscript version 4 uses the
-user-collected spec 014 study: two separately prepared pilot sessions and 776
-fresh processes on an Apple M1 Pro. It is not yet deposited on arXiv, assigned a
-DOI or peer reviewed by a venue. Independent agent reviews and their
-[revision response](reviews/revision-4-response.md) are retained separately.
+A seven-page, two-column conference-style preprint by Christian Kauten
+(Arhythmetic Units), manuscript version 5, dated October 1, 2026. It explains
+how to distribute FFT-based analysis across sample calls and evaluates the
+tradeoff between processing bursts, total work, and result age. The seven pages
+include the abstract and references. The paper has not been peer reviewed by
+a venue, deposited on arXiv, or assigned a DOI.
+
+The approach is called **CoopFFT** (Cooperative Fast Fourier Transform): a
+resumable FFT and surrounding analysis pipeline that advance under per-call
+work quotas. In comparisons, **CoopFFT scheduled** spreads that work across
+sample calls; **CoopFFT batch** runs the same implementation at the frame
+endpoint. The name applies independently of VCV Rack. The retained benchmark
+identifiers, including `core-matched-{batch,distributed}-{float,double}`, keep
+their original names for reproducibility.
 
 ## Read And Build
 
-[fourier.tex](fourier.tex) defines manuscript order. Prose lives in `sections/`
-and `appendices/`; complete figures/tables live in their matching directories.
-The paper has its own [preamble](preamble.tex) and single-column report format.
-It shares only the PDF lifecycle with the manuals. Venue selection, formatting,
-length and anonymity remain a later submission task.
+[fourier.tex](fourier.tex) is the complete, canonical manuscript. Like the
+[RackNES paper](https://github.com/Kautenja/RackNES/tree/master/whitepaper), it
+contains its prose, typography, figures, tables, and bibliography in one file.
+Open it directly in the Codex LaTeX editor for editing and PDF preview.
 
-From the repository root, with `latexmk`, `pdflatex` and the preamble packages:
+For a command-line build, install `latexmk`, `pdflatex`, and the packages in the
+preamble, then run from the repository root:
 
 ```shell
-python3 docs/whitepaper/tools/study_paper.py --check
 make -C docs/whitepaper
-make -C docs/whitepaper check
-make -C docs/whitepaper arxiv
 ```
 
-Outputs are `.build/paper.pdf` and `.build/fourier-arxiv-source.tar.gz` inside
-this directory. Compilation/checks never collect timings, download data or
-rewrite measurements. The check validates citations/links, current generated
-assets and separately retained historical evidence. Successful PDF builds clean
-auxiliary files; failed builds retain logs. `clean` preserves experiment data.
+The result is `docs/whitepaper/.build/paper.pdf`. Typesetting uses only
+`fourier.tex`; it does not require Python, derived assets, or benchmark tools.
+Successful builds remove auxiliary files. Failed builds retain diagnostics.
 
-Extract the portable source archive into an empty directory and compile with
+To share the standalone source:
+
+```shell
+make -C docs/whitepaper source
+```
+
+Extract `.build/fourier-arxiv-source.tar.gz` into an empty directory and run
 `latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' fourier.tex`.
-The exporter expands literal inputs and includes explicitly referenced assets.
-It does not publish or submit the manuscript.
+The `arxiv` target additionally builds and checks the paper before completing.
+Neither target publishes or submits it. `clean` removes the PDF, source archive,
+and derived study assets while preserving measured evidence.
 
-## Evidence And Source Map
+## Evidence And Maintenance
 
-| Location | Responsibility |
-| --- | --- |
-| [fourier.tex](fourier.tex), [preamble.tex](preamble.tex) | Reading order and typography |
-| [sections/](sections/), [appendices/](appendices/) | Current argument and supporting derivations |
-| [figures/](figures/), [tables/](tables/) | Editorial figures and tables |
-| [data/study-014/](data/study-014/README.md) | Current compact evidence, original identities and rederivation commands |
-| [generated/paper-study/](generated/paper-study/) | Checked current tables/macros/plots and all 776 process summaries |
-| [tools/](tools/README.md) | Read-only import, statistical generation, checks and portable export |
-| [benchmarks/](benchmarks/README.md) | Benchmark preparation and user-run collection workflow |
-| [reviews/](reviews/) | Independent reviews and revision response |
-| [bibliography.tex](bibliography.tex), [sources.md](sources.md) | References and literature verification |
-| `.build/` | Local PDF/export and visual-review products |
+Maintain the paper in `fourier.tex`. The [source notes](sources.md) and
+[study evidence guide](data/study-014/README.md) document its references,
+measurements, identities, aggregation, and limitations. The
+[benchmark workflow](benchmarks/README.md) and [validation tools](tools/README.md)
+remain separate from typesetting.
 
-The [evidence guide](data/study-014/README.md) explains exact provenance,
-aggregation and limits. Hop peaks, instrumented block cost, process CPU, logical
-age and missed synthetic releases remain distinct. The study is descriptive:
-one host, binary and date, with two session replicates and residual OS activity.
-It does not establish audio-device reliability or an optimal FFT granularity.
+From the repository root, verify references, links, metadata, scheduling
+examples, and the embedded study results with:
 
-The new manuscript replaces the old performance argument. Earlier
-[FFT](data/README.md), [pipeline](data/pipeline/README.md), and
-[spec 012](data/comparison-012/README.md) artifacts stay intact for provenance;
-their timing sections and generated plots are outside the active manuscript.
-The [archived preparation spec](../../specs/archive/014-benchmark-reliability-and-scheduling-study.md)
-records the measured implementation. New analysis does not mutate original raw
-sessions. Their handbacks remain local; no public raw-data deposit is claimed.
+```shell
+make -C docs/whitepaper check
+```
 
-## Maintain And Cite
+The check independently derives results in memory and compares the four marked
+study blocks in `fourier.tex` exactly. It writes no generated assets and never
+edits the manuscript or collects timings. If measured results change, regenerate
+with `make -C docs/whitepaper generate` and update those marked blocks from
+the corresponding generated files in ignored `.build/paper-study/`. All
+cell/process/session CSVs remain available beside the generated tables.
 
-Keep literal standalone `\input{path.tex}` lines relative to this directory so
-artifact checking and portable export see the same content. Use
-`python3 docs/whitepaper/tools/study_paper.py` to regenerate current assets,
-then `--check` to verify them. The generator reads compact evidence; the explicit
-importer requires original sessions to rederive process summaries. Neither runs
-benchmarks. [Historical verification notes](data/verification-history.md) retain
-old commands and outcomes without assigning them to the current revision.
+The [deprecated archive](../latex/deprecated/whitepaper/README.md) preserves the
+extended report, appendices, older experiments, and reproduction tools with
+its own build and checks. They are excluded from the conference source archive.
+The [housekeeping specification](../../specs/archive/017-whitepaper-housekeeping.md)
+records content and rendering equivalence.
 
-[CITATION.bib](CITATION.bib) and [CITATION.cff](../../CITATION.cff) identify
-manuscript version 4 consistently. A public deposit must use an actual identifier
-and URL; do not invent a DOI or acceptance. The [repository license](../../LICENSING.md)
-governs source and artwork; provider redistribution limits remain in the
-benchmark workflow. Review claims, authorship, license and the target venue's
-current requirements before any submission.
+## Cite
+
+[CITATION.bib](CITATION.bib), [CITATION.cff](../../CITATION.cff), and the
+[project README](../../README.md#citation) identify
+*Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop*,
+manuscript version 5. After a public deposit, update them with its actual
+identifier and URL. Source and artwork terms remain in
+[LICENSING.md](../../LICENSING.md).

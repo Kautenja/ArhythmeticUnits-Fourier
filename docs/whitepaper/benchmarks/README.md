@@ -36,9 +36,9 @@ build launches a benchmark or replaces its results.
 | [guides/](guides/) | Detailed measurement contracts and provider notes |
 | [lib/](lib/) | Private runner, validation, derivation and workflow implementation |
 | [tests/](tests/) | Python tests and small C++ verifier drivers |
-| [history/](history/README.md) | Older configurations and prototype reproduction tooling |
-| [../data/](../data/README.md) | Preserved manuscript evidence and historical research artifacts |
-| [Comparison results](../data/comparison-012/README.md) | Spec 012 replacement measurements and analysis/writing handoff |
+| [Archived inputs](../../latex/deprecated/whitepaper/benchmarks/history/README.md) | Older configurations and prototype reproduction tooling |
+| [Current study evidence](../data/study-014/README.md) | Compact study 014 measurements and provenance |
+| [Comparison results](../../latex/deprecated/whitepaper/data/comparison-012/README.md) | Spec 012 replacement measurements and analysis/writing handoff |
 | [../tools/](../tools/) | Manuscript source expansion and consistency checks, not benchmarks |
 
 New runs, resolved plans, freezes, reports, selections and bundles belong in
@@ -83,8 +83,8 @@ plot tests report their skips. A fresh `run --profile smoke` also builds and
 verifies the actual native executables, resources, numerical replay and reports.
 
 Old `benchmarks/*.py` commands now live in `benchmarks/lib/`; old JSON files
-live in `benchmarks/history/configs/`. Historical source archives retain their
-original paths and remain readable. No forwarding-script layer is needed:
+live in `docs/latex/deprecated/whitepaper/benchmarks/history/configs/`.
+Historical source archives retain their original paths and remain readable. No forwarding-script layer is needed:
 new work uses `bench.py`; exact historical reproduction uses its archived
 source. Existing [fast C++ development commands](guides/DEVELOPMENT.md) remain
 separate from publication campaigns.

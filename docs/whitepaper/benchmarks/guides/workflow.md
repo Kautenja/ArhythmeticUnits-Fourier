@@ -3,7 +3,7 @@
 Run these commands from the repository root. The workflow separates measured
 campaigns, checked reports, reviewed selections, generated paper assets and
 portable audit bundles. It does not publish externally. The replacement
-measurements are recorded in the [results handoff](../../data/comparison-012/README.md).
+measurements are recorded in the [results handoff](../../../latex/deprecated/whitepaper/data/comparison-012/README.md).
 Evidence retirement remains **DEFERRED** because all inventoried historical
 campaigns have retained dependencies. Implementation spec 004 is archived;
 [spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
@@ -184,8 +184,8 @@ metadata to relabel partial work as complete.
 python3 docs/whitepaper/benchmarks/bench.py check .build/confirm-01 .build/confirm-02 .build/confirm-03
 python3 docs/whitepaper/benchmarks/bench.py report .build/confirm-01 .build/confirm-02 .build/confirm-03 --phase confirmation --output .build/confirmation-report
 python3 docs/whitepaper/benchmarks/bench.py select .build/confirmation-report --output .build/paper-selection.json
-python3 docs/whitepaper/benchmarks/bench.py export .build/paper-selection.json --output docs/whitepaper/generated/comparison
-python3 docs/whitepaper/benchmarks/bench.py check-export docs/whitepaper/generated/comparison
+python3 docs/whitepaper/benchmarks/bench.py export .build/paper-selection.json --output docs/whitepaper/.build/exports/comparison
+python3 docs/whitepaper/benchmarks/bench.py check-export docs/whitepaper/.build/exports/comparison
 make -C docs/whitepaper check
 make -C docs/whitepaper
 ```
@@ -201,7 +201,7 @@ not zeros. Transition figures and CSVs retain event identities and errors.
 
 Export produces `numbers.tex`, `results.tex`, `figures.tex`, selected PNGs and a
 receipt mapping every value to its source. Add the desired literal
-`\input{generated/comparison/results.tex}` etc. during the later editorial integration.
+`\input{.build/exports/comparison/results.tex}` etc. during the later editorial integration.
 Export never rewrites prose or automatically inserts provisional numbers into
 the manuscript. The table retains a workload hash, statistic, units and session counts;
 the receipt/report retain process/session ranges and exact raw identities.
@@ -240,7 +240,7 @@ plot/font-library versions; the plotting environment is recorded.
 
 ```shell
 python3 docs/whitepaper/benchmarks/bench.py retire-plan .build/obsolete-comparison --output .build/retirement-plan.json
-python3 docs/whitepaper/benchmarks/bench.py retire .build/retirement-plan.json --replacement .build/comparison-evidence.tar.gz --publication docs/whitepaper/generated/comparison --receipt .build/retirement-receipt.json
+python3 docs/whitepaper/benchmarks/bench.py retire .build/retirement-plan.json --replacement .build/comparison-evidence.tar.gz --publication docs/whitepaper/.build/exports/comparison --receipt .build/retirement-receipt.json
 ```
 
 The first command inventories exact identities and tracked references. The

@@ -261,11 +261,11 @@ is a separate required check, not replaced by export success.
 ## Results Handoff And Closure
 
 September 30, 2026: all results-only requirements are complete. The
-[durable handoff](../../docs/whitepaper/data/comparison-012/README.md) contains
+[durable handoff](../../docs/latex/deprecated/whitepaper/data/comparison-012/README.md) contains
 40 exact CSV tables, all 672 diagnostic PNGs through the five generated export
 sets, source/design/host records, original compressed campaign metadata,
 selection/receipt identities and preservation/verification records. The
-[coverage inventory](../../docs/whitepaper/data/comparison-012/coverage.json)
+[coverage inventory](../../docs/latex/deprecated/whitepaper/data/comparison-012/coverage.json)
 includes 217 periodic inverse-job workloads, 24 isolated IFFT workloads and
 434 complete identity/FIR-chain workloads, in addition to the forward/analysis
 and transition pathways. No production DSP or Rack module was modified.

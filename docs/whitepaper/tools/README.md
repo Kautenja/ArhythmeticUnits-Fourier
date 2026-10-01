@@ -1,22 +1,30 @@
-# Manuscript Tools
+# Paper Tools
 
-These tools inspect or package the manuscript; they never collect benchmarks.
-Use `make -C docs/whitepaper check` or `arxiv` from the repository root.
+Three commands support the standalone paper. None collects measurements, and
+none is needed to typeset `fourier.tex`. Run them from the repository root.
 
--   `study_import.py` validates original spec 014 sessions and derives compact
-    evidence without executing a benchmark.
--   `study_paper.py` generates/checks the current tables, macros, vector figures
-    and full-grid process/session CSVs; use `--check` for read-only validation.
--   `comparison_paper.py` generates or checks the historical spec 012 tables,
-    vector figures, numeric macros and provenance from committed evidence.
-    Use `--check` for validation without modifying outputs or rerunning timing.
--   `manuscript.py` expands the literal TeX input tree and writes portable source.
--   `check_paper.py` checks references, links, historical data, derived tables
-    and freshness of explicitly included generated evidence.
--   `check_pipeline.py` validates the historical pipeline archive independently
-    of the current DSP implementation.
+| Command | Purpose |
+| --- | --- |
+| `make -C docs/whitepaper check` | Check the paper directly against retained evidence, without writing generated assets |
+| `make -C docs/whitepaper generate` | Write derived tables, macros, full-grid CSVs, and provenance to `.build/paper-study/` |
+| `python3 docs/whitepaper/tools/study_import.py SESSION_ROOT --output NEW_DIRECTORY` | Validate original sessions and rederive compact evidence; see the [evidence guide](../data/study-014/README.md) for actual paths |
 
-Measurement, validation, reporting and evidence packaging use the separate
-[benchmark workflow](../benchmarks/README.md). Historical prototype drivers live
-in [benchmarks/history/](../benchmarks/history/README.md), and their exact measured
-versions remain inside the manuscript source archives.
+`check_paper.py` owns manuscript, citation, metadata, link, and worked-example
+checks. It compares the four marked study blocks with freshly derived values
+in memory. Existing generated files are not inputs to the check.
+
+`study_paper.py` owns evidence hash verification, aggregation, formatting, and
+asset generation. It also supplies the shared study calculations used by the
+archived report. `study_import.py` retains its original bytes because its hash
+is part of the evidence receipt.
+
+Regression tests live in `tests/`:
+
+```shell
+python3 -m unittest discover -s docs/whitepaper/tools/tests
+```
+
+The older split-source exporter lives with the
+[archived report tools](../../latex/deprecated/whitepaper/tools/README.md).
+Measurement collection uses the separate
+[benchmark workflow](../benchmarks/README.md).

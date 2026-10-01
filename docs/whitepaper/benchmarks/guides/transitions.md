@@ -139,7 +139,7 @@ from 2048 to 16384, with one repeat and minimum observation windows:
 
 ```shell
 python3 docs/whitepaper/benchmarks/lib/run.py .build/transition-smoke \
-    --config docs/whitepaper/benchmarks/history/configs/transition-smoke.json \
+    --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/transition-smoke.json \
     --variant rack --phase smoke --repeats 1 --hops 2 --warm-hops 0
 python3 docs/whitepaper/benchmarks/lib/check.py .build/transition-smoke
 ```

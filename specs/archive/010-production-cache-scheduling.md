@@ -102,7 +102,7 @@ pair checks reproducibility. A broader 240-workload profile uses three
 repetitions, 128 measured hops and 32 warmup hops. It covers startup, short
 hops, additional lengths, staggered analyzers and background load.
 
-The separate [module matrix](../../docs/whitepaper/benchmarks/history/configs/production-010-modules.json)
+The separate [module matrix](../../docs/latex/deprecated/whitepaper/benchmarks/history/configs/production-010-modules.json)
 measures actual Fourier/Spectre live window/band changes at N=2048/H=1024,
 with smoothing off/on and callback/throughput passes. It checks whether
 rebalance of the lower-level DSP also benefits the complete engine pipeline,

@@ -294,7 +294,7 @@ class WorkflowTests(unittest.TestCase):
                 campaigns.append(p)
             derive(campaigns, root / "report", "confirmation", False)
             selection_manifest(root / "report", root / "selection.json")
-            publication = root / "docs/whitepaper/generated/fixture-validation"
+            publication = root / "docs/whitepaper/.build/exports/fixture-validation"
             with patch("publication.ROOT", root):
                 export(root / "selection.json", publication)
             pack(campaigns, root / "replacement.tar.gz", root / "selection.json")
@@ -327,44 +327,6 @@ class WorkflowTests(unittest.TestCase):
                     "metadata_sha256"
                 ],
                 preview["candidates"][0]["metadata_sha256"],
-            )
-
-    def test_portable_manuscript_export_retains_explicit_images(self):
-        import shutil
-
-        with tempfile.TemporaryDirectory() as t:
-            root = Path(t)
-            paper = root / "paper"
-            (paper / "tools").mkdir(parents=True)
-            (paper / "generated").mkdir()
-            shutil.copy2(
-                BENCHMARKS.parent / "tools/manuscript.py", paper / "tools/manuscript.py"
-            )
-            (paper / "fourier.tex").write_text(
-                r"\documentclass{article}\begin{document}\includegraphics{generated/figure.png}\end{document}"
-            )
-            (paper / "generated/figure.png").write_bytes(b"fixture-image")
-            command = [
-                sys.executable,
-                str(paper / "tools/manuscript.py"),
-                "--archive",
-                str(root / "source.tar.gz"),
-            ]
-            result = subprocess.run(command, capture_output=True, text=True, timeout=20)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            with tarfile.open(root / "source.tar.gz") as archive:
-                self.assertEqual(
-                    set(archive.getnames()), {"fourier.tex", "generated/figure.png"}
-                )
-                self.assertEqual(
-                    archive.extractfile("generated/figure.png").read(), b"fixture-image"
-                )
-            (paper / "fourier.tex").write_text(r"\includegraphics{../../private.png}")
-            self.assertNotEqual(
-                subprocess.run(
-                    command, capture_output=True, text=True, timeout=20
-                ).returncode,
-                0,
             )
 
     def test_status_failure_restart_and_plan_are_bounded(self):

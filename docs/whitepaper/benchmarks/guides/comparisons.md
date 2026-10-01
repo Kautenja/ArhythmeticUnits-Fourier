@@ -6,7 +6,7 @@ It preserves the contender shortlist, research questions, adapter requirements,
 measurement contracts and implementation evidence. Replacement measurements,
 portable evidence and retained historical dependencies are recorded in
 [spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
-and its [results handoff](../../data/comparison-012/README.md).
+and its [results handoff](../../../latex/deprecated/whitepaper/data/comparison-012/README.md).
 [Spec 013](../../../../specs/archive/013-comparison-paper.md) records the subsequent
 manuscript analysis and publication checks.
 
@@ -26,5 +26,6 @@ and dependencies until the replacement and retirement gate permits removal.
 Neither tooling completion nor the new results alone permits deleting them.
 
 Use the existing [publication protocol](protocol.md) for current build commands
-and measurement semantics. The manuscript integrates selected confirmation results with checked numerical
-assets, while preserving the historical campaigns separately in its appendices.
+and measurement semantics. The conference manuscript uses the later study 014
+evidence. Spec 012 confirmation results and the extended report remain in the
+[deprecated archive](../../../latex/deprecated/whitepaper/README.md).

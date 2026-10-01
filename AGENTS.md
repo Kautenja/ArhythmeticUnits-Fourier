@@ -107,15 +107,19 @@ unverified. Do not replace it with a mockup or stale capture.
 
 ## Whitepaper Sources
 
-Follow the [whitepaper guide](docs/whitepaper/README.md) for its source map,
-artifact checks, and portable export. `fourier.tex` controls manuscript order;
-keep prose in `sections/` and `appendices/`, complete figure/table environments
-in their matching directories, and typography in the paper's own preamble.
-The manuals and paper share `docs/latex/publication.mk`, not a stylesheet.
-Use literal `\input{path.tex}` lines relative to the whitepaper directory so
-the artifact checker and single-file source export include the same material.
-Preserve text, labels, and placement when reorganizing. Verify rendered-page
-equivalence for housekeeping changes and compile the exported source archive.
+Follow the [whitepaper guide](docs/whitepaper/README.md) for editing, artifact
+checks, and portable export. Keep the active paper self-contained in
+`docs/whitepaper/fourier.tex`, including typography, figures, tables, and
+bibliography, following RackNES's single-source paper organization. Typesetting
+must not depend on Python or generated inputs. The separate `check` target
+verifies the embedded study blocks against retained evidence. Keep derived
+validation assets in ignored `.build/` directories.
+Extended material and appendices live in `docs/latex/deprecated/whitepaper`,
+with separate builds and checks. Keep that archive's literal input paths
+relative to its own directory. The manuals and paper share
+`docs/latex/publication.mk`, not a stylesheet. Preserve text, labels, and
+placement when reorganizing; verify rendered-page equivalence and compile
+the portable source archive.
 
 ## VCV Library Releases
 

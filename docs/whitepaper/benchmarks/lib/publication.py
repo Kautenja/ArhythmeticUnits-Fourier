@@ -152,7 +152,7 @@ def export(selection, output, fixture=False):
     data, campaigns = checked_report(report)
     if s["phase"] != data["phase"]:
         raise ValueError("Selection/report phases differ")
-    production = (ROOT / "docs/whitepaper/generated").resolve()
+    production = (ROOT / "docs/whitepaper/.build/exports").resolve()
     if fixture:
         if (ROOT / "docs/whitepaper").resolve() == output.resolve() or (
             ROOT / "docs/whitepaper"
@@ -162,7 +162,7 @@ def export(selection, output, fixture=False):
         confirmations(campaigns)
         if production not in output.resolve().parents:
             raise ValueError(
-                "Production export belongs under docs/whitepaper/generated/<selection>"
+                "Production export belongs under docs/whitepaper/.build/exports/<selection>"
             )
     if s["sources"] != [
         dict(
