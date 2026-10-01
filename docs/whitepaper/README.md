@@ -7,6 +7,14 @@ tradeoff between processing bursts, total work, and result age. The seven pages
 include the abstract and references. The paper has not been peer reviewed by
 a venue, deposited on arXiv, or assigned a DOI.
 
+The approach is called **CoopFFT** (Cooperative Fast Fourier Transform): a
+resumable FFT and surrounding analysis pipeline that advance under per-call
+work quotas. In comparisons, **CoopFFT scheduled** spreads that work across
+sample calls; **CoopFFT batch** runs the same implementation at the frame
+endpoint. The name applies independently of VCV Rack. The retained benchmark
+identifiers, including `core-matched-{batch,distributed}-{float,double}`, keep
+their original names for reproducibility.
+
 ## Read And Build
 
 [fourier.tex](fourier.tex) is the complete, canonical manuscript. Like the

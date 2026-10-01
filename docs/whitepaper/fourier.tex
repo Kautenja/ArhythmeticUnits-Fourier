@@ -28,7 +28,7 @@
 \definecolor{accent}{HTML}{B85C38}
 \definecolor{pale}{HTML}{F3F5F7}
 \usepackage[colorlinks=true,linkcolor=ink,citecolor=ink,urlcolor=ink]{hyperref}
-\hypersetup{pdftitle={Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop},pdfauthor={Christian Kauten},pdfsubject={Conference-length preprint on distributing FFT-based analysis across audio samples},pdfkeywords={FFT, spectral analysis, cooperative scheduling, real-time audio, VCV Rack}}
+\hypersetup{pdftitle={Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop},pdfauthor={Christian Kauten},pdfsubject={Conference-length preprint on distributing FFT-based analysis across audio samples},pdfkeywords={CoopFFT, FFT, spectral analysis, cooperative scheduling, real-time audio, VCV Rack}}
 \setlength{\columnsep}{0.25in}
 \setlength{\headheight}{14pt}
 \setlength{\emergencystretch}{1.5em}
@@ -124,9 +124,10 @@
 \begin{abstract}
 \noindent
 An FFT-based spectrum analyzer can be inexpensive on average yet concentrate
-most of its work in one audio-processing call. This paper describes how to
-spread that work across successive sample calls without a separate analysis
-thread. A resumable radix-2 FFT preserves its traversal state between calls;
+most of its work in one audio-processing call. This paper presents CoopFFT
+(Cooperative Fast Fourier Transform), which spreads that work across successive
+sample calls without a separate analysis thread. A resumable radix-2 FFT
+preserves its traversal state between calls;
 windowing, spectrum reconstruction, smoothing, and output preparation are
 scheduled alongside it. Each frame completes over one chosen update interval,
 with a bounded operation count per call and an explicit delay before the
@@ -136,7 +137,7 @@ FFT libraries. In a scalar 4096-point comparison, distributing the same
 implementation reduces the typical peak block time from
 \StudyBatchPeak{} to \StudyCorePeak\,$\mu$s while increasing aggregate
 instrumented cost by 18\%. With four aligned analyzers on one Rack engine
-thread, the distributed implementation reduces the corresponding peak from
+thread, CoopFFT reduces the corresponding peak from
 \StudyHostBatchPeak\,$\mu$s for native vDSP batch processing to
 \StudyHostCorePeak\,$\mu$s, at the cost of more work and about 30\,ms of
 additional publication delay. The measurements demonstrate a useful tradeoff
@@ -144,7 +145,7 @@ between processing bursts, total cost, and result latency; they do not show a
 consistent reduction in missed deadlines.
 \end{abstract}
 \par\vspace{0.7em}
-\noindent\textbf{Keywords:} FFT; spectral analysis; cooperative scheduling;
+\noindent\textbf{Keywords:} CoopFFT; spectral analysis; cooperative scheduling;
 real-time audio; VCV Rack.\par\vspace{1.4em}
 ]
 % Source: sections/introduction.tex (now inline)
@@ -156,13 +157,15 @@ only a few dozen times per second can make the average cost look modest while
 leaving occasional blocks much more expensive than their neighbors. Several
 analyzers updating together can compound the burst.
 
-This is the problem that motivated Fourier, a spectrum analyzer for the VCV
+This problem motivated CoopFFT (Cooperative Fast Fourier Transform), the
+analysis approach implemented in Fourier, a spectrum analyzer for the VCV
 Rack modular synthesizer. Rack invokes a module's processing function once
 per sample~\cite{rack}. The FFT was therefore built to advance a little on
 each invocation: execute some butterflies, save the current position, and
 resume when the next sample arrives. Analysis remains in the ordinary
 processing loop. The display receives the completed spectrum later, while
-audio processing continues between pieces of the transform.
+audio processing continues between pieces of the transform. CoopFFT names
+the resumable FFT and its surrounding analysis pipeline.
 
 The distinction is between the amount of work and when that work happens.
 A conventional radix-2 FFT takes $O(N\log N)$ operations for $N$ samples.
@@ -243,7 +246,7 @@ call intact. This exposes the practical question: how much of the benefit
 requires interrupting the transform itself, and how much can be obtained by
 scheduling the work around it?
 % Source: sections/method.tex (now inline)
-\section{Scheduling the Analysis}
+\section{CoopFFT: Scheduling the Analysis}
 \label{sec:method}
 \subsection{Frames and processing calls}
 Let $x[n]$ be a real signal sampled at $f_s$\,Hz. The analyzer uses a
@@ -281,7 +284,7 @@ over its hop can move work out of one block and into subsequent blocks.
 \node[anchor=west] at (1.5,2.45) {window $+$ FFT $+$ output};
 \fill[accent] (0.65,1.85) circle (2pt);
 \node[anchor=west] at (1.5,2.02) {publish immediately};
-\node[anchor=west] at (0,0.95) {\textbf{Distributed: resume on successive calls}};
+\node[anchor=west] at (0,0.95) {\textbf{CoopFFT: resume on successive calls}};
 \draw[->] (0,-0.2) -- (13.8,-0.2);
 \foreach \x in {0.2,1.2,2.2} {
   \draw[fill=ink!20,draw=ink] (\x,-0.2) rectangle +(0.65,0.48);
@@ -303,7 +306,7 @@ over its hop can move work out of one block and into subsequent blocks.
 \caption{The same selected frame can be computed at its endpoint or spread
 over the following hop. Input capture continues in both cases. Bars are
 conceptual work slices, not timing measurements; stages and bar heights are
-not to scale. The distributed result is published on the last call.}
+not to scale. CoopFFT publishes the result on the last call.}
 \label{fig:schedule}
 \end{figure}
 
@@ -351,7 +354,7 @@ Magnitude & Reconstruct one bin; compute magnitude and optional prefix sum & $K$
 Output & Smooth one bin and write its display data & $oK$ \\
 \bottomrule
 \end{tabular}
-\caption{Scheduled stages for real input. $M=N/2$ pairs and $K=M+1$ bins
+\caption{CoopFFT stages for real input. $M=N/2$ pairs and $K=M+1$ bins
 are processed in order. The last column gives the total credits per stage;
 $p$ and $o$ are preparation and output weights.}
 \label{tab:stages}
@@ -445,7 +448,7 @@ published exactly $H$ samples apart.
 % Source: sections/implementation.tex (now inline)
 \section{Implementation in VCV Rack}
 \label{sec:implementation}
-The method is implemented by the header-only C++ class
+CoopFFT is implemented by the header-only C++ class
 \code{SpectrumAnalysis<T>} and used by two modules in the Arhythmetic Units
 plugin. Fourier displays four spectra, using the four lanes of Rack's SIMD
 sample type as independent channels. Spectre displays a scalar spectrogram.
@@ -501,10 +504,11 @@ including scaling, numerical stress, and lifecycle cases beyond the selections
 reported here.
 
 \subsection{Comparisons and workloads}
-The \emph{matched batch} and \emph{matched distributed} controls use the same
+The \emph{CoopFFT batch} and \emph{CoopFFT scheduled} controls use the same
 scalar implementation, storage, arithmetic, and frame endpoints. Batch spends
-all credits in the endpoint call; distributed spends them according to
+all credits in the endpoint call; scheduled execution spends them according to
 Equation~\eqref{eq:quota}. This isolates placement within the implementation.
+Unless marked batch, CoopFFT denotes the scheduled mode.
 
 The native controls use PFFFT, FFTW, or vDSP for the transform. Each provider
 has a batch path and a \emph{hybrid}: the hybrid distributes input preparation
@@ -586,7 +590,7 @@ so the repository is not presented as a public raw-data deposit.
 \label{sec:results}
 \subsection{Distribution reduces bursts, with overhead}
 Table~\ref{tab:conference-baselines} isolates work placement and compares
-native alternatives. Distributing the matched scalar implementation reduces
+native alternatives. Scheduling scalar CoopFFT reduces
 the typical hop peak from \StudyBatchPeak{} to
 \StudyCorePeak\,$\mu$s, a factor of \StudyPlacementRatio. Aggregate
 instrumented cost rises from \StudyBatchCost{} to
@@ -601,17 +605,17 @@ concentrated execution rather than less total work.
 \toprule
 Analysis path & Cost & Peak [sessions] \\
 \midrule
-Matched batch & 68.3 & 52.2 [51.2--53.1] \\
-Matched distributed & 80.3 & 6.67 [6.25--7.08] \\
-PFFFT batch & 41.3 & 13.7 [13.1--14.3] \\
+CoopFFT batch & 68.3 & 52.2 [51.2--53.1] \\
+CoopFFT scheduled & 80.3 & \textbf{6.67} [6.25--7.08] \\
+PFFFT batch & \textbf{41.3} & 13.7 [13.1--14.3] \\
 PFFFT hybrid & 49.8 & 8.15 [7.4--8.9] \\
 vDSP batch & 43.6 & 17.1 [16.8--17.4] \\
 vDSP hybrid & 59.4 & 8.92 [8.85--8.98] \\
-FFTW batch & 41.3 & 21.8 [20.7--22.9] \\
+FFTW batch & \textbf{41.3} & 21.8 [20.7--22.9] \\
 FFTW hybrid & 46.6 & 12.5 [11.6--13.4] \\
 \bottomrule
 \end{tabular}
-\caption{Scalar analysis, $N=4096$, $H=1024$, $D=64$, Hann, no smoothing. Cost is instrumented ns/sample; peak is the typical hop peak in $\mu$s. Brackets give the two session summaries. Each row contains four processes, 16,384 blocks, and 1,024 complete hops. No block exceeded the 1,333\,$\mu$s budget.}
+\caption{Scalar analysis, $N=4096$, $H=1024$, $D=64$, Hann, no smoothing. Cost is instrumented ns/sample; peak is the typical hop peak in $\mu$s. Brackets give the two session summaries. Each row contains four processes, 16,384 blocks, and 1,024 complete hops. No block exceeded the 1,333\,$\mu$s budget. Lower is better; bold marks minima at displayed precision.}
 \label{tab:conference-baselines}
 \end{table}
 % END STUDY ASSET: conference-baselines.tex
@@ -621,7 +625,7 @@ paths. PFFFT, for example, moves from \StudyPffftBatchPeak{} to
 \StudyPffftHybridPeak\,$\mu$s while cost rises from
 \StudyPffftBatchCost{} to \StudyPffftHybridCost\,ns/sample. Native hybrids
 can therefore recover much of the burst reduction with lower aggregate cost
-than the custom distributed transform. The fully distributed path has the
+than CoopFFT. CoopFFT has the
 lowest typical peak at this scalar configuration, but it has the highest
 cost. There is no single winner on both measures.
 
@@ -652,18 +656,18 @@ surrounding work becomes more densely packed.
 \toprule
 Finish after & Age (ms) & Cost & Peak \\
 \midrule
-Batch & 0 & 544 & 125 \\
-$H$ & 4.98 & 589 & 68.6 \\
+Batch & \textbf{0} & \textbf{544} & 125 \\
+$H$ & 4.98 & 589 & \textbf{68.6} \\
 $H/2$ & 2.48 & 594 & 95.4 \\
 $H/4$ & 1.23 & 568 & 121 \\
 \bottomrule
 \end{tabular}
-\caption{Four-channel vDSP analysis, $N=16384$, $H=240$, $D=64$, Hann. Age is endpoint-to-publication delay; cost is ns/sample for all four channels; peak is $\mu$s. Each row contains four processes and 3,840 blocks. Only the completion interval changes between hybrid rows.}
+\caption{Four-channel vDSP analysis, $N=16384$, $H=240$, $D=64$, Hann. Age is endpoint-to-publication delay; cost is ns/sample for all four channels; peak is $\mu$s. Each row contains four processes and 3,840 blocks. Only the completion interval changes between hybrid rows. Lower is better; bold marks minima at displayed precision.}
 \label{tab:conference-horizons}
 \end{table}
 % END STUDY ASSET: conference-horizons.tex
 
-This configuration also shows a limit of the custom FFT. Its four-channel SIMD
+This configuration also shows a limit of CoopFFT. Its four-channel SIMD
 path costs \StudySimdExtremeCost\,ns/sample with a
 \StudySimdExtremePeak\,$\mu$s typical peak. The full-hop vDSP hybrid
 costs \StudyHorizonFullCost\,ns/sample with a
@@ -672,14 +676,14 @@ both recorded measures. The benefit of interrupting every butterfly therefore
 depends on transform size, hop, channel organization, and native kernel cost.
 
 \subsection{The effect survives one host configuration}
-With four aligned Fourier modules on one Rack engine thread, the distributed
-implementation has a \StudyHostCorePeak\,$\mu$s typical hop peak,
+With four aligned Fourier modules on one Rack engine thread, CoopFFT
+has a \StudyHostCorePeak\,$\mu$s typical hop peak,
 compared with \StudyHostBatchPeak\,$\mu$s for native vDSP batch and
 \StudyHostHybridPeak\,$\mu$s for the vDSP hybrid
 (Table~\ref{tab:conference-host}). These occupy approximately 15\%, 67\%,
 and 32\% of the block budget. Unlike the scalar comparison, the difference
 is a substantial fraction of the time available to the rest of the patch.
-The cost is higher aggregate processing: production uses
+The cost is higher aggregate processing: CoopFFT uses
 \StudyHostCoreCost\,ns/sample, versus \StudyHostBatchCost{} for batch and
 \StudyHostHybridCost{} for hybrid. Both distributed paths also defer
 publication by nearly the 30\,ms hop.
@@ -691,12 +695,12 @@ publication by nearly the 30\,ms hop.
 \toprule
 Analysis & Cost & Peak [sessions] & Misses \\
 \midrule
-Distributed & 2300 & 201 [197--206] & 18 \\
-vDSP batch & 1730 & 890 [885--894] & 20 \\
+CoopFFT scheduled & 2300 & \textbf{201} [197--206] & \textbf{18} \\
+vDSP batch & \textbf{1730} & 890 [885--894] & 20 \\
 vDSP hybrid & 2040 & 423 [417--428] & 38 \\
 \bottomrule
 \end{tabular}
-\caption{Actual Rack engine: one thread, four aligned four-channel Fourier modules, $N=2048$, $H=1440$, $D=64$, flattop. Cost is block wall ns/sample for the complete engine; peak is $\mu$s. Brackets give session summaries. Misses are late synthetic releases across 16,384 blocks per row, including wake lateness, not audio underruns.}
+\caption{Actual Rack engine: one thread, four aligned four-channel Fourier modules, $N=2048$, $H=1440$, $D=64$, flattop. Cost is block wall ns/sample for the complete engine; peak is $\mu$s. Brackets give session summaries. Misses are late synthetic releases across 16,384 blocks per row, including wake lateness, not audio underruns. Lower is better; bold marks minima at displayed precision.}
 \label{tab:conference-host}
 \end{table}
 % END STUDY ASSET: conference-host.tex
@@ -709,7 +713,7 @@ consumes about three CPU-seconds per second of nominal audio, indicating that
 its workers remain active between paced releases. The one-thread engine can
 sleep. The contrast therefore changes more than available parallelism.
 
-Alignment also matters. With sixteen modules on four threads, production's
+Alignment also matters. With sixteen modules on four threads, CoopFFT's
 typical peak is \StudyHostManyCorePeak\,$\mu$s, compared with
 \StudyHostManyBatchPeak\,$\mu$s for aligned vDSP batch. Staggering the
 batch modules lowers their peak to
@@ -718,9 +722,9 @@ coincidence of complete transforms without making them resumable, although an
 individual module cannot generally choose the phases of unrelated modules.
 
 Lower typical peaks do not establish better deadline reliability. In the
-one-thread, four-module comparison, production, vDSP batch, and hybrid miss
+one-thread, four-module comparison, CoopFFT, vDSP batch, and hybrid miss
 18, 20, and 38 synthetic releases respectively, across 16,384 blocks per row.
-With sixteen aligned modules on four threads, production misses 19 releases
+With sixteen aligned modules on four threads, CoopFFT misses 19 releases
 and vDSP batch misses none. Empty-engine controls also have late releases.
 Wake delays, interruptions, and backlog remain relevant even when the normal
 processing burst is much smaller than the deadline.
@@ -758,14 +762,14 @@ An efficient native kernel reduces total work, but an indivisible call sets
 a lower limit on how finely that work can be spread. A resumable kernel gives
 more control over placement, but repeated indexing, dispatch, and smaller
 memory operations can cost more. The measured four-channel example shows that
-a sufficiently efficient native hybrid can beat a fully distributed kernel
+a sufficiently efficient native hybrid can beat CoopFFT
 even on peak time. This is why operation-count bounds and timing measurements
 answer different questions.
 
 The delay also belongs in the design decision. A frame timestamp identifies
 the analyzed signal, not when the user sees it. In the retained headless
 consumer experiment at 60\,Hz, default Fourier snapshots have median
-endpoint-age bounds of 38--40\,ms for production and the full-hop hybrid,
+endpoint-age bounds of 38--40\,ms for CoopFFT and the full-hop hybrid,
 versus 8--10\,ms for native batch. That roughly 30\,ms difference matches
 the schedule; it excludes repaint. Slower or stalled consumers skip some
 published frames. No listening, interaction, or visual-response study was
@@ -799,7 +803,7 @@ The present evidence is sufficient to motivate that comparison without
 assuming its outcome.
 % Source: sections/conclusion.tex (now inline)
 \section{Conclusion}
-A spectrum analyzer can spread its FFT across the audio processing loop by
+CoopFFT spreads spectral analysis across the audio processing loop by
 saving traversal state and resuming on successive sample calls. Scheduling
 windowing, magnitudes, smoothing, and output in the same way brings the
 complete analysis under one schedule. A balanced integer quota completes

@@ -178,7 +178,8 @@ coding and documentation conventions. Coding agents should also follow
 
 The [technical report][report], **Scheduling FFT-Based Spectral Analysis
 in the Audio Processing Loop**, explains the implementation, scheduling and
-latency model, prior work, and reproducible experiments. Its README includes build
+latency model, prior work, and reproducible experiments. It names the approach
+**CoopFFT** (Cooperative Fast Fourier Transform). Its README includes build
 instructions for the [LaTeX project](docs/whitepaper/fourier.tex) and its
 self-contained source export.
 

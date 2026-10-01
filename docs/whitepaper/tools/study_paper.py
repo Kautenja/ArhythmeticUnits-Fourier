@@ -29,6 +29,13 @@ def number(v):
     return f'{v:.3g}'
 
 
+def best_values(values):
+    """Bold column minima, including ties at the displayed precision."""
+    minimum = number(min(values))
+    return [r'\textbf{' + text + '}' if text == minimum else text
+            for text in map(number, values)]
+
+
 def table(headers,rows,caption,label,columns=None):
     return '\n'.join([r'\begin{table}[htbp]',r'\centering\small',
         r'\begin{tabular}{@{}'+(columns or 'l'+'r'*(len(headers)-1))+r'@{}}',r'\toprule',
@@ -69,9 +76,10 @@ class Study:
             compute_misses=sum(r['compute_budget_misses']for r in rr),release_misses=sum(r.get('release_misses',0)for r in rr))
         self.cache[group,index]=result;return result
 
-    def peak_range(self,row):
+    def peak_range(self,row,headline=None):
         vals=[s['hop_median']/1000 for s in row['sessions'].values()]
-        return number(row['hop_median']/1000)+' ['+number(min(vals))+'--'+number(max(vals))+']'
+        if headline is None: headline=number(row['hop_median']/1000)
+        return headline+' ['+number(min(vals))+'--'+number(max(vals))+']'
 
 OUTPUT = PAPER / '.build/paper-study'
 
@@ -81,7 +89,7 @@ def generate():
     out, macros = {}, {}
     def macro(name, value):
         macros[name] = number(value)
-    names = ['Matched batch', 'Matched distributed', 'PFFFT batch', 'PFFFT hybrid',
+    names = ['CoopFFT batch', 'CoopFFT scheduled', 'PFFFT batch', 'PFFFT hybrid',
              'vDSP batch', 'vDSP hybrid', 'FFTW batch', 'FFTW hybrid']
     for prefix,i in [('Core',4),('Batch',1),('PffftBatch',7),('PffftHybrid',10),('VdspBatch',13),('VdspHybrid',16)]:
         r=study.cell('Baselines',i);macro(prefix+'Cost',r['compute_ns_per_sample']);macro(prefix+'Peak',r['hop_median']/1000)
@@ -117,39 +125,46 @@ def generate():
     out['all-cells.csv']=csv_text(allcells);out['all-processes.csv']=csv_text(processes);out['all-sessions.csv']=csv_text(sessions)
     # Compact conference tables retain the same cells and aggregation as the
     # longer report. Only the displayed columns and captions differ.
+    emphasis_note = ' Lower is better; bold marks minima at displayed precision.'
     baseline_ids = [1, 4, 7, 10, 13, 16, 19, 22]
+    baseline_rows = [study.cell('Baselines', index) for index in baseline_ids]
     out['conference-baselines.tex'] = table(
-        ['Analysis path', 'Cost', 'Peak [sessions]'], [
-            [name, number((row := study.cell('Baselines', index))['compute_ns_per_sample']),
-             study.peak_range(row)]
-            for name, index in zip(names, baseline_ids)],
+        ['Analysis path', 'Cost', 'Peak [sessions]'], list(zip(
+            names, best_values([row['compute_ns_per_sample'] for row in baseline_rows]),
+            [study.peak_range(row, peak) for row, peak in zip(
+                baseline_rows, best_values([row['hop_median'] / 1000 for row in baseline_rows]))])),
         r'Scalar analysis, $N=4096$, $H=1024$, $D=64$, Hann, no smoothing. '
         r'Cost is instrumented ns/sample; peak is the typical hop peak in $\mu$s. '
         r'Brackets give the two session summaries. Each row contains four processes, '
         r'16,384 blocks, and 1,024 complete hops. No block exceeded the '
-        r'1,333\,$\mu$s budget.', 'tab:conference-baselines')
+        r'1,333\,$\mu$s budget.' + emphasis_note, 'tab:conference-baselines')
+    horizons = [('Batch', 36, 0), ('$H$', 21, 239),
+                ('$H/2$', 22, 119), ('$H/4$', 23, 59)]
+    horizon_rows = [study.cell('Granularity', index) for _, index, _ in horizons]
     out['conference-horizons.tex'] = table(
-        ['Finish after', 'Age (ms)', 'Cost', 'Peak'], [
-            [label, number(age / 48),
-             number((row := study.cell('Granularity', index))['compute_ns_per_sample']),
-             number(row['hop_median'] / 1000)]
-            for label, index, age in [('Batch', 36, 0), ('$H$', 21, 239),
-                                     ('$H/2$', 22, 119), ('$H/4$', 23, 59)]],
+        ['Finish after', 'Age (ms)', 'Cost', 'Peak'], list(zip(
+            [label for label, _, _ in horizons],
+            best_values([age / 48 for _, _, age in horizons]),
+            best_values([row['compute_ns_per_sample'] for row in horizon_rows]),
+            best_values([row['hop_median'] / 1000 for row in horizon_rows]))),
         r'Four-channel vDSP analysis, $N=16384$, $H=240$, $D=64$, Hann. '
         r'Age is endpoint-to-publication delay; cost is ns/sample for all four '
         r'channels; peak is $\mu$s. Each row contains four processes and 3,840 '
-        r'blocks. Only the completion interval changes between hybrid rows.',
+        r'blocks. Only the completion interval changes between hybrid rows.' + emphasis_note,
         'tab:conference-horizons')
+    host_names = ['CoopFFT scheduled', 'vDSP batch', 'vDSP hybrid']
+    host_rows = [study.cell('Host', index) for index in (2, 15, 28)]
     out['conference-host.tex'] = table(
-        ['Analysis', 'Cost', 'Peak [sessions]', 'Misses'], [
-            [name, number((row := study.cell('Host', index))['compute_ns_per_sample']),
-             study.peak_range(row), str(row['release_misses'])]
-            for name, index in [('Distributed', 2), ('vDSP batch', 15), ('vDSP hybrid', 28)]],
+        ['Analysis', 'Cost', 'Peak [sessions]', 'Misses'], list(zip(
+            host_names, best_values([row['compute_ns_per_sample'] for row in host_rows]),
+            [study.peak_range(row, peak) for row, peak in zip(
+                host_rows, best_values([row['hop_median'] / 1000 for row in host_rows]))],
+            best_values([row['release_misses'] for row in host_rows]))),
         r'Actual Rack engine: one thread, four aligned four-channel Fourier '
         r'modules, $N=2048$, $H=1440$, $D=64$, flattop. Cost is block wall '
         r'ns/sample for the complete engine; peak is $\mu$s. Brackets give '
         r'session summaries. Misses are late synthetic releases across 16,384 '
-        r'blocks per row, including wake lateness, not audio underruns.',
+        r'blocks per row, including wake lateness, not audio underruns.' + emphasis_note,
         'tab:conference-host')
     out['macros.tex']='% Generated by tools/study_paper.py; do not edit.\n'+''.join(r'\newcommand{\Study'+k+'}{'+v+'}\n'for k,v in sorted(macros.items()))
     out['provenance.json']=json.dumps(dict(schema=1,evidence_sha256=digest(SOURCE/'evidence.json'),receipt_sha256=digest(SOURCE/'receipt.json'),generator_sha256=digest(Path(__file__)),aggregation='two process means/medians within session; equal session weight; descriptive only',selections='all cells in CSV; printed selections in generator; no discarded observations',outputs={k:hashlib.sha256(v.encode()).hexdigest()for k,v in out.items()}),sort_keys=True,indent=2)+'\n'
