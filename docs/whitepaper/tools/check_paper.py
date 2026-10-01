@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check the standalone paper directly against retained evidence, without writing."""
+import json
 import math
 from pathlib import Path
 import re
@@ -73,8 +74,13 @@ def main():
     assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
     assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
     assert 'manuscript version 5' in tex
+    version = json.loads((ROOT / 'plugin.json').read_text())['version']
+    assert f'Release v{version}, manuscript version 5' in tex
+    assert f'pdfsubject={{Release v{version}; manuscript version 5.' in tex
+    assert f'Preprint / v{version}' in tex
     for path in [ROOT / 'CITATION.cff', ROOT / 'README.md', PAPER / 'CITATION.bib']:
         assert 'Manuscript version 5' in path.read_text(), path
+        assert f'Release v{version}; Manuscript version 5' in path.read_text(), path
     assert r'\documentclass[10pt,letterpaper,twocolumn]{article}' in tex
     assert r'\appendix' not in tex
     assert not re.search(r'\\(?:input|include|includegraphics)\s*(?:\[.*?\])?\{', tex)

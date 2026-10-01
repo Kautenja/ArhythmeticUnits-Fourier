@@ -1,5 +1,25 @@
 # Change Log
 
+## 2.2.1 (2026-10-01)
+
+### Changed
+
+-   Revise the whitepaper as the seven-page conference-style manuscript
+    *Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop*,
+    manuscript version 5, introducing the CoopFFT name and focusing the
+    scheduling analysis and retained experimental evidence.
+-   Make the active paper a self-contained LaTeX source with portable export;
+    retain the extended report and historical material in the documentation
+    archive. Update both manuals and citation metadata for this release.
+
+### Fixed
+
+-   Install the complete New TX font dependencies in publication CI and
+    validate the whitepaper metadata against its canonical source. Release
+    builds attach both manuals and the whitepaper PDF.
+
+The plugin's DSP, controls, and saved-patch behavior are unchanged from 2.2.0.
+
 ## 2.2.0 (2026-09-30)
 
 ### Added

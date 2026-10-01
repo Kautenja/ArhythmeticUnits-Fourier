@@ -1,11 +1,11 @@
 # Scheduling FFT-Based Spectral Analysis In The Audio Processing Loop
 
 A seven-page, two-column conference-style preprint by Christian Kauten
-(Arhythmetic Units), manuscript version 5, dated October 1, 2026. It explains
-how to distribute FFT-based analysis across sample calls and evaluates the
-tradeoff between processing bursts, total work, and result age. The seven pages
-include the abstract and references. The paper has not been peer reviewed by
-a venue, deposited on arXiv, or assigned a DOI.
+(Arhythmetic Units), release v2.2.1 (manuscript version 5), dated October 1,
+2026. It explains how to distribute FFT-based analysis across sample calls and
+evaluates the tradeoff between processing bursts, total work, and result age.
+The seven pages include the abstract and references. The paper has not been
+peer reviewed by a venue, deposited on arXiv, or assigned a DOI.
 
 The approach is called **CoopFFT** (Cooperative Fast Fourier Transform): a
 resumable FFT and surrounding analysis pipeline that advance under per-call
@@ -78,6 +78,6 @@ records content and rendering equivalence.
 [CITATION.bib](CITATION.bib), [CITATION.cff](../../CITATION.cff), and the
 [project README](../../README.md#citation) identify
 *Scheduling FFT-Based Spectral Analysis in the Audio Processing Loop*,
-manuscript version 5. After a public deposit, update them with its actual
-identifier and URL. Source and artwork terms remain in
+release v2.2.1 (manuscript version 5). After a public deposit, update them with
+its actual identifier and URL. Source and artwork terms remain in
 [LICENSING.md](../../LICENSING.md).
