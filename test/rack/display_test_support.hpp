@@ -19,6 +19,7 @@
 #include <map>
 #include <stdexcept>
 #include <vector>
+#include "host.hpp"
 #include "rack.hpp"
 
 namespace DisplayTest {

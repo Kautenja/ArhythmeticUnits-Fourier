@@ -28,6 +28,8 @@
 #include <stdexcept>
 #include <vector>
 #include "dsp/dft.hpp"
+// DSP headers must not depend on the nonstandard M_PI macro.
+#undef M_PI
 #include "dsp/fft.hpp"
 #include "../ieee754.hpp"
 #include "../functions.hpp"

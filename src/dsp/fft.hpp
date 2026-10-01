@@ -24,7 +24,7 @@
 #include <stdexcept>      // invalid_argument
 #include <utility>        // swap
 #include <vector>         // vector
-#include "constants.hpp"  // M_PI, j<T>, etc.
+#include "constants.hpp"  // pi<T>, j<T>, etc.
 #include "math.hpp"       // complex_multiply, etc.
 #include "window.hpp"     // window_function
 
@@ -85,7 +85,7 @@ class TwiddleFactors {
         // Resize the vector to store half the number of FFT points.
         factors.resize(n >> 1);
         // Calculate the angular step theta = -2*pi/n.
-        const T theta = T(-2.0) * M_PI / n;
+        const T theta = T(-2.0) * pi<double>() / n;
         for (size_t i = 0; i < factors.size(); ++i) {
             const T angle = theta * static_cast<T>(i);
             factors[i] = std::complex<T>(cos(angle), sin(angle));

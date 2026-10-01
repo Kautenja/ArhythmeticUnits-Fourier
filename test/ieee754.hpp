@@ -17,7 +17,7 @@
 #ifndef ARHYTHMETIC_UNITS_TEST_IEEE754_HPP
 #define ARHYTHMETIC_UNITS_TEST_IEEE754_HPP
 
-#include <stdlib.h>
+#include <cmath>
 #include <complex>
 #include <cstdint>
 #include <limits>
@@ -34,7 +34,7 @@
 template<typename T>
 inline bool approx_equal(const T& a, const T& b, const T& epsilon) {
     static_assert(std::is_floating_point<T>(), "T should be a floating point type!");
-    return abs(a - b) <= epsilon;
+    return std::abs(a - b) <= epsilon;
 }
 
 /// @brief Return true if the floating point values are equal wrt. epsilon.
@@ -60,7 +60,7 @@ inline bool epsilon_equal(const T& a, const T& b) {
 template<typename T>
 inline bool approx_equal(const std::complex<T>& a, const std::complex<T>& b, const T& epsilon) {
     static_assert(std::is_floating_point<T>(), "T should be a floating point type!");
-    return abs(a - b) <= epsilon;
+    return std::abs(a - b) <= epsilon;
 }
 
 /// @brief Return true if the floating point complex values are equal wrt. epsilon.

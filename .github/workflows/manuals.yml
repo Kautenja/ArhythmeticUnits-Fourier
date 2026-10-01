@@ -2,44 +2,23 @@ name: Manuals and white paper
 
 on:
   pull_request:
-    paths:
-      - docs/manual-fourier/**
-      - docs/manual-spectre/**
-      - docs/latex/**
-      - docs/whitepaper/fourier.tex
-      - docs/whitepaper/preamble.tex
-      - docs/whitepaper/bibliography.tex
-      - docs/whitepaper/sections/**
-      - docs/whitepaper/appendices/**
-      - docs/whitepaper/figures/**
-      - docs/whitepaper/tables/**
-      - docs/whitepaper/makefile
-      - plugin.json
-      - .github/workflows/manuals.yml
+    paths: &publication_paths
+      - 'docs/**'
+      - 'specs/**'
+      - 'README.md'
+      - 'CITATION.cff'
+      - 'plugin.json'
+      - '.github/workflows/manuals.yml'
   push:
     branches: [main]
-    tags: ['v*']
-    paths:
-      - docs/manual-fourier/**
-      - docs/manual-spectre/**
-      - docs/latex/**
-      - docs/whitepaper/fourier.tex
-      - docs/whitepaper/preamble.tex
-      - docs/whitepaper/bibliography.tex
-      - docs/whitepaper/sections/**
-      - docs/whitepaper/appendices/**
-      - docs/whitepaper/figures/**
-      - docs/whitepaper/tables/**
-      - docs/whitepaper/makefile
-      - plugin.json
-      - .github/workflows/manuals.yml
+    paths: *publication_paths
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to build and upload PDFs for
-        required: true
+        description: Existing release tag to upload PDFs for (blank builds this ref only)
+        required: false
         type: string
 
 permissions:
@@ -50,8 +29,23 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main') }}
 
 jobs:
+  check:
+    name: Check publication evidence and links
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify paper artifacts and import regressions
+        run: |
+          make -C docs/whitepaper check
+          python3 -m unittest discover -s docs/whitepaper/tools -p test_study_import.py
+
   build:
     name: Build manuals and white paper
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -65,7 +59,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \
-            texlive-latex-extra texlive-fonts-recommended texlive-science latexmk lmodern poppler-utils python3-pypdf
+            texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended texlive-science latexmk lmodern poppler-utils python3-pypdf
 
       - name: Check release and manual versions
         env:
@@ -164,7 +158,8 @@ jobs:
               if not pdf.outline or '??' in text or 'Arhythmetic Units' not in text:
                   raise ValueError(f'{path.name}: missing bookmarks/branding or unresolved references')
               if path.name == 'Fourier-whitepaper.pdf':
-                  if len(pdf.pages) < 2 or 'FFT' not in title:
+                  expected = re.search(r'pdftitle=\{([^}]+)\}', Path('docs/whitepaper/preamble.tex').read_text())
+                  if len(pdf.pages) < 2 or not expected or title != expected.group(1):
                       raise ValueError(f'{path.name}: incomplete report or incorrect title')
               else:
                   module = path.stem
@@ -182,12 +177,12 @@ jobs:
         with:
           name: publication-pdfs
           path: ${{ steps.pdfs.outputs.directory }}/*.pdf
-          retention-days: 14
+          retention-days: 3
           if-no-files-found: error
 
   publish:
     name: Attach PDFs to release
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
     needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 5

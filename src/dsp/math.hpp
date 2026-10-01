@@ -123,6 +123,7 @@ inline std::complex<T> complex_multiply(const std::complex<T>& a, const std::com
 ///
 template<typename T>
 inline T amplitude2decibels(const T& x) {
+    using std::abs;
     return T(20) * log10(abs(x));
 }
 

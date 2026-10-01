@@ -416,61 +416,44 @@ reset. It is separate from `make test` and runs in CI's Rack job.
 
 ### Continuous Integration
 
-The [DSP and Rack tests workflow](.github/workflows/dsp-tests.yml) runs on
-pull requests, pushes to `main` (including merges), and version tags matching
-`v*`. Other branch pushes do not trigger builds. Code checks run on tags;
-release publication only rebuilds and uploads the PDFs, avoiding a second
-six-job code matrix for the same release.
+The [DSP and Rack tests workflow](.github/workflows/dsp-tests.yml) runs one
+Ubuntu 24.04 job on pull requests and pushes to `main` that change code, tests,
+build files, presets, or the benchmark tooling. It runs `make check-build`,
+`make -j2 test RACK_DIR=/nonexistent-sdk`, `make -j2 all`, and
+`make -j2 test-rack`. The job downloads the official Rack 2.6.3 Linux x64 SDK
+and verifies its pinned SHA-256 checksum. Standalone checks retain their
+SDK-independent flags; headless checks exercise actual module processing,
+serialization, display preparation, amplitudes, and the benchmark runner.
+Benchmarks are not compiled or timed separately on routine CI runs.
 
-The three standalone jobs run `make -j2 test` with Ubuntu 24.04 GCC,
-macOS 14 Apple Clang, and Windows 2022 MSYS2 UCRT64 GCC. Windows uses
-MSYS2's Make to preserve POSIX paths and GNU build tools. Each job also
-builds standalone benchmarks and lists their workloads without timing them.
-These commands use a missing `RACK_DIR` to verify SDK independence. Linux
-and macOS additionally run the small `make check-build` regression fixtures.
+Use **Actions > DSP and Rack tests > Run workflow** to check a selected branch
+on Ubuntu 24.04, macOS 14 ARM64, or Windows 2022 x64. Each dispatch runs one
+platform, rather than starting a matrix. Windows uses MSYS2 MINGW64 to match
+Rack's MSVCRT ABI, including `jq`, `diffutils`, and Python. Its headless tests
+extract the verified Rack Free runtime without installing it. macOS and
+Windows are opt-in to avoid charging for all three platforms on every update.
 
-Three independent Rack jobs download the official Rack 2.6.3 SDKs, verify
-pinned SHA-256 checksums, and run `make -j2 all` and `make -j2 test-rack`:
+New updates cancel obsolete runs of the same branch/PR and selected platform.
+The job has a 15-minute timeout. Plugin binaries are built for validation;
+CI does not package or publish them. Tag pushes do not duplicate these tests;
+run the desired platform checks on the release revision before publishing.
 
-| Runner | Plugin Architecture | Toolchain |
-| --- | --- | --- |
-| Ubuntu 24.04 | Linux x64 | GCC |
-| macOS 14 | macOS ARM64 | Apple Clang |
-| Windows 2022 | Windows x64 | MSYS2 MINGW64 GCC (MSVCRT) |
-
-Each Rack job runs five headless module/DSP suites: SIMD DC blocker,
-serialization, display lifecycle, spectrum coordinates, and module amplitudes,
-plus the C++ benchmark-runner checks. Linux and
-macOS link and run against the SDK library. Linux installs the OpenGL, X11,
-and audio runtime dependencies. The Windows SDK has an import library only,
-so CI also verifies and extracts the matching Rack Free installer and adds
-its DLL directory to the test process's `PATH`. It does not run the installer
-or compile Rack. Windows tests use Catch2's ordinary `main()` entry point;
-the plugin retains the SDK's flags.
-
-The SDK lives under the runner's temporary directory, selected by `RACK_DIR`.
-New updates cancel older runs for the same pull request or branch. DSP jobs
-have a 15-minute timeout and Rack jobs have a 25-minute timeout. A failed
-platform does not cancel the other matrix jobs. Plugin binaries are compiled
-for validation, without packaging or publishing GitHub release binaries;
-VCV Library distribution remains a separate release step.
-
-Headless tests exercise actual module processing, state, and CPU-side display
-behavior without a window or audio device. They do not replace an interactive
-Rack session or GPU checks. Intel macOS builds, benchmarks, and manual UI
-checks remain separate validation steps.
+Headless tests construct Rack's engine/history using host-only declarations,
+following [RackNES's harness pattern](https://github.com/Kautenja/RackNES/blob/master/tests/racknes.cpp).
+Those declarations stay in test support; the plugin uses Rack's public API.
+Headless checks do not replace an interactive Rack session, GPU inspection,
+or complete patch-loading checks. Intel macOS remains a separate build check.
 
 ### Coverage And Sanitizers
 
-The [instrumentation workflow](.github/workflows/instrumentation.yml)
-runs on pull requests, pushes to `main`, and manual dispatch. Four independent
-Ubuntu 24.04 jobs run DSP/Rack coverage and combined ASan/UBSan with Clang 18.
-Rack jobs use the same pinned Rack 2.6.3 SDK as the ordinary Rack CI job.
-A separate macOS 14 job runs only the standalone mailbox suite under TSan;
-it needs no Rack SDK or shared library. Failures do not cancel other matrix
-jobs. Reports and full compiler/test diagnostics are uploaded for 14 days,
-including diagnostics from failed runs. Coverage summaries also appear in the
-workflow summary. No external reporting account or token is required.
+The [instrumentation workflow](.github/workflows/instrumentation.yml) is
+manual-only. Select one mode and suite per run: coverage or ASan/UBSan with
+`dsp` or `rack`, or TSan with `mailbox`. DSP/Rack use Ubuntu 24.04 and Clang 18;
+the mailbox uses macOS 14. Invalid mode/suite pairs fail validation. Rack
+uses the same pinned SDK as the ordinary build. Reports and failed-run
+compiler/test diagnostics are retained for three days; coverage summaries
+also appear in the workflow summary. No external reporting token is needed.
+These diagnostics remain available without five extra jobs on every PR.
 
 From the repository root, use Python 3, Make, and Clang on Linux or macOS:
 
@@ -1340,29 +1323,29 @@ the paper, then exports one self-contained `fourier.tex` inside
 as LaTeX. See the [whitepaper guide](docs/whitepaper/README.md) for the source
 map, export verification, and maintenance conventions.
 
-The [manuals and white paper workflow](.github/workflows/manuals.yml) builds
-all three PDFs on relevant pull requests and pushes to `main`: changes to
-either manual directory, the shared `docs/latex/` directory,
-the white paper's entry point, preamble, bibliography, section/appendix and
-figure/table directories, or Makefile, `plugin.json`,
-or the workflow itself. Version tags matching `v*` build PDFs regardless of
-path filters. Other branch pushes do not run the workflow. New PR or `main`
-updates cancel obsolete PDF builds; tag and release runs are kept separate
-so a tag build cannot cancel release uploads.
+The [manuals and white paper workflow](.github/workflows/manuals.yml) runs a
+lightweight Python artifact/link check and six import regressions on relevant
+pull requests and pushes to `main`. Its paths include documentation, specs,
+README/citation metadata, `plugin.json`, and the workflow. Routine CI does not
+install LaTeX or compile PDFs. Tag pushes do not start duplicate PDF builds.
 
-Ubuntu installs `texlive-latex-extra`, `texlive-fonts-recommended`,
-`texlive-science`, `latexmk`, `lmodern`, `poppler-utils`, and `python3-pypdf`.
+Full PDFs build when a release is published or the workflow is dispatched.
+Leave `tag` blank to validate the selected branch without uploading anything;
+enter an existing release tag only to rebuild and replace its PDF assets.
+Ubuntu installs `texlive-latex-extra`, `texlive-fonts-extra` (for New TX and
+Inconsolata), `texlive-fonts-recommended`, `texlive-science`, `latexmk`,
+`lmodern`, `poppler-utils`, and `python3-pypdf`.
 For the current layout, CI checks release tags against `plugin.json` and both
 manual source versions before building. After building, it requires all three
-PDFs, checks page counts, titles, bookmarks, branding, and unresolved references,
-and verifies manual versions, language, and XMP metadata. All PDFs must also
-be nonempty and readable by `pdfinfo`. Validated `Fourier.pdf`, `Spectre.pdf`,
-and `Fourier-whitepaper.pdf` are saved in the `publication-pdfs` workflow
-artifact for 14 days.
+PDFs and checks page counts, source-derived paper title, manual titles and
+versions, bookmarks, branding, unresolved references, language, and XMP
+metadata. All PDFs must be readable by `pdfinfo`. Validated `Fourier.pdf`,
+`Spectre.pdf`, and `Fourier-whitepaper.pdf` are retained in the
+`publication-pdfs` workflow artifact for three days.
 
 Publishing a GitHub release builds from its tag and attaches all three PDFs.
-The manual asset names match `manualUrl` in `plugin.json`. A tag push builds
-an artifact but does not create a release or upload release assets. Publish a
+The manual asset names match `manualUrl` in `plugin.json`. A tag push does
+not create a release or upload release assets. Publish a
 regular release as latest for Rack's `/releases/latest/download/` links to
 resolve to these manuals; prerelease assets are also uploaded but do not
 become the latest release. Hosting the paper on GitHub does not submit it to
@@ -1439,10 +1422,10 @@ For an explicitly authorized release, work from the repository root:
     binary, runtime resources, presets, `LICENSE`, and `LICENSING.md`.
     Review all three PDFs and perform the applicable
     [manual Rack checks](#choosing-validation), including existing-patch
-    loading when persistence changes. Confirm code, instrumentation, and
-    publication workflows pass on the intended release revision; use an
-    eligible workflow dispatch or pull request where needed. The Rack CI
-    matrix covers Linux x64, macOS ARM64, and Windows x64, not Intel macOS.
+    loading when persistence changes. Dispatch code checks for Linux x64,
+    macOS ARM64, and Windows x64 on the intended release revision, and run
+    the applicable instrumentation and full PDF checks. Routine PR CI only
+    covers Linux and paper artifacts. Intel macOS requires a separate check.
     Record commands, platforms, SDK versions, results, and skipped checks
     in release notes or the owning spec. A successful headless suite does
     not verify interactive display behavior.

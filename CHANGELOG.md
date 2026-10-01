@@ -31,6 +31,9 @@
 
 ### Fixed
 
+-   Use floating-point absolute values for windows and decibel conversion
+    across standard libraries, and remove the standalone FFT's dependency
+    on the nonstandard `M_PI` macro.
 -   Prevent AC-coupled DC offsets caused by accumulated float rounding in
     short repeating signals; both modules now retain double-precision filter
     state.

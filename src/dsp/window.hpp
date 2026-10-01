@@ -77,6 +77,7 @@ inline T boxcar(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T bartlett(const T& n, const T& N, const bool& is_symmetric = true) {
+    using std::abs;
     return (T(2) / (N - is_symmetric)) * (((N - is_symmetric) / T(2)) - abs(n - (N - is_symmetric) / T(2)));
 }
 
@@ -100,6 +101,7 @@ inline T bartlett(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T parzen(const T& n, const T& N, const bool& is_symmetric = true) {
+    using std::abs;
     // Shift and scale the domain of n from [0, N) to [-1, 1]
     const T x = T(2) * n / (N - is_symmetric) - T(1);
     if (abs(x) >= T(0.5)) return T(2) * Fourier::cubed(T(1) - abs(x));
@@ -176,6 +178,7 @@ inline T cosine(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T bohman(const T& n, const T& N, const bool& is_symmetric = true) {
+    using std::abs;
     const auto x = abs(T(2) * n / (N - is_symmetric) - T(1));
     return (T(1) - x) * cos(Fourier::pi<T>() * x) + (T(1) / Fourier::pi<T>()) * sin(Fourier::pi<T>() * x);
 }
@@ -245,6 +248,7 @@ inline T hann(const T& n, const T& N, const bool& is_symmetric = true) {
 ///
 template<typename T>
 inline T barthann(const T& n, const T& N, const bool& is_symmetric = true) {
+    using std::abs;
     return T(0.62) - T(0.48) * abs(n / (N - is_symmetric) - T(0.5))
         - T(0.38) * cos(T(2) * Fourier::pi<T>() * n / (N - is_symmetric));
 }
@@ -698,6 +702,7 @@ struct CachedWindow {
 ///
 template<typename T>
 inline T exponential(const T& n, const T& N, const bool& is_symmetric = true, const T& alpha = 0.5) {
+    using std::abs;
     const T M = (N - is_symmetric) / T(2);
     return exp(-alpha * abs(n - M) / M);
 }
@@ -723,6 +728,7 @@ inline T exponential(const T& n, const T& N, const bool& is_symmetric = true, co
 ///
 template<typename T>
 inline T hannpoisson(const T& n, const T& N, const bool& is_symmetric = true, const T& alpha = 0.5) {
+    using std::abs;
     const T M = (N - is_symmetric) / T(2);
     return T(0.5) * (T(1) - cos(Fourier::pi<T>() * n / M)) * exp(-alpha * abs(n - M) / M);
 }
@@ -768,6 +774,7 @@ inline T gaussian(const T& n, const T& N, const bool& is_symmetric = true, const
 ///
 template<typename T>
 inline T tukey(const T& n, const T& N, const bool& is_symmetric = true, const T& alpha = 0.5) {
+    using std::abs;
     const T M = (N - is_symmetric) / T(2);
     if (abs(n - M) < alpha * M) return 1;
     return T(0.5) * (T(1) + cos(Fourier::pi<T>() * (abs(n - M) - alpha * M) / ((T(1) - alpha) * M)));

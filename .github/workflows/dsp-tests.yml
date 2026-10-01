@@ -2,105 +2,50 @@ name: DSP and Rack tests
 
 on:
   pull_request:
+    paths: &code_paths
+      - 'src/**'
+      - 'test/**'
+      - 'benchmark/**'
+      - 'dep/**'
+      - 'mk/**'
+      - 'scripts/**'
+      - 'Makefile'
+      - 'plugin.json'
+      - 'presets/**'
+      - 'docs/whitepaper/benchmarks/**'
+      - '.github/workflows/dsp-tests.yml'
   push:
     branches: [main]
-    tags: ['v*']
+    paths: *code_paths
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Platform to check (routine CI uses Linux only)
+        type: choice
+        options: [ubuntu-24.04, macos-14, windows-2022]
+        default: ubuntu-24.04
 
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.platform || 'ubuntu-24.04' }}
   cancel-in-progress: true
 
 jobs:
-  test:
-    name: Standalone DSP suites (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            shell: bash
-          - os: macos-14
-            shell: bash
-          - os: windows-2022
-            shell: msys2 {0}
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    defaults:
-      run:
-        shell: ${{ matrix.shell }}
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Linux test tools
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends g++ make
-
-      - name: Install Windows test tools
-        if: runner.os == 'Windows'
-        uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          install: >-
-            mingw-w64-ucrt-x86_64-gcc
-            make
-
-      - name: Check Make build boundaries
-        if: runner.os != 'Windows'
-        run: make check-build
-
-      - name: Run DSP suites
-        run: |
-          test -f dep/Catch2/catch_amalgamated.hpp
-          test -f dep/Catch2/catch_amalgamated.cpp
-          g++ --version
-          make --version
-          make -j2 test RACK_DIR=/nonexistent-sdk
-          make -j2 benchmark-build RACK_DIR=/nonexistent-sdk
-          make -j2 benchmark BENCHMARK_ARGS="--list-tests" RACK_DIR=/nonexistent-sdk
-
   rack:
-    name: Rack plugin and headless suites (${{ matrix.platform }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-24.04
-            platform: lin-x64
-            shell: bash
-            library: libRack.so
-            plugin: plugin.so
-            sha256: 9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d
-          - os: macos-14
-            platform: mac-arm64
-            shell: bash
-            library: libRack.dylib
-            plugin: plugin.dylib
-            sha256: a256d7f8c97c004419db4bef5a5f461c250c4ad2d877ab2e4454ecefd1a847cf
-          - os: windows-2022
-            platform: win-x64
-            shell: msys2 {0}
-            library: libRack.dll.a
-            plugin: plugin.dll
-            sha256: b5983ccc4ace9c2af29bcac07a18fdcca02e382485d3e7680520f9b789a58f0f
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    name: Build and regression tests (${{ inputs.platform || 'ubuntu-24.04' }})
+    runs-on: ${{ inputs.platform || 'ubuntu-24.04' }}
+    timeout-minutes: 15
     env:
       RACK_SDK_VERSION: '2.6.3'
-      RACK_SDK_SHA256: ${{ matrix.sha256 }}
-      RACK_PLATFORM: ${{ matrix.platform }}
-      RACK_LIBRARY: ${{ matrix.library }}
-      PLUGIN_BINARY: ${{ matrix.plugin }}
+      RACK_SDK_SHA256: ${{ inputs.platform == 'macos-14' && 'a256d7f8c97c004419db4bef5a5f461c250c4ad2d877ab2e4454ecefd1a847cf' || inputs.platform == 'windows-2022' && 'b5983ccc4ace9c2af29bcac07a18fdcca02e382485d3e7680520f9b789a58f0f' || '9571627becc12092c3279fc473e48dda62ca049b1d6158ee157996547568393d' }}
+      RACK_PLATFORM: ${{ inputs.platform == 'macos-14' && 'mac-arm64' || inputs.platform == 'windows-2022' && 'win-x64' || 'lin-x64' }}
+      RACK_LIBRARY: ${{ inputs.platform == 'macos-14' && 'libRack.dylib' || inputs.platform == 'windows-2022' && 'libRack.dll.a' || 'libRack.so' }}
+      PLUGIN_BINARY: ${{ inputs.platform == 'macos-14' && 'plugin.dylib' || inputs.platform == 'windows-2022' && 'plugin.dll' || 'plugin.so' }}
     defaults:
       run:
-        shell: ${{ matrix.shell }}
+        shell: ${{ inputs.platform == 'windows-2022' && 'msys2 {0}' || 'bash' }}
     steps:
       - name: Check out source
         uses: actions/checkout@v7.0.1
@@ -127,7 +72,9 @@ jobs:
           msystem: MINGW64
           install: >-
             mingw-w64-x86_64-gcc
-            mingw-w64-x86_64-jq
+            jq
+            diffutils
+            python
             make
             curl
             unzip
@@ -171,6 +118,13 @@ jobs:
           $dll = @(Get-ChildItem $runtime -Recurse -Filter libRack.dll)
           if ($dll.Count -ne 1) { throw 'Expected exactly one Rack runtime DLL' }
           'RACK_RUNTIME_DIR=' + $dll[0].DirectoryName | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Check Make build boundaries
+        if: runner.os == 'Linux'
+        run: make check-build
+
+      - name: Run standalone DSP and mailbox suites
+        run: make -j2 test RACK_DIR=/nonexistent-sdk
 
       - name: Build Rack plugin
         run: |
