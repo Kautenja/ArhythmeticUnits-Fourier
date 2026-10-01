@@ -60,12 +60,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends \
             texlive-latex-extra texlive-fonts-extra texlive-fonts-recommended \
-            texlive-plain-generic texlive-science latexmk lmodern poppler-utils python3-pypdf
-          # New TX loads binhex from the generic collection, which is not a
-          # dependency when recommended packages are disabled.
+            texlive-plain-generic texlive-science tex-gyre latexmk lmodern \
+            poppler-utils python3-pypdf
+          # New TX also needs binhex and TeX Gyre's Termes metrics and glyphs;
+          # install them explicitly when recommended packages are disabled.
           kpsewhich newtxtext.sty
           kpsewhich binhex.tex
           kpsewhich zi4.sty
+          kpsewhich ts1-qtmr.tfm
+          kpsewhich qtmr.pfb
 
       - name: Check release and manual versions
         env:

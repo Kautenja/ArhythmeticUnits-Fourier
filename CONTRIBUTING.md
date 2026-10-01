@@ -1334,7 +1334,8 @@ Leave `tag` blank to validate the selected branch without uploading anything;
 enter an existing release tag only to rebuild and replace its PDF assets.
 Ubuntu installs `texlive-latex-extra`, `texlive-fonts-extra` (for New TX and
 Inconsolata), `texlive-fonts-recommended`, `texlive-plain-generic` (for New TX's
-`binhex` dependency), `texlive-science`, `latexmk`,
+`binhex` dependency), `texlive-science`, `tex-gyre` (for Termes font metrics
+and glyphs), `latexmk`,
 `lmodern`, `poppler-utils`, and `python3-pypdf`.
 For the current layout, CI checks release tags against `plugin.json` and both
 manual source versions before building. After building, it requires all three
