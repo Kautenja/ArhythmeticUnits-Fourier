@@ -1,67 +1,70 @@
 \section{Complete Analysis over One Hop}
 \label{sec:one-hop}
 The analyzer maintains one ordered work sequence and one publication boundary
-per frame. It schedules windowing and packing, butterflies, positive-bin
-reconstruction, magnitude processing, and per-bin output on the engine thread.
-Every stage preserves the dependencies of uninterrupted evaluation; pausing
-changes the placement of work, not the selected signal frame. Unused conjugate
-bins are omitted. The shared \code{SpectrumAnalysis<T>} implementation supports
-scalar samples and independent SIMD channels with the same scheduling contract.
+per frame. On the engine thread it schedules windowing and packing,
+butterflies, positive-bin reconstruction, magnitude processing, and per-bin
+output. Every stage preserves the dependencies of uninterrupted evaluation, so
+pausing changes where work runs, not which signal frame it analyzes. Unused
+conjugate bins are never computed. One implementation,
+\code{SpectrumAnalysis<T>}, supports both scalar samples and independent SIMD
+channels under the same scheduling contract.
 
 \subsection{Dependency order and work bound}
 Let $M=N/2$, $K=M+1$, and $B=(M/2)\log_2 M$. Table~\ref{tab:units} defines
-the operations in each stage. Let $p=4$ while rebuilding window coefficients
-and $p=1$ for a clean window cache. Let $o$ be the compile-time output weight:
-one by default, or two for Fourier's four-channel coordinate mapping. The
-ordered scheduling sequence consumes $W$ credits, where
+the operations in each stage. Let $p=4$ while window coefficients are being
+rebuilt and $p=1$ when the window cache is clean, and let $o$ be a
+compile-time output weight: one by default, or two for Fourier's four-channel
+coordinate mapping. The ordered sequence then consumes $W$ credits, where
 \begin{equation}
  W=pM+B+(1+o)K=\frac{N}{4}\log_2(N/2)+\frac{(p+1+o)N}{2}+1+o.
  \label{eq:wholework}
 \end{equation}
 All packing completes before any butterfly, all butterflies before any
-reconstruction, and the complete prefix sum before any range smoothing. A
-sample quota may cross stage boundaries. The dependency graph is unchanged
-when execution pauses; it therefore admits the same induction argument as
-the butterfly traversal in Appendix~\ref{sec:legacy-transform}. Arithmetic-order
-preservation applies to pauses within this implementation; it does not imply
-bitwise identity to other FFT kernels or compiler configurations.
+reconstruction, and the complete prefix sum before any range smoothing, though
+a single sample's quota may cross stage boundaries. Because pausing leaves the
+dependency graph unchanged, the induction argument for the butterfly traversal
+in Appendix~\ref{sec:legacy-transform} carries over directly. This
+preservation of arithmetic order holds across pauses within one
+implementation; it does not imply bitwise identity with other FFT kernels or
+compiler configurations.
 
 \input{tables/production-work-units.tex}
 
-For call $s\in\{1,\ldots,H\}$, assign the quota
+Call $s\in\{1,\ldots,H\}$ of a frame receives the quota
 \begin{equation}
  q_s=\floor{sW/H}-\floor{(s-1)W/H}.
  \label{eq:balanced}
 \end{equation}
-The cumulative credit count after $s$ calls is $\floor{sW/H}$. Credits are
-exhausted and the frame is published on call $H$, with at most
-$\ceil{W/H}$ credits per call. Weighted operations execute at their first
-credit; later credits can be bookkeeping only, so arithmetic may finish before
-publication. For $H=\rho N$ with fixed $\rho>0$, this is $O(\log N)$. A quotient/remainder
-accumulator implements the rule without per-sample division. The quota is an
-elementary balanced schedule applied to the complete dependency-ordered
-analysis. Appendix~\ref{app:one-hop} preserves the dispatch listing, proof,
-and clean/dirty-cache examples.
+After $s$ calls the cumulative count is $\floor{sW/H}$, so the credits are
+exhausted, and the frame is published, on call $H$, with at most
+$\ceil{W/H}$ credits on any call. For $H=\rho N$ with fixed $\rho>0$, this
+maximum is $O(\log N)$. A weighted operation executes at its first credit and
+its remaining credits are bookkeeping, so the arithmetic may finish before
+publication. A quotient/remainder accumulator implements the rule without
+per-sample division. The quota itself is an elementary balanced schedule; what
+matters here is its application to the complete dependency-ordered analysis.
+Appendix~\ref{app:one-hop} gives the dispatch listing, the proof, and examples
+for clean and dirty caches.
 
-For fixed $W,H$, any $D$ consecutive active sample calls consume at most
-$\ceil{DW/H}$ credits, including intervals that cross frame boundaries.
-This follows by telescoping the quota differences and relates sample-level
-accounting to a host block. It applies per analyzer, without configuration
-changes, reset, or pauses; it is not a duration bound.
-
-The corresponding lower bound is $\floor{DW/H}$, so the logical load over a
-fixed interval differs from its ideal proportional allocation by less than
-one credit. For a clean scalar $N=4096,H=1024$ frame, $W=17410$: at most
-18 credits per sample and 1089 per 64-sample block. The maximum sample quota
-$\ceil{W/H}$ is optimal among allocations of these $W$ credits to $H$ calls;
-this elementary result says nothing about equalizing operation durations.
+The same telescoping argument bounds any run of calls. For fixed $W$ and $H$,
+any $D$ consecutive active sample calls consume between $\floor{DW/H}$ and
+$\ceil{DW/H}$ credits, including runs that cross frame boundaries. This
+connects sample-level accounting to a host block and holds per analyzer,
+provided the configuration is fixed and no reset or pause intervenes; it is a
+bound on credits, not on duration. The logical load over any such interval
+therefore differs from its proportional share by less than one credit. For a
+clean scalar $N=4096$, $H=1024$ frame, $W=17410$: at most 18 credits per
+sample and 1089 per 64-sample block. No allocation of $W$ credits to $H$ calls
+has a smaller maximum than $\ceil{W/H}$, but that optimality concerns credits;
+it says nothing about equalizing operation durations.
 
 \begin{proposition}[Conditional operation-cost bound]
 Suppose every indivisible scheduled operation $i$ has an upper cost $c_i$,
 is charged integer weight $w_i\ge1$, and executes at its first credit.
-Let $\kappa=\max_i c_i/w_i$ and $w_{\max}=\max_i w_i$. If capture, control
+Let $\kappa=\max_i c_i/w_i$ and $w_{\max}=\max_i w_i$. If capture, control,
 and dispatch overhead over $D$ calls is bounded by $D c_{\mathrm{base}}(N)$,
-then, under fixed configuration and without external interference,
+then, under fixed configuration and without external interference, the time
+$T_D$ spent in those calls satisfies
 \[
  T_D\le D c_{\mathrm{base}}(N)+
  \kappa\bigl(\ceil{DW/H}+w_{\max}-1\bigr).
@@ -74,69 +77,74 @@ any residual charge from an operation begun earlier only reduces new work.
 Multiplying the total charged weight of newly executed operations by
 $\kappa$ and adding the stated overhead proves the result.
 \end{proof}
-The boundary term is necessary because execution occurs at the first credit,
-not after all credits have been consumed. Weights proportional to conservative
-operation costs suggest a design rule, but measured averages cannot provide
-those upper bounds on a general-purpose OS. The experiment measures the
-existing weights; it does not calibrate $\kappa$ or establish a wall-time bound.
-A native hybrid can follow the same accounting, yet its indivisible FFT may
-dominate $\kappa$.
+The boundary term arises because an operation executes at its first credit
+rather than after all its credits have been consumed. Weights proportional to
+conservative operation costs would make this a useful design rule, but
+measured averages on a general-purpose operating system cannot supply such
+upper bounds. The experiment measures the existing weights; it neither
+calibrates $\kappa$ nor establishes a wall-time bound. A native hybrid follows
+the same accounting, but its indivisible FFT call may dominate $\kappa$.
 
 \input{figures/whole-pipeline-timeline.tex}
 
-The per-call bound includes scheduled window/cache rebuilds and bounded module
-output callbacks. Construction and host lifecycle callbacks are excluded; constant
-input/control work and an $O(\log N)$ plan-index calculation remain. Decomposing
-every stage into bounded operations removes $O(N)$ boundary passes from
-steady-state engine analysis; the quota distributes those operations.
-Reweighting changes placement but does not equalize operation costs, constrain
-an arbitrary user callback, or bound operating-system interruptions.
+The per-call bound covers scheduled window and cache rebuilds and the modules'
+bounded output callbacks. Construction and host lifecycle callbacks are
+excluded, and each call still performs constant input and control work plus an
+$O(\log N)$ plan-index calculation. Because every stage is decomposed into
+bounded operations, no $O(N)$ boundary pass remains in steady-state engine
+analysis; the quota decides only where those operations run
+(Figure~\ref{fig:whole-timeline}). Reweighting changes that placement, but it
+cannot equalize operation costs, constrain an arbitrary user callback, or
+bound operating-system interruptions.
 
 \subsection{Retained samples, plans, and publication time}
-Let the frame endpoint be $t_r=rH$, counting continuously captured samples
-from zero. Frame selection occurs on call $t_r$, and the last scheduling
-credit and publication occur on call $t_r+H-1$. The last actual output may
-precede its final credit; it remains private until publication. The nominal
+Count continuously captured samples from zero and let the frame endpoint be
+$t_r=rH$. The frame is selected on call $t_r$; its last credit and its
+publication occur on call $t_r+H-1$. The last actual output may precede the
+final credit, but it remains private until publication. The nominal
 sample-index ages at publication are therefore
 \begin{equation}
  A_{\mathrm{newest}}=(H-1)/f_s,\qquad
  A_{\mathrm{mid}}=((N-1)/2+H-1)/f_s.
  \label{eq:wholeage}
 \end{equation}
-These ages do not include elapsed computation or display delay. Successive
-publications are exactly $H$ samples apart. This convention differs
-from the original next-call publication in Equation~\eqref{eq:age}. Startup
-uses zero padding; a full first window is not awaited. With changing hops the
-endpoints satisfy $t_{r+1}=t_r+H_r$, and each frame uses its latched $H_r$.
+These ages exclude elapsed computation and display delay. Successive
+publications are exactly $H$ samples apart, in contrast to the original
+scheduler's next-call publication in Equation~\eqref{eq:age}. At startup the
+window is zero-padded rather than waiting for a full window of input. When the
+hop changes, endpoints satisfy $t_{r+1}=t_r+H_r$, and each frame uses its
+latched $H_r$.
 
-Incremental packing must retain the selected samples while capture continues.
-A preallocated ring of capacity $C=N_{\max}+H_{\max}$ suffices for the
-prepared maximum window and hop; no whole-frame capture copy is needed.
-The lifetime proof and maximum-size table reuse are retained in
-Appendices~\ref{app:one-hop} and~\ref{app:implementation}.
+Because packing is incremental, the selected samples must survive while
+capture continues. A preallocated ring of capacity $C=N_{\max}+H_{\max}$
+suffices for the prepared maximum window and hop, and no whole-frame copy of
+the input is needed. Appendices~\ref{app:one-hop} and~\ref{app:implementation}
+give the lifetime proof and the reuse of maximum-size tables.
 
 \subsection{Smoothing, configuration, and output ownership}
-Reconstruction obtains magnitudes and, when frequency smoothing is enabled,
-builds a prefix sum before any range average is emitted. Output applies an
-inclusive fractional-octave magnitude mean, optional temporal averaging, and
-the module's display conversion. These are magnitude means, not power means
-or constant-Q analysis. The window normalization and display units are
-preserved. Appendix~\ref{app:one-hop} records the equations, control
-conventions, cache behavior, and sample-level hop quantization.
+Reconstruction computes magnitudes and, when frequency smoothing is enabled,
+a prefix sum that is complete before any range average is emitted. Output then
+applies an inclusive fractional-octave magnitude mean, optional temporal
+averaging, and the module's display conversion. These are magnitude means, not
+power means or a constant-Q analysis, and the window normalization and display
+units are unchanged. Appendix~\ref{app:one-hop} records the equations, control
+conventions, cache behavior, and the sample-level quantization of the hop.
 
-Settings latch at each frame start; reset and sample-rate changes cancel
-partial analysis. Window and smoothing caches rebuild inside scheduled units,
-and length changes logically clear input and averaging history. Storage is
-prepared outside the sample path; increasing the supported hop in a
-sample-rate callback can allocate. Freeze behavior differs between the two
-modules, so continuous-input timestamp formulas do not apply across pauses.
+Settings latch at the start of each frame, and a reset or sample-rate change
+cancels any partial analysis. Window and smoothing caches rebuild inside
+scheduled units, and a length change logically clears the input and averaging
+history. Storage is prepared outside the sample path, with one exception:
+increasing the supported hop in a sample-rate callback can allocate. Freeze
+behaves differently in the two modules, so the continuous-input timestamp
+formulas do not hold across a pause.
 
-Each output bin is written to a producer-owned destination. Only a complete
-frame is published through a single-producer/single-consumer triple-slot
-mailbox using acquire/release atomic exchange. The consumer retains its slot
-until its next successful exchange, and the producer never overwrites that
-slot. A slow consumer may miss intermediate snapshots. Fourier uses one curve
-mailbox; Spectre uses one mailbox per history column, with image history and
-recoloring on the UI thread. Lifecycle work, other shared controls, UI work,
-and host scheduling remain outside the quota; the contract is not a broad
-claim of hard real-time safety.
+Each output bin is written to producer-owned storage. Only a complete frame is
+published, through a single-producer/single-consumer triple-slot mailbox that
+uses acquire/release atomic exchange. The consumer keeps its slot until its
+next successful exchange, and the producer never writes to that slot, so a
+slow consumer may miss intermediate snapshots but never reads a partially
+written one. Fourier uses one curve mailbox; Spectre uses one mailbox per
+history column and builds and recolors its image history on the UI thread.
+Lifecycle work, other shared controls, UI work, and host scheduling lie
+outside the quota, so the contract is not a general claim of hard real-time
+safety.

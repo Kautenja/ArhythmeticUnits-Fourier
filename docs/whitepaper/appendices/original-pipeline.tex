@@ -43,10 +43,10 @@ when smoothed magnitudes replace complex coefficients.
 The Fourier module instantiates arithmetic on \code{simd::float\_4}. Each lane
 carries an independent input channel through the same traversal; the SIMD
 lanes are not four consecutive bins of one transform. This arrangement
-shares index/control work across channels. It does not establish a measured
-fourfold speedup, and the scalar experiments in
-the archived original FFT campaign do not validate Rack SIMD instantiations. Rack's plugin API supplies the host processing and SIMD
-context~\cite{rack}.
+shares index and control work across channels, but lane parallelism does not
+by itself imply a fourfold speedup; Section~\ref{sec:comparison-results}
+measures the four-channel paths directly. Rack's plugin API supplies the host
+processing and SIMD context~\cite{rack}.
 
 \subsection{Snapshots and publication}
 The input ring can continue advancing because \code{buffer()} copies the
@@ -58,7 +58,7 @@ input lifetime as well as arithmetic scheduling.
 Similarly, a display-readiness flag is not by itself an engine-to-display
 synchronization protocol. Concurrent reads of arrays being modified require an
 ownership and publication design consistent with the C++ memory model. The
-original source's shared display buffers are not certified by its scalar tests.
+original source's tests do not certify its shared display buffers.
 A bounded exchange of preallocated buffers needs an explicit slow-consumer
 policy and safe reuse; an atomic pointer alone is insufficient. The successor's
 ownership exchange is described in Section~\ref{sec:one-hop}.

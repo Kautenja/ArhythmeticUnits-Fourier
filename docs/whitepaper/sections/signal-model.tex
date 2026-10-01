@@ -1,42 +1,43 @@
 \section{Signal and Execution Model}
 \label{sec:signal-model}
-Let $x[n]$ be a real signal sampled at $f_s$ Hz. A sample call advances one
-engine sample; a host callback can render $D$ such samples. These are distinct
-measurement boundaries. A hop $H$ specifies the interval between selected
-frame endpoints, not the host callback size. The transform length $N\ge4$ is
-a power of two, and $H\ge1$ is an integer. With continuously captured input
-and fixed hop, the frame endpoint is $t_r=rH$. The selected window is
+Let $x[n]$ be a real signal sampled at $f_s$\,Hz. A \emph{sample call}
+advances the engine by one sample; a host callback, or \emph{block}, renders
+$D$ such samples. The two are distinct measurement boundaries. The hop $H$ is
+the interval between successive frame endpoints and is unrelated to the block
+size. The transform length $N\ge4$ is a power of two, and $H\ge1$ is an
+integer. With continuously captured input and a fixed hop, frame $r$ ends at
+$t_r=rH$ and analyzes the window
 \begin{equation}
  u_r[m]=x[t_r-N+1+m]w[m],\qquad 0\le m<N,
 \end{equation}
-where $w$ is an analysis window. Its unnormalized forward transform is
+where $w$ is the analysis window. Its unnormalized forward transform is
 \begin{equation}
- X_r[k]=\sum_{m=0}^{N-1}u_r[m]e^{-j2\pi km/N}.
+ X_r[k]=\sum_{m=0}^{N-1}u_r[m]e^{-j2\pi km/N},
  \label{eq:dft}
 \end{equation}
-The associated bin frequency is $kf_s/N$. Deferring computation changes when
-$X_r$ becomes available; it does not change which samples enter this sum.
-Sample-index age measures the distance from a specified frame timestamp to
+with bin $k$ at frequency $kf_s/N$. Deferring computation changes when $X_r$
+becomes available, never which samples enter this sum. We define
+\emph{sample-index age} as the distance from a specified frame timestamp to
 publication, converted to seconds using $f_s$. It excludes wall-clock
 computation, device buffering, and display consumption. In particular, a
-transform computed in its endpoint's sample call has zero endpoint-to-publication
-age but nonzero execution time.
+transform computed within its endpoint's sample call has zero
+endpoint-to-publication age but nonzero execution time.
 
 For amplitude calibration, the finite-window coherent gain is
-$G_c=N^{-1}\sum_m w[m]$. An isolated interior bin-centered real sinusoid can be
-scaled using $2|X_r[k]|/(NG_c)$ when the window's positive- and negative-frequency
-contributions do not overlap materially. DC and Nyquist do not receive the
-factor of two. This is amplitude calibration, not power-spectral-density
-normalization; the latter involves window energy. The plugin caches window
-samples and applies tabulated coherent-gain factors. Those factors should not
-be assumed to equal the exact finite-length sum for every window and length.
-The original FFT campaign uses explicit rectangular and periodic Hann samples
-and does not certify display calibration. The pipeline campaign instead uses
-a coherent-gain-normalized periodic Hann window.
+$G_c=N^{-1}\sum_m w[m]$. An isolated, bin-centered real sinusoid at an
+interior bin has amplitude $2|X_r[k]|/(NG_c)$, provided the window's
+positive- and negative-frequency contributions do not overlap materially; DC
+and Nyquist omit the factor of two. This is amplitude calibration, not
+power-spectral-density normalization, which depends on the window's energy
+instead. The plugin caches window samples and applies tabulated
+coherent-gain factors, which should not be assumed to equal the exact
+finite-length sum for every window and length. The numerical audits in
+Section~\ref{sec:evaluation} compare each path with independent references
+and therefore verify computation, not display calibration.
 
-Real-input packing uses $M=N/2$ complex samples;
-the analyzer retains $K=M+1$ nonnegative-frequency bins, including DC and
-Nyquist. The standard radix-2 traversal requires
+Real-input packing uses $M=N/2$ complex samples, and the analyzer retains the
+$K=M+1$ nonnegative-frequency bins, including DC and Nyquist. The standard
+radix-2 traversal of the packed transform requires
 $B=B_r(N)=(N/4)\log_2(N/2)$ butterflies. Appendix~\ref{sec:legacy-transform}
-preserves the butterfly equations, arithmetic-order proof, resumable state
-transition, and real-spectrum reconstruction.
+gives the butterfly equations, the arithmetic-order proof, the resumable
+state transition, and real-spectrum reconstruction.

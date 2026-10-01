@@ -5,9 +5,9 @@ This appendix preserves the dispatch algorithm, proof, worked quotas, input
 lifetime argument, and module-specific processing details.
 
 \subsection{Balanced dispatch and worked quotas}
-Implement Equation~\eqref{eq:balanced} with a quotient/remainder accumulator.
-Quotient and
-remainder $a=\floor{W/H}$ and $r=W\bmod H$ are refreshed at configuration,
+Equation~\eqref{eq:balanced} is implemented with a quotient/remainder
+accumulator. The quotient $a=\floor{W/H}$ and remainder $r=W\bmod H$ are
+refreshed at configuration,
 reset, and the transition from a rebuilt window to a clean cache.
 Starting the accumulator $e$ at zero, each sample consumes $a$ credits plus one
 when $e+r\ge H$, then retains $(e+r)\bmod H$:
@@ -111,9 +111,9 @@ Only consecutively initialized entries advance that counter, so cancellation
 cannot expose stale entries. Magnitude scaling still evaluates every current
 value. This uses approximately 64\,KiB at $N_{\max}=16384$, with unchanged
 frame timing and no approximation of the coordinate formulas. Reuse reduces
-steady-state work; changing geometry every frame removes that reuse. These
-engineering changes postdate the report's historical timing campaigns and
-must be measured separately rather than attributed to those data.
+steady-state work; changing geometry every frame removes that reuse. The
+measured source includes this cache, but the study does not isolate its
+contribution.
 
 Each output unit maps a four-channel bin into the Fourier module's curve
 points, or writes one Spectre column magnitude. Only after all units finish

@@ -39,9 +39,8 @@ If they agree before a butterfly, Equation~\eqref{eq:butterfly} reads the same
 operands and performs the same updates; the index transition also agrees.
 Induction over $B_c$ establishes equality. A pause changes no state. In floating
 point, bitwise equality additionally assumes the same arithmetic instructions,
-rounding environment, and compiler transformations. The experiments test
-bitwise equality within a single executable rather than asserting it across
-different compilers or FFT libraries.
+rounding environment, and compiler transformations; we assert it only within
+a single executable, not across compilers or FFT libraries.
 \end{proof}
 
 \begin{lstlisting}[float=tbp,language=C++,caption={Simplified state transition corresponding to the original complex FFT. Tables and storage are prepared separately.},label={lst:step}]
@@ -94,8 +93,5 @@ It treats each output normalization as an additional resumable step, giving
 $B_c(N)+N$ steps after buffering. This differs from the real forward transform's
 bulk reconstruction. Input copying, permutation, and conjugation remain
 $O(N)$ buffering work. Neither production visualization module uses the
-inverse transform. The original historical campaign concerns the real forward
-path; the replacement campaign also measures isolated inverse transforms,
-periodic inverse jobs, and complete filtering chains. Their normalization,
-buffering, and delivery need separate application contracts; they are outside
-the current analysis-only experiment.
+inverse transform. Applications of it need their own normalization,
+buffering, and delivery contracts and are outside this analysis-only study.

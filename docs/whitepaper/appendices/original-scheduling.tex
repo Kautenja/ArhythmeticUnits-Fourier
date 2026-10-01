@@ -8,9 +8,9 @@ be the number of inner butterflies. The implementation chooses
 \end{equation}
 and invokes the single-step method $q$ times per call. Once complete, further
 step invocations are no-ops. The following statements concern this integer
-model. These reusable forward classes compute the ceiling through single-precision
-floating-point division; the reported experiments verify the model over the
-tested range. Extremely large sizes or horizons require a separate analysis of
+model. The reusable forward classes compute the ceiling through
+single-precision floating-point division; the repository's verification
+checks the model over its tested range. Extremely large sizes or horizons require a separate analysis of
 rounding and integer overflow. Zero horizons and unsupported transform lengths
 are outside the forward-path contract examined here. We use powers of two
 $N\ge4$ for the real transform.
@@ -73,8 +73,10 @@ $\exp[-tH/(L\tau)]$. The effective time constant is thus
  \tau_{\mathrm{eff}}=\tau L/H.
 \end{equation}
 For the 4096-point example, the decay time is approximately 8.3\% shorter than
-its nominal interpretation. The one-hop successor removes this completion-driven discrepancy; the Fourier module
-still truncates its hop control to integer samples (Section~\ref{sec:one-hop}). The analysis also motivates timestamping
+its nominal interpretation. The one-hop successor removes this
+completion-driven discrepancy, although the Fourier module still truncates its
+hop control to integer samples (Section~\ref{sec:one-hop}). The analysis also
+motivates timestamping
 spectrogram columns by captured frames rather than assuming the configured
 horizon is their spacing.
 

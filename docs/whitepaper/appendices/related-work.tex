@@ -42,18 +42,16 @@ the cooperative implementation fits their host-plugin execution model but
 requires more implementation effort. This motivates a worker-based comparison
 without establishing a performance ranking for this analyzer.
 The present study specifies a windowed spectral-analysis sequence, an exact-hop
-quota, retained-input capacity, cancellation, and output ownership. Its complete
-chain experiments use single-block overlap-save with identity and a short FIR
-as correctness fixtures; they do not evaluate the long-filter partitioning
-problem addressed by these convolution systems.
+quota, retained-input capacity, cancellation, and output ownership; it does
+not address the long-filter partitioning problem solved by these convolution
+systems.
 
 Wefers places these techniques in a broader treatment of real-time partitioned
 convolution, including manual preemption of processing chains and FFT
 subdivision~\cite{wefers2015}. This motivates evaluating the granularity of
 resumable work rather than assuming butterfly-level suspension is optimal.
 
-Liu, Yan, and Zou
-further study time-distributed FFT/IFFT algorithms for online control on
+Liu, Yan, and Zou further study time-distributed FFT/IFFT algorithms for online control on
 general-purpose processors~\cite{liu2017}. The existence of these approaches
 rules out a broad novelty claim for distributing transform work or a processing
 chain in time.
@@ -126,8 +124,8 @@ Optimized libraries such as FFTW use planning, generated kernels, and
 hardware-sensitive decompositions to improve actual execution
 time~\cite{frigo2005}. The present evaluation separates two questions. Matched
 first-party batch/resumable controls hold arithmetic substantially fixed to
-study work placement. External-library adapters measure the practical cost of
-using a different transform kernel, including the layout conversion and output
+study work placement. Native batch and hybrid paths measure the practical
+cost of a different transform kernel, including the layout handling and output
 processing required at each declared workload boundary. FFTW uses fresh,
 single-threaded \code{FFTW\_MEASURE} plans without imported wisdom; plan
 identities are retained because planning is part of the experimental condition.
@@ -142,8 +140,8 @@ inside incrementally scheduled preparation and output work, testing how much
 burst reduction requires suspending the transform itself. Apple Accelerate's
 vDSP provides a platform-specific baseline for the Apple Silicon
 host~\cite{vdsp}. Its reusable setup, packed real-transform layout, and scaling
-conventions are included in the adapter contract. Both libraries are measured
-in the replacement campaign, with numerical auditing and provenance retained.
+conventions are part of the native pipeline. FFTW, PFFFT, and vDSP are all
+measured in this study, with numerical audits and provenance retained.
 Their citations document the software interfaces, while all comparative
 timings in this report come from the accompanying experiment.
 Table~\ref{tab:position} summarizes the design distinctions without imposing

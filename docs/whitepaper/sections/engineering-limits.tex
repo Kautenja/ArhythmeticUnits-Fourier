@@ -1,70 +1,73 @@
 \section{Discussion and Limits}
 \label{sec:discussion}
-\subsection{A practical choice of execution granularity}
-Begin with native batch under the required complete-path semantics. If its
-per-hop peaks fit the allocated analysis budget and fresh output matters,
-immediate execution is a strong choice. If aligned releases consume too much
-headroom, test staggering or a native hybrid; shorten its horizon when age
-matters. Choose butterfly scheduling when its measured complete-path behavior
-meets a requirement the coarser alternatives do not, at acceptable total cost.
+\subsection{Choosing execution granularity}
+The results suggest a practical procedure. Start with native batch execution
+under the required complete-path semantics: if its per-hop peaks fit the
+analysis budget and fresh output matters, immediate execution is a strong
+choice. If aligned releases consume too much headroom, try staggering or a
+native hybrid, and shorten the hybrid's horizon when age matters. Choose
+butterfly-level scheduling when its measured complete-path behavior meets a
+requirement that the coarser alternatives do not, at an acceptable total cost.
 
-This is an empirical design rule rather than a deadline guarantee. The
-four-module, one-thread result provides the clearest practical example: the
-production path reduces typical block concentration from roughly two-thirds
-to one-sixth of the budget relative to vDSP batch. Yet the native hybrid is
-competitive in several controlled shapes, and multithreaded Rack changes the
-ranking. The implementation contract remains useful across those choices;
+This is an empirical design rule, not a deadline guarantee. The four-module,
+one-thread result is the clearest practical case: relative to vDSP batch, the
+production path reduces typical block concentration from about two-thirds of
+the budget to about 15\%. Yet the native hybrid is competitive in several
+controlled shapes, and the multithreaded engine changes the ranking. The
+execution contract remains useful across all of these choices, but
 performance cannot be inferred from the number of resumable butterflies alone.
-Rack's average CPU meter also reflects aggregate cost, so a lower burst can
-still appear more expensive to a user.
+Because Rack's CPU meter reflects aggregate cost, a path with smaller bursts
+can still appear more expensive to a user.
 
 Publication age is an explicit cost. A 30\,ms hop adds about 1.8 frames of a
-60\,Hz display before polling and repaint. That arithmetic does not establish
-a perceptual threshold. For latest-frame visualization a UI or worker thread
-may be preferable; for exact-hop producer history its capture, queueing,
-overflow and ownership policy must be specified. Spectre's history storage
-and per-column mailboxes support a different consumer contract from Fourier's
-latest curve. These alternatives deserve measurement at equivalent boundaries
-before a broader recommendation.
+60\,Hz display before polling and repaint, although that arithmetic does not
+establish a perceptual threshold. For latest-frame visualization, a UI or
+worker thread may be preferable; for exact-hop producer history, such a design
+must specify its capture, queueing, overflow, and ownership policy. Spectre's
+history storage and per-column mailboxes serve a different consumer contract
+from Fourier's latest curve. These alternatives deserve measurement at
+equivalent boundaries before broader recommendations are made.
 
 \subsection{What the evidence can establish}
-Native layouts, actual module/engine processing and a concurrent consumer
-connect the controlled analyzer to its host. Both pilots nevertheless use one
-M1 Pro, binary, compiler and local date. This is an early Apple Silicon laptop,
-not the original base M1 or a lower performance bound for Apple hardware.
-Independent-day, build and architecture replication remains outstanding.
+Native layouts, actual module and engine processing, and a concurrent consumer
+connect the controlled analyzer to its host. Both pilots, however, used one
+M1 Pro, one binary, one compiler, and one date. This is an early Apple Silicon
+laptop, neither the base M1 nor a lower performance bound for Apple hardware.
+Replication on independent days, with independent builds, and on other
+architectures remains outstanding.
 
-Careful setup and sleep/power checks coexist with residual OS activity.
+Careful setup and power and sleep checks coexist with residual OS activity.
 Snapshots cannot identify the cause of an individual outlier; longer compute
-paths may have greater interruption exposure, but that mechanism was not
-isolated. Maxima and session ranges retain those observations. Fixed group
-order also confounds workload family with time and possible thermal change.
+paths may be more exposed to interruption, but that mechanism was not
+isolated. Maxima and session ranges retain those observations. The fixed group
+order also confounds workload family with time and possible thermal drift.
 
-The stream study lacks a separate throughput pass, a matched paced/continuous
-cross-over at identical boundaries, core-placement calibration, and a
-thread-policy sweep. Four-thread engine workers consume substantial CPU even in the empty
-graph, so changes with thread count cannot be attributed solely to parallel
-analysis. The host filler set did not locate a saturation threshold.
-The extreme module path lacks matched paced native controls. Those are concrete
-limits on causal or reliability claims, even though the recorded comparisons
-are internally traceable. Headless consumption verifies copy/ownership and
-logical age; device underruns, GUI load and repaint are outside its scope.
-Native allocator internals remain opaque, and retained unused module storage
-precludes a total-memory ranking.
+The stream study lacks a separate throughput pass, a matched comparison of
+paced and continuous execution at identical boundaries, core-placement
+calibration, and a thread-policy sweep. Because four-thread engine workers
+consume substantial CPU even in an empty graph, changes with thread count
+cannot be attributed to parallel analysis alone. The background sweep did not
+locate a saturation threshold, and the extreme module settings lack matched
+paced native controls. These gaps limit causal and reliability claims, even
+though every reported comparison is traceable to retained data. Headless
+consumption verifies copying, ownership, and logical age; device underruns,
+GUI load, and repaint are outside its scope. Native allocator internals remain
+opaque, and the unused module storage retained by the native controls
+precludes a ranking by total memory.
 
 \subsection{Scope of the contribution}
 The analytical result bounds credits for a complete dependency-ordered
-analyzer. A conditional operation-cost model explains how weights could be
-chosen, while measured times test implementations on this host. Cache effects,
-unequal unit costs, interrupts and unrelated engine work separate these two
-claims. Empirically tuned weights and an unweighted band-cache rebuild are
-implementation choices, not a proof of time balance.
+analyzer. The conditional operation-cost bound explains how weights could be
+chosen, whereas the measurements test implementations on one host; cache
+effects, unequal unit costs, interrupts, and unrelated engine work separate
+these two claims. The empirically tuned weights and the unweighted band-cache
+rebuild are implementation choices, not a proof of time balance.
 
-Time-distributed transforms and cooperative chains precede this work. The
-specific contribution is to join analysis-tail accounting, exact-hop cadence,
-input lifetime, cancellation and output ownership with comparisons that expose
-placement, kernel and host effects. Sub-FFT native leaves could improve the
-tradeoff and remain an important missing granularity. Inverse synthesis and
-long-filter convolution require their own bounded preparation and delivery
-stages; no new performance claim for those applications follows from this
-analysis-only campaign.
+Time-distributed transforms and cooperative processing chains precede this
+work. The specific contribution is to combine analysis-tail accounting,
+exact-hop cadence, input lifetime, cancellation, and output ownership in one
+contract, and to evaluate it with comparisons that expose placement, kernel,
+and host effects. Native sub-FFT leaves could improve the tradeoff and remain
+the most important unmeasured granularity. Inverse synthesis and long-filter
+convolution need their own bounded preparation and delivery stages, and this
+analysis-only study makes no performance claim for them.

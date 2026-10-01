@@ -1,50 +1,61 @@
 \section{Introduction}
-Spectral analysis shares an audio engine's budget even when it produces no
-audio output. A visualizer can have low average cost yet concentrate window
-preparation, transformation, and display-data processing into one sample call.
-VCV Rack makes this distinction particularly concrete: modules process one
-sample at a time, and multiple engine workers synchronize between samples
-\cite{rackengine}. A long call can hold up the other workers. Whether reducing
-that concentration improves full-block behavior depends on the engine's own
-synchronization overhead and the rest of the patch.
+A spectral analyzer shares its host's audio budget even when it produces no
+audio. Its average cost may be small, yet a straightforward implementation
+concentrates window preparation, the transform, and display-data processing
+into whichever sample call completes a frame. VCV Rack makes the consequence
+concrete: modules process one sample at a time, and the engine's worker
+threads synchronize between samples~\cite{rackengine}, so one long call can
+hold up every worker. Whether reducing that concentration improves the
+behavior of a whole block, however, also depends on the engine's own
+synchronization overhead and on the rest of the patch.
 
-This paper studies complete windowed analysis on the existing engine thread.
-A batch FFT minimizes state and can exploit optimized kernels. A worker thread
-moves computation elsewhere, at the cost of a capture/queue/ownership policy.
-Phase staggering reduces simultaneous releases when the application controls
-analyzers' relative phases. Cooperative execution offers another choice: retain
-an unfinished analysis and advance it during successive sample calls. It is
-particularly relevant when a producer must maintain exact-hop spectral history
-independently of an intermittently polling display. A UI-thread computation is
-also reasonable for a latest-frame visualizer that permits dropped analyses;
-that is a different delivery contract.
+Several execution strategies are available. A batch FFT on the engine thread
+minimizes state and can exploit optimized kernels. A worker thread moves the
+computation elsewhere, at the cost of a capture, queueing, and ownership
+policy. When an application controls the relative phases of several
+analyzers, staggering them reduces coincident frame work. Cooperative
+execution offers a further choice: retain an unfinished analysis and advance
+it during successive sample calls. It is most relevant when a producer must
+maintain an exact-hop spectral history independently of a display that polls
+intermittently. For a latest-frame visualizer that tolerates dropped analyses,
+computing on the UI thread is also reasonable; that is a different delivery
+contract.
 
-Making only the FFT resumable leaves frame-sized packing, reconstruction, and
-output passes at its boundaries. Restarting as soon as it finishes also makes
-frame cadence depend on rounding in the butterfly quota. We instead use one
-dependency-ordered sequence covering the whole analyzer and a publication clock
-independent of early arithmetic completion. The resulting contribution is:
+Making only the FFT resumable is not enough. Frame-sized packing,
+reconstruction, and output passes remain at its boundaries, and restarting
+each transform as soon as the previous one finishes ties the frame cadence to
+rounding in the butterfly quota. We instead schedule one dependency-ordered
+sequence that covers the whole analyzer, and we drive publication from a frame
+clock that is independent of when the arithmetic finishes. This report
+contributes:
 \begin{itemize}
-\item an explicit contract for work credits, exact-hop publication, retained
-input, cancellation, and ownership of complete spectra;
-\item matched placement controls and native-layout batch/hybrid alternatives
-that separate scheduling from FFT-kernel choice;
-\item a same-host study of native completion horizons, shipped module defaults,
-and paced execution through Rack's actual multithreaded engine.
+\item an explicit execution contract for work credits, exact-hop publication,
+retention of the selected input, cancellation, and ownership of complete
+spectra (Section~\ref{sec:one-hop});
+\item matched batch/distributed controls and native-layout batch/hybrid
+alternatives that separate work placement from FFT-kernel choice
+(Section~\ref{sec:evaluation});
+\item a same-host study of native completion horizons, shipped module
+defaults, and paced execution through Rack's actual multithreaded engine
+(Section~\ref{sec:comparison-results}).
 \end{itemize}
 
-The evidence establishes a qualified result. Distributing a fixed scalar
-implementation reduces its typical per-hop peak. Native hybrid pipelines can
-combine smaller peaks with substantially lower total cost than scalar
-butterfly scheduling. In the complete host, however, synchronization and
-release lateness can dominate; a local burst reduction does not by itself
-establish fewer missed releases. This makes the practical contribution a
-measured way to choose execution granularity and publication age, with an
-explicit distinction between analyzer and host outcomes.
+The evidence supports a qualified conclusion. Distributing a fixed scalar
+implementation substantially reduces its typical per-hop peak. Native hybrid
+pipelines can combine small peaks with much lower total cost than
+butterfly-level scheduling. Inside the complete host, however,
+synchronization and release lateness can dominate, and a smaller local burst
+does not by itself mean fewer missed releases. The practical contribution is
+therefore a measured way to choose execution granularity and publication age,
+with analyzer-level and host-level outcomes kept distinct.
 
-The shared production implementation serves the Fourier spectrum analyzer
-(four independent SIMD channels) and Spectre spectrogram (scalar) for VCV Rack.
-Section~\ref{sec:one-hop} gives its contract; Sections~\ref{sec:evaluation}
-and~\ref{sec:comparison-results} evaluate the new pilot evidence. The appendices
-retain derivations and implementation details. Earlier timing campaigns remain
-in the repository but do not support the current performance argument.
+The implementation serves two VCV Rack modules: the Fourier spectrum analyzer,
+which processes four independent SIMD channels, and the scalar Spectre
+spectrogram. Section~\ref{sec:related} positions the work and
+Section~\ref{sec:signal-model} fixes notation. Section~\ref{sec:legacy-motivation}
+explains why scheduling only the FFT falls short, and Section~\ref{sec:one-hop}
+states the contract. Sections~\ref{sec:evaluation}
+and~\ref{sec:comparison-results} describe the study and its results, and
+Section~\ref{sec:discussion} discusses design guidance and limits. The
+appendices collect derivations, an analysis of the original scheduler, and
+implementation details.
