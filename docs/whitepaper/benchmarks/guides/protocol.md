@@ -138,8 +138,8 @@ without runtime diagnostics remain valid.
 ## External Campaigns And Reports
 
 FR-10 supplies generated, tracked manifests for
-[smoke](../history/configs/external-smoke.json), [pilot](../history/configs/external-pilot.json),
-and [focused extensions](../history/configs/external-extensions.json). Their explicit
+[smoke](../../../latex/deprecated/whitepaper/benchmarks/history/configs/external-smoke.json), [pilot](../../../latex/deprecated/whitepaper/benchmarks/history/configs/external-pilot.json),
+and [focused extensions](../../../latex/deprecated/whitepaper/benchmarks/history/configs/external-extensions.json). Their explicit
 variants resolve these workload counts before process repetitions:
 
 | Variant | Required Providers | Smoke | Pilot | Extensions |
@@ -157,7 +157,7 @@ independent channel counts, and declared omissions from the repository root:
 
 ```shell
 python3 docs/whitepaper/benchmarks/lib/campaigns.py --check
-python3 docs/whitepaper/benchmarks/lib/run.py --config docs/whitepaper/benchmarks/history/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
+python3 docs/whitepaper/benchmarks/lib/run.py --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/external-pilot.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --describe-matrix
 ```
 
 Use `rack` without feature flags, or `portable` with `--fftw-prefix`, on hosts
@@ -172,7 +172,7 @@ rationale after the pilot.
 For implementation validation, run a short smoke check:
 
 ```shell
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr10-smoke --config docs/whitepaper/benchmarks/history/configs/external-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --host-id apple-silicon-validation --session-id fr10-smoke
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr10-smoke --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/external-smoke.json --variant macos --enable-vdsp --fftw-prefix .build/deps/fftw --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2 --host-id apple-silicon-validation --session-id fr10-smoke
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr10-smoke
 ```
 
@@ -192,7 +192,7 @@ experiment-to-paper workflow are implemented and smoke-validated. Use the
 including setup, progress/logs, failure recovery, checked exports and bundles.
 [Spec 012](../../../../specs/archive/012-comparison-evidence-and-paper-integration.md)
 records the replacement measurements and
-[analysis handoff](../../data/comparison-012/README.md). The user deferred
+[analysis handoff](../../../latex/deprecated/whitepaper/data/comparison-012/README.md). The user deferred
 manuscript integration to the next agent. Historical confirmation status does
 not transfer to new code.
 Retain earlier results until the
@@ -444,8 +444,8 @@ No same-production-pipeline batch ablation is supplied or claimed here.
 From the repository root with the usual Rack SDK (no optional library needed):
 
 ```shell
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr6-hybrid --config docs/whitepaper/benchmarks/history/configs/hybrid-smoke.json --list
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr6-hybrid --config docs/whitepaper/benchmarks/history/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr6-hybrid --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/hybrid-smoke.json --list
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr6-hybrid --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/hybrid-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr6-hybrid
 python3 docs/whitepaper/benchmarks/lib/hybrid_report.py .build/paper-fr6-hybrid .build/paper-fr6-attribution
 ```
@@ -477,7 +477,7 @@ identities, canonical layouts, normalization, and stack scratch behavior.
 Run its matched smoke configuration from the repository root:
 
 ```shell
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr3-pffft --config docs/whitepaper/benchmarks/history/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr3-pffft --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/pffft-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr3-pffft
 ```
 
@@ -488,7 +488,7 @@ existing source/object trees cannot silently contaminate its provenance:
 ```shell
 python3 docs/whitepaper/benchmarks/lib/build_fftw.py --jobs 2
 python3 docs/whitepaper/benchmarks/lib/run.py --inventory --fftw-prefix .build/deps/fftw
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config docs/whitepaper/benchmarks/history/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr4-fftw --fftw-prefix .build/deps/fftw --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/fftw-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr4-fftw
 ```
 
@@ -513,7 +513,7 @@ On macOS, enable the system Accelerate/vDSP provider explicitly:
 
 ```shell
 python3 docs/whitepaper/benchmarks/lib/run.py --inventory --enable-vdsp
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr5-vdsp --enable-vdsp --config docs/whitepaper/benchmarks/history/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-fr5-vdsp --enable-vdsp --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/vdsp-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-fr5-vdsp
 ```
 
@@ -664,7 +664,7 @@ the module adapters. The tracked 56-workload configuration covers all 12 new
 adapters and eight isolated inverse passes. Use a new output directory:
 
 ```shell
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-inverse-smoke --config docs/whitepaper/benchmarks/history/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-inverse-smoke --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/synthesis-smoke.json --repeats 1 --hops 4 --frames 2 --step-frames 1 --warm-hops 2
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-inverse-smoke
 python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-synthesis-session-01 --profile synthesis --list
 ```
@@ -885,8 +885,8 @@ comparative metrics require later prepared-host measurements.
 From the repository root, use new output directories:
 
 ```shell
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-numerical-smoke --config docs/whitepaper/benchmarks/history/configs/numerical-smoke.json --repeats 1 --hops 4 --warm-hops 2
-python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-transition-smoke --config docs/whitepaper/benchmarks/history/configs/transition-smoke.json --variant rack --repeats 1 --hops 26
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-numerical-smoke --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/numerical-smoke.json --repeats 1 --hops 4 --warm-hops 2
+python3 docs/whitepaper/benchmarks/lib/run.py .build/paper-transition-smoke --config docs/latex/deprecated/whitepaper/benchmarks/history/configs/transition-smoke.json --variant rack --repeats 1 --hops 26
 python3 docs/whitepaper/benchmarks/lib/check.py .build/paper-transition-smoke
 python3 docs/whitepaper/benchmarks/lib/report.py .build/paper-transition-smoke --output .build/paper-transition-report --phase smoke --no-plots
 ```

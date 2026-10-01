@@ -238,7 +238,7 @@ cadence. Settings latch at each frame start; mid-frame changes apply next hop.
 The original `OnTheFlyFFT/RFFT` APIs remain available for other DSP users.
 The [conference paper](docs/whitepaper/fourier.tex) explains the work bound,
 input lifetime, and publication delay. The separately retained
-[extended report](docs/whitepaper/report-v4.tex) contains detailed derivations,
+[extended report](docs/latex/deprecated/whitepaper/fourier.tex) contains detailed derivations,
 smoothing equations, and supporting algorithms. The user manuals focus on controls, displays, operating behavior, and practical setting
 choices, and link to the report for mathematical details.
 
@@ -1022,12 +1022,12 @@ allocation-free live settings. Rack coverage adds scalar/SIMD comparison,
 curve ownership and publication, coordinate mapping, module allocation checks,
 and Spectre's exact cadence and freeze/resume behavior.
 
-The [historical pipeline campaign](docs/whitepaper/data/pipeline/README.md)
+The [historical pipeline campaign](docs/latex/deprecated/whitepaper/data/pipeline/README.md)
 retains pre-integration timing evidence and reproduction sources in an archive.
 It is not a benchmark of the current plugin. Verify that artifact separately:
 
 ```shell
-python3 docs/whitepaper/tools/check_pipeline.py
+python3 docs/latex/deprecated/whitepaper/tools/check_pipeline.py
 ```
 
 ### User Manuals And Build Products
@@ -1307,24 +1307,25 @@ make -C docs/whitepaper
 ```
 
 This writes `docs/whitepaper/.build/paper.pdf` without running experiments.
-The entry point `docs/whitepaper/fourier.tex` includes the paper's own
-`preamble.tex`, `sections/`, `appendices/`, `figures/`, `tables/`, and
-`bibliography.tex`. Lower-case source names and stable labels follow the
-manuals' organization. The manuscript keeps its existing typography and
-content; only the build lifecycle is shared through `docs/latex/publication.mk`.
+The canonical `docs/whitepaper/fourier.tex` contains all prose, typography,
+figures, tables, and references, following the single-source organization of
+the RackNES paper. It opens directly in the native LaTeX editor and typesets
+without Python or generated inputs. The shared build lifecycle remains in
+`docs/latex/publication.mk`; the paper has its own typography.
 Successful builds remove auxiliary files; failures retain diagnostics.
-`make -C docs/whitepaper clean` preserves experiment output and source archives.
+`make -C docs/whitepaper clean` preserves measured evidence and source archives.
 
-Run `make -C docs/whitepaper check` to validate the assembled manuscript against
-the archived evidence. `make -C docs/whitepaper arxiv` also builds and checks
-the paper, then exports one self-contained `fourier.tex` inside
-`.build/fourier-arxiv-source.tar.gz`. The source expander follows literal
-`\input{path.tex}` lines, so the checker and archive see the same sections
-as LaTeX. See the [whitepaper guide](docs/whitepaper/README.md) for the source
-map, export verification, and maintenance conventions.
+Run `make -C docs/whitepaper check` separately to verify the paper's embedded
+study blocks against the retained evidence, along with references, links,
+metadata, and scheduling examples. `make -C docs/whitepaper source` packages
+only the canonical `fourier.tex`; `arxiv` also builds and validates the paper.
+The [whitepaper guide](docs/whitepaper/README.md) documents editing and export.
+Extended sources and appendices live in the
+[deprecated archive](docs/latex/deprecated/whitepaper/README.md), with their own
+build and `make -C docs/latex/deprecated/whitepaper check` target.
 
 The [manuals and white paper workflow](.github/workflows/manuals.yml) runs a
-lightweight Python artifact/link check and six import regressions on relevant
+lightweight Python artifact/link check and publication-tool regressions on relevant
 pull requests and pushes to `main`. Its paths include documentation, specs,
 README/citation metadata, `plugin.json`, and the workflow. Routine CI does not
 install LaTeX or compile PDFs. Tag pushes do not start duplicate PDF builds.

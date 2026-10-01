@@ -147,7 +147,7 @@ input. Supply base workload settings and resolved v3 controls; omit
 Do not pass a results document or whole plan as the workload array:
 
 ```shell
-make benchmark-fast BENCHMARK_DEV_OUT=.build/custom BENCHMARK_DEV_ARGS="--config docs/whitepaper/benchmarks/history/configs/external-confirmation-primary.json --list"
+make benchmark-fast BENCHMARK_DEV_OUT=.build/custom BENCHMARK_DEV_ARGS="--config docs/latex/deprecated/whitepaper/benchmarks/history/configs/external-confirmation-primary.json --list"
 ```
 
 That particular array requires FFTW and macOS vDSP. Build and run with the same

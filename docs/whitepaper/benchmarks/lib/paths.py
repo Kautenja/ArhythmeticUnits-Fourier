@@ -4,4 +4,5 @@ from pathlib import Path
 
 BENCHMARKS = Path(__file__).resolve().parents[1]
 ROOT = BENCHMARKS.parents[2]
-HISTORY = BENCHMARKS / "history"
+ARCHIVE = ROOT / "docs/latex/deprecated/whitepaper"
+HISTORY = ARCHIVE / "benchmarks/history"

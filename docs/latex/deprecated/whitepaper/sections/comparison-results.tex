@@ -1,0 +1,174 @@
+\section{Results}
+\label{sec:comparison-results}
+The measurements support three findings. Placement substantially changes the
+typical burst of a fixed implementation. Native kernels change the cost of
+obtaining that reduction. And complete host behavior depends on
+synchronization, alignment, and release timing as well as on analyzer cost.
+
+\subsection{Placement and native implementation cost}
+Table~\ref{tab:study-baselines} reports the scalar reference shape. Matched
+distribution reduces the median per-hop peak from \StudyBatchPeak{} to
+\StudyCorePeak\,$\mu$s, a factor of \StudyPlacementRatio, while cost rises
+from \StudyBatchCost{} to \StudyCoreCost\,ns per engine sample. Across all
+three baseline lengths, all four matched implementation families, and both
+sessions, the distributed or hybrid path has the lower session hop-peak
+summary in \StudyPlacementSigns{} of \StudyPlacementComparisons{} comparisons.
+This is descriptive sign consistency over dependent cells; it is neither a
+significance test nor a ranking of unrelated kernels.
+
+\input{.build/paper-study/baselines.tex}
+
+Native kernels lower the price of a similar reduction. The PFFFT hybrid costs
+\StudyPffftHybridCost\,ns/sample with an \StudyPffftHybridPeak\,$\mu$s hop
+peak, against \StudyPffftBatchCost\,ns/sample and \StudyPffftBatchPeak\,$\mu$s
+for its matched batch path; vDSP and FFTW supply further tradeoff points.
+Figure~\ref{fig:study-tradeoff} shows every process at this shape. A small
+peak does not imply minimal aggregate work, and the variation between sessions
+is shown rather than folded into a single score per provider. Redistributing
+work changes dispatch, vector-call sizes, and locality, so even matched
+arithmetic need not produce identical elapsed cost.
+
+\input{.build/paper-study/tradeoff.tex}
+
+At this shape even the scalar batch path uses only a few percent of its
+1,333\,$\mu$s block budget. The reference exists to isolate work placement;
+its practical significance must be judged at the complete-module and host
+boundaries below. Callback p99 and retained maxima also differ markedly from
+the median hop peak: the per-hop statistic keeps sparse frame work visible,
+whereas maxima retain interruptions and other excursions. None of these
+statistics is a safe execution-time bound.
+
+\subsection{Completion horizon and four-channel analysis}
+The native horizon sweep makes publication age an explicit design variable
+(Table~\ref{tab:study-horizons}). At the demanding controlled shape
+$N=16384$, $H=240$, contracting the four-channel vDSP hybrid's horizon from
+$H$ to $H/2$ to $H/4$ cuts endpoint age from 4.98 to 2.48 to 1.23\,ms while
+raising its median hop peak from \StudyHorizonFullPeak{} to
+\StudyHorizonHalfPeak{} to \StudyHorizonQuarterPeak\,$\mu$s. Because the
+native FFT remains indivisible, a shorter horizon packs the surrounding stages
+more densely without distributing the transform itself. Behavior at small
+sizes and for other kernels need not be monotonic; all 39 granularity cells
+are retained in the accompanying data.
+
+\input{.build/paper-study/horizons.tex}
+
+At the same four-channel shape, the SIMD production core has a
+\StudySimdExtremePeak\,$\mu$s peak at \StudySimdExtremeCost\,ns/sample,
+against \StudyHorizonFullPeak\,$\mu$s at \StudyHorizonFullCost\,ns/sample for
+the full-hop vDSP hybrid. Here the native hybrid is better on both recorded
+cost and typical peak. Channel-level SIMD therefore does not by itself give
+the production core an advantage over batched native channels; which approach
+wins depends on shape and kernel. These controlled rows omit module
+conditioning and display conversion.
+
+\subsection{Shipped defaults and demanding module settings}
+Table~\ref{tab:study-modules} measures actual module calls with paced
+releases. With its defaults, Fourier's hop peak is
+\StudyModuleDefaultPeak\,$\mu$s, \StudyModuleDefaultBudgetPercent\% of the
+block budget. At $N=16384$ with a 5\,ms hop, the complete four-port module
+reaches \StudyModuleExtremePeak\,$\mu$s, or
+\StudyModuleExtremeBudgetPercent\%. Enabling both smoothing modes raises this
+to \StudyModuleBothPeak\,$\mu$s (\StudyModuleBothBudgetPercent\%), with
+\StudyModuleBothComputeMisses{} compute-budget exceedances and
+\StudyModuleBothMisses{} late releases in 3,840 blocks. The hardest shipped
+setting is thus a materially different regime from both the scalar reference
+and the defaults.
+
+\input{.build/paper-study/modules.tex}
+
+Using one active port does not make Fourier a scalar analyzer: its four-lane
+analysis still runs, and additional voices are summed into each port's lane
+rather than becoming separate FFT channels. The table therefore captures
+control and input costs and does not imply a fourfold saving when three ports
+are unpatched. No paced native complete-module comparison was collected at the
+extreme shape, and the continuous native core results cannot fill that gap.
+These settings expose a limitation of the production path; they are not
+evidence that an alternative would eliminate its missed releases.
+
+\subsection{Actual Rack engine, alignment, and missed releases}
+Four aligned Fourier modules on one engine thread produce a large difference
+in concentration (Table~\ref{tab:study-host}). Production's typical hop peak
+of \StudyHostCorePeak\,$\mu$s uses \StudyHostCoreBudgetPercent\% of the
+budget, against \StudyHostBatchPeak\,$\mu$s (\StudyHostBatchBudgetPercent\%)
+for vDSP batch and \StudyHostHybridPeak\,$\mu$s
+(\StudyHostHybridBudgetPercent\%) for the vDSP hybrid. The price is aggregate
+block wall cost: \StudyHostCoreCost{} versus \StudyHostBatchCost{} and
+\StudyHostHybridCost\,ns/sample, respectively. In this regime the burst
+reduction frees a substantial fraction of the block for other work, rather
+than shaving a few microseconds from an otherwise idle callback.
+
+\input{.build/paper-study/host.tex}
+
+Four engine threads change the picture. With four aligned modules, the three
+paths converge to typical hop peaks of 100--115\,$\mu$s
+(Figure~\ref{fig:study-host}), and the empty four-thread engine has a much
+larger callback p99 than the one-thread control. Rack's per-sample barriers
+and worker dispatch are a plausible mechanism, but these runs do not separate
+that cost from CPU placement or power-state effects, and the synchronization
+code alone does not establish it. Table~\ref{tab:study-host-accounting} adds
+an important observation: the empty four-thread engine consumes about
+\StudyEmptyCpuCores{} CPU-seconds per second of nominal audio, consistent with
+workers spinning between releases, and its process CPU stays near that level
+when analyzers are present. The one-thread engine, by contrast, can sleep
+between releases. Moving to four threads therefore changes the activity and
+potential power-state regime as well as the available parallelism. We report
+this as the observed behavior of the pinned headless engine, not as an
+isolated measurement of barrier overhead.
+
+\input{.build/paper-study/host-accounting.tex}
+
+\input{.build/paper-study/host-figure.tex}
+
+With 16 aligned modules on four threads, production's typical peak is
+\StudyHostManyCorePeak\,$\mu$s against \StudyHostManyBatchPeak\,$\mu$s for
+vDSP batch, and staggering the native instances lowers the batch peak to
+\StudyHostStaggerBatchPeak\,$\mu$s. Staggering is thus a practical
+alternative whenever frame phases can be chosen. The predeclared sweep of 0,
+16, and 64 background modules with four staggered analyzers did not reach a
+repeatable saturation point, and its latency summaries are not monotonic in
+the number of background modules. We retain those cells but do not treat the
+background-module count as a calibrated CPU load.
+
+Release misses call for a stronger qualification. On one thread with four
+modules, production and vDSP batch have \StudyHostCoreMisses{} and
+\StudyHostBatchMisses{} late releases despite very different typical peaks,
+and the vDSP hybrid has \StudyHostHybridMisses. The corresponding FFTW batch
+row has \StudyHostFftwBatchMisses, but that provider-specific outcome does not
+demonstrate a general benefit of scheduling. With 16 aligned modules,
+production has \StudyHostManyCoreMisses{} late releases while vDSP batch has
+none in these runs, and even empty-engine controls miss releases. These counts
+are observations under synthetic pacing and include wake delay and backlog.
+They support comparisons of headroom and concentration; they do not establish
+fewer audio underruns or a stable ordering of rare-event reliability.
+
+\subsection{Consumer age and numerical limits}
+Table~\ref{tab:study-consumer} reports the headless consumer. At 60\,Hz,
+production and the full-hop vDSP hybrid have median endpoint-age bounds of
+38--40\,ms, against 8--10\,ms for native batch. The difference, about one
+30\,ms hop, matches the publication contract. At 30\,Hz, or with polling
+stalls, some complete Fourier snapshots are superseded before they are read:
+correct ownership protects the data a consumer holds, but it does not
+guarantee that the consumer sees every frame. Logical age bounds do not
+measure screen refresh, perceptual acceptability, or real-time freshness
+during a backlog.
+
+\input{.build/paper-study/consumer.tex}
+
+All numerical replays pass their declared policies
+(Table~\ref{tab:study-numerical}), including non-power-of-two hops, high
+overlap, weak and decaying input, silence, and complete-module lifecycle
+changes. Preparing the study exposed premature underflow in naively squared
+magnitudes, and the measured source uses scaled magnitudes in both production
+and native paths. Long decays still reach the flagged FTZ/display tail, where
+observed relative error can reach one, so the ordinary relative budgets do not
+extend to that region. Retaining the tail with its absolute diagnostics is
+more informative than labeling the entire decay uniformly accurate.
+
+\input{.build/paper-study/numerical.tex}
+
+Lifecycle replays check freeze and resume, window and band changes, geometry
+changes, reset, and sample-rate changes separately from the stationary
+comparisons. These mutations occur between engine blocks, and their durations
+and allocation probes are recorded outside ordinary block intervals. The study
+thus verifies serialized lifecycle behavior; it does not show that arbitrary
+concurrent control changes, or all host callbacks, are allocation-free.

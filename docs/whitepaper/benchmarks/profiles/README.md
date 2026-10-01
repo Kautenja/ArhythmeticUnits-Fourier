@@ -26,7 +26,7 @@ override a profile for pilot exploration. A confirmation freeze stores those
 options plus the exact expanded matrix and pilot identities; `run --freeze`
 uses it instead of reinterpreting a changed profile. Version-2 profiles are
 not confirmation evidence. Old expanded JSON configurations and the former
-confirmation plan remain in [history/configs/](../history/configs/); none is
+confirmation plan remain in [history/configs/](../../../latex/deprecated/whitepaper/benchmarks/history/configs); none is
 silently promoted to the new study.
 
 For a small extension, copy one profile outside this directory and add a

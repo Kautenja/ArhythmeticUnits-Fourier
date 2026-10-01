@@ -2222,7 +2222,7 @@ measurement sessions, rather than trimming results or reporting tight error
 bars. Timer p99 was 42 ns throughout both pilots; quantization matters for
 very short calls and is never mechanically subtracted.
 
-The frozen [plan](../../docs/whitepaper/benchmarks/history/configs/external-confirmation-plan.json)
+The frozen [plan](../../docs/latex/deprecated/whitepaper/benchmarks/history/configs/external-confirmation-plan.json)
 retains all 408 primary and all 875 extension workloads, partitioned solely by
 observation-length requirements. Its four configuration hashes are fixed before
 confirmation. Each of three sessions uses three process repeats, 64 warmup

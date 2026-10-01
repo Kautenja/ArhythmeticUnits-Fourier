@@ -38,10 +38,10 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - name: Verify paper artifacts and import regressions
+      - name: Verify paper artifacts and publication regressions
         run: |
           make -C docs/whitepaper check
-          python3 -m unittest discover -s docs/whitepaper/tools -p test_study_import.py
+          python3 -m unittest discover -s docs/whitepaper/tools/tests
 
   build:
     name: Build manuals and white paper
@@ -167,7 +167,7 @@ jobs:
               if not pdf.outline or '??' in text or 'Arhythmetic Units' not in text:
                   raise ValueError(f'{path.name}: missing bookmarks/branding or unresolved references')
               if path.name == 'Fourier-whitepaper.pdf':
-                  expected = re.search(r'pdftitle=\{([^}]+)\}', Path('docs/whitepaper/preamble.tex').read_text())
+                  expected = re.search(r'pdftitle=\{([^}]+)\}', Path('docs/whitepaper/fourier.tex').read_text())
                   if len(pdf.pages) < 2 or not expected or title != expected.group(1):
                       raise ValueError(f'{path.name}: incomplete report or incorrect title')
               else:

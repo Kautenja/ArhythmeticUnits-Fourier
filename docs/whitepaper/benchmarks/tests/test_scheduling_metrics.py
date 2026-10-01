@@ -18,7 +18,7 @@ from run import BASE, digest, save
 from workloads import expand
 from check import check
 from report import variation, callback_tails
-from paths import ROOT
+from paths import ROOT, ARCHIVE
 from reporting import derive as report
 from publication import checked_report, selection_manifest, export, verify_export
 from bundles import pack, unpack
@@ -193,7 +193,10 @@ class SchedulingMetricsTests(unittest.TestCase):
             with self.subTest(process=record["label"]):
                 raw = gzip.decompress((fixture/(record["label"]+".csv.gz")).read_bytes())
                 self.assertEqual(hashlib.sha256(raw).hexdigest(), record["raw_sha256"])
-                original = gzip.decompress((ROOT/record["metadata"]).read_bytes())
+                # Provenance retains its original path; resolve its relocated
+                # evidence without rewriting the recorded bytes or identities.
+                archived = ARCHIVE / Path(record["metadata"]).relative_to("docs/whitepaper")
+                original = gzip.decompress(archived.read_bytes())
                 self.assertEqual(hashlib.sha256(original).hexdigest(), record["metadata_sha256"])
                 metadata = json.loads(original)
                 self.assertEqual(metadata["artifact_sha256"][record["original_raw"]], record["raw_sha256"])
@@ -227,7 +230,7 @@ class SchedulingMetricsTests(unittest.TestCase):
 
     def test_historical_headline_hierarchical_summaries(self):
         processes = {}
-        for path in sorted((ROOT/"docs/whitepaper/data/comparison-012/campaigns").glob("confirm-*-primary.metadata.json.gz")):
+        for path in sorted((ARCHIVE/"data/comparison-012/campaigns").glob("confirm-*-primary.metadata.json.gz")):
             metadata = json.loads(gzip.decompress(path.read_bytes()))
             for run in metadata["runs"]:
                 c = metadata["configs"][run["workload"]]
