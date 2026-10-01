@@ -1,8 +1,8 @@
 # Supporting Appendices
 
 These sources preserve the derivations, algorithms, implementation details,
-and extended discussion behind the compact main narrative. All appendices are
-included by [fourier.tex](../fourier.tex) and its standalone source export.
+and extended discussion behind the compact main narrative. [fourier.tex](../fourier.tex) explicitly selects the active appendices for its
+standalone source export. Historical timing sections remain as source artifacts.
 
 ## Main Text Boundary
 
@@ -10,9 +10,9 @@ The main text follows the problem, closest prior work, frozen-frame signal
 model, legacy motivation, and complete one-hop design before the experimental
 methods and results. It retains the dependency order, total work and quota
 equations, exact publication bound, publication ages, retained-input capacity,
-and output ownership contract. The main evaluation describes the completed confirmation study, including
-inverse jobs and overlap-save filtering controls. Historical methods and results
-remain in the appendices, separate from the current production comparisons.
+and output ownership contract. The main evaluation describes the new spec 014 descriptive study, including
+complete modules, native horizons and the actual Rack engine. Historical timing
+methods and results are excluded from the active manuscript.
 
 References precede a page break into the appendices, making the main narrative
 boundary visible in the PDF. The main text summarizes the supporting arguments
@@ -32,13 +32,14 @@ and links to their full derivations here.
 -   [Original experimental method](experimental-method.tex),
     [FFT results](original-results.tex), and
     [prototype evaluation](prototype-evaluation.tex): Complete historical
-    campaigns, including their original tables, figures, and limitations.
+    campaigns, including their original tables, figures, and limitations. These
+    three sources are no longer included in the active manuscript.
 -   [Extended related work](related-work.tex) and
     [evaluation agenda](evaluation-agenda.tex): Detailed comparisons and
     proposed experiments, with their original citations and limitations.
--   [Reproducibility](reproducibility.tex) and
-    [availability](availability.tex): Artifact locations, reproduction
-    commands, and citation and licensing information.
+-   [Reproducibility](reproducibility.tex): Artifact locations, reproduction
+    commands, availability, citation and licensing information. The separate
+    historical [availability source](availability.tex) is no longer included.
 
 Keep existing labels when moving supporting material, and keep every input
 literal and relative to the whitepaper directory. The

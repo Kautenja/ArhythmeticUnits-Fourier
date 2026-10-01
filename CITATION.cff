@@ -25,7 +25,7 @@ keywords:
   - C++
 preferred-citation:
   type: report
-  title: "Resumable FFT Scheduling for Real-Time Spectral Analysis"
+  title: "Whole-Pipeline Scheduling for Real-Time Spectral Analysis"
   authors:
     - family-names: Kauten
       given-names: Christian
@@ -36,4 +36,4 @@ preferred-citation:
   month: 9
   version: "3"
   url: "https://github.com/Kautenja/ArhythmeticUnits-Fourier/tree/main/docs/whitepaper"
-  notes: "Manuscript version 3; not yet deposited on arXiv"
+  notes: "Manuscript version 4; not yet deposited on arXiv"

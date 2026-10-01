@@ -1,25 +1,24 @@
 \begin{abstract}
-Spectral analysis can be inexpensive on average yet concentrate enough work in
-one audio callback to interfere with other processing. This report studies
-cooperative execution of a complete windowed-analysis pipeline on the engine
-thread. A dependency-ordered sequence covers packing, windowing, FFT
-butterflies, positive-bin reconstruction, smoothing, and output preparation.
-A balanced integer quota bounds scheduling credits per sample and publishes
-a complete spectrum at an exact hop; we derive input-retention, sample-age,
-and ownership requirements. A scalar and four-channel SIMD implementation is
-evaluated against matched scheduling controls and FFTW, PFFFT, and vDSP on an
-Apple M1 Pro. The confirmation campaign covers \PaperCmpWorkloads{} workloads with three
-process repeats in each of three prepared same-host sessions, including
-inverse jobs and complete overlap-save chains. For representative scalar
-unsmoothed analysis at $N=4096$, $H=1024$, 48\,kHz, and 64-sample callbacks,
-the production analyzer's simulated callback p99 is \PaperCmpCoreTail\,$\mu$s versus
-\PaperCmpVdspTail\,$\mu$s for immediate vDSP, while aggregate cost rises from
-\PaperCmpVdspCost\ to \PaperCmpCoreCost\,ns/sample and publication is delayed
-by \PaperCmpDelayMs\,ms. Inverse and filtering controls retain bulk operations
-and do not inherit the analyzer's bounded-operation contract. Results support
-a conditional cost--burst--age tradeoff, not a universal speedup or an audio
-deadline guarantee. The contribution is a reproducible implementation study
-within established time-distributed FFT research.
+Windowed spectral analysis competes with audio processing even when it produces
+only display data. We present an exact-hop execution contract that distributes
+window preparation, FFT butterflies, magnitude processing, smoothing, and
+publication over successive engine sample calls. The contract bounds logical
+work, preserves the selected input, and transfers complete spectra through an
+owned mailbox. A descriptive study of 776 fresh processes in two sessions on
+one Apple M1 Pro separates work placement from native FFT-kernel choice and
+measures complete modules through VCV Rack's engine. For scalar
+$N=4096,H=1024,D=64$ analysis, matched distribution reduces median per-hop
+peak block time from \StudyBatchPeak{} to \StudyCorePeak\,$\mu$s, with
+\StudyPlacementCostRatio{} times the instrumented aggregate cost.
+With four aligned four-channel modules on one Rack thread, the production
+pipeline, native vDSP batch, and native hybrid have typical hop peaks of
+\StudyHostCorePeak, \StudyHostBatchPeak, and \StudyHostHybridPeak\,$\mu$s:
+\StudyHostCoreBudgetPercent\%, \StudyHostBatchBudgetPercent\%, and
+\StudyHostHybridBudgetPercent\% of the block budget. Production and full-hop
+hybrid add approximately 30\,ms of logical publication age. Native hybrids
+and shorter completion horizons expose useful intermediate tradeoffs, while
+multithreaded host overhead and release lateness limit extrapolation from
+local burst statistics to missed deadlines. The result is an analysis-specific
+scheduling contract and a measured execution-granularity tradeoff, rather than
+a universal performance ranking.
 \end{abstract}
-\noindent\textbf{Keywords:} fast Fourier transform; cooperative scheduling;
-real-time audio; spectral analysis; inverse transform; overlap-save filtering.

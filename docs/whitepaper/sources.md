@@ -200,3 +200,28 @@ and [Google Scholar inclusion guidelines](https://scholar.google.com/intl/en/sch
 These operational sources are linked from the report README rather than
 added to its scientific bibliography. Citation metadata is a discovery aid;
 it does not create a public deposit or guarantee indexing.
+
+## Version 4 Reference Checks
+
+On September 30, 2026, checked the following primary bibliographic sources:
+
+-   Gardner, 1995, *Efficient Convolution without Input-Output Delay*, JAES
+    43(3), 127-136: [AES record](https://secure.aes.org/forum/pubs/journal/?elib=7957).
+-   Garcia, 2002, *Optimal Filter Partition for Efficient Convolution with Short
+    Input/Output Delay*, AES Convention 113, paper 5660:
+    [AES record](https://secure.aes.org/forum/pubs/conventions/?elib=11275).
+-   Wefers and Vorlaender, 2011, *Optimal Filter Partitions for Real-Time FIR
+    Filtering using Uniformly-Partitioned FFT-based Convolution in the
+    Frequency-Domain*, DAFx-11, 155-161:
+    [conference PDF](https://www.dafx.de/paper-archive/2011/Papers/74_e.pdf).
+-   The previously questioned 2026 neural-audio citation resolves to the
+    [official eight-page DAFx PDF](https://www.dafx.de/paper-archive/2026/papers/DAFx26_paper_16.pdf).
+
+AES search-indexed publisher records supplied the first two bibliographic
+entries and abstracts; direct page opening failed. No detailed implementation
+claim or quotation is based on an unavailable full paper. The Wefers/Vorlaender
+conference PDF was opened and its title, authors, scope and pagination checked.
+The pinned Rack `Engine.cpp` was inspected locally: per-frame worker barriers,
+block-level `yieldWorkers()` and worker-loop behavior, revision
+`8c33d966d329e4a6e354593b2b5f9ac2df5a03bd`. Engine CPU observations are reported
+separately from the inferred explanation involving spinning and power state.

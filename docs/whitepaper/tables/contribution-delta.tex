@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{.26\linewidth}p{.31\linewidth}p{.35\linewidth}@{}}
+\toprule
+Prior approach & Established contribution & Focus of this study \\
+\midrule
+Time-distributed FFTs~\cite{hurchalla2010,lo1999} & Transform work spread over acquisition or processing intervals & Complete analysis tail, exact-hop producer cadence, and retained selected input. \\
+Cooperative convolution~\cite{battenberg2011} & Scheduled chains with optimized native leaves & Analysis-specific magnitude/smoothing/display output and matched placement controls. \\
+Transform subdivision~\cite{wefers2015} & Granularity as an implementation choice & Measured batch, whole-native hybrid, and butterfly paths; native leaves remain unmeasured. \\
+Worker visualization~\cite{prusa2016} & Separate computation, polling, and repaint & Engine-thread publication ownership and bounded logical consumer-age observations. \\
+\bottomrule
+\end{tabular}
+\caption{Contribution relative to closely related execution models. The
+right column states this study's emphasis, not an exhaustive absence claim
+about prior implementations.}
+\label{tab:contribution-delta}
+\end{table}

@@ -1,80 +1,70 @@
 \section{Discussion and Limits}
 \label{sec:discussion}
-\subsection{When the tradeoff is useful}
-The strongest case for cooperative analysis is a caller that values reducing
-concentrated engine work and can tolerate an additional hop of spectrum age.
-The representative comparison reduces callback p99 while increasing aggregate
-cost. That is useful evidence for an engineering choice, not a new transform
-complexity result. For a low-cost visualizer, headroom in the callback budget
-may matter more than minimum arithmetic throughput; an application needing
-fresh output or many concurrent analyzers may make the opposite choice.
-The observed timing distributions cannot decide those application priorities.
-For the representative $D=64$, 48\,kHz case, the nominal callback interval is
-\PaperCmpBudgetUs\,$\mu$s: the production and vDSP p99 values occupy only
-\PaperCmpCoreBudgetPercent\% and \PaperCmpVdspBudgetPercent\% of that interval,
-respectively. Thus the measured reduction does not show that the native
-baseline was near its deadline, or that redistribution prevented audible
-failures. Such a claim would require a contended host and device measurements.
+\subsection{A practical choice of execution granularity}
+Begin with native batch under the required complete-path semantics. If its
+per-hop peaks fit the allocated analysis budget and fresh output matters,
+immediate execution is a strong choice. If aligned releases consume too much
+headroom, test staggering or a native hybrid; shorten its horizon when age
+matters. Choose butterfly scheduling when its measured complete-path behavior
+meets a requirement the coarser alternatives do not, at acceptable total cost.
 
-The PFFFT hybrid is a useful intermediate design: it distributes surrounding
-work while keeping a native FFT indivisible. It shows that scheduling the
-pipeline around a batch transform can capture some benefit without suspending
-individual butterflies. Its comparison with the matched scheduled-batch
-control isolates work placement more closely than a comparison with the
-production analyzer, which also changes arithmetic, layout, storage, and
-caching. The extra state in a resumable transform is justified only when its
-measured behavior meets a requirement that the simpler alternative does not.
+This is an empirical design rule rather than a deadline guarantee. The
+four-module, one-thread result provides the clearest practical example: the
+production path reduces typical block concentration from roughly two-thirds
+to one-sixth of the budget relative to vDSP batch. Yet the native hybrid is
+competitive in several controlled shapes, and multithreaded Rack changes the
+ranking. The implementation contract remains useful across those choices;
+performance cannot be inferred from the number of resumable butterflies alone.
+Rack's average CPU meter also reflects aggregate cost, so a lower burst can
+still appear more expensive to a user.
 
-The inverse and chain results sharpen that qualification. Deferring butterfly
-execution does not eliminate the bulk buffering and conjugation at job or
-stage boundaries. The representative native PFFFT and vDSP inverse jobs provide both lower
-aggregate cost and lower p99 than the incremental control. The complete-chain
-control reduces p99 more modestly than its large aggregate-cost penalty. Thus the favorable
-analysis example cannot be generalized to all frequency-domain processing.
-The formulas in Section~\ref{sec:inverse-chain} identify what a future complete
-inverse scheduler would need to change. The current measurements are already
-useful as counterexamples to a blanket claim that incremental execution
-reduces callbacks more effectively than optimized batch execution.
+Publication age is an explicit cost. A 30\,ms hop adds about 1.8 frames of a
+60\,Hz display before polling and repaint. That arithmetic does not establish
+a perceptual threshold. For latest-frame visualization a UI or worker thread
+may be preferable; for exact-hop producer history its capture, queueing,
+overflow and ownership policy must be specified. Spectre's history storage
+and per-column mailboxes support a different consumer contract from Fourier's
+latest curve. These alternatives deserve measurement at equivalent boundaries
+before a broader recommendation.
 
-\subsection{Interpretation and external validity}
-The primary tables compare declared input/output contracts. Smoothing
-interval arithmetic and transform layouts differ across implementation
-families; numerical agreement is within the stated contracts and budgets,
-not bitwise identity. Precision, channel count, state, callback phase, and
-additional DSP change the task. Extension results should be read within each
-matched group rather than combined into a single provider score.
+\subsection{What the evidence can establish}
+Native layouts, actual module/engine processing and a concurrent consumer
+connect the controlled analyzer to its host. Both pilots nevertheless use one
+M1 Pro, binary, compiler and local date. This is an early Apple Silicon laptop,
+not the original base M1 or a lower performance bound for Apple hardware.
+Independent-day, build and architecture replication remains outstanding.
 
-A high percentile, a maximum, and aggregate throughput answer different
-questions. Single-sample p99 can omit frame work occurring less than once per
-hundred calls. Maxima retain those bursts and rare preemptions but depend on
-observation duration; the separate group durations preclude indiscriminate
-maxima comparisons. No samples are trimmed and no empty-timer cost is
-subtracted. Small absolute differences and sub-tick observations should not
-be interpreted as finely resolved instruction costs. Storage probes measure
-only their declared allocation scope; unknown provider-native storage prevents
-a complete memory ranking.
+Careful setup and sleep/power checks coexist with residual OS activity.
+Snapshots cannot identify the cause of an individual outlier; longer compute
+paths may have greater interruption exposure, but that mechanism was not
+isolated. Maxima and session ranges retain those observations. Fixed group
+order also confounds workload family with time and possible thermal change.
 
-All confirmation observations come from one compiler and one macOS ARM64 host
-on one night. The prepared sessions expose temporal variation, including
-unfavorable session excursions, but do not establish independent-host
-replication or a stable rare-event distribution. Dynamic FFTW planning is part
-of the recorded configuration. Other architectures, compilers, and plans may
-change the relative costs. Binary64 references, deterministic fixtures, and
-all-publication audits support the stated numerical workloads, not every
-possible input or application-specific tolerance.
+The stream study lacks a separate throughput pass, a matched paced/continuous
+cross-over at identical boundaries, core-placement calibration, and a
+thread-policy sweep. Four-thread engine workers consume substantial CPU even in the empty
+graph, so changes with thread count cannot be attributed solely to parallel
+analysis. The host filler set did not locate a saturation threshold.
+The extreme module path lacks matched paced native controls. Those are concrete
+limits on causal or reliability claims, even though the recorded comparisons
+are internally traceable. Headless consumption verifies copy/ownership and
+logical age; device underruns, GUI load and repaint are outside its scope.
+Native allocator internals remain opaque, and retained unused module storage
+precludes a total-memory ranking.
 
-\subsection{Work bounds and real-time behavior}
-The proof bounds credits in the complete analysis sequence. Unequal unit
-costs, memory hierarchy, preemption, host lifecycle work, and unrelated DSP
-still determine elapsed time. A late call executes its logical quota; the
-scheduler does not recover a missed deadline. Producer publication also does
-not guarantee display consumption or repaint cadence: a slow display may skip
-complete snapshots by design.
+\subsection{Scope of the contribution}
+The analytical result bounds credits for a complete dependency-ordered
+analyzer. A conditional operation-cost model explains how weights could be
+chosen, while measured times test implementations on this host. Cache effects,
+unequal unit costs, interrupts and unrelated engine work separate these two
+claims. Empirically tuned weights and an unweighted band-cache rebuild are
+implementation choices, not a proof of time balance.
 
-The benchmark runs synchronously without an audio driver or concurrent UI.
-It therefore provides no measured device underrun rate or proof of hard
-real-time safety. Worker-thread analyzers, overlap-reusing sliding/hopping
-methods, non-power-of-two transforms, and long-filter applications are not
-ranked. Appendix~\ref{app:evaluation-agenda} identifies the next experiments.
-The complete paper can support an implementation decision under its recorded
-conditions; broader recommendations require those additional measurements.
+Time-distributed transforms and cooperative chains precede this work. The
+specific contribution is to join analysis-tail accounting, exact-hop cadence,
+input lifetime, cancellation and output ownership with comparisons that expose
+placement, kernel and host effects. Sub-FFT native leaves could improve the
+tradeoff and remain an important missing granularity. Inverse synthesis and
+long-filter convolution require their own bounded preparation and delivery
+stages; no new performance claim for those applications follows from this
+analysis-only campaign.

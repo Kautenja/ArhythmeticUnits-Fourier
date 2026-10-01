@@ -1,16 +1,14 @@
 \section{Conclusion}
-A complete windowed analyzer can be expressed as bounded,
-dependency-ordered operations and advanced over an exact publication hop.
-The resulting contract accounts for work credits, retained input,
-cancellation, and ownership of complete spectra. It addresses the surrounding
-preparation and output stages that remain concentrated when only FFT
-butterflies are resumable.
+Complete windowed analysis can advance over an exact hop using a bounded
+sequence covering preparation, transform, magnitude processing, smoothing
+and publication. Whole-pipeline accounting resolves boundary bursts and
+cadence ambiguity; retention and mailbox ownership preserve input and output.
 
-The confirmation study establishes a practical tradeoff on the measured M1 Pro
-host: cooperative analysis can reduce callback p99 at the expense of total
-cost and spectrum age. Matched controls distinguish that placement effect
-from the benefits of optimized kernels, and the native PFFFT hybrid provides
-an intermediate option. Periodic inverse jobs and overlap-save chains retain
-bulk stages and include cases favoring native batch processing; their results
-do not inherit the complete analyzer's bound. The value of suspension is
-therefore conditional on the full processing path and the caller's priorities.
+The descriptive study separates that contract from implementation cost.
+Matched scheduling reduces typical hop peaks; native hybrids and completion
+horizons offer different cost and age tradeoffs. With four aligned Rack
+modules, production substantially reduces block concentration relative to
+native batch. Synchronization, staggering and release lateness nevertheless
+change host outcomes, and missed releases give no consistent reliability
+ranking. Choose granularity against complete-path headroom and age requirements;
+broader platform and audio-device claims require further measurement.

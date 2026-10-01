@@ -1,0 +1,20 @@
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Analysis & Consumer & Median age bounds (ms) & Unconsumed \\
+\midrule
+Production & 30 Hz & 44.4--45.8 & 365 \\
+Production & 60 Hz & 38.1--39.5 & 0 \\
+Production & 60 Hz + stalls & 39--40.3 & 352 \\
+vDSP batch & 30 Hz & 14.7--16.1 & 355 \\
+vDSP batch & 60 Hz & 8.33--9.67 & 0 \\
+vDSP batch & 60 Hz + stalls & 9.46--10.8 & 351 \\
+vDSP hybrid & 30 Hz & 44.4--45.7 & 359 \\
+vDSP hybrid & 60 Hz & 38.2--39.5 & 0 \\
+vDSP hybrid & 60 Hz + stalls & 39--40.3 & 351 \\
+\bottomrule
+\end{tabular}
+\caption{Fourier defaults, four threads and four staggered modules, $D=64$. Age is relative to the newest input sample and uses the logical engine clock. Stalls skip two polls every tenth poll. Unconsumed counts retain publications not observed even by the final drain; age summaries exclude that drain. The consumer only copies/checksums data; no repaint or perceptual threshold is measured.}
+\label{tab:study-consumer}
+\end{table}

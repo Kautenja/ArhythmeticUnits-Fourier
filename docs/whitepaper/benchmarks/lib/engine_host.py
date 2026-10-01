@@ -135,7 +135,7 @@ def validate(document, registry=None, allow_fixture=False):
             raise ValueError('Invalid concurrent snapshot observation')
         seen.add(key)
         if row['drain']: drains += 1
-        else: ages.append((max(0, row['before']-pub['endpoint']), max(0, row['after']+c['block']-pub['endpoint'])))
+        else: ages.append([max(0, row['before']-pub['endpoint']), max(0, row['after']+c['block']-pub['endpoint'])])
     measured = {key for key, pub in spectra.items() if pub['published_at'] >= origin}
     return dict(blocks=len(rows), duration_budget_misses=sum(misses), aggregate_cpu_ns=r['aggregate_cpu_ns'],
                 hop_block_peaks_ns=peaks, publication_age_samples=publication_age,

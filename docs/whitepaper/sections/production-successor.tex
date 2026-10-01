@@ -49,6 +49,41 @@ This follows by telescoping the quota differences and relates sample-level
 accounting to a host block. It applies per analyzer, without configuration
 changes, reset, or pauses; it is not a duration bound.
 
+The corresponding lower bound is $\floor{DW/H}$, so the logical load over a
+fixed interval differs from its ideal proportional allocation by less than
+one credit. For a clean scalar $N=4096,H=1024$ frame, $W=17410$: at most
+18 credits per sample and 1089 per 64-sample block. The maximum sample quota
+$\ceil{W/H}$ is optimal among allocations of these $W$ credits to $H$ calls;
+this elementary result says nothing about equalizing operation durations.
+
+\begin{proposition}[Conditional operation-cost bound]
+Suppose every indivisible scheduled operation $i$ has an upper cost $c_i$,
+is charged integer weight $w_i\ge1$, and executes at its first credit.
+Let $\kappa=\max_i c_i/w_i$ and $w_{\max}=\max_i w_i$. If capture, control
+and dispatch overhead over $D$ calls is bounded by $D c_{\mathrm{base}}(N)$,
+then, under fixed configuration and without external interference,
+\[
+ T_D\le D c_{\mathrm{base}}(N)+
+ \kappa\bigl(\ceil{DW/H}+w_{\max}-1\bigr).
+\]
+\end{proposition}
+\begin{proof}
+The calls consume at most $\ceil{DW/H}$ credits. An operation started on the
+last consumed credit can extend its charge by at most $w_{\max}-1$ credits;
+any residual charge from an operation begun earlier only reduces new work.
+Multiplying the total charged weight of newly executed operations by
+$\kappa$ and adding the stated overhead proves the result.
+\end{proof}
+The boundary term is necessary because execution occurs at the first credit,
+not after all credits have been consumed. Weights proportional to conservative
+operation costs suggest a design rule, but measured averages cannot provide
+those upper bounds on a general-purpose OS. The experiment measures the
+existing weights; it does not calibrate $\kappa$ or establish a wall-time bound.
+A native hybrid can follow the same accounting, yet its indivisible FFT may
+dominate $\kappa$.
+
+\input{figures/whole-pipeline-timeline.tex}
+
 The per-call bound includes scheduled window/cache rebuilds and bounded module
 output callbacks. Construction and host lifecycle callbacks are excluded; constant
 input/control work and an $O(\log N)$ plan-index calculation remain. Decomposing

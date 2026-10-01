@@ -70,6 +70,8 @@ class EngineHostTests(unittest.TestCase):
             data = json.loads(self.invoke('record', str(path)))
             summary = validate(data, self.registry, allow_fixture=True)
             self.assertEqual(summary['blocks'], p['blocks'])
+            # Offline handbacks reload summaries from JSON before comparison.
+            self.assertEqual(summary, json.loads(json.dumps(summary)))
             self.assertTrue(json.loads((self.root/'execution.json').read_text())['fixture'])
             with self.assertRaises(ValueError): validate(data, self.registry)
             for mutate in (lambda d: d['result']['observations'].pop(),

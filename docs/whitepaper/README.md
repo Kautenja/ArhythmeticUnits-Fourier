@@ -1,122 +1,83 @@
-# Resumable FFT Scheduling for Real-Time Spectral Analysis
+# Whole-Pipeline Scheduling for Real-Time Spectral Analysis
 
-A technical report by Christian Kauten (Arhythmetic Units), studying resumable
-FFT execution, complete analysis scheduling, frame cadence and practical costs.
-Manuscript version 3 incorporates the September 30, 2026 comparison campaign,
-including periodic inverse jobs and complete overlap-save filtering controls.
-The supporting software is the Fourier/Spectre VCV Rack plugin. The manuscript
-is an implementation study within the time-distributed FFT literature; it is
-not yet deposited on arXiv, assigned a DOI, or peer reviewed.
+A technical report by Christian Kauten (Arhythmetic Units) about complete
+analysis scheduling, exact-hop publication and the tradeoffs between work
+placement, native kernels and host execution. Manuscript version 4 uses the
+user-collected spec 014 study: two separately prepared pilot sessions and 776
+fresh processes on an Apple M1 Pro. It is not yet deposited on arXiv, assigned a
+DOI or peer reviewed by a venue. Independent agent reviews and their
+[revision response](reviews/revision-4-response.md) are retained separately.
 
 ## Read And Build
 
 [fourier.tex](fourier.tex) defines manuscript order. Prose lives in `sections/`
-and `appendices/`; complete figures/tables live in `figures/` and `tables/`.
-The paper has its own [preamble](preamble.tex) and single-column style. It shares
-only the PDF build lifecycle with the manuals, not their typography.
+and `appendices/`; complete figures/tables live in their matching directories.
+The paper has its own [preamble](preamble.tex) and single-column report format.
+It shares only the PDF lifecycle with the manuals. Venue selection, formatting,
+length and anonymity remain a later submission task.
 
-From the repository root, with `latexmk`, `pdflatex` and the packages named in
-the preamble:
+From the repository root, with `latexmk`, `pdflatex` and the preamble packages:
 
 ```shell
+python3 docs/whitepaper/tools/study_paper.py --check
 make -C docs/whitepaper
 make -C docs/whitepaper check
 make -C docs/whitepaper arxiv
 ```
 
-The outputs are `.build/paper.pdf` and `.build/fourier-arxiv-source.tar.gz`
-inside this directory. Compilation never runs benchmarks, fetches results or
-rewrites measurements. `check` verifies citations, links, historical evidence,
-numerical tables and included generated assets. Successful PDF builds clean
-auxiliary files; failed builds keep logs. `clean` preserves experiment outputs.
+Outputs are `.build/paper.pdf` and `.build/fourier-arxiv-source.tar.gz` inside
+this directory. Compilation/checks never collect timings, download data or
+rewrite measurements. The check validates citations/links, current generated
+assets and separately retained historical evidence. Successful PDF builds clean
+auxiliary files; failed builds retain logs. `clean` preserves experiment data.
 
-The arXiv target expands literal manuscript inputs into one TeX file and packs
-any explicitly referenced local image assets.
-Extract into an empty directory and compile with
+Extract the portable source archive into an empty directory and compile with
 `latexmk -pdf -pdflatex='pdflatex -no-shell-escape %O %S' fourier.tex`.
-Review the PDF, claims, author information and license before any submission.
-The archive command does not submit or publish anything.
+The exporter expands literal inputs and includes explicitly referenced assets.
+It does not publish or submit the manuscript.
 
-## Project Map
+## Evidence And Source Map
 
 | Location | Responsibility |
 | --- | --- |
-| [fourier.tex](fourier.tex), [preamble.tex](preamble.tex) | Manuscript order and typography |
-| [sections/](sections/), [appendices/](appendices/) | Scientific prose and implementation reference |
-| [figures/](figures/), [tables/](tables/) | Editorial figures and tables with labels/captions |
+| [fourier.tex](fourier.tex), [preamble.tex](preamble.tex) | Reading order and typography |
+| [sections/](sections/), [appendices/](appendices/) | Current argument and supporting derivations |
+| [figures/](figures/), [tables/](tables/) | Editorial figures and tables |
+| [data/study-014/](data/study-014/README.md) | Current compact evidence, original identities and rederivation commands |
+| [generated/paper-study/](generated/paper-study/) | Checked current tables/macros/plots and all 776 process summaries |
+| [tools/](tools/README.md) | Read-only import, statistical generation, checks and portable export |
+| [benchmarks/](benchmarks/README.md) | Benchmark preparation and user-run collection workflow |
+| [reviews/](reviews/) | Independent reviews and revision response |
 | [bibliography.tex](bibliography.tex), [sources.md](sources.md) | References and literature verification |
-| [benchmarks/](benchmarks/README.md) | One maintained workflow for measurements and derived evidence |
-| [data/](data/README.md) | Immutable manuscript campaigns and historical research |
-| [tools/](tools/README.md) | Manuscript checks and source expansion |
-| `.build/` | Local PDF, fixture and reproduction outputs |
-| `generated/paper-comparison/` | Selected, checked tables, macros and vector plots used by the paper |
-| Other `generated/` directories | Immutable full-grid diagnostic exports from the measurement handoff |
+| `.build/` | Local PDF/export and visual-review products |
 
-## Measurements And Reproduction
+The [evidence guide](data/study-014/README.md) explains exact provenance,
+aggregation and limits. Hop peaks, instrumented block cost, process CPU, logical
+age and missed synthetic releases remain distinct. The study is descriptive:
+one host, binary and date, with two session replicates and residual OS activity.
+It does not establish audio-device reliability or an optimal FFT granularity.
 
-Start with the [benchmark workflow](benchmarks/README.md), then follow its
-[launch handoff](benchmarks/guides/workflow.md). It covers setup, the small smoke
-profile, pilots, frozen confirmation sessions, progress/failure inspection,
-reports, selections, paper export and portable evidence bundles. The C++
-measurement code remains in [benchmark/paper](../../benchmark/paper/README.md).
-Neither the benchmark runner nor report generation changes the Rack modules.
-
-The completed comparison measurements are separate from the two historical
-manuscript campaigns: [original FFT evaluation](data/README.md) and
-[complete-pipeline study](data/pipeline/README.md). Their raw bytes, metadata
-and source archives remain intact. Use their isolated extraction commands for
-exact reproduction. Historical optimization investigations are retained under
-[data/research/](data/research/). Their one-off programs are archived research
-artifacts, not competing maintained workflow entry points.
-
-The [archived comparison implementation](../../specs/archive/004-external-fft-comparison.md)
-records the completed tooling. [Spec 012](../../specs/archive/012-comparison-evidence-and-paper-integration.md)
-records the replacement campaign and
-[results handoff](data/comparison-012/README.md), covering forward, inverse and
-complete-chain work. [Spec 013](../../specs/archive/013-comparison-paper.md) records
-the manuscript integration and publication checks. The paper compares total
-cost, callback bursts and algorithmic age; it does not claim a universal
-speedup. New evidence must
-pass provenance, numerical coverage and session checks before explicit export.
-Hardware-dependent timing replication is different from regenerating statistics
-from retained raw data. [Historical verification notes](data/verification-history.md)
-record earlier manuscript builds and their original commands.
+The new manuscript replaces the old performance argument. Earlier
+[FFT](data/README.md), [pipeline](data/pipeline/README.md), and
+[spec 012](data/comparison-012/README.md) artifacts stay intact for provenance;
+their timing sections and generated plots are outside the active manuscript.
+The [archived preparation spec](../../specs/archive/014-benchmark-reliability-and-scheduling-study.md)
+records the measured implementation. New analysis does not mutate original raw
+sessions. Their handbacks remain local; no public raw-data deposit is claimed.
 
 ## Maintain And Cite
 
-Keep prose in the existing section/appendix files and preserve labels. Use
-standalone literal `\input{path.tex}` lines relative to this directory so the
-checker and source exporter see the same manuscript. Do not introduce shell
-escape, automatic measurements or dynamic data downloads into the paper build.
-For source-only TeX reorganizations, compare before/after rendered pages, text,
-metadata and references and compile the extracted export.
+Keep literal standalone `\input{path.tex}` lines relative to this directory so
+artifact checking and portable export see the same content. Use
+`python3 docs/whitepaper/tools/study_paper.py` to regenerate current assets,
+then `--check` to verify them. The generator reads compact evidence; the explicit
+importer requires original sessions to rederive process summaries. Neither runs
+benchmarks. [Historical verification notes](data/verification-history.md) retain
+old commands and outcomes without assigning them to the current revision.
 
-Paper export writes separate table/macro/figure includes and a provenance
-receipt. The publication-specific
-[comparison generator](tools/comparison_paper.py) derives the selected tables,
-vector plots and prose numbers from the immutable committed tables. It verifies
-the input hashes and per-session aggregation without requiring local raw
-bundles. Run it without arguments to regenerate, or with `--check` to compare
-against committed assets; `make check` includes this check. The original
-diagnostic exports and historical results remain unchanged.
-
-The compact evidence and exact measured-source archive are committed. Individual
-callback observations remain in local, untracked bundles; a fresh clone cannot
-rederive statistics without acquiring those bundles. Their locations and hashes
-are in the [handoff](data/comparison-012/README.md). Public raw-data deposition
-is still a dissemination step, and no such deposit is claimed.
-
-[CITATION.bib](CITATION.bib) and the repository [CITATION.cff](../../CITATION.cff)
-identify the manuscript as the shared report/software citation. After a public
-deposit, update its real identifier and URL consistently in both and the project
-README. Do not invent a DOI or publication date. Public searchable PDFs,
-accurate title/author metadata and stable links help discovery, but Scholar
-indexing and citation counts remain external outcomes.
-
-For a public deposit, follow the [arXiv TeX guidance](https://info.arxiv.org/help/submit_tex.html)
-and the chosen license terms. [Scholar inclusion guidance](https://scholar.google.com/intl/en/scholar/inclusion.html)
-describes discovery requirements; a source archive or citation file alone does
-not establish indexing.
-
-The repository [license](../../LICENSING.md) governs its code and artwork.
-Benchmark provider and redistribution limits are documented with the workflow.
+[CITATION.bib](CITATION.bib) and [CITATION.cff](../../CITATION.cff) identify
+manuscript version 4 consistently. A public deposit must use an actual identifier
+and URL; do not invent a DOI or acceptance. The [repository license](../../LICENSING.md)
+governs source and artwork; provider redistribution limits remain in the
+benchmark workflow. Review claims, authorship, license and the target venue's
+current requirements before any submission.

@@ -2,10 +2,10 @@
 % Compile with make; make arxiv exports one self-contained TeX source.
 \documentclass[11pt,letterpaper]{article}
 \input{preamble.tex}
-\input{generated/paper-comparison/macros.tex}
-\title{\textbf{Resumable FFT Scheduling\\for Real-Time Spectral Analysis}}
+\input{generated/paper-study/macros.tex}
+\title{\textbf{Whole-Pipeline Scheduling\\for Real-Time Spectral Analysis}}
 \author{Christian Kauten\\\small Arhythmetic Units\\\small\href{mailto:arhythmetic.units@gmail.com}{arhythmetic.units@gmail.com}}
-\date{September 30, 2026\\\small Technical report, manuscript version 3}
+\date{September 30, 2026\\\small Technical report, manuscript version 4}
 
 \begin{document}
 \maketitle
@@ -15,11 +15,9 @@
 \input{sections/signal-model.tex}
 \input{sections/legacy-motivation.tex}
 \input{sections/production-successor.tex}
-\input{sections/inverse-and-chain.tex}
 \input{sections/evaluation-method.tex}
 \input{sections/comparison-results.tex}
 \FloatBarrier
-\input{sections/historical-evidence.tex}
 \input{sections/engineering-limits.tex}
 \input{sections/conclusion.tex}
 \clearpage
@@ -31,12 +29,8 @@
 \input{appendices/original-pipeline.tex}
 \input{appendices/one-hop.tex}
 \input{appendices/implementation.tex}
-\input{appendices/experimental-method.tex}
-\input{appendices/original-results.tex}
-\input{appendices/prototype-evaluation.tex}
 \input{appendices/related-work.tex}
 \FloatBarrier
 \input{appendices/evaluation-agenda.tex}
 \input{appendices/reproducibility.tex}
-\input{appendices/availability.tex}
 \end{document}

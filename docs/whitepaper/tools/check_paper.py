@@ -31,6 +31,8 @@ for name in sorted(generated_inputs):
         # It is independently checked without requiring local raw bundles.
         subprocess.run([sys.executable, str(PAPER / 'tools/comparison_paper.py'),
                         '--check'], check=True)
+    elif name == 'generated/paper-study':
+        subprocess.run([sys.executable, str(PAPER / 'tools/study_paper.py'), '--check'], check=True)
     else:
         verify_export(PAPER/name)
 
@@ -64,10 +66,15 @@ for path in [ROOT / 'README.md', *PAPER.rglob('*.md')]:
         if '://' not in target:
             assert (path.parent / target.split('#')[0]).exists(), (path, target)
 
+# Historical source tables remain checked outside the active manuscript.
+historical_tex = '\n'.join((PAPER/name).read_text() for name in [
+    'appendices/original-results.tex', 'appendices/prototype-evaluation.tex',
+    'tables/legacy-timing.tex', 'tables/legacy-cadence.tex', 'tables/prototype-timing.tex'])
+
 verification = list(csv.DictReader((PAPER / 'data/verification.csv').open()))
 assert sum(int(r['schedules']) for r in verification) == 1320
 assert sum(int(r['reference_bins']) for r in verification) == 6048
-assert 'All 1320' in tex and '6048 complex bins' in tex
+assert 'All 1320' in historical_tex and '6048 complex bins' in historical_tex
 for precision, limit in [('float', 8.69e-8), ('double', 1.06e-14)]:
     actual = max(float(r['max_scaled_error']) for r in verification if r['precision'] == precision)
     assert actual <= limit and actual > limit * 0.98
@@ -89,16 +96,16 @@ for n in [1024, 2048, 4096, 16384]:
     complete, inc = half[n, 'complete'], half[n, 'incremental']
     lo, hi = inc['call_max_ns_paired_ratio_ci95']
     table_row = f"{n:,} & {complete['frame_ns_median']/1000:.3f} & {inc['frame_ns_median']/1000:.3f} & {complete['call_max_ns_median']/1000:.3f} & {inc['call_max_ns_median']/1000:.3f} & [{lo:.3f}, {hi:.3f}]"
-    assert table_row in tex, table_row
+    assert table_row in historical_tex, table_row
     b = (n // 4) * (n.bit_length() - 2)
     h = n // 2
     q = math.ceil(b / h)
     length = math.ceil(b / q)
     cadence_row = f'{n:,} & {h:,} & {b:,} & {q} & {length:,} & {h/length:.3f}'
-    assert cadence_row in tex, cadence_row
+    assert cadence_row in historical_tex, cadence_row
 
 legacy_figure = PAPER / 'figures/peak-call-duration.tex'
-assert legacy_figure in manuscript_sources
+assert r'\input{figures/peak-call-duration.tex}' in historical_tex
 points = re.findall(r'\(([\d.]+),([\d.]+)\) \+= \(0,([\d.]+)\) -= \(0,([\d.]+)\)', legacy_figure.read_text())
 assert len(points) == 8
 for (mode, index), point in zip([(m,i) for m in ['complete','incremental'] for i in range(4)], points):
@@ -117,7 +124,7 @@ for work in range(1,257):
         assert sum(quotas) == work and quotas[-1] > 0
         assert max(quotas) == math.ceil(work/horizon)
 
-title = 'Resumable FFT Scheduling for Real-Time Spectral Analysis'
+title = 'Whole-Pipeline Scheduling for Real-Time Spectral Analysis'
 assert f'pdftitle={{{title}}}' in tex
 printed_title = re.search(r'\\title\{\\textbf\{(.*?)\}\}', tex, re.DOTALL).group(1)
 assert ' '.join(printed_title.replace(r'\\', ' ').split()) == title
@@ -127,9 +134,9 @@ for path in [ROOT / 'README.md', PAPER / 'README.md']:
     assert title in ' '.join(path.read_text().split()), path
 assert 'not yet deposited on arXiv' in (ROOT / 'CITATION.cff').read_text()
 assert 'kauten2026fourier' in (PAPER / 'CITATION.bib').read_text()
-assert 'manuscript version 3' in tex
+assert 'manuscript version 4' in tex
 for path in [ROOT / 'CITATION.cff', ROOT / 'README.md', PAPER / 'CITATION.bib']:
-    assert 'Manuscript version 3' in path.read_text(), path
+    assert 'Manuscript version 4' in path.read_text(), path
 print(f'Passed: {len(keys)} references, local links, source/data hashes, numerical tables, plot coordinates, and 32768 balanced schedules.')
 
 # The prototype campaign is separate from the original FFT campaign and from
@@ -148,7 +155,7 @@ for mode, title in [('legacy', 'Legacy'), ('stage_burst', 'Stage bursts'),
     assert all(int(r['age_samples']) == age for r in blocks)
     line = (f'{title} & {statistics.median(hops):.3f} & {statistics.median(maxima):.3f}'
             f' & {min(maxima):.3f}--{max(maxima):.3f} & {age}')
-    assert line in tex, line
+    assert line in historical_tex, line
 
 # Verify both clean and dirty whole-pipeline examples independently.
 for weight, output_weight, work, lower, extra in [

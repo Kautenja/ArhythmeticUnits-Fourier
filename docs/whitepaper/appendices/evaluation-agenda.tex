@@ -1,70 +1,31 @@
 \section{Further Evaluation}
 \label{app:evaluation-agenda}
-The confirmation study supplies optimized-library baselines, repeated sessions,
-inverse jobs, filtering chains, and selected state/load extensions. Its main
-remaining questions concern different execution models, stronger replication,
-and actual host integration, rather than another measurement of the same grid.
+The next experiments should resolve specific gaps exposed by the pilots.
+First, declare the main complete-host contrasts and repeat them on separate
+days with additional fresh processes, recording process calibration and
+matched continuous/paced behavior at identical boundaries. Use the pilots to
+choose observation duration before collection; keep future confirmation
+separate from these descriptive results. A second architecture and independent
+build would test portability rather than merely extending this host's trace.
 
-\paragraph{Asynchronous and overlap-reusing alternatives.}
-A worker can remove analysis from the engine thread when asynchronous delivery
-is acceptable, as considered by Battenberg and
-Avi\v{z}ienis~\cite{battenberg2011}. A matched experiment should include capture,
-queueing, missed publications, consumer contention, and actual spectrum age.
-For heavily overlapping windows or a small requested bin set, hopping,
-windowed sliding, and feedforward methods deserve separate comparisons
-\cite{garrido2016,park2014,rafii2018,eleftheriadis2023}. Equivalent windowing,
-normalization, smoothing, and output processing are essential. A periodic Hann
-window permits an exact short window kernel; approximate truncated kernels
-would require a separately stated accuracy target. None of the present FFT
-backend results ranks these alternatives.
+Second, compare paced native replacements at the hardest complete-module
+settings and choose a background sweep that actually brackets saturation.
+Record wake lateness, block compute, process CPU and device underruns separately.
+The distinction between computation and host/device reliability also appears
+in audio benchmark methodology~\cite{skare2024,balasubramaniam2026}. Physical
+audio interfaces and concurrent rendering are required for user-facing
+reliability and repaint claims.
 
-\paragraph{Numerical stress and applications.}
-Van der Byl and Inggs distinguish stability from useful numerical accuracy in
-sliding structures~\cite{vanderbyl2016}. Long streams with weak tones beside
-strong ones, silence after a strong signal, and phase-sensitive processing
-would extend the current deterministic fixtures. The binary64 references here
-are not exact arithmetic. Non-power-of-two lengths, more windows, and
-application-specific error budgets remain untested. The overlap-save identity
-and three-tap FIR establish processing semantics; realistic long impulse
-responses and frequency-dependent effects would be needed before recommending
-FFT filtering for an application. A complete bounded-stage inverse pipeline
-would also have to distribute the bulk initialization identified in
-Section~\ref{sec:inverse-chain}.
+Third, test native sub-FFT leaves and cost-informed weights under matched
+input/output semantics. Transform subdivision~\cite{wefers2015} and alternative
+traversals~\cite{becoulet2021} are credible candidates, not measured improvements.
+Time-distributed inverse synthesis and long-filter chains need their own
+bounded buffering, normalization and delivery paths.
 
-\paragraph{Device and display behavior.}
-For a visualizer, producer publication is only one component of perceived
-latency. The decomposition of Pr\r{u}\v{s}a and Holighaus~\cite{prusa2016}
-motivates measuring consumption and repaint separately. The mailbox permits
-superseded snapshots when the display is slower than production. A Rack study
-should measure the real callback schedule, driver-reported underruns,
-concurrent displays, and patch load. Callback phase and analyzer count matter
-because individually tolerable bursts can coincide, as staggered convolution
-schedules also illustrate~\cite{borss2009}.
-
-Skare separates continuous throughput from periodic callback measurements and
-emphasizes their difference from plugin invocation within a
-DAW~\cite{skare2024}. Balasubramaniam et al. distinguish plugin timing, session
-callback utilization, driver underruns, and worker inference underruns under
-controlled contention~\cite{balasubramaniam2026}. Their virtual driver does
-not include physical-interface behavior. These methods inform the next host
-experiment; their GPU and inference results are not FFT-backend evidence.
-The present synchronous harness measures computation, not audio reliability.
-
-\paragraph{Replication and granularity.}
-The three temporal blocks provide observed variation on one host. Additional
-days, builds, architectures, compilers, and operating systems should be chosen
-before making general platform claims. Kalibera and Jones provide a framework
-for allocating repetitions across sources of variation~\cite{kalibera2013};
-layout and environment bias also require attention~\cite{mytkowicz2009}.
-Longer sessions would help characterize infrequent stalls but would still not
-supply a safe worst-case bound~\cite{wilhelm2008}.
-
-The current weights distribute operation density without making operations
-equal in duration. Following Wefers' discussion of transform subdivision
-\cite{wefers2015}, a controlled study could vary butterfly batches or small
-subtransforms under the same hop and publication constraint. The depth-first
-traversal of B\'ecoulet and Verguet~\cite{becoulet2021} suggests comparing
-immediate and resumable forms of the same alternative kernel across working
-sets and analyzer counts. That would separate locality and factorization from
-suspension. Hardware-calibrated weights might improve typical behavior, but
-would add assumptions rather than prove execution time on a general-purpose OS.
+Worker/UI-thread analysis should retain capture, queueing, overflow and
+consumption costs. Overlap-reusing methods require equivalent window and
+accuracy targets~\cite{garrido2016,park2014,rafii2018,eleftheriadis2023}; their
+stability must be checked over long streams~\cite{vanderbyl2016}. Finally,
+concurrent displays should measure actual repaint and visible age in addition
+to the existing headless snapshot observations. These comparisons extend the
+execution contract while testing alternatives outside the present study.
