@@ -14,8 +14,9 @@ and **Spectre**, a spectrogram visualizer.
 [Fourier manual (PDF)][Fourier] · [Spectre manual (PDF)][Spectre] ·
 [Changelog](CHANGELOG.md)
 
-Read the [**technical report source and build guide**][report] for the
-analysis algorithms, FFT scheduling, and reproducible experiments.
+Read the [**technical report (PDF)**][Whitepaper] for the analysis algorithms,
+FFT scheduling, and reproducible experiments. The [source and build guide][report]
+includes the reproducible evidence and portable source export.
 [BibTeX citation](docs/whitepaper/CITATION.bib).
 
 ## Fourier: Spectrum Analyzer
@@ -181,12 +182,11 @@ model, prior work, and reproducible experiments. Its README includes build
 instructions for the [LaTeX project](docs/whitepaper/fourier.tex) and its
 self-contained source export.
 
-Release [v2.1.2](https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/tag/v2.1.2)
-includes both user manuals but no whitepaper PDF. Follow the
-[report's build instructions][report] for a local PDF. The
-[publication workflow](.github/workflows/manuals.yml) builds both
-manuals and `Fourier-whitepaper.pdf` and attaches them when a release is
-published.
+Release [v2.2.0](https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/tag/v2.2.0)
+includes both user manuals and the [whitepaper PDF][Whitepaper]. The
+[publication workflow](.github/workflows/manuals.yml) builds and validates
+all three documents from the release tag before attaching them. The
+[report's build instructions][report] also support local PDF builds.
 
 <details>
 <summary><strong>Citation Formats And Reproducibility</strong></summary>
@@ -272,6 +272,7 @@ See [LICENSING.md](LICENSING.md) for details.
 [LicenseBadge]: https://img.shields.io/badge/source%20license-GPL--3.0--or--later-blue
 [Fourier]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier.pdf
 [Spectre]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Spectre.pdf
+[Whitepaper]: https://github.com/Kautenja/ArhythmeticUnits-Fourier/releases/latest/download/Fourier-whitepaper.pdf
 [report]: docs/whitepaper/README.md
 [citation-cff]: CITATION.cff
 [vcv-rack]: https://github.com/VCVRack/Rack
